@@ -14,18 +14,19 @@
 - [x] Aprobada (2026-11-22)
 
 ### Plan
-- [x] Plan de implementación (`docs/plans/F0-spike.md`), pendiente de revisión de Simón
+- [x] Plan de implementación (`docs/plans/F0-spike.md`), aprobado
 
 ### Tareas
 - [x] T1 · Esqueleto, `SmaltiCore` y guarda de imports
-- [ ] T2 · Dominio del panel y tema Obsidiana
-- [ ] T3 · Puerto `TerminalEngine`, `OpenPane` y fake
-- [ ] T4 · Ghostty v1.4.0 fijado y build de GhosttyKit
-- [ ] T5 · `GhosttyAdapter`: config, acciones y tamaños
-- [ ] T6 · App de Xcode con ventana de vidrio
-- [ ] T7 · Terminal viva tras `TerminalEngine`
-- [ ] T8 · Lista de render, mediciones y pregunta técnica 7
-- [ ] T9 · Informe del spike, Muter y cierre
+- [x] T2 · Dominio del panel y tema Obsidiana
+- [x] T3 · Puerto `TerminalEngine`, `OpenPane` y fake
+- [x] T4 · Ghostty v1.4.0 fijado y build de GhosttyKit
+- [x] T5 · `GhosttyAdapter`: config, acciones y tamaños
+- [x] T6 · App de Xcode con ventana de vidrio
+- [x] T7 · Terminal viva tras `TerminalEngine`
+- [x] T8 · Lista de render, mediciones y pregunta técnica 7
+- [x] T9 · Informe del spike (`docs/specs/F0-spike-report.md`); Muter descartado por ahora (issue #321), decisión pendiente
+- [ ] Cierre formal de F0: pendientes manuales de Simón (ver informe)
 
 ## F1 · Tiling y workspaces
 

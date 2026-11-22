@@ -81,11 +81,14 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 
 ## Comandos
 
-Se definen en F0 y se anotan aquí al existir:
-
-- `scripts/bootstrap`: dependencias, submódulo y build de GhosttyKit.
+- `scripts/bootstrap`: Zig (Homebrew), Metal Toolchain de Xcode, submódulo `vendor/ghostty` y build de GhosttyKit.
+- `scripts/check-ghostty-pin.sh`: comprueba que GhosttyKit corresponde al SHA fijado (también corre como fase de build).
 - `swift test --package-path Packages/SmaltiCore`: dominio y casos de uso.
-- Build de la app: `xcodebuild -scheme Smalti …` (se completa en F0).
+- `swift test --package-path Packages/GhosttyAdapter`: adaptador de libghostty (requiere GhosttyKit construido).
+- `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app (`build/Build/Products/Debug/Smalti.app`).
+- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
+- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests`: formato.
+- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
 
 ## Git
 
