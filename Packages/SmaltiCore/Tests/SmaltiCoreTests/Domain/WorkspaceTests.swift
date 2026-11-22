@@ -144,4 +144,10 @@ struct WorkspaceTests {
         #expect(workspace.switchingLayout(to: ColumnsLayout()) != workspace)
         #expect(workspace.switchingLayout(to: DwindleLayout()) == workspace)
     }
+
+    @Test func equalityDetectsRenamedWorkspaceWithSameTree() {
+        let workspace = makeWorkspace()
+
+        #expect(workspace.renamed("other") != workspace)
+    }
 }

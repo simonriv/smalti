@@ -138,4 +138,17 @@ struct FuzzyMatchTests {
 
         #expect(ranked.first?.command.title == "Nuevo panel")
     }
+
+    @Test func wordStartBonusAppliesToLaterQueryCharacters() {
+        let ranked = fuzzyMatch("ab", in: [command("axb"), command("a b")])
+
+        #expect(ranked.map(\.command.title) == ["a b", "axb"])
+        #expect(ranked.map(\.score) == [15, 7])
+    }
+
+    @Test func characterAfterDigitDoesNotStartAWord() {
+        let ranked = fuzzyMatch("a", in: [command("1ab")])
+
+        #expect(ranked.map(\.score) == [0])
+    }
 }

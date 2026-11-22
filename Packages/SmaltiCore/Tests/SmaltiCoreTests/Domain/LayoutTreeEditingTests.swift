@@ -228,4 +228,41 @@ struct LayoutTreeEditingTests {
         let frame = Rect(x: origin.maxX + gapFromEdge, y: 0, width: 100, height: overlap)
         return NeighborCandidate(id: id, frame: frame, origin: origin, direction: .right)
     }
+
+    @Test func touchingNeighborIsFoundToTheLeft() {
+        let tree = sideBySide(0.5, .leaf(a), .leaf(b))
+
+        #expect(tree.neighbor(of: b, toward: .left, in: wideArea, gap: 0) == a)
+    }
+
+    @Test func touchingNeighborIsFoundBelow() {
+        let tree = stacked(0.5, .leaf(a), .leaf(b))
+
+        #expect(tree.neighbor(of: a, toward: .down, in: wideArea, gap: 0) == b)
+    }
+
+    @Test func touchingNeighborIsFoundAbove() {
+        let tree = stacked(0.5, .leaf(a), .leaf(b))
+
+        #expect(tree.neighbor(of: b, toward: .up, in: wideArea, gap: 0) == a)
+    }
+
+    @Test func nearestLeftNeighborWinsOverFarther() {
+        let tree = sideBySide(0.3, .leaf(a), sideBySide(0.5, .leaf(b), .leaf(c)))
+
+        #expect(tree.neighbor(of: c, toward: .left, in: wideArea, gap: 8) == b)
+    }
+
+    @Test func nearestUpNeighborWinsOverFarther() {
+        let tree = stacked(0.3, .leaf(a), stacked(0.5, .leaf(b), .leaf(c)))
+
+        #expect(tree.neighbor(of: c, toward: .up, in: wideArea, gap: 8) == b)
+    }
+
+    @Test func neighborBelowIgnoresPanesOutsideItsColumn() {
+        let d = PaneID()
+        let tree = sideBySide(0.5, stacked(0.5, .leaf(a), .leaf(b)), stacked(0.5, .leaf(c), .leaf(d)))
+
+        #expect(tree.neighbor(of: a, toward: .down, in: wideArea, gap: 8) == b)
+    }
 }
