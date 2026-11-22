@@ -19,6 +19,14 @@ struct GeometryTests {
         #expect(inset.size == Size(width: 0, height: 0))
     }
 
+    @Test func collapsedInsetStaysCenteredInsideOriginal() {
+        let rect = Rect(x: 0, y: 0, width: 10, height: 10)
+
+        let inset = rect.insetBy(20)
+
+        #expect(inset == Rect(x: 5, y: 5, width: 0, height: 0))
+    }
+
     @Test func rectExposesEdgesAndMidpoints() {
         let rect = Rect(x: 10, y: 20, width: 100, height: 50)
 

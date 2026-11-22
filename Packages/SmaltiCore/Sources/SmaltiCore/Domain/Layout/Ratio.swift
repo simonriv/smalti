@@ -5,9 +5,12 @@ public struct Ratio: Hashable, Sendable {
 
     public let value: Double
 
-    /// Clamps `value` into `bounds`.
+    private static let neutralValue = 0.5
+
+    /// Clamps `value` into `bounds`; NaN becomes an even split.
     public init(_ value: Double) {
-        self.value = min(max(value, Self.bounds.lowerBound), Self.bounds.upperBound)
+        let finiteValue = value.isNaN ? Self.neutralValue : value
+        self.value = min(max(finiteValue, Self.bounds.lowerBound), Self.bounds.upperBound)
     }
 
     public func adding(_ delta: Double) -> Ratio {

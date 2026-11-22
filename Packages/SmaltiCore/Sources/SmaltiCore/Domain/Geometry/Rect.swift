@@ -21,12 +21,15 @@ public struct Rect: Hashable, Sendable {
     public var midX: Double { origin.x + size.width / 2 }
     public var midY: Double { origin.y + size.height / 2 }
 
-    /// Shrinks every side by `amount`; width and height never go below 0.
+    /// Shrinks every side by `amount`, never more than half the extent on each
+    /// axis, so a collapsed rect stays centered inside the original.
     public func insetBy(_ amount: Double) -> Rect {
-        Rect(
-            x: origin.x + amount,
-            y: origin.y + amount,
-            width: max(0, size.width - 2 * amount),
-            height: max(0, size.height - 2 * amount))
+        let insetX = min(amount, size.width / 2)
+        let insetY = min(amount, size.height / 2)
+        return Rect(
+            x: origin.x + insetX,
+            y: origin.y + insetY,
+            width: size.width - 2 * insetX,
+            height: size.height - 2 * insetY)
     }
 }
