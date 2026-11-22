@@ -9,12 +9,18 @@ struct KeyRouter {
     let keymap: () -> Keymap
     let perform: (CommandID) -> Void
 
-    /// True when the event was a Smalti shortcut and must not reach the terminal.
-    func route(_ event: NSEvent) -> Bool {
-        guard event.type == .keyDown, let chord = KeyChordTranslator.chord(from: event),
-            let command = keymap().command(for: chord)
-        else { return false }
-        perform(command)
-        return true
+    /// True when the key belongs to Smalti and must not reach the terminal.
+    func route(_ event: NSEvent, composing: Bool) -> Bool {
+        // A pending dead key or IME composition owns the next key; switching panes would strand it.
+        guard event.type == .keyDown, !composing, let chord = KeyChordTranslator.chord(from: event) else {
+            return false
+        }
+        switch KeyRouting.decide(chord, isRepeat: event.isARepeat, keymap: keymap()) {
+        case .perform(let command):
+            perform(command)
+            return true
+        case .swallow: return true
+        case .passThrough: return false
+        }
     }
 }

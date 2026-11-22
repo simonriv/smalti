@@ -11,7 +11,7 @@ final class SmaltiWindow: NSWindow {
     let strip: WorkspaceStripView
     let statusBar: StatusBarView
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
-    var routeKey: ((NSEvent) -> Bool)?
+    var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 
     init(theme: Theme) {
         let content = WindowContentView(theme: theme)
@@ -42,13 +42,18 @@ final class SmaltiWindow: NSWindow {
 
     /// ⌘ shortcuts arrive here first, before the menu and the terminal's own key equivalents.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        routeKey?(event) == true || super.performKeyEquivalent(with: event)
+        routeKey?(event, isComposing) == true || super.performKeyEquivalent(with: event)
     }
 
     /// Shortcuts without ⌘ (⌃1…⌃9) arrive as plain key-down events.
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, routeKey?(event) == true { return }
+        if event.type == .keyDown, routeKey?(event, isComposing) == true { return }
         super.sendEvent(event)
+    }
+
+    /// The first responder is in the middle of a dead key or an IME composition.
+    private var isComposing: Bool {
+        (firstResponder as? NSTextInputClient)?.hasMarkedText() ?? false
     }
 }
 

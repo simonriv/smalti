@@ -133,6 +133,12 @@ struct ObsidianThemeTests {
         #expect(theme.header.processFontWeight == 600)
     }
 
+    /// One hairline width for the strip, header and status bar separators and the pill border; a header dot of its own.
+    @Test func hairlineAndHeaderDotTokens() {
+        #expect(theme.chrome.hairlineWidth == 1)
+        #expect(theme.header.dot == theme.strip.dot)
+    }
+
     @Test func focusTokensDeriveFromTheAccent() {
         #expect(theme.focus.ring == theme.accent.withAlpha(0x80 / 255))
         #expect(theme.focus.glow == theme.accent.withAlpha(0x22 / 255))

@@ -36,6 +36,8 @@ public struct PanelTokens: Equatable, Sendable {
 
 public struct ChromeTokens: Equatable, Sendable {
     public let topStripHeight: Double
+    /// Separators under the strip, the pane headers and above the status bar, and the pill border (1 px).
+    public let hairlineWidth: Double
 }
 
 public struct TextTokens: Equatable, Sendable {
@@ -87,6 +89,8 @@ public struct HeaderTokens: Equatable, Sendable {
     public let gap: Double
     public let fontSize: Double
     public let dotSize: Double
+    /// Neutral in F1; F2 colors it by agent state.
+    public let dot: RGBAColor
     public let directory: RGBAColor
     public let bottomBorder: RGBAColor
     /// The process name is semibold in the title color.

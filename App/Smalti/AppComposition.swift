@@ -84,7 +84,7 @@ final class AppComposition {
         let router = KeyRouter(
             keymap: { [weak controller] in controller?.config.keys ?? .standard },
             perform: { [weak controller] command in controller?.perform(command) })
-        window.routeKey = { router.route($0) }
+        window.routeKey = { router.route($0, composing: $1) }
     }
 
     /// Keystrokes go to the focused pane's terminal.

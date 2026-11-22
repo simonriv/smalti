@@ -51,7 +51,7 @@ final class PaneContainerView: NSView {
         needsLayout = true
     }
 
-    func apply(_ theme: Theme, isFocused: Bool, header content: PaneHeader?) {
+    func apply(_ theme: Theme, isFocused: Bool, header content: PaneHeaderContent?) {
         self.theme = theme
         content.map { header.show($0, theme: theme) }
         let radius = theme.panel.cornerRadius

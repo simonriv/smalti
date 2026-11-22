@@ -91,7 +91,7 @@ final class PaneGridView: NSView {
             if let view = views(pane) { container.embed(view) }
             if container.superview !== self { addSubview(container) }
             let header = workspace.panes.first { $0.id == pane }.map {
-                PaneHeader($0, index: state.set.paneIndex(of: pane), state: state)
+                PaneHeaderContent($0, index: state.set.paneIndex(of: pane), keymap: state.config.keys, home: state.home)
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
         }

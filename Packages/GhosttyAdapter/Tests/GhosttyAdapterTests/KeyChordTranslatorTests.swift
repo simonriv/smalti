@@ -56,6 +56,10 @@ struct KeyChordTranslatorTests {
         #expect(KeyChordTranslator.chord(keyCode: KeyCode.escape, characters: "\u{1B}", modifiers: [])?.key == "escape")
     }
 
+    @Test func keypadEnterIsEnter() {
+        #expect(KeyChordTranslator.chord(keyCode: 76, characters: "\u{3}", modifiers: [.command])?.key == "enter")
+    }
+
     @Test func eventWithoutCharactersOrKnownKeyHasNoChord() {
         #expect(KeyChordTranslator.chord(keyCode: 200, characters: nil, modifiers: [.command]) == nil)
     }

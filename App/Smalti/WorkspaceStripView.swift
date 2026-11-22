@@ -10,6 +10,21 @@ final class WorkspaceStripView: NSView {
     private let pills = NSStackView()
     private let paletteHint: KbdView
     private var theme: Theme
+    /// Last drawn model: terminal events publish often, and pills only change with workspaces.
+    private var rendered: StripModel?
+
+    /// Everything the strip draws; rebuilding happens only when it changes.
+    private struct StripModel: Equatable {
+        let pills: [Pill]
+        let paletteChord: String
+        let theme: Theme
+
+        struct Pill: Equatable {
+            let id: WorkspaceID
+            let name: String
+            let isActive: Bool
+        }
+    }
 
     init(theme: Theme) {
         self.theme = theme
@@ -37,21 +52,26 @@ final class WorkspaceStripView: NSView {
     required init?(coder: NSCoder) { nil }
 
     func render(_ state: TilingState) {
-        theme = state.theme
+        let model = StripModel(
+            pills: state.set.workspaces.map { .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID) },
+            paletteChord: state.config.keys.chord(for: .paletteOpen)?.display ?? "", theme: state.theme)
+        guard model != rendered else { return }
+        rendered = model
+        theme = model.theme
         let buttons: [NSView] =
-            state.set.workspaces.map { workspace in
-                WorkspacePill(workspace, isActive: workspace.id == state.set.activeID, theme: theme) { [weak self] in
-                    self?.onCommand?(.workspaceGo(workspace.id))
+            model.pills.map { pill in
+                WorkspacePill(name: pill.name, isActive: pill.isActive, theme: theme) { [weak self] in
+                    self?.onCommand?(.workspaceGo(pill.id))
                 }
             } + [AddWorkspaceButton(theme: theme) { [weak self] in self?.onCommand?(.workspaceNew) }]
         pills.setViews(buttons, in: .leading)
-        paletteHint.text = state.config.keys.chord(for: .paletteOpen)?.display ?? ""
+        paletteHint.text = model.paletteChord
         needsDisplay = true
     }
 
     override func draw(_ dirtyRect: NSRect) {
         theme.strip.bottomBorder.nsColor.setFill()
-        NSRect(x: 0, y: 0, width: bounds.width, height: theme.panel.borderWidth).fill()
+        NSRect(x: 0, y: 0, width: bounds.width, height: theme.chrome.hairlineWidth).fill()
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -64,16 +84,33 @@ final class WorkspaceStripView: NSView {
 private final class WorkspacePill: NSView {
     private let action: () -> Void
 
-    init(_ workspace: Workspace, isActive: Bool, theme: Theme, action: @escaping () -> Void) {
+    init(name: String, isActive: Bool, theme: Theme, action: @escaping () -> Void) {
         self.action = action
         super.init(frame: .zero)
-        let strip = theme.strip
+        style(isActive: isActive, theme: theme)
+        layoutRow(name: name, isActive: isActive, theme: theme)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+        setAccessibilityIdentifier("smalti.workspace")
+        setAccessibilityLabel(name)
+        setAccessibilityValue(isActive ? "active" : nil)
+    }
+
+    @available(*, unavailable, message: "Built in code only")
+    required init?(coder: NSCoder) { nil }
+
+    /// The active pill carries the accent ring and glow, like the focused pane.
+    private func style(isActive: Bool, theme: Theme) {
         wantsLayer = true
-        layer?.cornerRadius = strip.pillCornerRadius
-        layer?.borderWidth = theme.panel.borderWidth
+        layer?.cornerRadius = theme.strip.pillCornerRadius
+        layer?.borderWidth = theme.chrome.hairlineWidth
         layer?.borderColor = isActive ? theme.focus.ring.nsColor.cgColor : NSColor.clear.cgColor
         layer?.backgroundColor = isActive ? theme.focus.glow.nsColor.cgColor : NSColor.clear.cgColor
-        let label = NSTextField(labelWithString: workspace.name)
+    }
+
+    private func layoutRow(name: String, isActive: Bool, theme: Theme) {
+        let strip = theme.strip
+        let label = NSTextField(labelWithString: name)
         label.font = theme.interfaceFont(size: strip.fontSize, weight: strip.fontWeight)
         label.textColor = (isActive ? strip.activeText : strip.inactiveText).nsColor
         let row = NSStackView(views: [StatusDot(diameter: strip.dotSize, color: strip.dot), label])
@@ -86,15 +123,12 @@ private final class WorkspacePill: NSView {
             row.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -strip.pillPadding),
             row.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
-        setAccessibilityElement(true)
-        setAccessibilityRole(.button)
-        setAccessibilityIdentifier("smalti.workspace")
-        setAccessibilityLabel(workspace.name)
-        setAccessibilityValue(isActive ? "active" : nil)
     }
 
-    @available(*, unavailable, message: "Built in code only")
-    required init?(coder: NSCoder) { nil }
+    override func accessibilityPerformPress() -> Bool {
+        action()
+        return true
+    }
 
     override func mouseDown(with event: NSEvent) { action() }
 }
@@ -121,6 +155,11 @@ private final class AddWorkspaceButton: NSView {
 
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
+
+    override func accessibilityPerformPress() -> Bool {
+        action()
+        return true
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let size = theme.strip.addButtonIconSize

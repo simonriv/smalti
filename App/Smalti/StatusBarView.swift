@@ -31,20 +31,16 @@ final class StatusBarView: NSView {
         theme = state.theme
         label.font = theme.interfaceFont(size: theme.statusBar.fontSize)
         label.textColor = theme.statusBar.text.nsColor
-        label.stringValue = state.message?.text ?? Self.summary(of: state.set.active)
+        label.stringValue = state.message?.text ?? state.set.active.statusLine
         setAccessibilityValue(label.stringValue)
         needsDisplay = true
     }
 
-    /// "solen · 3 paneles · dwindle", as in `Main.dc.html`.
-    static func summary(of workspace: Workspace) -> String {
-        let count = workspace.panes.count
-        return "\(workspace.name) · \(count) \(count == 1 ? "panel" : "paneles") · \(workspace.layout.statusName)"
-    }
-
     override func draw(_ dirtyRect: NSRect) {
         theme.statusBar.topBorder.nsColor.setFill()
-        NSRect(x: 0, y: bounds.maxY - theme.panel.borderWidth, width: bounds.width, height: theme.panel.borderWidth)
-            .fill()
+        NSRect(
+            x: 0, y: bounds.maxY - theme.chrome.hairlineWidth, width: bounds.width, height: theme.chrome.hairlineWidth
+        )
+        .fill()
     }
 }

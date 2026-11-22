@@ -19,6 +19,8 @@ private let obsidianPrimaryText = rgb(0xd7dae0)
 private let obsidianTitleText = rgb(0xe6e9ef)
 /// Minimum for small text over the glass (docs/design/README.md); status bar and empty hint use it too.
 private let obsidianSecondaryText = rgb(0x8b919c)
+/// Status dot before agents have a state (F2 colors it).
+private let obsidianNeutralDot = rgb(0x565c68)
 /// Inactive workspace names and pane directories (Main.dc.html).
 private let obsidianMutedText = rgb(0x9aa0ab)
 
@@ -38,7 +40,7 @@ extension Theme {
             cornerRadius: 11,
             gap: 8,
             areaPadding: 10),
-        chrome: ChromeTokens(topStripHeight: 40),
+        chrome: ChromeTokens(topStripHeight: 40, hairlineWidth: 1),
         text: TextTokens(
             interfaceFontFamily: "Inter", primary: obsidianPrimaryText, title: obsidianTitleText,
             secondary: obsidianSecondaryText),
@@ -59,11 +61,12 @@ extension Theme {
             pillHeight: 26, pillCornerRadius: 7, pillPadding: 11, pillGap: 6, paddingLeading: 16,
             paddingTrailing: 14, inactiveText: obsidianMutedText, activeText: obsidianTitleText, labelGap: 7,
             fontSize: 12,
-            fontWeight: 500, dotSize: 6, dot: rgb(0x565c68),
+            fontWeight: 500, dotSize: 6, dot: obsidianNeutralDot,
             bottomBorder: white(0.05), addButtonIconSize: 12, addButtonIconStroke: 1.4,
             addButtonColor: obsidianSecondaryText),
         header: HeaderTokens(
-            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: obsidianMutedText,
+            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, dot: obsidianNeutralDot,
+            directory: obsidianMutedText,
             bottomBorder: white(0.05), processFontWeight: 600),
         kbd: KbdTokens(
             fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
