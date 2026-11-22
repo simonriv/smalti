@@ -117,7 +117,7 @@ Ejecución: las tareas T1–T13 las hacen subagentes. Las tareas T14–T18 las h
   - `func equalized() -> LayoutTree`
   - `public struct LayoutGeometry: Hashable, Sendable { area: Rect; gap: Double; minimumPaneSize: Size }`, con `static func standard(area: Rect) -> LayoutGeometry` (gap 8, mínimo 240 × 120) y `func fits(_ tree: LayoutTree) -> Bool` (todos los frames ≥ mínimo).
 
-Algoritmo de `frames`: un split reparte `extent - gap` (el ancho en `sideBySide`, el alto en `stacked`). `first` recibe `(extent - gap) * ratio` y `second` el resto, separados por `gap`, igual que CSS `fr`. Ningún frame baja de 1 pt de ancho ni de alto.
+Algoritmo de `frames` (las separaciones se reparten según el `span`, definido abajo): en un split de eje `A` con extensión `E` a lo largo de `A`, el contenido es `C = E - (span(self) - 1) * gap`. `first` recibe `C * ratio + (span(first) - 1) * gap`, y `second` lo que queda tras `first` y una separación `gap`. Con dos hojas equivale a CSS `fr` (`(E - gap) * ratio`), y con `ratio = span(first) / span(self)` todas las hojas miden lo mismo, separaciones incluidas. Ningún frame baja de 1 pt de ancho ni de alto.
 
 Algoritmo de `equalized`: la `ratio` de cada split es `span(first) / (span(first) + span(second))`, donde `span` se mide a lo largo del eje del split. Una hoja vale 1, un split del mismo eje suma y un split del otro eje toma el máximo. Así quedan hojas del mismo tamaño en cada eje (B3).
 
@@ -127,6 +127,7 @@ Algoritmo de `equalized`: la `ratio` de cada split es `span(first) / (span(first
   - `stackedSplitHonoursRatioAndGap`
   - `panesListsLeavesInOrder`
   - `framesNeverCollapseBelowOnePoint`: árbol de 9 hojas en `Rect(0, 0, 40, 40)` → todos los anchos y altos ≥ 1 (Review Focus 3).
+  - `columnChainWithSpanRatiosHasEqualWidths`: cadena `sideBySide` `a | (b | c)` con ratios 1/3 y 1/2 en `Rect(0, 0, 1308, 732)` → los tres anchos ≈ 430.67.
   - `equalizedColumnsHaveEqualWidths`: cadena `sideBySide` de 4 hojas con ratios 0,3 / 0,7 / 0,2 → los 4 anchos son iguales.
   - `equalizedDwindleBalancesEachAxis`: `a | (b / c)` con ratios 0,8 / 0,3 → `a.width == b.width` y `b.height == c.height`.
   - `fitsRejectsFramesBelowMinimum`
@@ -535,7 +536,7 @@ Reglas del parser:
   - `optionOnlyShortcutIsRejectedWithLine` (R8)
   - `unbindWithNone`
   - `tomlStoreSatisfiesContract` (`ConfigStoreContract.verify` con un harness que escribe en un directorio temporal)
-  - `onlyThisAdapterImportsTheTOMLLibrary` (R10: recorre `Packages/*/Sources` y `App/` y reutiliza el escáner de `ImportScanner`, copiado en el test target del adaptador)
+  - `onlyThisAdapterImportsTheTOMLLibrary` (R10: recorre `Packages/*/Sources` y `App/`. `ImportScanner` se mueve de `SmaltiCoreTests/Architecture` a `SmaltiCoreTestSupport` como API pública y lo usan las dos guardas, sin copiarlo)
 - [ ] **Step 3:** Correr → falla.
 - [ ] **Step 4:** Implementar.
 - [ ] **Step 5:** `swift test --package-path Packages/TOMLConfigAdapter` en verde. Añadir el paquete al proyecto de Xcode y comprobar que `xcodebuild … build` compila.
