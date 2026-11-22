@@ -60,9 +60,10 @@ final class TerminalPaneTests: XCTestCase {
 
         app.typeText("<<<'\(text)'>\"$SMALTI_UITEST_OUT\"\n")
 
-        let written = expectation(for: NSPredicate { _, _ in
-            (try? String(contentsOf: self.outputFile, encoding: .utf8)) == text + "\n"
-        }, evaluatedWith: nil)
+        let written = expectation(
+            for: NSPredicate { _, _ in
+                (try? String(contentsOf: self.outputFile, encoding: .utf8)) == text + "\n"
+            }, evaluatedWith: nil)
         wait(for: [written], timeout: 10)
     }
 
@@ -83,9 +84,10 @@ final class TerminalPaneTests: XCTestCase {
         app.typeKey("v", modifierFlags: .command)
         app.typeText("'>\"$SMALTI_UITEST_OUT\"\n")
 
-        let written = expectation(for: NSPredicate { _, _ in
-            (try? String(contentsOf: self.outputFile, encoding: .utf8)) == "pegado-ok\n"
-        }, evaluatedWith: nil)
+        let written = expectation(
+            for: NSPredicate { _, _ in
+                (try? String(contentsOf: self.outputFile, encoding: .utf8)) == "pegado-ok\n"
+            }, evaluatedWith: nil)
         wait(for: [written], timeout: 10)
     }
 
