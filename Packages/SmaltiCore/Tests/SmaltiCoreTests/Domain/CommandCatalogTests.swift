@@ -85,13 +85,23 @@ struct CommandCatalogTests {
     }
 
     @Test func goToWorkspaceListsOnlyInactiveOnes() throws {
-        let other = makeWorkspace(name: "api")
-        let set = WorkspaceSet(first: other).adding(makeWorkspace(name: "web"))
+        let inactive = makeWorkspace(name: "api")
+        let set = WorkspaceSet(first: inactive).adding(makeWorkspace(name: "web"))
 
         let goTo = commands(for: set).filter { $0.title.hasPrefix("Ir a workspace") }
 
         #expect(goTo.map(\.title) == ["Ir a workspace api"])
-        #expect(goTo.map(\.id) == [.workspaceGo(other.id)])
+        #expect(goTo.map(\.id) == [.workspaceGo(inactive.id)])
+    }
+
+    @Test func noPaneCommandsWithoutPanes() {
+        let paneOnly = commands(paneCount: 0).filter { $0.group == .panes }.map(\.id)
+
+        #expect(paneOnly == [.paneNew])
+    }
+
+    @Test func noGoToWorkspaceWithSingleWorkspace() {
+        #expect(!commands(paneCount: 0).contains { $0.title.hasPrefix("Ir a workspace") })
     }
 
     @Test func commandsCarryKeymapShortcut() throws {

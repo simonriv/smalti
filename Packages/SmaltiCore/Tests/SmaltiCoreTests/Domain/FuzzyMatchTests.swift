@@ -99,4 +99,43 @@ struct FuzzyMatchTests {
 
         #expect(ranked.map(\.command.title) == ["Panel nuevo", "Cerrar panel"])
     }
+
+    @Test func izqRanksAllThreeDirectionVerbsEqually() throws {
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(
+                first: (0..<2).reduce(Workspace.empty(name: "w", rootDirectory: root, layout: DwindleLayout())) {
+                    w, _ in
+                    w.adding(Pane(id: PaneID(), workingDirectory: root))
+                }),
+            keymap: .standard, layouts: .standard)
+
+        let ranked = fuzzyMatch("izq", in: commands)
+
+        let leftTitles = ["Enfocar", "Intercambiar", "Agrandar"].map { "\($0) panel hacia la izquierda" }
+        let top = ranked.prefix(3)
+        #expect(Set(top.map(\.command.title)) == Set(leftTitles))
+        #expect(Set(top.map(\.score)).count == 1)
+        #expect(ranked.dropFirst(3).allSatisfy { $0.score < (top.first?.score ?? 0) })
+        #expect(top.first?.score == 28)
+    }
+
+    @Test func bestAlignmentPrefersWordStart() {
+        // Matching "a" at the word start of "ab" (+8) and "b" right after (+10) beats the early mid-word "a".
+        let ranked = fuzzyMatch("ab", in: [command("xa ab")])
+
+        #expect(ranked.first?.score == 18)
+    }
+
+    @Test func trailingSpaceIsIgnored() {
+        let commands = catalog()
+
+        #expect(fuzzyMatch("lay ", in: commands) == fuzzyMatch("lay", in: commands))
+        #expect(fuzzyMatch("  ", in: commands).count == commands.count)
+    }
+
+    @Test func titlePrefixOutranksScatteredMatch() {
+        let ranked = fuzzyMatch("nu", in: [command("Cerrar nada util"), command("Nuevo panel")])
+
+        #expect(ranked.first?.command.title == "Nuevo panel")
+    }
 }
