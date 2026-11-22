@@ -4,10 +4,11 @@
 
 ## Veredicto
 
-**F0 queda técnicamente cerrado; el cierre formal depende de una sesión corta de Simón.**
+**F0 cerrado (2026-11-22).**
 
 - **Lo que confirma el spike:** Swift + AppKit + libghostty v1.4.0 dan una terminal con vidrio, sin botones, aislada tras `TerminalEngine`. Rinde igual o mejor que Ghostty.app (A12 y A14), sin bloqueos del hilo principal (A13) y con contraste suficiente sobre el vidrio (A15).
-- **Lo que falta para el cierre formal:** los casos que exigen teclado físico, segundo monitor o juicio humano: A16 (A/B a ciegas), espacios y teclas muertas físicas, y los casos interactivos de Claude Code (prompt de permiso, redimensionar, `/help`, scroll). La lista exacta está en "Pendientes".
+- **Pruebas manuales descartadas:** Simón descartó los casos que exigían teclado físico, ratón o juicio humano (A16, espacios y teclas muertas físicas, casos interactivos de Claude Code, segundo monitor). Quedan como riesgo conocido en "Pendientes descartados".
+- **Revisión final:** un revisor nuevo revisó la rama completa (0 críticos, 4 importantes, 12 menores). Todos se corrigieron con su prueba, salvo `isReleasedWhenClosed`, que no tiene comportamiento observable en F0.
 
 ## Criterios de aceptación
 
@@ -73,10 +74,24 @@ Pruebas automáticas al cierre: `SmaltiCore` 28, `GhosttyAdapter` 20 y XCUITest 
 | F7 | `smaltid` dueño de los PTY choca con que libghostty sea dueño del PTY y del proceso |
 | Proceso | Mutation testing: Muter v16 no funciona con SwiftPM + Swift Testing (issue #321). Lo reemplaza `scripts/mutation/mutate.py`; todavía no cubre paquetes con dependencias relativas (`GhosttyAdapter`) |
 
-## Pendientes para el cierre formal (Simón, unos 15 min)
+## Pendientes descartados (decisión de Simón, 2026-11-22)
 
-1. A16: diez minutos escribiendo y usando Claude en Smalti y en Ghostty, sin saber cuál es cuál.
-2. Con el teclado físico: espacios, `´` + `a` → `á`, `¨` + `u` → `ü`, ⌥ + teclas (@, |, #), ⌃C, ⌃R, ⌘C tras seleccionar con el ratón.
-3. Claude Code: prompt de permiso con flechas, redimensionar durante el streaming, `/help`, scroll del historial.
-4. nvim con ratón y pegado multilínea (no debe ejecutarse línea a línea).
-5. Si hay un segundo monitor: mover la ventana y comprobar que el texto siga nítido.
+Sin verificar a mano; se revisarán si aparecen en el uso real:
+
+1. A16: comparación de sensación al escribir frente a Ghostty.
+2. Teclado físico: espacios, `´` + vocal, `¨` + `u`, ⌥ + teclas, ⌃C/⌃R, ⌘C tras seleccionar con el ratón.
+3. Claude Code interactivo: prompt de permiso con flechas, redimensionar durante el streaming, `/help`, scroll del historial.
+4. nvim con ratón.
+5. Cambio a un segundo monitor (cubierto por `ScreenChangeTests`, sin hardware real).
+
+## Correcciones tras la revisión final
+
+| Hallazgo | Arreglo | Prueba |
+| --- | --- | --- |
+| Pegado multilínea descartado en silencio | Confirmación "¿Pegar texto de varias líneas?" | `ClipboardConfirmationTests`, E2E `testMultilinePasteAsksAndPastes` |
+| Cambio de pantalla sin actualizar display ni escala | Observador de `didChangeScreenNotification` | `ScreenChangeTests` |
+| Vida de superficie, vista y runtime frente a callbacks de C | `deinit` de la vista, registro vista+superficie, limpieza del runtime, cierre diferido | `SurfaceLifetimeTests` |
+| Pin comparado con el checkout y no con el gitlink | Exige checkout = gitlink, árbol limpio y xcframework correcto | `check-ghostty-pin-gitlink.test.sh` |
+| Menores (teclado, shell que muere al arrancar, tokens, salida limpia, puerto) | Ver commit `3a339f5` | `KeyboardDetailsTests`, `HandlePaneExitTests`, E2E |
+
+Pruebas al cierre: `SmaltiCore` 33, `GhosttyAdapter` 43, XCUITest 12, mutación de `SmaltiCore` 100 %.

@@ -26,7 +26,8 @@
 - [x] T7 · Terminal viva tras `TerminalEngine`
 - [x] T8 · Lista de render, mediciones y pregunta técnica 7
 - [x] T9 · Informe del spike (`docs/specs/F0-spike-report.md`); Muter reemplazado por `scripts/mutation/mutate.py` (100 % en SmaltiCore)
-- [ ] Cierre formal de F0: pendientes manuales de Simón (ver informe)
+- [x] Revisión final de la rama: 4 importantes y 12 menores corregidos
+- [x] F0 cerrado (2026-11-22); pruebas manuales descartadas por Simón
 
 ## F1 · Tiling y workspaces
 

@@ -3,7 +3,7 @@
 Comparación lado a lado: Smalti (build de `feature/f0-spike`) y Ghostty.app 1.4.0, ejecutada por Claude el 2026-11-22 con capturas compuestas de pantalla (`docs/specs/F0-assets/`).
 
 - **Comando de prueba:** cada caso se lanzó con un comando propio (`-SmaltiShellCommand`, y `ghostty -e` en Ghostty), sin el `.zshrc` de Simón, que engancha el shell a tmux.
-- **Marcas:** ✅ verificado · ⚠️ verificado en parte · ⏳ pendiente de una persona.
+- **Marcas:** ✅ verificado · ⚠️ verificado en parte · ⏳ pendiente de una persona; Simón descartó los ⏳ al cerrar F0 (2026-11-22).
 
 ## A9 · Claude Code
 
