@@ -1,0 +1,27 @@
+/// A terminal pane as the domain sees it: identity plus what its terminal has reported.
+public struct Pane: Equatable, Sendable {
+    public let id: PaneID
+    public private(set) var title: String?
+    public private(set) var workingDirectory: WorkingDirectory
+    public private(set) var lastCommand: CommandOutcome?
+    public private(set) var isRunning: Bool
+
+    public init(id: PaneID, workingDirectory: WorkingDirectory) {
+        self.id = id
+        self.workingDirectory = workingDirectory
+        self.isRunning = true
+    }
+
+    public func applying(_ event: TerminalEvent) -> Pane {
+        var updated = self
+        switch event {
+        case .titleChanged(let title): updated.title = title
+        case .workingDirectoryChanged(let directory): updated.workingDirectory = directory
+        case .commandFinished(let exitCode, let duration):
+            updated.lastCommand = CommandOutcome(exitCode: exitCode, duration: duration)
+        case .exited: updated.isRunning = false
+        case .bell: break
+        }
+        return updated
+    }
+}

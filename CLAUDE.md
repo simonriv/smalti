@@ -40,7 +40,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 
 ## libghostty
 
-- **Commit fijado:** se fija en un único lugar, el SHA del submódulo `vendor/ghostty`; hoy es Ghostty `v1.4.0` (`ce787fc`). `scripts/build-ghostty.sh` construye `GhosttyKit.xcframework` (en `.gitignore`), y el build falla si el xcframework no corresponde a ese SHA.
+- **Commit fijado:** se fija en un único lugar, el SHA del submódulo `vendor/ghostty`; hoy es Ghostty `v1.4.0` (`83fb956`). `scripts/build-ghostty.sh` construye `GhosttyKit.xcframework` (en `.gitignore`), y el build falla si el xcframework no corresponde a ese SHA.
 - **Frontera:** solo el target `GhosttyAdapter` importa GhosttyKit. Punteros, `ghostty_*_t` y tipos de C nunca cruzan el puerto `TerminalEngine`; la vista (`NSView`) sale por `TerminalViewProvider`, del lado de la app.
 - **Actualizaciones a propósito:** se actualiza en un PR propio, `chore(ghostty): bump to <sha>`. El PR incluye el diff de las APIs de `ghostty.h` que usamos y la lista de render de F0 (`docs/specs/F0-spike.md`, A9–A11) repetida.
 - **Configuración aislada:** Smalti nunca lee `~/.config/ghostty/`. La configuración del motor se genera desde `SmaltiConfig`.
@@ -73,7 +73,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - TDD: la prueba que falla va antes del código de producción.
 - **Unitarias y de dominio:** Swift Testing (`import Testing`), en formato Arrange/Act/Assert, un concepto por prueba. Prueba los límites: 0, 1 y 9 paneles, ratios en los bordes y tamaños mínimos.
 - **Contrato compartido:** obligatorio para cada puerto con más de una implementación.
-- **Mutation testing:** Muter (Stryker no soporta Swift). Antes de configurarlo, confirma que soporta Swift Testing; si solo soporta XCTest, avisa a Simón antes de elegir.
+- **Mutation testing:** `scripts/mutation/mutate.py` (propio; Muter v16 no aplica mutaciones con SwiftPM + Swift Testing, issue #321). Puntuación mínima 80 % en `SmaltiCore`; los sobrevivientes se arreglan con una prueba nueva, no se ignoran.
 - **E2E de la UI nativa:** XCUITest, solo las pruebas afectadas por el cambio.
 - **Verificación manual:** las listas de render y las mediciones de cada spec se registran en el PR o en el informe de la fase.
 - **Suites largas:** toda suite de más de ~30 s se lanza con `"$KB_ROOT/_system/bin/kb-progress" run <etiqueta> -- <comando>` y muestra `[n/total] ok|FAIL <unidad>`.
@@ -81,11 +81,15 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 
 ## Comandos
 
-Se definen en F0 y se anotan aquí al existir:
-
-- `scripts/bootstrap`: dependencias, submódulo y build de GhosttyKit.
+- `scripts/bootstrap`: Zig (Homebrew), Metal Toolchain de Xcode, submódulo `vendor/ghostty` y build de GhosttyKit.
+- `scripts/check-ghostty-pin.sh`: comprueba que GhosttyKit corresponde al SHA fijado (también corre como fase de build).
 - `swift test --package-path Packages/SmaltiCore`: dominio y casos de uso.
-- Build de la app: `xcodebuild -scheme Smalti …` (se completa en F0).
+- `swift test --package-path Packages/GhosttyAdapter`: adaptador de libghostty (requiere GhosttyKit construido).
+- `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app (`build/Build/Products/Debug/Smalti.app`).
+- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
+- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests`: formato.
+- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
+- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
 
 ## Git
 

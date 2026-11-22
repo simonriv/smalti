@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# One-time setup from a clean clone: Zig, the pinned Ghostty submodule and GhosttyKit.
+set -euo pipefail
+root="$(cd "$(dirname "$0")/.." && pwd)"
+brew list zig >/dev/null 2>&1 || brew install zig
+# libghostty compiles its Metal shaders with xcrun metal, which ships as a separate Xcode component.
+xcrun -sdk macosx metal --version >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain
+git -C "$root" submodule update --init --recursive
+"$root/scripts/build-ghostty.sh"

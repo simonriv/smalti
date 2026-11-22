@@ -7,5 +7,7 @@ xcuserdata/
 # SwiftPM
 .build/
 .swiftpm/
-# libghostty build output (rebuilt from the pinned submodule by scripts/build-ghostty.sh)
-Frameworks/GhosttyKit.xcframework/
+# GhosttyKit + resources, rebuilt from the pinned submodule by scripts/build-ghostty.sh
+Packages/GhosttyAdapter/Frameworks/
+# Superpowers plan-execution scratch
+.superpowers/

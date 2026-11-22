@@ -162,4 +162,5 @@ command = "login"            # login shell del usuario
 | Reacomodar varias superficies Metal a la vez | Parpadeo o frames en blanco al redimensionar | Reacomodo sin animar el contenido del terminal, solo el marco; B8 lo mide |
 | Muchas superficies vivas en workspaces ocultos | Memoria y GPU | Medir con 9 paneles; pausar el render de superficies ocultas si la API lo permite (informe de F0) |
 | Librería TOML de terceros | Dependencia y API ajena | Detrás de `ConfigStore`, con errores traducidos en la frontera; candidata TOMLKit, se elige en el plan |
+| `.zshrc` que engancha todo shell interactivo a una sesión de tmux compartida (`tmux new-session -A -s main`, el caso de Simón) | Todos los paneles de Smalti mostrarían la misma sesión de tmux, y el tiling dejaría de tener sentido | Smalti exporta `SMALTI=1` (y su versión) a cada proceso hijo; el `.zshrc` se condiciona con `-z "$SMALTI"`; prueba E2E con un panel nuevo que comprueba que `$SMALTI` llega |
 | Proceso en primer plano sin acceso al PTY | La cabecera muestra solo el título OSC | Depende de la pregunta técnica 6 de F0; en ese caso se usa el título |
