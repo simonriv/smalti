@@ -44,8 +44,8 @@
 - [x] T3 · `LayoutTree`: redimensionar, intercambiar y vecino
 - [x] T4 · Estrategias de layout y catálogo
 - [x] T5 · `Pane` ampliado y `Workspace`
-- [ ] T6 · `WorkspaceSet`
-- [ ] T7 · Config, atajos, `ConfigStore`, contrato y tokens
+- [x] T6 · `WorkspaceSet`
+- [x] T7 · Config, atajos, `ConfigStore`, contrato y tokens
 - [ ] T8 · Comandos y búsqueda difusa
 - [ ] T9 · Abrir, cerrar y salida de paneles
 - [ ] T10 · Casos de uso de distribución y workspaces
