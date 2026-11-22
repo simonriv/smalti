@@ -51,14 +51,15 @@ final class TerminalPaneTests: XCTestCase {
         wait(for: [written], timeout: 10)
     }
 
-    /// Review Focus 2: when the shell exits, the pane closes its window and the app terminates.
-    func testShellExitTerminatesApp() {
+    /// B15: when the last shell exits, the workspace stays open and empty, with its hint, instead of quitting.
+    func testShellExitLeavesEmptyWorkspace() {
         XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
 
         app.typeText("exit\n")
 
-        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: exitMarker.path), "the app must quit cleanly, not crash")
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(app.windows["smalti.window"].exists)
     }
 
     /// A11 (synthesized input): accented letters and the characters ⌥ produces on the Latin American layout
@@ -127,16 +128,15 @@ final class TerminalPaneTests: XCTestCase {
         wait(for: [written], timeout: 10)
     }
 
-    /// A shell that dies right after starting is reported instead of the window vanishing.
-    func testShellThatFailsToStartIsReported() {
+    /// A shell that dies right after starting no longer takes the window with it (the status bar reports it, F1 T15).
+    func testShellThatFailsToStartKeepsTheWindow() {
         app.terminate()
-        let failing = XCUIApplication()
-        failing.launchArguments += ["-SmaltiShellCommand", "/usr/bin/false"]
+        let failing = XCUIApplication.isolatedSmalti(shell: "/usr/bin/false")
         failing.launch()
 
-        let message = failing.staticTexts["El shell terminó al iniciar"]
-        XCTAssertTrue(message.waitForExistence(timeout: 10))
-        failing.buttons["Cerrar"].click()
-        XCTAssertTrue(failing.wait(for: .notRunning, timeout: 10))
+        XCTAssertTrue(
+            failing.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(failing.windows["smalti.window"].exists)
+        failing.terminate()
     }
 }

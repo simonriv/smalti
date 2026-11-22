@@ -7,11 +7,11 @@ final class SmaltiWindow: NSWindow {
     static let defaultContentSize = NSSize(width: 1328, height: 820)
     static let minimumContentSize = NSSize(width: 480, height: 300)
 
-    let paneContainer: PaneContainerView
+    let paneGrid: PaneGridView
 
     init(theme: Theme) {
         let content = WindowContentView(theme: theme)
-        paneContainer = content.paneContainer
+        paneGrid = content.paneGrid
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -37,10 +37,10 @@ final class SmaltiWindow: NSWindow {
 
 /// Rounded glass surface holding the drag strip and the pane area.
 final class WindowContentView: NSView {
-    let paneContainer: PaneContainerView
+    let paneGrid: PaneGridView
 
     init(theme: Theme) {
-        paneContainer = PaneContainerView(theme: theme)
+        paneGrid = PaneGridView(theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = theme.window.cornerRadius
@@ -62,7 +62,7 @@ final class WindowContentView: NSView {
 
     private func layout(strip: DragStripView, theme: Theme) {
         let padding = theme.panel.areaPadding
-        for view in [strip, paneContainer] as [NSView] {
+        for view in [strip, paneGrid] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -71,10 +71,10 @@ final class WindowContentView: NSView {
             strip.leadingAnchor.constraint(equalTo: leadingAnchor),
             strip.trailingAnchor.constraint(equalTo: trailingAnchor),
             strip.heightAnchor.constraint(equalToConstant: theme.chrome.topStripHeight),
-            paneContainer.topAnchor.constraint(equalTo: strip.bottomAnchor, constant: padding),
-            paneContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
-            paneContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
-            paneContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padding),
+            paneGrid.topAnchor.constraint(equalTo: strip.bottomAnchor, constant: padding),
+            paneGrid.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
+            paneGrid.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
+            paneGrid.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padding),
         ])
     }
 }

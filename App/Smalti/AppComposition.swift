@@ -2,165 +2,108 @@ import AppKit
 import GhosttyAdapter
 import OSLog
 import SmaltiCore
+import TOMLConfigAdapter
 
 /// Composition root: the only place that builds infrastructure and wires it to the UI.
 @MainActor
 final class AppComposition {
-    private let theme = Theme.obsidian
     private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "engine")
     private var window: SmaltiWindow?
+    private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
-    private var workspaces: WorkspaceSet?
-    private var paneOpenedAt: ContinuousClock.Instant?
+    private var controller: TilingController?
 
     func showMainWindow() {
+        let options = LaunchOptions.current()
+        let store = TOMLConfigStore(file: options.configFile)
+        let initial = ReloadConfig(store: store).execute()
+        let theme = Theme.obsidian.applying(initial.config.appearance)
         let window = SmaltiWindow(theme: theme)
         window.makeKeyAndOrderFront(nil)
         WindowGlass.apply(blurRadius: theme.window.blurRadius, to: window)
         self.window = window
         do {
-            try openTerminal(in: window)
+            try start(in: window, options: options, store: store, initial: initial)
         } catch {
             fail(error)
         }
     }
 
-    private func openTerminal(in window: SmaltiWindow) throws(OpenPaneError) {
-        let engine = try makeEngine()
-        let home = try homeDirectory()
-        var set = WorkspaceSet(
-            first: .empty(name: home.lastComponent, rootDirectory: home, layout: DwindleLayout()))
-        window.contentView?.layoutSubtreeIfNeeded()
-        let request = OpenPaneRequest(
-            shell: Self.shellCommand(), geometry: .standard(area: Self.area(of: window.paneContainer)))
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-        let open = OpenPane(engine: engine, version: version)
-        let pane = try open.execute(request, in: &set)
-        guard let view = (engine as TerminalViewProvider).view(for: pane) else { return }
-        window.paneContainer.embed(view)
-        window.makeFirstResponder(view)
+    private func start(
+        in window: SmaltiWindow, options: LaunchOptions, store: TOMLConfigStore, initial: ConfigReload
+    ) throws(TerminalEngineError) {
+        let runtime = try makeRuntime(Theme.obsidian.applying(initial.config.appearance).terminal)
+        let engine = GhosttyTerminalEngine(runtime: runtime)
+        let controller = TilingController(
+            .init(
+                engine: engine, configStore: store, version: Self.version, home: try homeDirectory(),
+                shellOverride: options.shellOverride,
+                applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
+                    try runtime?.apply(appearance)
+                }),
+            initial: initial)
+        connect(controller, to: window, engine: engine)
+        self.runtime = runtime
         self.engine = engine
-        workspaces = set
-        paneOpenedAt = .now
-        observe(engine.events(for: pane), of: pane)
+        self.controller = controller
+        window.contentView?.layoutSubtreeIfNeeded()
+        controller.start()
+        openDebugPanes(controller)
     }
 
-    private func makeEngine() throws(OpenPaneError) -> GhosttyTerminalEngine {
-        do {
-            try GhosttyProcess.ensureInitialized(
-                resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
-            let config = try GhosttyConfig.load(
-                text: GhosttyConfigText.render(theme.terminal), writingTo: Self.engineConfigFile)
-            return GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
-        } catch {
-            throw .engine(error)
+    private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
+        let grid = window.paneGrid
+        controller.area = { [weak grid] in grid?.area ?? Rect(x: 0, y: 0, width: 0, height: 0) }
+        controller.onChange = { [weak self, weak grid] state in
+            grid?.render(state.set, config: state.config, theme: state.theme) { engine.view(for: $0) }
+            self?.focusKeyboard(on: state.set.active.focusedPane)
+            if let message = state.message { self?.logger.info("status: \(message.text, privacy: .public)") }
         }
+        grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
     }
 
-    private func observe(_ events: AsyncStream<TerminalEvent>, of pane: PaneID) {
-        Task { [weak self] in
-            for await event in events {
-                guard let self else { return }
-                self.logger.info("pane event: \(String(describing: event), privacy: .public)")
-                self.apply(event, to: pane)
-                if case .exited(let code) = event {
-                    self.paneDidExit(pane, code: code)
-                    return
-                }
-                if event == .closeRequested {
-                    self.paneDidRequestClose(pane)
-                    return
-                }
-            }
-        }
+    /// Keystrokes go to the focused pane's terminal.
+    private func focusKeyboard(on pane: PaneID?) {
+        guard let window, let pane, let view = engine?.view(for: pane), window.firstResponder !== view else { return }
+        window.makeFirstResponder(view)
     }
 
-    private func apply(_ event: TerminalEvent, to pane: PaneID) {
-        guard let set = workspaces, let owner = set.workspace(containing: pane) else { return }
-        workspaces = set.updating(owner) { $0.applying(event, to: pane) }
+    /// `-SmaltiDebugPanes <n>` (Debug builds only) opens n panes at launch so the grid can be checked before the
+    /// key router exists (F1 Task 15 removes it).
+    private func openDebugPanes(_ controller: TilingController) {
+        #if DEBUG
+            let count = UserDefaults.standard.integer(forKey: "SmaltiDebugPanes")
+            for _ in 1..<max(count, 1) { controller.perform(.paneNew) }
+        #endif
     }
 
-    private func paneDidExit(_ pane: PaneID, code: Int?) {
-        guard let engine, var set = workspaces else { return }
-        let lifetime = paneOpenedAt.map { ContinuousClock.now - $0 } ?? .zero
-        let exit = PaneExit(pane: pane, exitCode: code, lifetime: lifetime)
-        let outcome = HandlePaneExit(engine: engine).execute(exit, in: &set)
-        workspaces = set
-        switch outcome {
-        case .alreadyClosed:
-            return
-        case .closed:
-            break
-        case .closedAfterFailedStart(let exitCode):
-            reportFailedStart(exitCode: exitCode)
-        }
-        if set.active.panes.isEmpty { window?.close() }
+    private func makeRuntime(_ appearance: TerminalAppearance) throws(TerminalEngineError) -> GhosttyRuntime {
+        try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
+        let config = try GhosttyConfig.load(
+            text: GhosttyConfigText.render(appearance), writingTo: Self.engineConfigFile)
+        return try GhosttyRuntime(config: config)
     }
 
-    /// The terminal asked to close its pane with the process still running; the engine never closes on its own.
-    private func paneDidRequestClose(_ pane: PaneID) {
-        guard let engine, var set = workspaces else { return }
-        _ = ClosePane(engine: engine).execute(pane, in: &set)
-        workspaces = set
-        if set.active.panes.isEmpty { window?.close() }
-    }
-
-    private func reportFailedStart(exitCode: Int?) {
-        let alert = NSAlert()
-        alert.messageText = "El shell terminó al iniciar"
-        alert.informativeText =
-            (exitCode.map { "Código de salida: \($0). " } ?? "")
-            + "Revisa el comando del shell y sus archivos de inicio (por ejemplo ~/.zshrc)."
-        alert.addButton(withTitle: "Cerrar")
-        alert.runModal()
-    }
-
-    /// Login shell by default. `-SmaltiShellCommand <command>` (launch argument) overrides it; UI tests use it
-    /// to run a shell without startup files. F1 moves this to `[shell] command` in config.toml.
-    private static func shellCommand() -> TerminalCommand {
-        guard let command = UserDefaults.standard.string(forKey: "SmaltiShellCommand"), !command.isEmpty else {
-            return .loginShell
-        }
-        return .custom(command)
-    }
-
-    private static func area(of container: NSView) -> Rect {
-        Rect(x: 0, y: 0, width: container.bounds.width, height: container.bounds.height)
-    }
-
-    private func homeDirectory() throws(OpenPaneError) -> WorkingDirectory {
+    private func homeDirectory() throws(TerminalEngineError) -> WorkingDirectory {
         let path = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
         do {
             return try WorkingDirectory(path: path)
         } catch {
-            throw .engine(.surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute"))
+            throw .surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute")
         }
     }
 
-    private func fail(_ error: OpenPaneError) {
+    private func fail(_ error: TerminalEngineError) {
         logger.error("terminal engine failed: \(String(describing: error), privacy: .public)")
         let alert = NSAlert()
         alert.messageText = "Smalti no pudo iniciar la terminal"
-        alert.informativeText = Self.describe(error)
+        alert.informativeText = EngineErrorText.describe(error)
         alert.runModal()
         NSApp.terminate(nil)
     }
 
-    private static func describe(_ error: OpenPaneError) -> String {
-        switch error {
-        case .paneTooSmall(let minimum):
-            "No cabe un panel de \(Int(minimum.width)) × \(Int(minimum.height)) pt."
-        case .engine(let engineError):
-            describe(engineError)
-        }
-    }
-
-    private static func describe(_ error: TerminalEngineError) -> String {
-        switch error {
-        case .engineStartFailed(let reason): reason
-        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
-        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
-        }
+    private static var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
     }
 
     private static var engineConfigFile: URL {
