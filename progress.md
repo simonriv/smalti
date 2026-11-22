@@ -50,7 +50,7 @@
 - [x] T9 · Abrir, cerrar y salida de paneles
 - [x] T10 · Casos de uso de distribución y workspaces
 - [x] T11 · `ReloadConfig` y `SearchCommands`
-- [ ] T12 · `TOMLConfigAdapter`
+- [x] T12 · `TOMLConfigAdapter`
 - [ ] T13 · `GhosttyAdapter` para F1
 - [ ] T14 · Composition root y rejilla
 - [ ] T15 · `KeyRouter`, franja, cabecera y barra de estado
