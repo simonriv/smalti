@@ -180,10 +180,16 @@ struct TOMLConfigParserTests {
 
     @Test(arguments: ["font_size", "gap", "radius", "glass_opacity", "blur"], ["nan", "inf", "-inf"])
     func nonFiniteNumberIsRejected(key: String, value: String) {
+        let ranges = [
+            "font_size": "6 y 72", "gap": "0 y 32", "radius": "0 y 32", "glass_opacity": "0,3 y 0,95",
+            "blur": "0 y 48",
+        ]
+
         let error = error(parsing: "[appearance]\n\(key) = \(value)")
 
         #expect(error?.key == key)
         #expect(error?.line == 2)
+        #expect(error?.reason == ranges[key].map { "se esperaba un número entre \($0)" })
     }
 
     @Test func glassOpacityNaNIsRejected() {

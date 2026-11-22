@@ -86,6 +86,16 @@ struct KeymapTests {
         }
     }
 
+    @Test func overridingRejectsOptionOnlyChordDirectly() {
+        let reserved = KeyChord(key: "c", modifiers: [.option])
+
+        #expect(
+            throws: ConfigError(file: "", line: nil, key: "⌥C", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+        ) {
+            try Keymap.standard.overriding([reserved: .layoutColumns])
+        }
+    }
+
     @Test func overridingDoesNotChangeTheOriginal() throws {
         let original = Keymap.standard
 
