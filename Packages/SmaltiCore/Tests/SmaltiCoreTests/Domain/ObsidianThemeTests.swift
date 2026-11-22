@@ -33,6 +33,14 @@ struct ObsidianThemeTests {
         #expect(theme.accent == (try RGBAColor(hex: "#7aa2f7")))
     }
 
+    @Test func interfaceTypefaceIsInter() {
+        #expect(theme.text.interfaceFontFamily == "Inter")
+    }
+
+    @Test func kbdTypefaceReusesTheTerminalFamily() {
+        #expect(theme.kbd.fontFamily == theme.terminal.fontFamily)
+    }
+
     @Test func terminalAppearance() throws {
         let terminal = theme.terminal
 

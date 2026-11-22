@@ -13,6 +13,7 @@ private func white(_ alpha: Double) -> RGBAColor {
     RGBAColor(red: 255, green: 255, blue: 255, alpha: alpha)
 }
 
+private let monospacedFontFamily = "JetBrains Mono"
 private let obsidianAccent = rgb(0x7aa2f7)
 private let obsidianPrimaryText = rgb(0xd7dae0)
 private let obsidianTitleText = rgb(0xe6e9ef)
@@ -34,10 +35,12 @@ extension Theme {
             gap: 8,
             areaPadding: 10),
         chrome: ChromeTokens(topStripHeight: 40),
-        text: TextTokens(primary: obsidianPrimaryText, title: obsidianTitleText, secondary: rgb(0x8b919c)),
+        text: TextTokens(
+            interfaceFontFamily: "Inter", primary: obsidianPrimaryText, title: obsidianTitleText,
+            secondary: rgb(0x8b919c)),
         accent: obsidianAccent,
         terminal: TerminalAppearance(
-            fontFamily: "JetBrains Mono",
+            fontFamily: monospacedFontFamily,
             fontSize: 13,
             lineHeight: 1.62,
             foreground: obsidianPrimaryText,
@@ -57,7 +60,7 @@ extension Theme {
             height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: rgb(0x9aa0ab),
             bottomBorder: white(0.05)),
         kbd: KbdTokens(
-            fontFamily: "JetBrains Mono", fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
+            fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
             cornerRadius: 5, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
         statusBar: StatusBarTokens(
             height: 28, padding: 16, gap: 16, fontSize: 11, text: rgb(0x8b919c), topBorder: white(0.05)),

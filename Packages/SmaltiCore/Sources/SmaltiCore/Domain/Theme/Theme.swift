@@ -38,6 +38,7 @@ public struct ChromeTokens: Equatable, Sendable {
 }
 
 public struct TextTokens: Equatable, Sendable {
+    public let interfaceFontFamily: String
     public let primary: RGBAColor
     public let title: RGBAColor
     public let secondary: RGBAColor
