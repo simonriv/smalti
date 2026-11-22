@@ -64,6 +64,9 @@ El símbolo está formado por **los tres paneles del layout Dwindle, partidos co
 
 ## Ícono de macOS en Icon Composer
 
+**La app ya usa el ícono:** `App/Smalti/AppIcon.icon` es un archivo de Icon Composer con las teselas (con Liquid Glass) y el brillo (al 30 %, *Plus Lighter*) sobre el fondo `#0d0f15`. El target lo compila con `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`. Para afinarlo, abre `AppIcon.icon` en Icon Composer y guarda: no hace falta tocar nada más. Los pasos de abajo son para rehacerlo desde las capas sueltas.
+
+
 1. Crea un ícono nuevo en Icon Composer y arrastra las tres capas en este orden: `1-fondo.svg` (abajo), `2-teselas.svg` y `3-brillo.svg` (arriba).
 2. **Fondo:** sin material de vidrio, color sólido.
 3. **Teselas:** aplícales el material Liquid Glass. Es la capa que debe reaccionar a la luz.
@@ -76,6 +79,8 @@ El símbolo está formado por **los tres paneles del layout Dwindle, partidos co
 python3 brand/source/build_symbol.py brand/logo
 python3 brand/source/build_wordmark.py "$HOME/Library/Fonts/Inter-VariableFont_opsz,wght.ttf" brand/logo   # requiere fontTools
 python3 brand/source/build_macos_icon.py brand/macos-icon
+# Copia las capas al ícono de la app (sin <title>, que Icon Composer no necesita):
+for l in teselas brillo; do n=$([ $l = teselas ] && echo 2 || echo 3); sed '/<title>/d' brand/macos-icon/$n-$l.svg > App/Smalti/AppIcon.icon/Assets/$l.svg; done
 ```
 
 Los íconos web se generaron con el `export_variants.py` de la skill `logo-design`, a partir de `smalti-symbol.svg` y con `smalti-symbol-small.svg` como fuente del favicon.

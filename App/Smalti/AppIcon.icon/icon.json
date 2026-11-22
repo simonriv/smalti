@@ -1,0 +1,36 @@
+{
+  "fill" : {
+    "solid" : "srgb:0.05098,0.05882,0.08235,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode" : "plus-lighter",
+          "glass" : false,
+          "image-name" : "brillo.svg",
+          "name" : "brillo",
+          "opacity" : 0.3
+        },
+        {
+          "glass" : true,
+          "image-name" : "teselas.svg",
+          "name" : "teselas"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.4
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
