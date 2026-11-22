@@ -18,6 +18,22 @@ struct SmaltiConfigTests {
         #expect(config.keys == Keymap.standard)
     }
 
+    @Test func launchShellOverrideWinsOverConfiguredShell() {
+        var config = SmaltiConfig.defaults
+        config.shell = .custom("/opt/homebrew/bin/fish")
+
+        let resolved = config.withShell(overriddenBy: .custom("/bin/zsh -f"))
+
+        #expect(resolved.shell == .custom("/bin/zsh -f"))
+    }
+
+    @Test func missingLaunchOverrideKeepsConfiguredShell() {
+        var config = SmaltiConfig.defaults
+        config.shell = .custom("/opt/homebrew/bin/fish")
+
+        #expect(config.withShell(overriddenBy: nil) == config)
+    }
+
     @Test func applyingDefaultsLeavesObsidianUnchanged() {
         #expect(Theme.obsidian.applying(.obsidian) == Theme.obsidian)
     }

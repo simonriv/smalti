@@ -60,4 +60,13 @@ public struct SmaltiConfig: Equatable, Sendable {
 
     public static let defaults = SmaltiConfig(
         appearance: .obsidian, defaultLayout: .dwindle, shell: .loginShell, keys: .standard)
+
+    /// Shell precedence (spec R2): defaults < `[shell] command` < launch override. The override exists only so
+    /// automated tests can run a shell without startup files; `nil` keeps the configured shell.
+    public func withShell(overriddenBy override: TerminalCommand?) -> SmaltiConfig {
+        guard let override else { return self }
+        var resolved = self
+        resolved.shell = override
+        return resolved
+    }
 }
