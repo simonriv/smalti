@@ -18,10 +18,11 @@ public struct WorkspaceSet: Sendable, Equatable {
     }
 
     public var active: Workspace {
-        let found = workspaces.first { $0.id == activeID }
         // Every mutation keeps `activeID` pointing at an existing workspace, so a miss is a bug here.
-        precondition(found != nil, "WorkspaceSet invariant broken: active workspace \(activeID) is missing")
-        return found.unsafelyUnwrapped
+        guard let found = workspaces.first(where: { $0.id == activeID }) else {
+            preconditionFailure("WorkspaceSet invariant broken: active workspace \(activeID) is missing")
+        }
+        return found
     }
 
     public func adding(_ workspace: Workspace) -> WorkspaceSet {
