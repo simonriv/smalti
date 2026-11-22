@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ventana principal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#d7dae0}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.mono{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.62}
+.ln{white-space:pre;margin:0}
+.mu{color:#8b919c}
+.gr{color:#9ece6a}
+.am{color:#e0af68}
+.rd{color:#f7768e}
+.bl{color:#7aa2f7}
+.vi{color:#bb9af7}
+.add{background:rgba(158,206,106,0.10);color:#b9e08f}
+.del{background:rgba(247,118,142,0.10);color:#f7a3b4}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:#aeb3bd;background:rgba(255,255,255,0.04)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background-color: #0b0d12; background-image: radial-gradient(circle at 16% 20%, #284766 0, rgba(40,71,102,0) 38%), radial-gradient(circle at 84% 80%, #563663 0, rgba(86,54,99,0) 42%), radial-gradient(circle at 72% 12%, #1d5a55 0, rgba(29,90,85,0) 34%), radial-gradient(circle at 30% 92%, #5a4a2a 0, rgba(90,74,42,0) 30%)">
+
+  <div style="position: absolute; left: 56px; top: 40px; width: 1328px; height: 820px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 90px rgba(0,0,0,0.5); background: {{winBg}}; backdrop-filter: {{blurCss}}; -webkit-backdrop-filter: {{blurCss}}; display: flex; flex-direction: column; overflow: hidden">
+
+    <div style="height: 40px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 14px 0 16px; border-bottom: 1px solid rgba(255,255,255,0.05)">
+      <button type="button" style="display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 7px; border: 1px solid {{ring}}; background: {{glow}}; color: #e6e9ef; font: 500 12px Inter, sans-serif">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #9ece6a"></span>solen
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #e0af68"></span>rizaria
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #565c68"></span>xolken
+      </button>
+      <button type="button" aria-label="Nuevo workspace" style="width: 26px; height: 26px; border-radius: 7px; border: none; background: transparent; color: #8b919c; display: flex; align-items: center; justify-content: center">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 1.5v9M1.5 6h9"></path></svg>
+      </button>
+      <div style="flex: 1; height: 100%"></div>
+      <div style="display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: #9aa0ab">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 50%; background: #9ece6a"></span>2 trabajando</span>
+        <span style="display: flex; align-items: center; gap: 6px; color: #e0af68"><span style="width: 6px; height: 6px; border-radius: 50%; background: #e0af68"></span>1 te espera</span>
+        <span class="kbd">⌘K</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; display: grid; gap: 8px; padding: 10px; grid-template-columns: {{cols}}; grid-template-rows: {{rows}}; grid-template-areas: {{areas}}">
+
+      <section style="grid-area: a; min-width: 0; min-height: 0; display: flex; flex-direction: column; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid {{ring}}; box-shadow: 0 0 0 1px {{glow}}, 0 0 28px {{glow}}; overflow: hidden">
+        <header style="height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 11.5px; color: #9aa0ab; border-bottom: 1px solid rgba(255,255,255,0.05)">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #9ece6a"></span>
+          <span style="color: #e6e9ef; font-weight: 600">claude</span>
+          <span>solen/api · opus</span>
+          <span style="flex: 1"></span>
+          <span>ctx 41%</span>
+          <span style="width: 44px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; width: 41%; height: 100%; background: {{accent}}"></span></span>
+          <span>1h 12m</span>
+          <span class="kbd">⌥1</span>
+        </header>
+        <div class="mono" style="flex: 1; min-height: 0; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 1px">
+          <p class="ln"><span class="gr">●</span> Read(<span class="bl">src/modules/reminders/reminder.service.ts</span>)</p>
+          <p class="ln mu">  ⎿  214 líneas</p>
+          <p class="ln"><span class="gr">●</span> Update(<span class="bl">src/modules/reminders/reminder.service.ts</span>)</p>
+          <p class="ln mu">  ⎿  +18 −4</p>
+          <p class="ln mu">     41   const due = event.startsAt.minus(rule.offset)</p>
+          <p class="ln del">     42 − if (due &lt; now) return</p>
+          <p class="ln add">     42 + if (due &lt; now) return this.markMissed(rule)</p>
+          <p class="ln add">     43 + await this.queue.schedule(rule.id, due)</p>
+          <p class="ln mu">     44   this.logger.debug(`scheduled ${rule.id}`)</p>
+          <p class="ln"> </p>
+          <p class="ln"><span class="gr">●</span> Bash(<span class="vi">pnpm --filter api test reminders</span>)</p>
+          <p class="ln mu">  ⎿  <span class="gr">23 passed</span> · 1.8s</p>
+          <p class="ln"> </p>
+          <p class="ln"><span class="gr">●</span> El recordatorio ahora se agenda al crear el evento y se marca</p>
+          <p class="ln">  como perdido si la ventana ya pasó. Sigo con el adaptador</p>
+          <p class="ln">  de notificaciones push.</p>
+          <p class="ln"> </p>
+          <p class="ln am">✻ Escribiendo NotificationAdapter… <span class="mu">(38s · ↓ 2.1k tokens)</span></p>
+        </div>
+        <div style="flex: none; margin: 0 12px 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025); padding: 9px 12px; display: flex; flex-direction: column; gap: 6px">
+          <p class="mono ln" style="color: #e6e9ef">› <span class="mu">Pide algo o escribe / para comandos</span></p>
+          <p class="ln" style="font-size: 11px; color: #8b919c">opus · aceptar ediciones · worktree feat/reminders</p>
+        </div>
+      </section>
+
+      <section style="grid-area: b; min-width: 0; min-height: 0; display: flex; flex-direction: column; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(224,175,104,0.35); overflow: hidden">
+        <header style="height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 11.5px; color: #9aa0ab; border-bottom: 1px solid rgba(255,255,255,0.05)">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #e0af68"></span>
+          <span style="color: #e6e9ef; font-weight: 600">claude</span>
+          <span>rizaria/web · sonnet</span>
+          <span style="flex: 1"></span>
+          <span style="color: #e0af68">te espera · 2m</span>
+          <span class="kbd">⌥2</span>
+        </header>
+        <div class="mono" style="flex: 1; min-height: 0; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 1px">
+          <p class="ln"><span class="gr">●</span> Write(<span class="bl">apps/web/app/onboarding/page.tsx</span>)</p>
+          <p class="ln mu">  ⎿  96 líneas</p>
+          <p class="ln"> </p>
+          <p class="ln am">● Quiero ejecutar un comando</p>
+          <p class="ln">  <span class="vi">pnpm db:migrate --name add_user_prefs</span></p>
+          <p class="ln"> </p>
+          <p class="ln">  ¿Permitir?</p>
+          <p class="ln" style="color: #e6e9ef">  › 1. Sí</p>
+          <p class="ln mu">    2. Sí, y no volver a preguntar aquí</p>
+          <p class="ln mu">    3. No, indicar otra cosa</p>
+        </div>
+      </section>
+
+      <section style="grid-area: c; min-width: 0; min-height: 0; display: flex; flex-direction: column; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.07); overflow: hidden; position: relative">
+        <header style="height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 11.5px; color: #9aa0ab; border-bottom: 1px solid rgba(255,255,255,0.05)">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #565c68"></span>
+          <span style="color: #e6e9ef; font-weight: 600">zsh</span>
+          <span>~/dev/xolken</span>
+          <span style="flex: 1"></span>
+          <span class="gr">main ✓</span>
+          <span class="kbd">⌥3</span>
+        </header>
+        <div class="mono" style="flex: 1; min-height: 0; overflow: hidden; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+          <div style="border-radius: 7px; padding: 6px 10px; background: rgba(255,255,255,0.02)">
+            <p class="ln"><span class="bl">$</span> git pull --rebase</p>
+            <p class="ln mu">Already up to date.</p>
+            <p class="ln" style="font-size: 10.5px; color: #8b919c; text-align: right">exit 0 · 0.4s</p>
+          </div>
+          <div style="border-radius: 7px; padding: 6px 10px; background: rgba(255,255,255,0.02); position: relative">
+            <p class="ln"><span class="bl">$</span> gh run view --log | grep artifact</p>
+            <p class="ln mu">preview → <span style="color: #7dcfff; text-decoration: underline">cdn.xolken.dev/shots/landing-v3.png</span></p>
+            <div style="position: absolute; left: 150px; top: 46px; width: 210px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(18,20,27,0.92); box-shadow: 0 18px 40px rgba(0,0,0,0.5); padding: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 3">
+              <div role="img" aria-label="Vista previa de la imagen enlazada" style="height: 104px; border-radius: 6px; background: #f4f1ff; padding: 10px; display: flex; flex-direction: column; gap: 6px">
+                <div style="width: 40%; height: 6px; border-radius: 3px; background: #2b2540"></div>
+                <div style="width: 80%; height: 14px; border-radius: 3px; background: #2b2540"></div>
+                <div style="width: 64%; height: 6px; border-radius: 3px; background: #9b93b8"></div>
+                <div style="width: 52px; height: 16px; border-radius: 4px; background: #6d4aff; margin-top: 4px"></div>
+              </div>
+              <p class="ln" style="font: 500 10.5px Inter, sans-serif; color: #aeb3bd">landing-v3.png · 1440×900 · espacio para abrir</p>
+            </div>
+          </div>
+          <div style="flex: 1"></div>
+          <div style="position: relative">
+            <div style="position: absolute; left: 0; bottom: 38px; width: 360px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(18,20,27,0.94); box-shadow: 0 18px 40px rgba(0,0,0,0.45); padding: 5px; display: flex; flex-direction: column; gap: 1px; font-size: 12px">
+              <div style="display: flex; gap: 10px; padding: 5px 8px; border-radius: 6px; background: {{glow}}"><span style="width: 92px; color: #e6e9ef">checkout</span><span class="mu" style="font-family: Inter, sans-serif">Cambiar de rama o restaurar</span></div>
+              <div style="display: flex; gap: 10px; padding: 5px 8px"><span style="width: 92px">cherry-pick</span><span class="mu" style="font-family: Inter, sans-serif">Aplicar commits existentes</span></div>
+              <div style="display: flex; gap: 10px; padding: 5px 8px"><span style="width: 92px">check-ignore</span><span class="mu" style="font-family: Inter, sans-serif">Depurar .gitignore</span></div>
+            </div>
+            <div style="border-radius: 8px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.03); padding: 7px 10px; display: flex; flex-direction: column; gap: 3px">
+              <p class="ln"><span class="bl">$</span> git ch<span style="color: #5f6672">eckout -b feat/agent-monitor</span><span style="display: inline-block; width: 7px; height: 14px; background: {{accent}}; vertical-align: -2px"></span></p>
+              <p class="ln" style="font: 400 10.5px Inter, sans-serif; color: #8b919c">Tab completar · → aceptar sugerencia · ⌃R historial</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer style="height: 28px; flex: none; display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 11px; color: #8b919c; border-top: 1px solid rgba(255,255,255,0.05)">
+      <span>solen · 3 paneles · {{layout}}</span>
+      <span style="flex: 1"></span>
+      <span>qwen3.5:9b · 6.1 GB</span>
+      <span>RAM 11.2 / 16 GB</span>
+      <span>GPU 38%</span>
+      <span style="color: #c3c7cf">hoy 1.24M tokens</span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#7aa2f7","options":["#7aa2f7","#bb9af7","#7dcfff","#e0af68"],"section":"Apariencia"},"glass":{"editor":"range","default":0.62,"min":0.3,"max":0.95,"step":0.05,"section":"Apariencia"},"blur":{"editor":"range","default":28,"min":0,"max":48,"step":2,"unit":"px","section":"Apariencia"},"layout":{"editor":"enum","default":"Dwindle","options":["Dwindle","Columnas","Maestro"],"section":"Tiling"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#7aa2f7';
+    const glass = this.props.glass ?? 0.62;
+    const blur = this.props.blur ?? 28;
+    const layout = this.props.layout ?? 'Dwindle';
+    const L = {
+      Dwindle: { cols: '1.35fr 1fr', rows: '1fr 1fr', areas: "'a b' 'a c'" },
+      Columnas: { cols: '1fr 1fr 1fr', rows: '1fr', areas: "'a b c'" },
+      Maestro: { cols: '1fr 1fr', rows: '1.15fr 1fr', areas: "'a a' 'b c'" }
+    }[layout] || { cols: '1.35fr 1fr', rows: '1fr 1fr', areas: "'a b' 'a c'" };
+    const hex = /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#7aa2f7';
+    return {
+      accent: hex,
+      ring: hex + '80',
+      glow: hex + '22',
+      winBg: 'rgba(13,15,21,' + glass + ')',
+      blurCss: 'blur(' + blur + 'px) saturate(150%)',
+      layout: layout.toLowerCase(),
+      cols: L.cols, rows: L.rows, areas: L.areas
+    };
+  }
+}
+</script>
+</body>
+</html>

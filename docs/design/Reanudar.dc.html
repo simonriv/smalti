@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Retomar sesiones</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#d7dae0}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8b919c;margin:0}
+.code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:#8b919c}
+.item{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:9px}
+.tag{font:500 10.5px Inter,sans-serif;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:#aeb3bd;background:rgba(255,255,255,0.04)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background-color: #0b0d12; background-image: radial-gradient(circle at 16% 20%, #284766 0, rgba(40,71,102,0) 38%), radial-gradient(circle at 84% 80%, #563663 0, rgba(86,54,99,0) 42%), radial-gradient(circle at 72% 12%, #1d5a55 0, rgba(29,90,85,0) 34%), radial-gradient(circle at 30% 92%, #5a4a2a 0, rgba(90,74,42,0) 30%)">
+  <div style="position: absolute; left: 56px; top: 40px; width: 1328px; height: 820px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 90px rgba(0,0,0,0.5); background: rgba(13,15,21,0.66); backdrop-filter: blur(28px) saturate(150%); -webkit-backdrop-filter: blur(28px) saturate(150%); display: grid; grid-template-columns: minmax(0, 1fr) 420px; overflow: hidden">
+
+    <div style="min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #e6e9ef">Retomar donde quedaste</h2>
+        <p style="margin: 0; font-size: 12.5px; color: #9aa0ab">Cerraste anoche a las 23:48. Los shells vuelven con su historial y salida; los agentes se relanzan con su propio comando de reanudación.</p>
+      </div>
+
+      <section style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.07); padding: 10px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 8px">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #9ece6a"></span>
+          <span style="font-weight: 600; color: #e6e9ef; font-size: 13px">solen</span>
+          <span style="font-size: 11.5px; color: #8b919c">Dwindle · 3 paneles</span>
+        </div>
+        <label for="r1" class="item" style="background: rgba(255,255,255,0.03)">
+          <input id="r1" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(217,119,87,0.16); color: #f0a98f">Claude Code</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px">Agendar recordatorios al crear eventos</span>
+          <span class="code">claude --resume 7f3a…</span>
+        </label>
+        <label for="r2" class="item">
+          <input id="r2" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(255,255,255,0.07); color: #c3c7cf">zsh</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px">~/dev/solen <span style="color: #8b919c">· 1.240 líneas · 38 comandos</span></span>
+          <span class="code">scrollback</span>
+        </label>
+        <label for="r3" class="item">
+          <input id="r3" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(255,255,255,0.07); color: #c3c7cf">nvim</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px">reminder.service.ts <span style="color: #8b919c">· línea 42</span></span>
+          <span class="code">nvim +42</span>
+        </label>
+      </section>
+
+      <section style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.07); padding: 10px; display: flex; flex-direction: column; gap: 2px">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 8px">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #e0af68"></span>
+          <span style="font-weight: 600; color: #e6e9ef; font-size: 13px">rizaria</span>
+          <span style="font-size: 11.5px; color: #8b919c">Columnas · 3 paneles</span>
+        </div>
+        <label for="r4" class="item" style="background: rgba(255,255,255,0.03)">
+          <input id="r4" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(158,206,106,0.14); color: #b9e08f">Codex</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px">Onboarding con preferencias de usuario</span>
+          <span class="code">codex resume 0198…</span>
+        </label>
+        <label for="r5" class="item">
+          <input id="r5" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(122,162,247,0.16); color: #a9c1fb">Antigravity</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px">Revisión de accesibilidad del landing</span>
+          <span class="code">agy --conversation c41e…</span>
+        </label>
+        <label for="r6" class="item">
+          <input id="r6" type="checkbox" style="width: 16px; height: 16px; accent-color: #7aa2f7">
+          <span class="tag" style="background: rgba(187,154,247,0.16); color: #d3b8ff">Gemini CLI</span>
+          <span style="flex: 1; min-width: 0; font-size: 13px; color: #9aa0ab">Exploración de esquema de pagos <span style="color: #8b919c">· terminada</span></span>
+          <span class="code">gemini --resume 3</span>
+        </label>
+      </section>
+
+      <div style="flex: 1"></div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <button type="button" style="height: 36px; padding: 0 16px; border-radius: 8px; border: none; background: #7aa2f7; color: #0d0f15; font: 600 13px Inter, sans-serif">Restaurar 5 paneles</button>
+        <button type="button" style="height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #d7dae0; font: 500 13px Inter, sans-serif">Solo layouts</button>
+        <button type="button" style="height: 36px; padding: 0 16px; border-radius: 8px; border: none; background: transparent; color: #9aa0ab; font: 500 13px Inter, sans-serif">Empezar limpio</button>
+        <span style="flex: 1"></span>
+        <span style="font-size: 11.5px; color: #8b919c">Siempre restaurar <span class="kbd">⌘,</span></span>
+      </div>
+    </div>
+
+    <aside style="border-left: 1px solid rgba(255,255,255,0.07); background: rgba(10,11,16,0.55); padding: 24px 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <p class="lbl">Todas las sesiones de agentes</p>
+        <p style="margin: 0; font-size: 11.5px; color: #8b919c">Leídas del disco de cada harness, aunque no las abrieras aquí.</p>
+      </div>
+      <label for="q" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.03)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+        <input id="q" type="text" placeholder="Buscar por tema, proyecto o archivo" aria-label="Buscar sesiones" style="flex: 1; background: transparent; border: none; outline: none; color: #e6e9ef; font: 400 12.5px Inter, sans-serif">
+      </label>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap">
+        <span class="tag" style="background: rgba(122,162,247,0.18); color: #e6e9ef">Todas</span>
+        <span class="tag" style="background: rgba(255,255,255,0.05); color: #aeb3bd">Claude Code</span>
+        <span class="tag" style="background: rgba(255,255,255,0.05); color: #aeb3bd">Codex</span>
+        <span class="tag" style="background: rgba(255,255,255,0.05); color: #aeb3bd">Antigravity</span>
+        <span class="tag" style="background: rgba(255,255,255,0.05); color: #aeb3bd">OpenCode</span>
+        <span class="tag" style="background: rgba(255,255,255,0.05); color: #aeb3bd">Gemini</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="padding: 10px 12px; border-radius: 9px; background: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span style="color: #e6e9ef">Migración de Supabase a RLS</span><span style="color: #8b919c">ayer</span></div>
+          <span style="font-size: 11.5px; color: #8b919c">Claude Code · billi/api · 212k tokens</span>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 9px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span>Spec del hito 3 de termotty</span><span style="color: #8b919c">jue</span></div>
+          <span style="font-size: 11.5px; color: #8b919c">OpenCode · qwen3.5:9b · termotty</span>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 9px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span>Componentes de la landing</span><span style="color: #8b919c">mié</span></div>
+          <span style="font-size: 11.5px; color: #8b919c">Antigravity · rizaria/web</span>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 9px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span>Endpoint de calendario compartido</span><span style="color: #8b919c">lun</span></div>
+          <span style="font-size: 11.5px; color: #8b919c">Codex · solen/api</span>
+        </div>
+      </div>
+      <div style="flex: 1"></div>
+      <p style="margin: 0; font-size: 11.5px; color: #8b919c; line-height: 1.5">Enter abre la sesión en un panel nuevo con el comando correcto del harness. ⌘Enter la bifurca cuando el harness lo permite.</p>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

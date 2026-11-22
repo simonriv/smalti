@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Apariencia y temas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#d7dae0}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8b919c;margin:0}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;line-height:1.62}
+.ln{white-space:pre;margin:0}
+.sw{width:22px;height:22px;border-radius:6px}
+input[type=range]{width:100%;accent-color:#7aa2f7}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background-color: #0b0d12; background-image: radial-gradient(circle at 16% 20%, #284766 0, rgba(40,71,102,0) 38%), radial-gradient(circle at 84% 80%, #563663 0, rgba(86,54,99,0) 42%), radial-gradient(circle at 72% 12%, #1d5a55 0, rgba(29,90,85,0) 34%), radial-gradient(circle at 30% 92%, #5a4a2a 0, rgba(90,74,42,0) 30%)">
+  <div style="position: absolute; left: 56px; top: 40px; width: 1328px; height: 820px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 90px rgba(0,0,0,0.5); background: rgba(13,15,21,0.62); backdrop-filter: blur(28px) saturate(150%); -webkit-backdrop-filter: blur(28px) saturate(150%); display: flex; overflow: hidden">
+
+    <div style="flex: 1; min-width: 0; padding: 50px 24px 24px; display: flex; flex-direction: column">
+      <div style="flex: 1; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(122,162,247,0.5); box-shadow: 0 0 28px rgba(122,162,247,0.13); padding: 18px 20px" class="mono">
+        <p class="ln"><span style="color: #7aa2f7">~/dev/solen</span> <span style="color: #9ece6a">main</span> <span style="color: #8b919c">via node 22</span></p>
+        <p class="ln"><span style="color: #7aa2f7">$</span> ls apps</p>
+        <p class="ln"><span style="color: #7dcfff">api</span>  <span style="color: #7dcfff">mobile</span>  <span style="color: #7dcfff">web</span>  <span style="color: #c3c7cf">README.md</span></p>
+        <p class="ln"><span style="color: #7aa2f7">$</span> pnpm test</p>
+        <p class="ln"><span style="color: #9ece6a">✓</span> reminders (23)  <span style="color: #9ece6a">✓</span> calendar (41)  <span style="color: #f7768e">✗</span> sync (1)</p>
+        <p class="ln"><span style="color: #e0af68">warn</span> 2 tests lentos &gt; 500ms</p>
+        <p class="ln"> </p>
+        <p class="ln"><span style="color: #bb9af7">const</span> due = event.startsAt.<span style="color: #7aa2f7">minus</span>(rule.offset)</p>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 11.5px; color: #8b919c">Vista en vivo: los cambios del panel se aplican a todos los paneles abiertos.</p>
+    </div>
+
+    <aside style="width: 440px; flex: none; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(10,11,16,0.55); padding: 22px 24px; display: flex; flex-direction: column; gap: 22px; overflow: hidden">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600; color: #e6e9ef">Apariencia</h2>
+        <span style="font-size: 11.5px; color: #8b919c">se guarda en ~/.config/…/theme.toml</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <p class="lbl">Tema</p>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <button type="button" style="border-radius: 10px; border: 1.5px solid #7aa2f7; background: rgba(122,162,247,0.08); padding: 8px; display: flex; flex-direction: column; gap: 7px; text-align: left; color: #e6e9ef; font: 500 12.5px Inter, sans-serif">
+            <span style="height: 54px; border-radius: 6px; background: #12141b; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-sizing: border-box"><span style="width: 60%; height: 4px; border-radius: 2px; background: #7aa2f7"></span><span style="width: 80%; height: 4px; border-radius: 2px; background: #c3c7cf"></span><span style="width: 45%; height: 4px; border-radius: 2px; background: #9ece6a"></span></span>
+            Obsidiana
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 8px; display: flex; flex-direction: column; gap: 7px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span style="height: 54px; border-radius: 6px; background: #eef0f4; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-sizing: border-box"><span style="width: 60%; height: 4px; border-radius: 2px; background: #3b5bdb"></span><span style="width: 80%; height: 4px; border-radius: 2px; background: #2a2e36"></span><span style="width: 45%; height: 4px; border-radius: 2px; background: #2f9e44"></span></span>
+            Niebla <span style="color: #8b919c; font-weight: 400">· claro</span>
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 8px; display: flex; flex-direction: column; gap: 7px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span style="height: 54px; border-radius: 6px; background: #1a1410; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-sizing: border-box"><span style="width: 60%; height: 4px; border-radius: 2px; background: #e0af68"></span><span style="width: 80%; height: 4px; border-radius: 2px; background: #e8dccb"></span><span style="width: 45%; height: 4px; border-radius: 2px; background: #b5c97a"></span></span>
+            Ámbar nocturno
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 8px; display: flex; flex-direction: column; gap: 7px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span style="height: 54px; border-radius: 6px; background: #0f1714; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-sizing: border-box"><span style="width: 60%; height: 4px; border-radius: 2px; background: #6fd3b5"></span><span style="width: 80%; height: 4px; border-radius: 2px; background: #cfe0d8"></span><span style="width: 45%; height: 4px; border-radius: 2px; background: #a6d86b"></span></span>
+            Bosque
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <p class="lbl">Vidrio</p>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><label for="op">Opacidad del fondo</label><span style="color: #8b919c">62%</span></div>
+          <input id="op" type="range" min="30" max="95" value="62">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px"><label for="bl">Desenfoque</label><span style="color: #8b919c">28 px</span></div>
+          <input id="bl" type="range" min="0" max="48" value="28">
+        </div>
+        <label for="aa" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px">
+          <span>Proteger legibilidad <span style="display: block; font-size: 11.5px; color: #8b919c; margin-top: 2px">Sube la opacidad bajo el texto si el contraste cae de 4.5:1</span></span>
+          <input id="aa" type="checkbox" checked style="width: 18px; height: 18px; accent-color: #7aa2f7">
+        </label>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <p class="lbl">Paleta ANSI</p>
+        <div style="display: grid; grid-template-columns: repeat(8, 22px); gap: 8px">
+          <span class="sw" style="background: #15161e"></span><span class="sw" style="background: #f7768e"></span><span class="sw" style="background: #9ece6a"></span><span class="sw" style="background: #e0af68"></span><span class="sw" style="background: #7aa2f7"></span><span class="sw" style="background: #bb9af7"></span><span class="sw" style="background: #7dcfff"></span><span class="sw" style="background: #a9b1d6"></span>
+          <span class="sw" style="background: #414868"></span><span class="sw" style="background: #ff99ad"></span><span class="sw" style="background: #b9f27c"></span><span class="sw" style="background: #ffc777"></span><span class="sw" style="background: #a3bdfa"></span><span class="sw" style="background: #d3b8ff"></span><span class="sw" style="background: #a4e3ff"></span><span class="sw" style="background: #c0caf5"></span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <p class="lbl">Botones de ventana</p>
+        <div role="radiogroup" aria-label="Botones de ventana" style="display: flex; padding: 3px; border-radius: 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06)">
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: rgba(122,162,247,0.18); color: #e6e9ef; font: 500 12px Inter, sans-serif">Ocultos</button>
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Al pasar el cursor</button>
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Visibles</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 12.5px">
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Fuente</span><span>JetBrains Mono 13</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Espacio</span><span>8 px</span></div>
+        <div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Radio</span><span>11 px</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

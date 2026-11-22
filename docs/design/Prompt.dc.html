@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Estudio de prompt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#d7dae0}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8b919c;margin:0}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13.5px;line-height:1.7}
+.row{display:flex;align-items:center;gap:6px;margin:0;white-space:pre}
+.seg{display:inline-flex;align-items:center;gap:5px}
+.mod{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;border-radius:8px;font-size:12.5px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background-color: #0b0d12; background-image: radial-gradient(circle at 16% 20%, #284766 0, rgba(40,71,102,0) 38%), radial-gradient(circle at 84% 80%, #563663 0, rgba(86,54,99,0) 42%), radial-gradient(circle at 72% 12%, #1d5a55 0, rgba(29,90,85,0) 34%), radial-gradient(circle at 30% 92%, #5a4a2a 0, rgba(90,74,42,0) 30%)">
+  <div style="position: absolute; left: 56px; top: 40px; width: 1328px; height: 820px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 90px rgba(0,0,0,0.5); background: rgba(13,15,21,0.66); backdrop-filter: blur(28px) saturate(150%); -webkit-backdrop-filter: blur(28px) saturate(150%); display: flex; overflow: hidden">
+
+    <div style="flex: 1; min-width: 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600; color: #e6e9ef">Prompt</h2>
+        <span style="font-size: 11.5px; color: #8b919c">vista previa en tres situaciones reales</span>
+      </div>
+
+      <div style="border-radius: 11px; background: rgba(6,7,10,0.38); border: 1px solid rgba(255,255,255,0.07); padding: 18px 20px; display: flex; flex-direction: column; gap: 16px" class="mono">
+        <div>
+          <p class="lbl" style="font-family: Inter, sans-serif; margin-bottom: 6px">Carpeta normal</p>
+          <p class="row"><span class="seg" style="color: #7aa2f7"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"></path></svg>~/Downloads</span></p>
+          <p class="row"><span style="color: {{accent}}">›</span> <span style="display: inline-block; width: 8px; height: 16px; background: {{accent}}; vertical-align: -3px"></span></p>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.05)"></div>
+        <div>
+          <p class="lbl" style="font-family: Inter, sans-serif; margin-bottom: 6px">Proyecto Node con git</p>
+          <p class="row"><span class="seg" style="color: #7aa2f7"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"></path></svg>solen/apps/api</span>   <span class="seg" style="color: #bb9af7"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.5"></circle><circle cx="4.5" cy="12.5" r="1.5"></circle><circle cx="11.5" cy="6" r="1.5"></circle><path d="M4.5 5v6M11.5 7.5c0 2.5-7 1.5-7 3.5"></path></svg>feat/reminders</span> <span style="color: #e0af68">●2</span> <span style="color: #9ece6a">+1</span>   <span class="seg" style="color: #8b919c"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"></path></svg>22.11</span></p>
+          <p class="row"><span style="color: {{accent}}">›</span> pnpm dev</p>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.05)"></div>
+        <div>
+          <p class="lbl" style="font-family: Inter, sans-serif; margin-bottom: 6px">Después de un error, con agente activo</p>
+          <p class="row"><span class="seg" style="color: #7aa2f7"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"></path></svg>rizaria/web</span>   <span class="seg" style="color: #bb9af7"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.5"></circle><circle cx="4.5" cy="12.5" r="1.5"></circle><circle cx="11.5" cy="6" r="1.5"></circle><path d="M4.5 5v6M11.5 7.5c0 2.5-7 1.5-7 3.5"></path></svg>main</span>   <span style="color: #8b919c">4.2s</span>   <span class="seg" style="color: #e0af68"><span style="width: 6px; height: 6px; border-radius: 50%; background: #e0af68"></span>claude te espera</span></p>
+          <p class="row"><span style="color: #f7768e">›</span> <span style="color: #8b919c">exit 1</span></p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <p class="lbl">Plantillas</p>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <button type="button" style="border-radius: 10px; border: 1.5px solid {{accent}}; background: {{glow}}; padding: 12px; display: flex; flex-direction: column; gap: 10px; text-align: left; color: #e6e9ef; font: 500 12.5px Inter, sans-serif">
+            <span class="mono" style="font-size: 11.5px; line-height: 1.5; color: #c3c7cf; white-space: pre">solen  main  22.11<br><span style="color: {{accent}}">›</span></span>
+            Línea limpia
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 12px; display: flex; flex-direction: column; gap: 10px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span class="mono" style="font-size: 11.5px; line-height: 1.5; color: #c3c7cf; white-space: pre"><span style="color: {{accent}}">solen</span> › </span>
+            Una sola línea
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 12px; display: flex; flex-direction: column; gap: 10px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span style="display: flex; gap: 5px; flex-wrap: wrap"><span style="font: 500 10.5px Inter, sans-serif; padding: 2px 7px; border-radius: 99px; background: rgba(122,162,247,0.16); color: #a9c1fb">solen</span><span style="font: 500 10.5px Inter, sans-serif; padding: 2px 7px; border-radius: 99px; background: rgba(187,154,247,0.16); color: #d3b8ff">main</span></span>
+            Píldoras
+          </button>
+          <button type="button" style="border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; padding: 12px; display: flex; flex-direction: column; gap: 10px; text-align: left; color: #c3c7cf; font: 500 12.5px Inter, sans-serif">
+            <span class="mono" style="font-size: 11.5px; line-height: 1.5; color: {{accent}}">›</span>
+            Solo símbolo <span style="color: #8b919c; font-weight: 400">· contexto en la cabecera</span>
+          </button>
+        </div>
+      </div>
+      <div style="flex: 1"></div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <button type="button" style="height: 34px; padding: 0 14px; border-radius: 8px; border: none; background: {{accent}}; color: #0d0f15; font: 600 12.5px Inter, sans-serif">Aplicar a todos los paneles</button>
+        <button type="button" style="height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: #d7dae0; font: 500 12.5px Inter, sans-serif">Exportar como starship.toml</button>
+        <span style="font-size: 11.5px; color: #8b919c">para usar el mismo prompt por SSH o en otra terminal</span>
+      </div>
+    </div>
+
+    <aside style="width: 400px; flex: none; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(10,11,16,0.55); padding: 22px 20px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <p class="lbl">Módulos</p>
+        <p style="margin: 0; font-size: 11.5px; color: #8b919c">Arrastra para ordenar. Cada uno aparece solo cuando aplica.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <label for="m1" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Directorio <span style="color: #8b919c">· últimos 2 niveles</span></span><input id="m1" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m2" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Rama git</span><input id="m2" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m3" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Cambios git <span style="color: #8b919c">· ●2 +1</span></span><input id="m3" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m4" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Runtime <span style="color: #8b919c">· Node, Bun, Python, Go</span></span><input id="m4" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m5" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Duración <span style="color: #8b919c">· si pasa de 2 s</span></span><input id="m5" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m6" class="mod" style="background: rgba(255,255,255,0.03)"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1">Estado del agente del panel</span><input id="m6" type="checkbox" checked style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m7" class="mod"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1; color: #9aa0ab">Hora</span><input id="m7" type="checkbox" style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+        <label for="m8" class="mod"><span style="color: #6b717c">⋮⋮</span><span style="flex: 1; color: #9aa0ab">Contexto de Kubernetes / AWS</span><input id="m8" type="checkbox" style="width: 16px; height: 16px; accent-color: #7aa2f7"></label>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <p class="lbl">Iconos</p>
+        <div role="radiogroup" aria-label="Estilo de iconos" style="display: flex; padding: 3px; border-radius: 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06)">
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: rgba(122,162,247,0.18); color: #e6e9ef; font: 500 12px Inter, sans-serif">Trazo fino</button>
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Nerd Font</button>
+          <button type="button" style="flex: 1; height: 30px; border-radius: 7px; border: none; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Sin iconos</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 12.5px">
+        <div style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">Símbolo</span><span class="mono" style="font-size: 13px">›  ❯  λ  $</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">Disposición</span><span>Contexto arriba, input abajo</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#7aa2f7","options":["#7aa2f7","#bb9af7","#7dcfff","#e0af68"],"section":"Apariencia"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.accent ?? '#7aa2f7';
+    const hex = /^#[0-9a-fA-F]{6}$/.test(a) ? a : '#7aa2f7';
+    return { accent: hex, glow: hex + '1f' };
+  }
+}
+</script>
+</body>
+</html>

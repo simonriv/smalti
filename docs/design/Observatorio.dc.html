@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Observatorio de agentes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#d7dae0}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8b919c;margin:0}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:#aeb3bd;background:rgba(255,255,255,0.04)}
+.cell{padding:0 10px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; background-color: #0b0d12; background-image: radial-gradient(circle at 16% 20%, #284766 0, rgba(40,71,102,0) 38%), radial-gradient(circle at 84% 80%, #563663 0, rgba(86,54,99,0) 42%), radial-gradient(circle at 72% 12%, #1d5a55 0, rgba(29,90,85,0) 34%), radial-gradient(circle at 30% 92%, #5a4a2a 0, rgba(90,74,42,0) 30%)">
+  <div style="position: absolute; left: 56px; top: 40px; width: 1328px; height: 820px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 30px 90px rgba(0,0,0,0.5); background: rgba(13,15,21,0.72); backdrop-filter: blur(28px) saturate(150%); -webkit-backdrop-filter: blur(28px) saturate(150%); display: flex; flex-direction: column; overflow: hidden">
+
+    <div style="height: 40px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px 0 18px; border-bottom: 1px solid rgba(255,255,255,0.05)">
+      <span style="font-weight: 600; font-size: 13px; color: #e6e9ef">Observatorio</span>
+      <span style="font-size: 12px; color: #8b919c">agentes y modelos en esta máquina</span>
+      <span style="flex: 1"></span>
+      <button type="button" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid {{ring}}; background: {{glow}}; color: #e6e9ef; font: 500 12px Inter, sans-serif">Todas</button>
+      <button type="button" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Claude Code</button>
+      <button type="button" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">OpenCode</button>
+      <button type="button" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: #9aa0ab; font: 500 12px Inter, sans-serif">Locales</button>
+      <span style="width: 1px; height: 18px; background: rgba(255,255,255,0.08)"></span>
+      <button type="button" style="height: 26px; padding: 0 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #c3c7cf; font: 500 12px Inter, sans-serif">Hoy</button>
+      <span class="kbd">esc</span>
+    </div>
+
+    <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; padding: 14px">
+
+      <div style="min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+            <p class="lbl">Sesiones activas</p>
+            <p class="num" style="margin: 0; font-size: 26px; color: #e6e9ef">3</p>
+            <p style="margin: 0; font-size: 11.5px; color: #8b919c"><span style="color: #9ece6a">2 trabajando</span> · <span style="color: #e0af68">1 esperando</span></p>
+          </div>
+          <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+            <p class="lbl">Tokens entrada</p>
+            <p class="num" style="margin: 0; font-size: 26px; color: #e6e9ef">982k</p>
+            <p style="margin: 0; font-size: 11.5px; color: #8b919c">71% desde caché</p>
+          </div>
+          <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+            <p class="lbl">Tokens salida</p>
+            <p class="num" style="margin: 0; font-size: 26px; color: #e6e9ef">61.4k</p>
+            <p style="margin: 0; font-size: 11.5px; color: #8b919c">pico 4.8k/min · 10:42</p>
+          </div>
+          <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+            <p class="lbl">Equivalente API</p>
+            <p class="num" style="margin: 0; font-size: 26px; color: #e6e9ef">$18.40</p>
+            <p style="margin: 0; font-size: 11.5px; color: #8b919c">estimado · incluido en tu plan</p>
+          </div>
+        </div>
+
+        <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); overflow: hidden; display: flex; flex-direction: column">
+          <div style="height: 34px; display: grid; grid-template-columns: 112px minmax(0,1.3fr) minmax(0,1.3fr) 76px 76px 70px 118px 56px 66px; align-items: center; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #8b919c; border-bottom: 1px solid rgba(255,255,255,0.06)">
+            <span class="cell">Estado</span><span class="cell">Sesión</span><span class="cell">Agente · modelo</span><span class="cell">Vida</span><span class="cell">Entrada</span><span class="cell">Salida</span><span class="cell">Contexto</span><span class="cell">Err</span><span class="cell">PID</span>
+          </div>
+          <div style="height: 44px; display: grid; grid-template-columns: 112px minmax(0,1.3fr) minmax(0,1.3fr) 76px 76px 70px 118px 56px 66px; align-items: center; font-size: 12.5px; background: {{glow}}; box-shadow: inset 2px 0 0 {{accent}}">
+            <span class="cell" style="display: flex; align-items: center; gap: 7px; color: #9ece6a"><span style="width: 7px; height: 7px; border-radius: 50%; background: #9ece6a"></span>trabajando</span>
+            <span class="cell" style="color: #e6e9ef">solen/api</span>
+            <span class="cell" style="color: #aeb3bd">Claude Code · opus</span>
+            <span class="cell num">1h 12m</span>
+            <span class="cell num">412k</span>
+            <span class="cell num">28.1k</span>
+            <span class="cell" style="display: flex; align-items: center; gap: 8px"><span style="width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; width: 41%; height: 100%; background: {{accent}}"></span></span><span class="num">41%</span></span>
+            <span class="cell num">2%</span>
+            <span class="cell num" style="color: #8b919c">48213</span>
+          </div>
+          <div style="height: 44px; display: grid; grid-template-columns: 112px minmax(0,1.3fr) minmax(0,1.3fr) 76px 76px 70px 118px 56px 66px; align-items: center; font-size: 12.5px; border-top: 1px solid rgba(255,255,255,0.04)">
+            <span class="cell" style="display: flex; align-items: center; gap: 7px; color: #e0af68"><span style="width: 7px; height: 7px; border-radius: 50%; background: #e0af68"></span>te espera</span>
+            <span class="cell" style="color: #e6e9ef">rizaria/web</span>
+            <span class="cell" style="color: #aeb3bd">Claude Code · sonnet</span>
+            <span class="cell num">34m</span>
+            <span class="cell num">190k</span>
+            <span class="cell num">11.9k</span>
+            <span class="cell" style="display: flex; align-items: center; gap: 8px"><span style="width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; width: 63%; height: 100%; background: {{accent}}"></span></span><span class="num">63%</span></span>
+            <span class="cell num">0%</span>
+            <span class="cell num" style="color: #8b919c">48877</span>
+          </div>
+          <div style="height: 44px; display: grid; grid-template-columns: 112px minmax(0,1.3fr) minmax(0,1.3fr) 76px 76px 70px 118px 56px 66px; align-items: center; font-size: 12.5px; border-top: 1px solid rgba(255,255,255,0.04)">
+            <span class="cell" style="display: flex; align-items: center; gap: 7px; color: #9ece6a"><span style="width: 7px; height: 7px; border-radius: 50%; background: #9ece6a"></span>trabajando</span>
+            <span class="cell" style="color: #e6e9ef">termotty</span>
+            <span class="cell" style="color: #aeb3bd">OpenCode · qwen3.5:9b local</span>
+            <span class="cell num">2h 05m</span>
+            <span class="cell num">380k</span>
+            <span class="cell num">21.4k</span>
+            <span class="cell" style="display: flex; align-items: center; gap: 8px"><span style="width: 56px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden"><span style="display: block; width: 78%; height: 100%; background: #e0af68"></span></span><span class="num" style="color: #e0af68">78%</span></span>
+            <span class="cell num" style="color: #f7768e">9%</span>
+            <span class="cell num" style="color: #8b919c">50112</span>
+          </div>
+          <div style="height: 44px; display: grid; grid-template-columns: 112px minmax(0,1.3fr) minmax(0,1.3fr) 76px 76px 70px 118px 56px 66px; align-items: center; font-size: 12.5px; border-top: 1px solid rgba(255,255,255,0.04); color: #8b919c">
+            <span class="cell" style="display: flex; align-items: center; gap: 7px"><span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #6b717c; box-sizing: border-box"></span>detenida</span>
+            <span class="cell">xolken/site</span>
+            <span class="cell">Claude Code · haiku</span>
+            <span class="cell num">hace 3h</span>
+            <span class="cell num">64k</span>
+            <span class="cell num">3.2k</span>
+            <span class="cell">—</span>
+            <span class="cell num">0%</span>
+            <span class="cell">—</span>
+          </div>
+        </div>
+
+        <div style="flex: 1; min-height: 0; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px">
+          <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+            <p class="lbl">Actividad · solen/api</p>
+            <div class="num" style="display: flex; flex-direction: column; gap: 6px; font-size: 12px">
+              <div style="display: flex; gap: 10px"><span style="width: 52px; color: #8b919c">10:58</span><span style="width: 64px; color: #7aa2f7">Bash</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">pnpm --filter api test reminders</span><span style="color: #9ece6a">1.8s</span></div>
+              <div style="display: flex; gap: 10px"><span style="width: 52px; color: #8b919c">10:57</span><span style="width: 64px; color: #7aa2f7">Update</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">reminder.service.ts +18 −4</span><span style="color: #9ece6a">ok</span></div>
+              <div style="display: flex; gap: 10px"><span style="width: 52px; color: #8b919c">10:56</span><span style="width: 64px; color: #7aa2f7">Read</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">reminder.service.ts</span><span style="color: #9ece6a">ok</span></div>
+              <div style="display: flex; gap: 10px"><span style="width: 52px; color: #8b919c">10:51</span><span style="width: 64px; color: #7aa2f7">Bash</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">pnpm lint --fix</span><span style="color: #f7768e">exit 1</span></div>
+              <div style="display: flex; gap: 10px"><span style="width: 52px; color: #8b919c">10:49</span><span style="width: 64px; color: #7aa2f7">Grep</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">"scheduleReminder" en src/</span><span style="color: #9ece6a">ok</span></div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+            <p class="lbl">Tokens por minuto · última hora</p>
+            <svg viewBox="0 0 300 110" width="100%" height="110" role="img" aria-label="Tokens por minuto de la sesión solen/api en la última hora, con pico a las 10:42">
+              <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,0.08)"></line>
+              <line x1="0" y1="55" x2="300" y2="55" stroke="rgba(255,255,255,0.05)"></line>
+              <polygon points="0,92 25,88 50,80 75,84 100,62 125,40 150,22 175,48 200,70 225,58 250,66 275,52 300,44 300,100 0,100" fill="{{glow}}"></polygon>
+              <polyline points="0,92 25,88 50,80 75,84 100,62 125,40 150,22 175,48 200,70 225,58 250,66 275,52 300,44" fill="none" stroke="{{accent}}" stroke-width="1.6"></polyline>
+              <circle cx="150" cy="22" r="3" fill="{{accent}}"></circle>
+              <text x="156" y="18" fill="#aeb3bd" font-size="10" font-family="Inter, sans-serif">4.8k · 10:42</text>
+            </svg>
+            <p style="margin: 0; font-size: 11.5px; color: #8b919c">Compactación hace 22 min · liberó 38% del contexto</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+          <p class="lbl">Modelos locales · Ollama</p>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #e6e9ef">qwen3.5:9b</span><span style="color: #9ece6a; font-size: 11.5px">cargado</span></div>
+            <p class="num" style="margin: 0; font-size: 11.5px; color: #8b919c">Q4_K_M · 6.1 GB · ctx 64K · 22 tok/s</p>
+          </div>
+          <div style="height: 1px; background: rgba(255,255,255,0.05)"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #aeb3bd">nomic-embed-text</span><span style="color: #8b919c; font-size: 11.5px">en disco</span></div>
+            <p class="num" style="margin: 0; font-size: 11.5px; color: #8b919c">274 MB · última vez hace 2 días</p>
+          </div>
+        </div>
+
+        <div style="flex: 1; border-radius: 11px; background: rgba(6,7,10,0.34); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; display: flex; flex-direction: column; gap: 14px">
+          <p class="lbl">Sistema · MacBook Air M4</p>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 12px"><span>CPU</span><span class="num">31%</span></div>
+            <svg viewBox="0 0 300 34" width="100%" height="34" aria-hidden="true"><polyline points="0,26 30,24 60,20 90,22 120,14 150,18 180,10 210,16 240,20 270,18 300,21" fill="none" stroke="#7dcfff" stroke-width="1.4"></polyline></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 12px"><span>GPU</span><span class="num">38%</span></div>
+            <svg viewBox="0 0 300 34" width="100%" height="34" aria-hidden="true"><polyline points="0,30 30,28 60,12 90,8 120,10 150,22 180,26 210,14 240,9 270,16 300,19" fill="none" stroke="#bb9af7" stroke-width="1.4"></polyline></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-size: 12px"><span>Memoria unificada</span><span class="num">11.2 / 16 GB</span></div>
+            <div style="height: 8px; border-radius: 4px; background: rgba(255,255,255,0.07); display: flex; overflow: hidden">
+              <span style="width: 38%; background: #bb9af7"></span>
+              <span style="width: 22%; background: #7aa2f7"></span>
+              <span style="width: 10%; background: #6b717c"></span>
+            </div>
+            <p style="margin: 0; font-size: 11px; color: #8b919c">modelo 6.1 · agentes 3.5 · resto 1.6 GB · presión media</p>
+          </div>
+          <div style="flex: 1"></div>
+          <p style="margin: 0; font-size: 11px; color: #8b919c; line-height: 1.5">Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#7aa2f7","options":["#7aa2f7","#bb9af7","#7dcfff","#e0af68"],"section":"Apariencia"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.accent ?? '#7aa2f7';
+    const hex = /^#[0-9a-fA-F]{6}$/.test(a) ? a : '#7aa2f7';
+    return { accent: hex, ring: hex + '80', glow: hex + '22' };
+  }
+}
+</script>
+</body>
+</html>

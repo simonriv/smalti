@@ -1,0 +1,11 @@
+.DS_Store
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+# SwiftPM
+.build/
+.swiftpm/
+# libghostty build output (rebuilt from the pinned submodule by scripts/build-ghostty.sh)
+Frameworks/GhosttyKit.xcframework/
