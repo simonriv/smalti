@@ -41,15 +41,11 @@ public enum GhosttyConfigText {
         return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"
     }
 
-    /// Defense in depth behind the config's own validation: a name that could close the quote or start a new line
-    /// is dropped, not escaped, and libghostty keeps its default font.
+    /// Defense in depth behind the config's own validation: an invalid name (one that could close the quote or start
+    /// a new line) is dropped, not escaped, and libghostty keeps its default font.
     private static func fontFamily(_ name: String) -> [String] {
-        guard !name.unicodeScalars.contains(where: isUnsafeInQuotedValue) else { return [] }
+        guard AppearanceSettings.isValidFontFamily(name) else { return [] }
         return ["font-family = \"\(name)\""]
-    }
-
-    private static func isUnsafeInQuotedValue(_ scalar: Unicode.Scalar) -> Bool {
-        scalar == "\"" || scalar == "\\" || scalar.properties.generalCategory == .control
     }
 
     private static func hex(_ color: RGBAColor) -> String {

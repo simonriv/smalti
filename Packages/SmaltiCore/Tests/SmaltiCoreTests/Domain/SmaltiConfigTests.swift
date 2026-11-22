@@ -68,4 +68,23 @@ struct SmaltiConfigTests {
                 == "config.toml · ilegible")
         #expect(ConfigError(file: "", line: nil, key: "⌥C", reason: "reservado").summary == "⌥C: reservado")
     }
+
+    @Test(arguments: [
+        "JetBrains Mono", "a", String(repeating: "a", count: AppearanceSettings.maximumFontFamilyLength), "Fira Código",
+    ])
+    func fontFamilyIsValid(_ name: String) {
+        #expect(AppearanceSettings.isValidFontFamily(name))
+    }
+
+    @Test(arguments: [
+        "", String(repeating: "a", count: AppearanceSettings.maximumFontFamilyLength + 1), "Jet\"Brains",
+        "Jet\\Brains", "Jet\nBrains", "Jet\rBrains", "Jet\tBrains", "Jet\u{7}Brains", "Jet\u{7F}Brains",
+    ])
+    func fontFamilyIsInvalid(_ name: String) {
+        #expect(!AppearanceSettings.isValidFontFamily(name))
+    }
+
+    @Test func maximumFontFamilyLengthIsOneHundred() {
+        #expect(AppearanceSettings.maximumFontFamilyLength == 100)
+    }
 }

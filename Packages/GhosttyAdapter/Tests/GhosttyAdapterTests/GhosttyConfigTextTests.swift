@@ -52,7 +52,7 @@ struct GhosttyConfigTextTests {
         #expect(lines.filter { $0 == "keybind = clear" }.count == 1)
     }
 
-    @Test(arguments: ["X\"Y", "X\\Y", "X\nY", "X\rY", "X\u{7}Y"])
+    @Test(arguments: ["X\"Y", "X\\Y", "X\nY", "X\rY", "X\u{7}Y", String(repeating: "a", count: 101)])
     func unsafeFontFamilyLeavesTheEngineDefault(_ family: String) {
         var settings = AppearanceSettings.obsidian
         settings.fontFamily = family

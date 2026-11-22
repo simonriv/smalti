@@ -54,7 +54,6 @@ private enum AppearanceReader {
     private static let radius = Bounds(0...32, "0 y 32")
     private static let accentReason = "se esperaba un color #rrggbb"
     private static let fontFamilyKey = "font_family"
-    private static let fontFamilyMaximumLength = 100
     private static let fontFamilyReason =
         "se esperaba un nombre de 1 a 100 caracteres sin comillas, \\ ni caracteres de control"
 
@@ -89,13 +88,10 @@ private enum AppearanceReader {
     /// quote or start a new line is refused here, at the boundary.
     private static func fontFamily(in section: TOMLSection) throws(ConfigError) -> String? {
         guard let text = try section.text(fontFamilyKey) else { return nil }
-        guard (1...fontFamilyMaximumLength).contains(text.count), !text.unicodeScalars.contains(where: isUnsafe)
-        else { throw section.error(at: fontFamilyKey, fontFamilyReason) }
+        guard AppearanceSettings.isValidFontFamily(text) else {
+            throw section.error(at: fontFamilyKey, fontFamilyReason)
+        }
         return text
-    }
-
-    private static func isUnsafe(_ scalar: Unicode.Scalar) -> Bool {
-        scalar == "\"" || scalar == "\\" || scalar.properties.generalCategory == .control
     }
 
     private static func number(_ key: String, in section: TOMLSection, _ bounds: Bounds) throws(ConfigError)

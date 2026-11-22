@@ -21,6 +21,19 @@ public struct AppearanceSettings: Equatable, Sendable {
         self.radius = radius
     }
 
+    public static let maximumFontFamilyLength = 100
+
+    /// A font name that fits in one quoted line of a config file: 1 to `maximumFontFamilyLength` characters, with no
+    /// quote, backslash or control character that could close the quote or start a new line.
+    public static func isValidFontFamily(_ name: String) -> Bool {
+        (1...maximumFontFamilyLength).contains(name.count)
+            && !name.unicodeScalars.contains(where: isForbiddenInFontFamily)
+    }
+
+    private static func isForbiddenInFontFamily(_ scalar: Unicode.Scalar) -> Bool {
+        scalar == "\"" || scalar == "\\" || scalar.properties.generalCategory == .control
+    }
+
     public static let obsidian = AppearanceSettings(
         accent: Theme.obsidian.accent,
         glassOpacity: Theme.obsidian.window.background.alpha,

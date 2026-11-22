@@ -104,18 +104,13 @@ struct SurfaceLifetimeTests {
         #expect(exits.count == 1)
     }
 
-    /// A normal exit goes through SHOW_CHILD_EXITED and then close_surface_cb with process_exited. A surface-level
-    /// command forces `wait-after-command` (embedded.zig:572), which skips close_surface_cb, so the command comes
-    /// from the config's `command` key instead and the surface passes none. It is still `zsh -f`, never a login
-    /// shell.
+    /// A normal exit goes through SHOW_CHILD_EXITED and then close_surface_cb with process_exited. Smalti always passes
+    /// the command on the surface, which forces `wait-after-command` (embedded.zig:572): libghostty then calls
+    /// close_surface_cb when a key is pressed on the finished surface (Surface.zig keyCallback). Every surface here has
+    /// an explicit `zsh -f` command, so a login shell can never start.
     @Test func normalExitThroughBothCallbacksDeliversOneExited() async throws {
-        let configWithCommand = try GhosttyConfig.load(
-            text: GhosttyConfigText.render(Theme.obsidian.terminal) + "command = /bin/zsh -f -c 'sleep 0.4; exit 3'\n",
-            writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-exit-\(UUID()).conf"))
-
         let exits = try await exitsDelivered(
-            TerminalSessionSpec(workingDirectory: spec.workingDirectory, command: .loginShell),
-            config: configWithCommand)
+            running: "/bin/zsh -f -c 'sleep 0.4; exit 3'", afterExit: { view in Self.pressKey(on: view) })
 
         #expect(exits.count == 1)
     }
@@ -151,22 +146,24 @@ struct SurfaceLifetimeTests {
         #expect(GhosttyRuntime.liveView(at: viewAddress, surfaceAddress: view.surfaceAddress) === view)
     }
 
-    /// Runs a real surface and returns every `.exited` seen until the exit is due plus a grace period.
-    private func exitsDelivered(running command: String) async throws -> [TerminalEvent] {
-        try await exitsDelivered(
-            TerminalSessionSpec(workingDirectory: spec.workingDirectory, command: .custom(command)), config: config)
-    }
-
-    private func exitsDelivered(_ session: TerminalSessionSpec, config: GhosttyConfig) async throws -> [TerminalEvent] {
+    /// Runs `command` (always passed on the surface, never a login shell) in a real surface and returns every
+    /// `.exited` seen until the exit is due plus a grace period. `afterExit` runs once the first `.exited` arrives.
+    private func exitsDelivered(
+        running command: String, afterExit: @escaping @MainActor (GhosttySurfaceView) -> Void = { _ in }
+    ) async throws -> [TerminalEvent] {
         let runtime = try GhosttyRuntime(config: config)
         let engine = GhosttyTerminalEngine(runtime: runtime)
-        let pane = try engine.open(session)
+        let pane = try engine.open(
+            TerminalSessionSpec(workingDirectory: spec.workingDirectory, command: .custom(command)))
         defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
         let events = engine.events(for: pane)
-        let collector = Task {
+        let collector = Task { @MainActor in
             var exits: [TerminalEvent] = []
             for await event in events {
-                if case .exited = event { exits.append(event) }
+                guard case .exited = event else { continue }
+                exits.append(event)
+                if exits.count == 1 { afterExit(view) }
             }
             return exits
         }
@@ -180,6 +177,22 @@ struct SurfaceLifetimeTests {
         collector.cancel()
         return await collector.value
     }
+
+    /// Presses "a" on the surface, as a user would on a finished pane.
+    private static func pressKey(on view: GhosttySurfaceView) {
+        guard let surface = view.surface else { return }
+        var key = ghostty_input_key_s()
+        key.action = GHOSTTY_ACTION_PRESS
+        key.keycode = Self.aKeyCode
+        key.unshifted_codepoint = UInt32(("a" as Unicode.Scalar).value)
+        "a".withCString { text in
+            key.text = text
+            _ = ghostty_surface_key(surface, key)
+        }
+    }
+
+    /// macOS virtual key code of the "A" key (kVK_ANSI_A).
+    private static let aKeyCode: UInt32 = 0
 
     private static let exitTimeout: Duration = .seconds(2)
     private static let exitGracePeriod: Duration = .milliseconds(500)
