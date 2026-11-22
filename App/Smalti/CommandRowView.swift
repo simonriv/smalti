@@ -41,7 +41,7 @@ final class CommandRowView: NSView {
         self.command = command
         self.theme = theme
         icon = CommandIconView(
-            CommandIcons.path(for: command.id), size: theme.palette.iconSize,
+            command.icon.map(CommandIcons.path(for:)), size: theme.palette.iconSize,
             lineWidth: theme.palette.commandIconStroke)
         super.init(frame: .zero)
         wantsLayer = true
@@ -65,7 +65,13 @@ final class CommandRowView: NSView {
         setAccessibilityValue(isSelected ? "selected" : nil)
     }
 
-    override func mouseDown(with event: NSEvent) { onClick?() }
+    /// Like a button: the command runs when the click ends inside the row.
+    override func mouseDown(with event: NSEvent) {}
+
+    override func mouseUp(with event: NSEvent) {
+        guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
+        onClick?()
+    }
 
     override func accessibilityPerformPress() -> Bool {
         onClick?()

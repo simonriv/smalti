@@ -19,25 +19,30 @@ public enum CommandCatalog {
 
         var paneCount: Int { workspaces.active.panes.count }
 
-        func command(
-            _ id: CommandID, _ title: String, subtitle: String? = nil, group: CommandGroup, isCurrent: Bool = false
-        ) -> Command {
+        func command(_ id: CommandID, _ title: String, subtitle: String? = nil, group: CommandGroup) -> Command {
             Command(
                 id: id, title: title, subtitle: subtitle, group: group, shortcut: keymap.chord(for: id),
-                isCurrent: isCurrent)
+                isCurrent: false)
         }
     }
 
     private static func tilingCommands(_ context: Context, _ layouts: LayoutCatalog) -> [Command] {
-        var commands = layouts.all.map { layout in
-            context.command(
-                .layout(layout.id), "Layout: \(layout.displayName)", subtitle: layoutSubtitles[layout.id],
-                group: .tiling, isCurrent: layout.id == context.workspaces.active.layout.id)
-        }
+        var commands = layouts.all.map { layoutCommand($0, context) }
         if context.paneCount >= 2 {
-            commands.append(context.command(.panesEqualize, "Igualar tamaños de paneles", group: .tiling))
+            commands.append(
+                Command(
+                    id: .panesEqualize, title: "Igualar tamaños de paneles", subtitle: nil, group: .tiling,
+                    shortcut: context.keymap.chord(for: .panesEqualize), isCurrent: false, icon: .equalize))
         }
         return commands
+    }
+
+    private static func layoutCommand(_ layout: any LayoutStrategy, _ context: Context) -> Command {
+        let id = CommandID.layout(layout.id)
+        return Command(
+            id: id, title: "Layout: \(layout.displayName)", subtitle: layoutSubtitles[layout.id], group: .tiling,
+            shortcut: context.keymap.chord(for: id), isCurrent: layout.id == context.workspaces.active.layout.id,
+            icon: layout.icon)
     }
 
     private static func paneCommands(_ context: Context) -> [Command] {

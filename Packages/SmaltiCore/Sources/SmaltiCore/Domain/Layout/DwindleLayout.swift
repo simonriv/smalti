@@ -7,6 +7,10 @@ public struct DwindleLayout: LayoutStrategy {
     public let id = LayoutID.dwindle
     public let displayName = "Dwindle"
     public let statusName = "dwindle"
+    /// Paleta.dc.html icon of this layout's command.
+    public let icon = CommandIcon.layoutFrame(strokes: [
+        [Point(x: 8.5, y: 2), Point(x: 8.5, y: 14)], [Point(x: 8.5, y: 8), Point(x: 14.5, y: 8)],
+    ])
 
     public init() {}
 

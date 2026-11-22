@@ -6,6 +6,10 @@ public struct MasterStackLayout: LayoutStrategy {
     public let id = LayoutID.master
     public let displayName = "Maestro + pila"
     public let statusName = "maestro"
+    /// Paleta.dc.html icon of this layout's command.
+    public let icon = CommandIcon.layoutFrame(strokes: [
+        [Point(x: 1.5, y: 8.5), Point(x: 14.5, y: 8.5)], [Point(x: 8, y: 8.5), Point(x: 8, y: 14)],
+    ])
 
     private let stack = ColumnsLayout()
 

@@ -5,11 +5,14 @@ import SmaltiCore
 /// a 52 pt search field, grouped rows and a 36 pt footer. It draws; `CommandPaletteController` decides.
 @MainActor
 final class CommandPaletteView: NSView {
-    let field = NSTextField()
+    let field = PaletteField()
     private let theme: Theme
     private let list = NSStackView()
     private let scroll = NSScrollView()
     private var scrollHeight: NSLayoutConstraint?
+    /// Under the list; hidden with it so the field and the footer never show a doubled line.
+    private let listSeparator = NSView()
+    private var navigateHint: NSView?
 
     init(theme: Theme) {
         self.theme = theme
@@ -27,9 +30,26 @@ final class CommandPaletteView: NSView {
     /// Rows and group labels in display order; the list grows with them up to `maximumListHeight`.
     func show(_ views: [NSView], maximumListHeight: Double) {
         list.setViews(views, in: .top)
-        list.layoutSubtreeIfNeeded()
-        scrollHeight?.constant = min(list.fittingSize.height, maximumListHeight)
+        fitList(maximumHeight: maximumListHeight)
         scroll.isHidden = views.isEmpty
+        listSeparator.isHidden = views.isEmpty
+    }
+
+    /// The list grows with its rows up to `maximumHeight` (recomputed when the window resizes).
+    func fitList(maximumHeight: Double) {
+        list.layoutSubtreeIfNeeded()
+        scrollHeight?.constant = min(list.fittingSize.height, maximumHeight)
+    }
+
+    /// The rename prompt has nothing to navigate; only "↵ ejecutar" applies.
+    func showNavigationHint(_ isShown: Bool) {
+        navigateHint?.isHidden = !isShown
+    }
+
+    override func layout() {
+        super.layout()
+        let radius = theme.palette.cornerRadius
+        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
     }
 
     func scrollToVisible(_ view: NSView) {
@@ -69,7 +89,7 @@ final class CommandPaletteView: NSView {
         content.layer?.borderWidth = theme.chrome.hairlineWidth
         content.layer?.borderColor = palette.border.nsColor.cgColor
         content.layer?.backgroundColor = palette.background.nsColor.cgColor
-        let stack = NSStackView(views: [fieldRow(), separator(), listArea(), separator(), footer()])
+        let stack = NSStackView(views: [fieldRow(), separator(), listArea(), separator(listSeparator), footer()])
         stack.orientation = .vertical
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -125,8 +145,10 @@ final class CommandPaletteView: NSView {
         let palette = theme.palette
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
+        let navigate = hint("↑↓", "navegar")
+        navigateHint = navigate
         let row = NSStackView(views: [
-            hint("↑↓", "navegar"), hint("↵", "ejecutar"), spacer,
+            navigate, hint("↵", "ejecutar"), spacer,
             footerLabel("Todo lo que hacen los botones vive aquí"),
         ])
         row.spacing = palette.footerGap
@@ -149,8 +171,7 @@ final class CommandPaletteView: NSView {
         return label
     }
 
-    private func separator() -> NSView {
-        let line = NSView()
+    private func separator(_ line: NSView = NSView()) -> NSView {
         line.wantsLayer = true
         line.layer?.backgroundColor = theme.palette.footerBorder.nsColor.cgColor
         line.heightAnchor.constraint(equalToConstant: theme.chrome.hairlineWidth).isActive = true
@@ -170,4 +191,20 @@ final class CommandPaletteView: NSView {
 /// Lays the row list out top-down inside the scroll view.
 private final class FlippedView: NSView {
     override var isFlipped: Bool { true }
+}
+
+/// The palette's text field. Smalti has no Edit menu (the terminal owns ⌘C/⌘V), so the editing shortcuts are
+/// handled here: ⌘A, ⌘C, ⌘V, ⌘X and ⌘Z go to the field editor.
+final class PaletteField: NSTextField {
+    private static let editActions: [String: Selector] = [
+        "a": #selector(NSResponder.selectAll(_:)), "c": #selector(NSText.copy(_:)), "v": #selector(NSText.paste(_:)),
+        "x": #selector(NSText.cut(_:)), "z": Selector(("undo:")),
+    ]
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard let editor = currentEditor(), event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+            let key = event.charactersIgnoringModifiers?.lowercased(), let action = Self.editActions[key]
+        else { return super.performKeyEquivalent(with: event) }
+        return NSApp.sendAction(action, to: editor, from: self)
+    }
 }

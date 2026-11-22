@@ -18,6 +18,8 @@ public protocol LayoutStrategy: Sendable {
     var displayName: String { get }
     /// Short name shown in the status bar.
     var statusName: String { get }
+    /// Icon of its palette command.
+    var icon: CommandIcon { get }
     /// The tree holding `panes` in order, or `nil` when there are none.
     func tree(for panes: [PaneID]) -> LayoutTree?
 }

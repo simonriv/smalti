@@ -37,6 +37,27 @@ struct CommandCatalogTests {
         #expect(dwindle.subtitle == "cada panel nuevo divide el último")
     }
 
+    @Test func layoutCommandsCarryTheirLayoutIcon() throws {
+        let commands = commands(paneCount: 1)
+
+        let dwindle = try #require(commands.first { $0.id == .layout(.dwindle) })
+        #expect(dwindle.icon == DwindleLayout().icon)
+    }
+
+    @Test func equalizeCarriesTheBoardIcon() throws {
+        let commands = commands(paneCount: 2)
+
+        let equalize = try #require(commands.first { $0.id == .panesEqualize })
+        #expect(equalize.icon?.frame == nil)
+        #expect(equalize.icon?.strokes.count == 4)
+    }
+
+    @Test func commandsWithoutBoardIconHaveNone() {
+        let commands = commands(paneCount: 1)
+
+        #expect(commands.first { $0.id == .paneNew }?.icon == nil)
+    }
+
     @Test func currentLayoutIsMarked() {
         let set = WorkspaceSet(first: makeWorkspace(layout: ColumnsLayout()))
 

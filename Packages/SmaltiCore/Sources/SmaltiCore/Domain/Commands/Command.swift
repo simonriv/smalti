@@ -15,11 +15,14 @@ public struct Command: Hashable, Sendable {
     public let shortcut: KeyChord?
     /// Whether the command describes the state already in effect, such as the active layout.
     public let isCurrent: Bool
+    /// Board icon, when the board draws one.
+    public let icon: CommandIcon?
 
     public init(
         id: CommandID, title: String, subtitle: String?, group: CommandGroup, shortcut: KeyChord?,
-        isCurrent: Bool
+        isCurrent: Bool, icon: CommandIcon? = nil
     ) {
+        self.icon = icon
         self.id = id
         self.title = title
         self.subtitle = subtitle

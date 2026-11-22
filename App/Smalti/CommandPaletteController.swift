@@ -31,6 +31,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private var selection = 0
     private var mode = Mode.searching
     private let signposter = OSSignposter(subsystem: "dev.simonriv.smalti", category: "palette")
+    private var outsideClicks: Any?
+    private var resizes: NSObjectProtocol?
 
     init(window: SmaltiWindow, actions: Actions) {
         self.window = window
@@ -41,21 +43,16 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
         isOpen ? close() : open(theme: theme)
     }
 
-    /// B7: the palette must open in 50 ms or less; the interval shows in Instruments as "palette.open".
+    /// B7: the palette must open in 50 ms or less; the "palette.open" interval spans building, the first layout and
+    /// the first display.
     func open(theme: Theme) {
-        let interval = signposter.beginInterval("palette.open")
-        defer { signposter.endInterval("palette.open", interval) }
         guard !isOpen else { return }
-        self.theme = theme
-        let view = CommandPaletteView(theme: theme)
-        place(view, theme: theme)
-        view.field.delegate = self
-        self.view = view
-        mode = .searching
-        isOpen = true
+        let interval = signposter.beginInterval("palette.open")
+        present(theme: theme, mode: .searching)
         refresh()
-        window.makeFirstResponder(view.field)
-        onOpenChange?(true)
+        view?.layoutSubtreeIfNeeded()
+        view?.displayIfNeeded()
+        signposter.endInterval("palette.open", interval)
     }
 
     func close() {
@@ -64,17 +61,66 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
         view = nil
         rows = []
         isOpen = false
+        stopObserving()
         onOpenChange?(false)
     }
 
     /// "Renombrar workspace…": the field shows the current name, selected, and ↵ applies it.
     func beginRename(theme: Theme) {
-        if !isOpen { open(theme: theme) }
+        if !isOpen { present(theme: theme, mode: .renaming) }
         guard let view else { return }
         mode = .renaming
-        view.field.stringValue = actions.currentWorkspaceName()
+        rows = []
         view.show([], maximumListHeight: 0)
+        view.showNavigationHint(false)
+        view.field.stringValue = actions.currentWorkspaceName()
         view.field.currentEditor()?.selectAll(nil)
+    }
+
+    private func present(theme: Theme, mode: Mode) {
+        self.theme = theme
+        let view = CommandPaletteView(theme: theme)
+        place(view, theme: theme)
+        view.field.delegate = self
+        self.view = view
+        self.mode = mode
+        isOpen = true
+        window.makeFirstResponder(view.field)
+        startObserving()
+        onOpenChange?(true)
+    }
+
+    // MARK: - Window events while open
+
+    /// A click outside the palette closes it (and still reaches what was clicked); a resize refits the list.
+    private func startObserving() {
+        outsideClicks = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            MainActor.assumeIsolated { self?.closeIfOutside(event) }
+            return event
+        }
+        resizes = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refitList() }
+        }
+    }
+
+    private func stopObserving() {
+        outsideClicks.map(NSEvent.removeMonitor)
+        outsideClicks = nil
+        resizes.map(NotificationCenter.default.removeObserver)
+        resizes = nil
+    }
+
+    private func closeIfOutside(_ event: NSEvent) {
+        guard event.window === window, let view else { return }
+        let point = view.convert(event.locationInWindow, from: nil)
+        if !view.bounds.contains(point) { close() }
+    }
+
+    private func refitList() {
+        guard mode == .searching else { return }
+        view?.fitList(maximumHeight: maximumListHeight)
     }
 
     // MARK: - NSTextFieldDelegate
@@ -97,25 +143,27 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     // MARK: - Results
 
+    /// Rows follow the domain's sections, so the selection order is the order on screen.
     private func refresh() {
         guard let view else { return }
-        rows = actions.search(view.field.stringValue).map { ranked in
-            let row = CommandRowView(ranked.command, theme: theme)
-            row.onClick = { [weak self] in self?.run(ranked.command.id) }
-            return row
+        let sections = CommandSection.grouping(actions.search(view.field.stringValue))
+        var views: [NSView] = []
+        rows = []
+        for section in sections {
+            views.append(CommandGroupLabel(section.group, theme: theme))
+            let sectionRows = section.commands.map(makeRow)
+            rows += sectionRows
+            views += sectionRows
         }
         selection = 0
-        view.show(Self.grouped(rows, theme: theme), maximumListHeight: maximumListHeight)
+        view.show(views, maximumListHeight: maximumListHeight)
         highlight()
     }
 
-    /// Groups in order of their best result, rows inside each group by rank (as Paleta.dc.html shows "layout").
-    private static func grouped(_ rows: [CommandRowView], theme: Theme) -> [NSView] {
-        var order: [CommandGroup] = []
-        for row in rows where !order.contains(row.command.group) { order.append(row.command.group) }
-        return order.flatMap { group in
-            [CommandGroupLabel(group, theme: theme) as NSView] + rows.filter { $0.command.group == group }
-        }
+    private func makeRow(_ ranked: RankedCommand) -> CommandRowView {
+        let row = CommandRowView(ranked.command, theme: theme)
+        row.onClick = { [weak self] in self?.run(ranked.command.id) }
+        return row
     }
 
     private func moveSelection(by step: Int) {

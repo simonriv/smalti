@@ -152,6 +152,26 @@ struct LayoutStrategyTests {
         #expect(LayoutCatalog.standard.strategyOrDefault(for: .columns).id == .columns)
     }
 
+    /// Paleta.dc.html icons: a 13×12 rounded frame at (1.5, 2), radius 2, plus each layout's dividers (viewBox 16).
+    @Test func layoutIconsMatchTheBoard() {
+        let frame = Rect(x: 1.5, y: 2, width: 13, height: 12)
+        #expect(
+            DwindleLayout().icon
+                == CommandIcon(
+                    frame: frame, frameRadius: 2,
+                    strokes: [
+                        [Point(x: 8.5, y: 2), Point(x: 8.5, y: 14)], [Point(x: 8.5, y: 8), Point(x: 14.5, y: 8)],
+                    ]))
+        #expect(
+            ColumnsLayout().icon.strokes == [
+                [Point(x: 5.8, y: 2), Point(x: 5.8, y: 14)], [Point(x: 10.2, y: 2), Point(x: 10.2, y: 14)],
+            ])
+        #expect(
+            MasterStackLayout().icon.strokes == [
+                [Point(x: 1.5, y: 8.5), Point(x: 14.5, y: 8.5)], [Point(x: 8, y: 8.5), Point(x: 8, y: 14)],
+            ])
+    }
+
     @Test func emptyCatalogIsRejected() async {
         await #expect(processExitsWith: .failure) {
             _ = LayoutCatalog([])

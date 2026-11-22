@@ -45,17 +45,46 @@ final class CommandPaletteTests: XCTestCase {
         XCTAssertTrue(element("smalti.palette").waitForNonExistence(timeout: 5))
     }
 
+    /// ⌘A works in the field: "x" replaces the selected name, ⌘A selects it again, "solen" replaces it.
     func testRenameWorkspaceFromPalette() {
-        app.typeKey("k", modifierFlags: .command)
+        openPalette()
         app.typeText("renombrar")
         app.typeKey(.return, modifierFlags: [])
+        app.typeText("x")
         app.typeKey("a", modifierFlags: .command)
 
         app.typeText("solen")
         app.typeKey(.return, modifierFlags: [])
 
-        XCTAssertTrue(app.descendants(matching: .any)["smalti.workspace"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.descendants(matching: .any)["smalti.workspace"].firstMatch.label, "solen")
+        XCTAssertTrue(element("smalti.palette").waitForNonExistence(timeout: 5))
+        XCTAssertEqual(element("smalti.workspace").label, "solen")
+    }
+
+    func testEscapeCancelsRename() {
+        let original = element("smalti.workspace").label
+        openPalette()
+        app.typeText("renombrar")
+        app.typeKey(.return, modifierFlags: [])
+        app.typeText("zzz")
+
+        app.typeKey(.escape, modifierFlags: [])
+
+        XCTAssertTrue(element("smalti.palette").waitForNonExistence(timeout: 5))
+        XCTAssertEqual(element("smalti.workspace").label, original)
+    }
+
+    func testClickOutsideClosesThePalette() {
+        openPalette()
+
+        // The palette is 640 pt wide and centred; the left edge of the pane is outside it.
+        element("smalti.terminal").coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)).click()
+
+        XCTAssertTrue(element("smalti.palette").waitForNonExistence(timeout: 5))
+    }
+
+    private func openPalette() {
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(element("smalti.palette").waitForExistence(timeout: 5))
     }
 
     private func element(_ identifier: String) -> XCUIElement {
