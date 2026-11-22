@@ -70,6 +70,30 @@ struct LayoutTreeFramesTests {
         #expect(frames.values.allSatisfy { $0.size.width >= 1 && $0.size.height >= 1 })
     }
 
+    @Test func framesMayOverflowTinyAreaInsteadOfCollapsing() {
+        let ids = (0..<9).map { _ in PaneID() }
+        let tree = ids.dropFirst().reduce(LayoutTree.leaf(ids[0])) { partial, id in
+            .split(axis: .sideBySide, ratio: .half, first: partial, second: .leaf(id))
+        }
+        let area = Rect(x: 0, y: 0, width: 40, height: 40)
+
+        let frames = tree.frames(in: area, gap: 8)
+
+        #expect(frames.values.contains { $0.maxX > area.maxX })
+    }
+
+    @Test func stackedFramesNeverCollapseBelowOnePoint() {
+        let ids = (0..<9).map { _ in PaneID() }
+        let tree = ids.dropFirst().reduce(LayoutTree.leaf(ids[0])) { partial, id in
+            .split(axis: .stacked, ratio: .half, first: partial, second: .leaf(id))
+        }
+
+        let frames = tree.frames(in: Rect(x: 0, y: 0, width: 40, height: 40), gap: 8)
+
+        #expect(frames.count == 9)
+        #expect(frames.values.allSatisfy { $0.size.width >= 1 && $0.size.height >= 1 })
+    }
+
     @Test func columnChainWithSpanRatiosHasEqualWidths() {
         let tree = LayoutTree.split(
             axis: .sideBySide, ratio: Ratio(1.0 / 3.0),

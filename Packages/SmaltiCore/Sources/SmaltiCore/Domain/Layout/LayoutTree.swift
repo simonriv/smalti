@@ -20,6 +20,10 @@ public indirect enum LayoutTree: Hashable, Sendable {
     ///
     /// Gaps are shared out by span (see `span(along:)`), so a ratio of
     /// `span(first) / span(self)` gives every leaf the same size, gaps included.
+    ///
+    /// Every frame is at least 1 pt on each axis, so panes never collapse. In an
+    /// area too small for the tree that floor applies and frames may extend past
+    /// `area`: this is intended.
     public func frames(in area: Rect, gap: Double) -> [PaneID: Rect] {
         var result: [PaneID: Rect] = [:]
         place(in: area, gap: gap, into: &result)
