@@ -130,4 +130,42 @@ struct WorkspaceSetTests {
         #expect(set.paneIndex(of: panes[8].id) == 9)
         #expect(set.paneIndex(of: panes[9].id) == nil)
     }
+
+    @Test func updatingIgnoresTransformThatChangesId() {
+        let set = makeSet(2)
+        let target = set.activeID
+        let replacement = makeWorkspace("other")
+
+        let result = set.updating(target) { _ in replacement }
+
+        #expect(result == set)
+    }
+
+    @Test func removingUnknownIdIsNoOpWithOneWorkspace() throws {
+        let set = WorkspaceSet(first: makeWorkspace())
+
+        #expect(try set.removing(WorkspaceID()) == set)
+    }
+
+    @Test func removingUnknownIdIsNoOpWithSeveral() throws {
+        let set = makeSet(3)
+
+        #expect(try set.removing(WorkspaceID()) == set)
+    }
+
+    // Pins existing behavior: passed immediately.
+    @Test func closingActiveLastActivatesPrevious() throws {
+        let set = makeSet(3)
+
+        let result = try set.removing(set.activeID)
+
+        #expect(result.activeID == set.workspaces[1].id)
+    }
+
+    // Pins existing behavior: passed immediately.
+    @Test func addingDuplicateIdIsIgnored() {
+        let set = makeSet(2)
+
+        #expect(set.adding(set.workspaces[0]) == set)
+    }
 }

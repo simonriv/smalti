@@ -18,8 +18,10 @@ public struct WorkspaceSet: Sendable, Equatable {
     }
 
     public var active: Workspace {
-        // Safe fallback: the invariant guarantees the active workspace exists.
-        workspaces.first { $0.id == activeID } ?? workspaces[0]
+        let found = workspaces.first { $0.id == activeID }
+        // Every mutation keeps `activeID` pointing at an existing workspace, so a miss is a bug here.
+        precondition(found != nil, "WorkspaceSet invariant broken: active workspace \(activeID) is missing")
+        return found.unsafelyUnwrapped
     }
 
     public func adding(_ workspace: Workspace) -> WorkspaceSet {
@@ -44,8 +46,8 @@ public struct WorkspaceSet: Sendable, Equatable {
     }
 
     public func removing(_ id: WorkspaceID) throws(WorkspaceSetError) -> WorkspaceSet {
-        guard workspaces.count > 1 else { throw .cannotCloseLastWorkspace }
         guard let position = workspaces.firstIndex(where: { $0.id == id }) else { return self }
+        guard workspaces.count > 1 else { throw .cannotCloseLastWorkspace }
         var updated = self
         updated.workspaces.remove(at: position)
         if activeID == id {
@@ -56,8 +58,11 @@ public struct WorkspaceSet: Sendable, Equatable {
 
     public func updating(_ id: WorkspaceID, _ transform: (Workspace) -> Workspace) -> WorkspaceSet {
         guard let position = workspaces.firstIndex(where: { $0.id == id }) else { return self }
+        let transformed = transform(workspaces[position])
+        // A transform that renames identity would break unique ids and `activeID`.
+        guard transformed.id == id else { return self }
         var updated = self
-        updated.workspaces[position] = transform(workspaces[position])
+        updated.workspaces[position] = transformed
         return updated
     }
 
