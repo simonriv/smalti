@@ -97,10 +97,9 @@ struct KeymapTests {
     @Test func bindingOneCommandToTwoChordsKeepsTheGreaterDisplay() throws {
         let first = try chord("cmd+j")
         let second = try chord("cmd+m")
-        let expected = [first, second].max { $0.display < $1.display }
 
         let keymap = try Keymap.standard.overriding([first: .paletteOpen, second: .paletteOpen])
 
-        #expect(keymap.chord(for: .paletteOpen) == expected)
+        #expect(keymap.chord(for: .paletteOpen) == KeyChord(key: "m", modifiers: [.command]))
     }
 }

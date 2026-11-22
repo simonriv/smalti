@@ -15,10 +15,9 @@ struct SearchCommandsTests {
     @Test func searchUsesCurrentState() {
         let results = search.execute("workspace", set: set, keymap: .standard)
 
-        let expected = fuzzyMatch(
-            "workspace", in: CommandCatalog.commands(for: set, keymap: .standard, layouts: .standard))
-        #expect(results == expected)
-        #expect(!results.isEmpty)
+        let ids = results.map(\.command.id)
+        #expect(ids.contains(.workspaceNew))
+        #expect(!ids.contains(.paneClose))
     }
 
     @Test func searchReflectsStateOfTheSet() {
