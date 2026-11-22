@@ -36,6 +36,33 @@ struct LayoutStrategyTests {
                 #expect(frame.minY >= area.minY - frameTolerance)
                 #expect(frame.maxY <= area.maxY + frameTolerance)
             }
+            expectNoOverlap(Array(placed.values), "\(strategy.displayName)")
+        }
+    }
+
+    private func expectNoOverlap(
+        _ frames: [Rect], _ label: String, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
+        for (index, first) in frames.enumerated() {
+            for second in frames.dropFirst(index + 1) {
+                let overlapWidth = min(first.maxX, second.maxX) - max(first.minX, second.minX)
+                let overlapHeight = min(first.maxY, second.maxY) - max(first.minY, second.minY)
+                let overlapArea = max(0, overlapWidth) * max(0, overlapHeight)
+                #expect(overlapArea <= 0, "\(label)", sourceLocation: sourceLocation)
+            }
+        }
+    }
+
+    @Test(arguments: [5, 9])
+    func columnsAreEqualForFiveAndNine(count: Int) {
+        let panes = makePanes(count)
+
+        let placed = frames(of: ColumnsLayout(), panes)
+
+        let widths = panes.compactMap { placed[$0]?.size.width }
+        #expect(widths.count == count)
+        for width in widths {
+            #expect(abs(width - widths[0]) < frameTolerance)
         }
     }
 
