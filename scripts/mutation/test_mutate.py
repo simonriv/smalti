@@ -1,8 +1,10 @@
 """Tests for the mutant generator of scripts/mutation/mutate.py."""
 
+import tempfile
 import unittest
+from pathlib import Path
 
-from mutate import Mutant, mutants_for_line, mutants_for_source
+from mutate import Mutant, mutants_for_line, mutants_for_source, source_files
 
 
 def replacements(line):
@@ -111,3 +113,17 @@ class SourceLevel(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourceFiles(unittest.TestCase):
+    def test_only_the_package_own_target_is_mutated(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            package = Path(scratch) / "SmaltiCore"
+            for relative in ("SmaltiCore/Domain/A.swift", "SmaltiCoreTestSupport/Fake.swift", "Other/B.swift"):
+                file = package / "Sources" / relative
+                file.parent.mkdir(parents=True)
+                file.write_text("")
+
+            found = source_files(package)
+
+            self.assertEqual(found, [package / "Sources" / "SmaltiCore" / "Domain" / "A.swift"])
