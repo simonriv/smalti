@@ -14,6 +14,7 @@ public struct Theme: Equatable, Sendable {
     public let focus: FocusTokens
     public let palette: PaletteTokens
     public let motion: MotionTokens
+    public let emptyState: EmptyStateTokens
 }
 
 public struct WindowTokens: Equatable, Sendable {
@@ -156,6 +157,14 @@ public struct PaletteTokens: Equatable, Sendable {
     }
 }
 
+/// Hint shown in a workspace with no panes (not on the boards; decided by Simón, 2026-11-22).
+public struct EmptyStateTokens: Equatable, Sendable {
+    public let fontSize: Double
+    /// Vertical space between the title and the shortcut line.
+    public let lineGap: Double
+    public let text: RGBAColor
+}
+
 public struct MotionTokens: Equatable, Sendable {
     /// Seconds a pane takes to move to its new place; disabled by "Reducir movimiento".
     public let rearrangeDuration: Double
@@ -180,6 +189,6 @@ extension Theme {
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
-            motion: motion)
+            motion: motion, emptyState: emptyState)
     }
 }

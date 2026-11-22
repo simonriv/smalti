@@ -152,6 +152,13 @@ struct ObsidianThemeTests {
         #expect(palette.panelsBackdropOpacity == 0.45)
     }
 
+    /// Empty workspace hint (decided by Simón, 2026-11-22): Inter 13 in the secondary text color.
+    @Test func emptyStateTokens() {
+        #expect(theme.emptyState.fontSize == 13)
+        #expect(theme.emptyState.lineGap == 8)
+        #expect(theme.emptyState.text == theme.text.secondary)
+    }
+
     @Test func motionTokens() {
         #expect(theme.motion.rearrangeDuration == 0.15)
     }

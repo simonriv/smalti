@@ -17,6 +17,8 @@ private let monospacedFontFamily = "JetBrains Mono"
 private let obsidianAccent = rgb(0x7aa2f7)
 private let obsidianPrimaryText = rgb(0xd7dae0)
 private let obsidianTitleText = rgb(0xe6e9ef)
+/// Minimum for small text over the glass (docs/design/README.md); status bar and empty hint use it too.
+private let obsidianSecondaryText = rgb(0x8b919c)
 
 extension Theme {
     public static let obsidian = Theme(
@@ -37,7 +39,7 @@ extension Theme {
         chrome: ChromeTokens(topStripHeight: 40),
         text: TextTokens(
             interfaceFontFamily: "Inter", primary: obsidianPrimaryText, title: obsidianTitleText,
-            secondary: rgb(0x8b919c)),
+            secondary: obsidianSecondaryText),
         accent: obsidianAccent,
         terminal: TerminalAppearance(
             fontFamily: monospacedFontFamily,
@@ -63,7 +65,7 @@ extension Theme {
             fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
             cornerRadius: 5, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
         statusBar: StatusBarTokens(
-            height: 28, padding: 16, gap: 16, fontSize: 11, text: rgb(0x8b919c), topBorder: white(0.05)),
+            height: 28, padding: 16, gap: 16, fontSize: 11, text: obsidianSecondaryText, topBorder: white(0.05)),
         focus: FocusTokens(
             ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28),
         palette: PaletteTokens(
@@ -73,5 +75,6 @@ extension Theme {
             groupPaddingTop: 10, groupPaddingHorizontal: 12, groupPaddingBottom: 4,
             selection: obsidianAccent.withAlpha(0x26 / 255), footerHeight: 36, footerFontSize: 11.5,
             footerBorder: white(0.07), topOffset: 110, panelsBackdropOpacity: 0.45),
-        motion: MotionTokens(rearrangeDuration: 0.15))
+        motion: MotionTokens(rearrangeDuration: 0.15),
+        emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText))
 }
