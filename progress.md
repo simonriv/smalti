@@ -33,6 +33,7 @@
 
 ### Spec
 - [x] Aprobada (2026-11-22); se revisa con el informe de F0
+- [x] Revisada con el informe de F0: ajustes R1–R10 aprobados; requisito de cmux descartado (2026-11-22)
 
 ### Plan
-- [ ] Pendiente
+- [ ] Plan de implementación (`docs/plans/F1-tiling.md`)
