@@ -4,9 +4,12 @@ set -euo pipefail
 SCRIPT="$(cd "$(dirname "$0")/.." && pwd)/check-ghostty-pin.sh"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 
-mkdir -p "$work/vendor/ghostty" "$work/Packages/GhosttyAdapter/Frameworks"
-git -C "$work/vendor/ghostty" init -q
-git -C "$work/vendor/ghostty" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+g() { git -c user.email=t@t -c user.name=t -c init.defaultBranch=main "$@"; }
+g init -q "$work"
+g -C "$work" init -q vendor/ghostty
+g -C "$work/vendor/ghostty" commit -q --allow-empty -m init
+g -C "$work" add vendor/ghostty 2>/dev/null   # gitlink = the pin
+mkdir -p "$work/Packages/GhosttyAdapter/Frameworks"
 head_sha="$(git -C "$work/vendor/ghostty" rev-parse HEAD)"
 sha_file="$work/Packages/GhosttyAdapter/Frameworks/GhosttyKit.sha"
 failures=0
