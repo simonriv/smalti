@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Ghostty fijado a `ce787fc18a7782e81585beb63f0d905ccaf69284` (tag `v1.4.0`). El SHA del submódulo es el único lugar donde se fija.
+- Ghostty fijado a `83fb95624b0439ee660c2679b43b38c8b63769cd` (tag `v1.4.0`). El SHA del submódulo es el único lugar donde se fija.
 - `minimum_zig_version = 0.17.0`; se usa Zig de Homebrew (0.17.1).
 - macOS 27 como mínimo. Bundle ID `dev.simonriv.smalti`. Firma ad hoc (`CODE_SIGN_IDENTITY = "-"`), sin sandbox ni hardened runtime.
 - `SmaltiCore` solo importa `Foundation` (tipos de valor). Prohibido: AppKit, SwiftUI, Combine, GhosttyKit, Darwin/C.
@@ -152,7 +152,7 @@
 ### Task 4: Ghostty fijado y build reproducible de GhosttyKit
 
 **Files:**
-- Create: submódulo `vendor/ghostty` en `ce787fc18a7782e81585beb63f0d905ccaf69284`
+- Create: submódulo `vendor/ghostty` en `83fb95624b0439ee660c2679b43b38c8b63769cd`
 - Create: `scripts/bootstrap`, `scripts/build-ghostty.sh`, `scripts/check-ghostty-pin.sh`
 - Test: `scripts/tests/check-ghostty-pin.test.sh`, `scripts/tests/build-ghostty-zig-version.test.sh`
 
@@ -164,7 +164,7 @@
   - `ghostty-resources/terminfo/`
 - Produces: `scripts/check-ghostty-pin.sh [repo_root]` → código 0 si `GhosttyKit.sha` coincide con `git -C vendor/ghostty rev-parse HEAD`. Si no, código 1 y en stderr: `GhosttyKit.xcframework was built from <a> but vendor/ghostty is at <b>. Run scripts/build-ghostty.sh`.
 
-- [ ] **Step 1:** `git submodule add https://github.com/ghostty-org/ghostty.git vendor/ghostty && git -C vendor/ghostty checkout ce787fc18a7782e81585beb63f0d905ccaf69284`.
+- [ ] **Step 1:** `git submodule add https://github.com/ghostty-org/ghostty.git vendor/ghostty && git -C vendor/ghostty checkout 83fb95624b0439ee660c2679b43b38c8b63769cd`.
 - [ ] **Step 2: Pruebas que fallan** (bash, con `set -euo pipefail`, en un directorio temporal falso con `vendor/ghostty` como repo git mínimo):
   - `check-ghostty-pin.test.sh`: con el SHA igual → 0; con el SHA distinto → 1 y stderr contiene `was built from`; sin `GhosttyKit.sha` → 1 y stderr contiene `Run scripts/build-ghostty.sh`.
   - `build-ghostty-zig-version.test.sh`: con `ZIG=<script falso que imprime 0.16.0>`, `build-ghostty.sh` sale con 1 y stderr contiene `requires Zig >= 0.17.0 (found 0.16.0)`.

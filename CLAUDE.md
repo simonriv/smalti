@@ -40,7 +40,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 
 ## libghostty
 
-- **Commit fijado:** se fija en un único lugar, el SHA del submódulo `vendor/ghostty`; hoy es Ghostty `v1.4.0` (`ce787fc`). `scripts/build-ghostty.sh` construye `GhosttyKit.xcframework` (en `.gitignore`), y el build falla si el xcframework no corresponde a ese SHA.
+- **Commit fijado:** se fija en un único lugar, el SHA del submódulo `vendor/ghostty`; hoy es Ghostty `v1.4.0` (`83fb956`). `scripts/build-ghostty.sh` construye `GhosttyKit.xcframework` (en `.gitignore`), y el build falla si el xcframework no corresponde a ese SHA.
 - **Frontera:** solo el target `GhosttyAdapter` importa GhosttyKit. Punteros, `ghostty_*_t` y tipos de C nunca cruzan el puerto `TerminalEngine`; la vista (`NSView`) sale por `TerminalViewProvider`, del lado de la app.
 - **Actualizaciones a propósito:** se actualiza en un PR propio, `chore(ghostty): bump to <sha>`. El PR incluye el diff de las APIs de `ghostty.h` que usamos y la lista de render de F0 (`docs/specs/F0-spike.md`, A9–A11) repetida.
 - **Configuración aislada:** Smalti nunca lee `~/.config/ghostty/`. La configuración del motor se genera desde `SmaltiConfig`.

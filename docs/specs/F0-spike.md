@@ -16,7 +16,7 @@ El spike responde preguntas. Su código de producción se conserva solo si cumpl
 ## Alcance
 
 - **Build del motor**
-  - Ghostty como submódulo en `vendor/ghostty`, fijado al commit del tag `v1.4.0` (`ce787fc18a7782e81585beb63f0d905ccaf69284`). Es la misma versión que Ghostty.app instalado, así las comparaciones son en igualdad de condiciones.
+  - Ghostty como submódulo en `vendor/ghostty`, fijado al commit del tag `v1.4.0` (`83fb95624b0439ee660c2679b43b38c8b63769cd`). Es la misma versión que Ghostty.app instalado, así las comparaciones son en igualdad de condiciones.
   - Zig: el commit exige `minimum_zig_version = 0.17.0`. Se usa el de Homebrew (0.17.1); si no compila, se instala la versión exacta fuera de Homebrew.
   - Script `scripts/build-ghostty.sh` que produce `GhosttyKit.xcframework` (no versionado) y copia los recursos que necesita: terminfo `xterm-ghostty` e integración de shell.
 - **Proyecto**
