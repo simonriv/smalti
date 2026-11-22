@@ -41,4 +41,60 @@ final class TerminalPaneTests: XCTestCase {
             }, evaluatedWith: nil)
         wait(for: [written], timeout: 10)
     }
+
+    /// Review Focus 2: when the shell exits, the pane closes its window and the app terminates.
+    func testShellExitTerminatesApp() {
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
+
+        app.typeText("exit\n")
+
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+    }
+
+    /// A11 (synthesized input): accented letters and the characters ⌥ produces on the Latin American layout
+    /// reach the shell intact. Real dead-key composition is checked by hand.
+    func testSpecialCharactersReachShell() {
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
+        sleep(2)
+        let text = "áéíóúñü¿¡@|#[]{}"
+
+        app.typeText("<<<'\(text)'>\"$SMALTI_UITEST_OUT\"\n")
+
+        let written = expectation(for: NSPredicate { _, _ in
+            (try? String(contentsOf: self.outputFile, encoding: .utf8)) == text + "\n"
+        }, evaluatedWith: nil)
+        wait(for: [written], timeout: 10)
+    }
+
+    /// A11: ⌘V pastes the general pasteboard into the shell (libghostty clipboard read callback).
+    func testCommandVPastesClipboard() {
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
+        sleep(2)
+        let previous = NSPasteboard.general.string(forType: .string)
+        defer {
+            // The test borrows the user's real pasteboard; give it back.
+            NSPasteboard.general.clearContents()
+            if let previous { NSPasteboard.general.setString(previous, forType: .string) }
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("pegado-ok", forType: .string)
+
+        app.typeText("<<<'")
+        app.typeKey("v", modifierFlags: .command)
+        app.typeText("'>\"$SMALTI_UITEST_OUT\"\n")
+
+        let written = expectation(for: NSPredicate { _, _ in
+            (try? String(contentsOf: self.outputFile, encoding: .utf8)) == "pegado-ok\n"
+        }, evaluatedWith: nil)
+        wait(for: [written], timeout: 10)
+    }
+
+    /// A11: ⌘Q quits through the app menu even while the terminal has focus.
+    func testCommandQQuits() {
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
+
+        app.typeKey("q", modifierFlags: .command)
+
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+    }
 }
