@@ -36,4 +36,4 @@
 - [x] Revisada con el informe de F0: ajustes R1–R10 aprobados; requisito de cmux descartado (2026-11-22)
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F1-tiling.md`)
+- [x] Plan de implementación (`docs/plans/F1-tiling.md`), pendiente de aprobación de Simón
