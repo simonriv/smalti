@@ -19,6 +19,8 @@ private let obsidianPrimaryText = rgb(0xd7dae0)
 private let obsidianTitleText = rgb(0xe6e9ef)
 /// Minimum for small text over the glass (docs/design/README.md); status bar and empty hint use it too.
 private let obsidianSecondaryText = rgb(0x8b919c)
+/// Inactive workspace names and pane directories (Main.dc.html).
+private let obsidianMutedText = rgb(0x9aa0ab)
 
 extension Theme {
     public static let obsidian = Theme(
@@ -55,12 +57,14 @@ extension Theme {
             paddingY: 12),
         strip: StripTokens(
             pillHeight: 26, pillCornerRadius: 7, pillPadding: 11, pillGap: 6, paddingLeading: 16,
-            paddingTrailing: 14, inactiveText: rgb(0x9aa0ab), activeText: obsidianTitleText, labelGap: 7, fontSize: 12,
+            paddingTrailing: 14, inactiveText: obsidianMutedText, activeText: obsidianTitleText, labelGap: 7,
+            fontSize: 12,
             fontWeight: 500, dotSize: 6, dot: rgb(0x565c68),
-            bottomBorder: white(0.05)),
+            bottomBorder: white(0.05), addButtonIconSize: 12, addButtonIconStroke: 1.4,
+            addButtonColor: obsidianSecondaryText),
         header: HeaderTokens(
-            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: rgb(0x9aa0ab),
-            bottomBorder: white(0.05)),
+            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: obsidianMutedText,
+            bottomBorder: white(0.05), processFontWeight: 600),
         kbd: KbdTokens(
             fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
             cornerRadius: 5, borderWidth: 1, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),

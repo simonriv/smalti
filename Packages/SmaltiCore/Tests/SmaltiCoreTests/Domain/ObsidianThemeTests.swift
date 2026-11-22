@@ -125,6 +125,14 @@ struct ObsidianThemeTests {
         #expect(theme.focus.ringWidth == 1)
     }
 
+    /// "+" button of the strip and the process name of the pane header, from Main.dc.html.
+    @Test func stripAddButtonAndHeaderProcessTokens() {
+        #expect(theme.strip.addButtonIconSize == 12)
+        #expect(theme.strip.addButtonIconStroke == 1.4)
+        #expect(theme.strip.addButtonColor == theme.text.secondary)
+        #expect(theme.header.processFontWeight == 600)
+    }
+
     @Test func focusTokensDeriveFromTheAccent() {
         #expect(theme.focus.ring == theme.accent.withAlpha(0x80 / 255))
         #expect(theme.focus.glow == theme.accent.withAlpha(0x22 / 255))

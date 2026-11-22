@@ -74,6 +74,10 @@ public struct StripTokens: Equatable, Sendable {
     public let dotSize: Double
     public let dot: RGBAColor
     public let bottomBorder: RGBAColor
+    /// The "+" (new workspace) button: a square as tall as a pill with a thin cross.
+    public let addButtonIconSize: Double
+    public let addButtonIconStroke: Double
+    public let addButtonColor: RGBAColor
 }
 
 /// The bar above each pane.
@@ -85,6 +89,8 @@ public struct HeaderTokens: Equatable, Sendable {
     public let dotSize: Double
     public let directory: RGBAColor
     public let bottomBorder: RGBAColor
+    /// The process name is semibold in the title color.
+    public let processFontWeight: Int
 }
 
 /// Keycap-style label that shows a shortcut.
@@ -114,7 +120,8 @@ public struct FocusTokens: Equatable, Sendable {
     public private(set) var ring: RGBAColor
     public private(set) var glow: RGBAColor
     public let glowRadius: Double
-    /// Width of the accent ring and of the `0 0 0 1px` glow ring around it.
+    /// Width of the glow ring stroked just outside the pane border (`0 0 0 1px`); the border itself, in the ring
+    /// color, uses `PanelTokens.borderWidth`.
     public let ringWidth: Double
 
     func following(_ accent: RGBAColor) -> FocusTokens {

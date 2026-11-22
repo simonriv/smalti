@@ -152,6 +152,12 @@ struct LayoutStrategyTests {
         #expect(LayoutCatalog.standard.strategyOrDefault(for: .columns).id == .columns)
     }
 
+    @Test func emptyCatalogIsRejected() async {
+        await #expect(processExitsWith: .failure) {
+            _ = LayoutCatalog([])
+        }
+    }
+
     @Test func catalogFindsStrategiesById() {
         let catalog = LayoutCatalog.standard
 
