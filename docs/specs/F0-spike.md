@@ -16,7 +16,7 @@ El spike responde preguntas. Su código de producción se conserva solo si cumpl
 ## Alcance
 
 - **Build del motor**
-  - Ghostty como submódulo en `vendor/ghostty`, fijado al commit del tag `v1.4.0` (`ce787fc18a7782e81585beb63f0d905ccaf69284`). Es la misma versión que Ghostty.app instalado, así las comparaciones son en igualdad de condiciones.
+  - Ghostty como submódulo en `vendor/ghostty`, fijado al commit del tag `v1.4.0` (`83fb95624b0439ee660c2679b43b38c8b63769cd`). Es la misma versión que Ghostty.app instalado, así las comparaciones son en igualdad de condiciones.
   - Zig: el commit exige `minimum_zig_version = 0.17.0`. Se usa el de Homebrew (0.17.1); si no compila, se instala la versión exacta fuera de Homebrew.
   - Script `scripts/build-ghostty.sh` que produce `GhosttyKit.xcframework` (no versionado) y copia los recursos que necesita: terminfo `xterm-ghostty` e integración de shell.
 - **Proyecto**
@@ -57,7 +57,7 @@ SmaltiApp (target de app, Xcode)          ← composition root + adaptadores pri
 
 - `PaneID` (valor opaco).
 - `TerminalSessionSpec`: directorio de trabajo, comando (por defecto, login shell) y variables extra.
-- `TerminalEvent`: `titleChanged(String)`, `workingDirectoryChanged(Path)`, `promptMarked(PromptMark)`, `bell` y `exited(code)`. Son la base de las cabeceras de F1 y del estado de F2.
+- `TerminalEvent`: `titleChanged(String)`, `workingDirectoryChanged(WorkingDirectory)`, `commandFinished(exitCode: Int?, duration: Duration)`, `bell` y `exited(code: Int?)`. Son la base de las cabeceras de F1 y del estado de F2. `commandFinished` sale del fin de comando de OSC 133 (`GHOSTTY_ACTION_COMMAND_FINISHED` en v1.4.0, que no expone un evento por cada prompt).
 
 ### Puertos (en `SmaltiCore`, con vocabulario de dominio)
 
@@ -92,7 +92,7 @@ protocol TerminalEngine {
 3. Cómo dar a la superficie un fondo transparente para que el vidrio se vea sin perder contraste. Coste en GPU y batería del desenfoque detrás de una capa Metal.
 4. Desenfoque de radio exacto (diseño: 0–48 px) con la API privada de ventana que usa Ghostty, aprobada para uso personal. El material del sistema queda como respaldo si la API falla.
 5. Si la inyección de integración de shell funciona con un `ZDOTDIR` propio sin tocar el del usuario.
-6. Si libghostty expone el PTY o el PID del proceso en primer plano (necesario en F1 para la cabecera y en F7 para `smaltid`).
+6. Si libghostty expone el PTY o el PID del proceso en primer plano (necesario en F1 para la cabecera y en F7 para `smaltid`). v1.4.0 tiene `ghostty_surface_foreground_pid`; falta confirmar que funcione y si hay acceso al PTY.
 7. Si es viable que Smalti dibuje sobre la zona del prompt (OSC 133) para F4 y F5. Exploración acotada a medio día; solo se documenta.
 
 ## Criterios de aceptación
@@ -107,7 +107,7 @@ Cada uno se verifica y su evidencia queda en el informe.
 | A4 | `OpenPane` se prueba con un `FakeTerminalEngine` en memoria | Prueba unitaria (Swift Testing) |
 | A5 | La ventana coincide con los tokens: radio 16, borde, sombra, franja de 40 px, margen de 10, panel con radio 11. Sin semáforo visible; se arrastra desde la franja | Captura a 1328×820 superpuesta a `Main.dc.html` |
 | A6 | zsh arranca como login shell; `echo $TERM` → `xterm-ghostty`; `infocmp xterm-ghostty` funciona dentro de Smalti | Manual, salida en el informe |
-| A7 | `cd /tmp` emite `workingDirectoryChanged`; cada prompt emite `promptMarked` | Log de eventos del adaptador |
+| A7 | `cd /tmp` emite `workingDirectoryChanged`; `false` emite `commandFinished(exitCode: 1, …)` | Log de eventos del adaptador |
 | A8 | Cambiar `~/.config/ghostty/config` (p. ej. el tamaño de fuente) no altera Smalti | Manual |
 | A9 | Lista de render de Claude Code sin artefactos, igual que en Ghostty.app lado a lado: arranque, spinner, respuesta larga en streaming, diff con colores, prompt de permiso navegado con flechas, redimensionar la ventana durante el streaming, `/help`, scroll del historial durante el streaming, salida y retorno al shell | Grabación de pantalla de ambos |
 | A10 | nvim, htop, less y `vim` en pantalla alternativa; ratón en nvim; emoji y CJK con ancho correcto; pegado entre corchetes | Manual |
