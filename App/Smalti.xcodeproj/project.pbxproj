@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
+		C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +37,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */,
+				C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,9 +76,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 780754F98F0CCAA36D4D0A49 /* Build configuration list for PBXNativeTarget "Smalti" */;
 			buildPhases = (
+				14ECE1FAB67C8A19695D47DC /* Check Ghostty pin */,
 				DA10D9DD089DF2AFEBC5ED5A /* Sources */,
 				0248D6DB510EB0F7E9C05175 /* Frameworks */,
 				82A968CB662751220D4DFE2D /* Resources */,
+				C25A501B472CEDF18639FE6A /* Copy Ghostty resources */,
 			);
 			buildRules = (
 			);
@@ -88,6 +92,7 @@
 			name = Smalti;
 			packageProductDependencies = (
 				45270719A545F7E15F22D287 /* SmaltiCore */,
+				2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */,
 			);
 			productName = Smalti;
 			productReference = 81918909E83595C8F4212CCC /* Smalti.app */;
@@ -144,6 +149,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4A2381B11E94060630713172 /* XCLocalSwiftPackageReference "../Packages/SmaltiCore" */,
+				1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
@@ -172,6 +178,39 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		14ECE1FAB67C8A19695D47DC /* Check Ghostty pin */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Check Ghostty pin";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/check-ghostty-pin.sh\"\n";
+		};
+		C25A501B472CEDF18639FE6A /* Copy Ghostty resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Ghostty resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "set -euo pipefail\nsrc=\"$SRCROOT/../Packages/GhosttyAdapter/Frameworks/ghostty-resources\"\ndst=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nrsync -a --delete \"$src/ghostty\" \"$src/terminfo\" \"$dst/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		DA10D9DD089DF2AFEBC5ED5A /* Sources */ = {
@@ -336,12 +375,20 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/SmaltiCore;
 		};
+		1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/GhosttyAdapter;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		45270719A545F7E15F22D287 /* SmaltiCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SmaltiCore;
+		};
+		2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GhosttyAdapter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

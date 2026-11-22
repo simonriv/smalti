@@ -6,7 +6,7 @@ final class MainWindowTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
+        app = XCUIApplication.isolatedSmalti()
         app.launch()
     }
 
