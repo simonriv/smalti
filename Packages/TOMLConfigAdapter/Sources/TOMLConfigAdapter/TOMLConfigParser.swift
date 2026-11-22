@@ -53,6 +53,10 @@ private enum AppearanceReader {
     private static let gap = Bounds(0...32, "0 y 32")
     private static let radius = Bounds(0...32, "0 y 32")
     private static let accentReason = "se esperaba un color #rrggbb"
+    private static let fontFamilyKey = "font_family"
+    private static let fontFamilyMaximumLength = 100
+    private static let fontFamilyReason =
+        "se esperaba un nombre de 1 a 100 caracteres sin comillas, \\ ni caracteres de control"
 
     static func read(_ section: TOMLSection, over defaults: AppearanceSettings) throws(ConfigError)
         -> AppearanceSettings
@@ -64,7 +68,7 @@ private enum AppearanceReader {
         appearance.accent = try accent(in: section) ?? appearance.accent
         appearance.glassOpacity = try number("glass_opacity", in: section, glassOpacity) ?? appearance.glassOpacity
         appearance.blur = try number("blur", in: section, blur) ?? appearance.blur
-        appearance.fontFamily = try section.text("font_family") ?? appearance.fontFamily
+        appearance.fontFamily = try fontFamily(in: section) ?? appearance.fontFamily
         appearance.fontSize = try number("font_size", in: section, fontSize) ?? appearance.fontSize
         appearance.gap = try number("gap", in: section, gap) ?? appearance.gap
         appearance.radius = try number("radius", in: section, radius) ?? appearance.radius
@@ -79,6 +83,19 @@ private enum AppearanceReader {
         } catch {
             throw section.error(at: "accent", accentReason)
         }
+    }
+
+    /// The name ends up inside a quoted line of the generated libghostty config, so anything that could close the
+    /// quote or start a new line is refused here, at the boundary.
+    private static func fontFamily(in section: TOMLSection) throws(ConfigError) -> String? {
+        guard let text = try section.text(fontFamilyKey) else { return nil }
+        guard (1...fontFamilyMaximumLength).contains(text.count), !text.unicodeScalars.contains(where: isUnsafe)
+        else { throw section.error(at: fontFamilyKey, fontFamilyReason) }
+        return text
+    }
+
+    private static func isUnsafe(_ scalar: Unicode.Scalar) -> Bool {
+        scalar == "\"" || scalar == "\\" || scalar.properties.generalCategory == .control
     }
 
     private static func number(_ key: String, in section: TOMLSection, _ bounds: Bounds) throws(ConfigError)

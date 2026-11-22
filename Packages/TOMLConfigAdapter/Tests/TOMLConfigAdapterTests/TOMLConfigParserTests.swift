@@ -142,6 +142,35 @@ struct TOMLConfigParserTests {
         #expect(error == ConfigError(file: Self.file, line: 2, key: "font_family", reason: "se esperaba un texto"))
     }
 
+    /// Values that could break or inject lines into the generated engine config, as TOML source.
+    @Test(arguments: [
+        #""""#,
+        "\"\(String(repeating: "a", count: 101))\"",
+        #""Jet\"Brains""#,
+        #""Jet\\Brains""#,
+        #""Jet\nBrains""#,
+        #""Jet\tBrains""#,
+        #""Jet\u0007Brains""#,
+        #""Jet\u007FBrains""#,
+    ])
+    func unsafeFontFamilyIsRejected(_ value: String) {
+        let error = error(parsing: "[appearance]\nfont_family = \(value)")
+
+        #expect(
+            error
+                == ConfigError(
+                    file: Self.file, line: 2, key: "font_family",
+                    reason: "se esperaba un nombre de 1 a 100 caracteres sin comillas, \\ ni caracteres de control"))
+    }
+
+    @Test func fontFamilyOfOneHundredCharactersIsAccepted() throws {
+        let name = String(repeating: "a", count: 100)
+
+        let config = try parse("[appearance]\nfont_family = \"\(name)\"")
+
+        #expect(config.appearance.fontFamily == name)
+    }
+
     @Test func unknownLayoutIsReportedWithLine() throws {
         let error = try error(parsingFixture: "unknown-layout")
 

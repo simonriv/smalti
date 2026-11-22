@@ -41,6 +41,28 @@ struct GhosttyConfigTextTests {
             ])
     }
 
+    @Test func renderNeverInjectsLinesFromFontFamily() {
+        var settings = AppearanceSettings.obsidian
+        settings.fontFamily = "X\"\ncommand = /bin/sh"
+        let appearance = Theme.obsidian.applying(settings).terminal
+
+        let lines = GhosttyConfigText.render(appearance).split(separator: "\n")
+
+        #expect(!lines.contains { $0.hasPrefix("command") })
+        #expect(lines.filter { $0 == "keybind = clear" }.count == 1)
+    }
+
+    @Test(arguments: ["X\"Y", "X\\Y", "X\nY", "X\rY", "X\u{7}Y"])
+    func unsafeFontFamilyLeavesTheEngineDefault(_ family: String) {
+        var settings = AppearanceSettings.obsidian
+        settings.fontFamily = family
+        let appearance = Theme.obsidian.applying(settings).terminal
+
+        let rendered = GhosttyConfigText.render(appearance)
+
+        #expect(!rendered.contains("font-family"))
+    }
+
     @Test func listsTheSixteenPaletteEntriesInOrder() {
         let palette = GhosttyConfigText.render(Theme.obsidian.terminal)
             .split(separator: "\n")
