@@ -7,6 +7,8 @@ import SmaltiCore
 @MainActor
 struct KeyRouter {
     let keymap: () -> Keymap
+    /// Commands allowed right now; nil allows every shortcut (see `KeyRouting.decide`).
+    let allowing: () -> Set<CommandID>?
     let perform: (CommandID) -> Void
 
     /// True when the key belongs to Smalti and must not reach the terminal.
@@ -15,7 +17,7 @@ struct KeyRouter {
         guard event.type == .keyDown, !composing, let chord = KeyChordTranslator.chord(from: event) else {
             return false
         }
-        switch KeyRouting.decide(chord, isRepeat: event.isARepeat, keymap: keymap()) {
+        switch KeyRouting.decide(KeyPress(chord, isRepeat: event.isARepeat), keymap: keymap(), allowing: allowing()) {
         case .perform(let command):
             perform(command)
             return true

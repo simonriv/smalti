@@ -12,6 +12,7 @@ final class AppComposition {
     private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
     private var controller: TilingController?
+    private var palette: CommandPaletteController?
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
     private struct Startup {
@@ -81,15 +82,48 @@ final class AppComposition {
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        connectPalette(controller, to: window)
+        connectKeyboard(controller, to: window)
+    }
+
+    /// ⌘K and "Renombrar workspace…" open the palette; while it is open the panes dim and keep their processes.
+    private func connectPalette(_ controller: TilingController, to window: SmaltiWindow) {
+        let palette = CommandPaletteController(
+            window: window,
+            actions: .init(
+                search: { [weak controller] query in
+                    guard let controller else { return [] }
+                    return SearchCommands(layouts: .standard).execute(
+                        query, set: controller.set, keymap: controller.config.keys)
+                },
+                perform: { [weak controller] command in controller?.perform(command) },
+                rename: { [weak controller] name in controller?.rename(to: name) },
+                currentWorkspaceName: { [weak controller] in controller?.set.active.name ?? "" }))
+        palette.onOpenChange = { [weak self, weak window, weak controller] isOpen in
+            guard let window, let controller else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { self?.focusKeyboard(on: controller.set.active.focusedPane) }
+        }
+        controller.onViewCommand = { [weak palette, weak controller] command in
+            guard let palette, let theme = controller?.theme else { return }
+            command == .workspaceRename ? palette.beginRename(theme: theme) : palette.toggle(theme: theme)
+        }
+        self.palette = palette
+    }
+
+    private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
         let router = KeyRouter(
             keymap: { [weak controller] in controller?.config.keys ?? .standard },
+            allowing: { [weak self] in self?.palette?.isOpen == true ? [.paletteOpen] : nil },
             perform: { [weak controller] command in controller?.perform(command) })
         window.routeKey = { router.route($0, composing: $1) }
     }
 
     /// Keystrokes go to the focused pane's terminal.
     private func focusKeyboard(on pane: PaneID?) {
-        guard let window, let pane, let view = engine?.view(for: pane), window.firstResponder !== view else { return }
+        guard palette?.isOpen != true, let window, let pane, let view = engine?.view(for: pane),
+            window.firstResponder !== view
+        else { return }
         window.makeFirstResponder(view)
     }
 

@@ -145,6 +145,25 @@ struct ObsidianThemeTests {
         #expect(theme.focus.glowRadius == 28)
     }
 
+    /// The rest of Paleta.dc.html: field, icons, list padding, row padding, shadow, "actual" marker, footer gap.
+    @Test func paletteDetailTokens() {
+        let palette = theme.palette
+        #expect(palette.fieldFontSize == 16)
+        #expect(palette.fieldGap == 10)
+        #expect(palette.iconSize == 16)
+        #expect(palette.searchIconStroke == 1.5)
+        #expect(palette.commandIconStroke == 1.4)
+        #expect(palette.listPaddingTop == 4)
+        #expect(palette.listPaddingHorizontal == 6)
+        #expect(palette.listPaddingBottom == 8)
+        #expect(palette.rowPadding == 12)
+        #expect(palette.shadowOffsetY == 40)
+        #expect(palette.shadowBlur == 100)
+        #expect(palette.shadowOpacity == 0.55)
+        #expect(palette.markerFontSize == 11.5)
+        #expect(palette.footerGap == 16)
+    }
+
     @Test func paletteTokens() {
         let palette = theme.palette
 

@@ -36,7 +36,7 @@ public struct PanelTokens: Equatable, Sendable {
 
 public struct ChromeTokens: Equatable, Sendable {
     public let topStripHeight: Double
-    /// Separators under the strip, the pane headers and above the status bar, and the pill border (1 px).
+    /// Separators under the strip, the pane headers and above the status bar, and the pill border, in points.
     public let hairlineWidth: Double
 }
 
@@ -163,6 +163,23 @@ public struct PaletteTokens: Equatable, Sendable {
     public let topOffset: Double
     /// Opacity of the layer that dims the panes behind the palette.
     public let panelsBackdropOpacity: Double
+    public let fieldFontSize: Double
+    /// Space between the search icon, the field and the `esc` hint.
+    public let fieldGap: Double
+    public let iconSize: Double
+    public let searchIconStroke: Double
+    public let commandIconStroke: Double
+    public let listPaddingTop: Double
+    public let listPaddingHorizontal: Double
+    public let listPaddingBottom: Double
+    public let rowPadding: Double
+    /// `0 40px 100px rgba(0,0,0,0.55)`.
+    public let shadowOffsetY: Double
+    public let shadowBlur: Double
+    public let shadowOpacity: Double
+    /// "actual" next to the current layout.
+    public let markerFontSize: Double
+    public let footerGap: Double
 
     func following(_ accent: RGBAColor) -> PaletteTokens {
         var copy = self

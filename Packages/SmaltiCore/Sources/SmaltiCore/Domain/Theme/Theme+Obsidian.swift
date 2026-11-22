@@ -82,7 +82,10 @@ extension Theme {
             rowCornerRadius: 8, rowGap: 12, rowFontSize: 13.5, groupFontSize: 10.5, groupTracking: 0.06,
             groupPaddingTop: 10, groupPaddingHorizontal: 12, groupPaddingBottom: 4,
             selection: obsidianAccent.withAlpha(0x26 / 255), footerHeight: 36, footerFontSize: 11.5,
-            footerBorder: white(0.07), topOffset: 110, panelsBackdropOpacity: 0.45),
+            footerBorder: white(0.07), topOffset: 110, panelsBackdropOpacity: 0.45, fieldFontSize: 16, fieldGap: 10,
+            iconSize: 16, searchIconStroke: 1.5, commandIconStroke: 1.4, listPaddingTop: 4, listPaddingHorizontal: 6,
+            listPaddingBottom: 8, rowPadding: 12, shadowOffsetY: 40, shadowBlur: 100, shadowOpacity: 0.55,
+            markerFontSize: 11.5, footerGap: 16),
         motion: MotionTokens(rearrangeDuration: 0.15),
         emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText))
 }
