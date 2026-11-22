@@ -17,7 +17,7 @@
 - [x] Plan de implementación (`docs/plans/F0-spike.md`), pendiente de revisión de Simón
 
 ### Tareas
-- [ ] T1 · Esqueleto, `SmaltiCore` y guarda de imports
+- [x] T1 · Esqueleto, `SmaltiCore` y guarda de imports
 - [ ] T2 · Dominio del panel y tema Obsidiana
 - [ ] T3 · Puerto `TerminalEngine`, `OpenPane` y fake
 - [ ] T4 · Ghostty v1.4.0 fijado y build de GhosttyKit
