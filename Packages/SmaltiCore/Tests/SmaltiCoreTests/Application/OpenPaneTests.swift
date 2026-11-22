@@ -29,7 +29,8 @@ struct OpenPaneTests {
     }
 
     @Test mutating func openKeepsSpecEnvironmentAndAddsSmalti() throws {
-        let open = OpenPane(engine: engine, version: "1", environment: ["EDITOR": "vim", "SMALTI": "0", "SMALTI_VERSION": "old"])
+        let open = OpenPane(
+            engine: engine, version: "1", environment: ["EDITOR": "vim", "SMALTI": "0", "SMALTI_VERSION": "old"])
 
         _ = try open.execute(request(roomy), in: &set)
 
