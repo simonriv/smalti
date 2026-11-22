@@ -10,7 +10,7 @@ final class AppComposition {
     private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "engine")
     private var window: SmaltiWindow?
     private var engine: GhosttyTerminalEngine?
-    private var pane: Pane?
+    private var workspaces: WorkspaceSet?
     private var paneOpenedAt: ContinuousClock.Instant?
 
     func showMainWindow() {
@@ -25,45 +25,63 @@ final class AppComposition {
         }
     }
 
-    private func openTerminal(in window: SmaltiWindow) throws(TerminalEngineError) {
+    private func openTerminal(in window: SmaltiWindow) throws {
         try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(theme.terminal), writingTo: Self.engineConfigFile)
         let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
         let home = try homeDirectory()
-        let pane = try OpenPane(engine: engine).execute(Self.sessionSpec(in: home))
-        guard let view = (engine as TerminalViewProvider).view(for: pane.id) else { return }
+        var set = WorkspaceSet(
+            first: .empty(name: home.lastComponent, rootDirectory: home, layout: DwindleLayout()))
+        window.contentView?.layoutSubtreeIfNeeded()
+        let request = OpenPaneRequest(
+            shell: Self.shellCommand(), geometry: .standard(area: Self.area(of: window.paneContainer)))
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        let open = OpenPane(engine: engine, environment: ChildEnvironment.smalti(version: version))
+        let pane = try open.execute(request, in: &set)
+        guard let view = (engine as TerminalViewProvider).view(for: pane) else { return }
         window.paneContainer.embed(view)
         window.makeFirstResponder(view)
         self.engine = engine
-        self.pane = pane
+        workspaces = set
         paneOpenedAt = .now
-        observe(engine.events(for: pane.id))
+        observe(engine.events(for: pane), of: pane)
     }
 
-    private func observe(_ events: AsyncStream<TerminalEvent>) {
+    private func observe(_ events: AsyncStream<TerminalEvent>, of pane: PaneID) {
         Task { [weak self] in
             for await event in events {
                 guard let self else { return }
                 self.logger.info("pane event: \(String(describing: event), privacy: .public)")
-                self.pane = self.pane?.applying(event)
+                self.apply(event, to: pane)
                 if case .exited(let code) = event {
-                    self.paneDidExit(code: code)
+                    self.paneDidExit(pane, code: code)
                     return
                 }
             }
         }
     }
 
-    private func paneDidExit(code: Int?) {
+    private func apply(_ event: TerminalEvent, to pane: PaneID) {
+        guard let set = workspaces, let owner = set.workspace(containing: pane) else { return }
+        workspaces = set.updating(owner) { $0.applying(event, to: pane) }
+    }
+
+    private func paneDidExit(_ pane: PaneID, code: Int?) {
+        guard let engine, var set = workspaces else { return }
         let lifetime = paneOpenedAt.map { ContinuousClock.now - $0 } ?? .zero
-        switch HandlePaneExit().execute(exitCode: code, lifetime: lifetime) {
-        case .closePane:
-            window?.close()
-        case .reportFailedStart(let exitCode):
+        let exit = PaneExit(pane: pane, exitCode: code, lifetime: lifetime)
+        let outcome = HandlePaneExit(engine: engine).execute(exit, in: &set)
+        workspaces = set
+        switch outcome {
+        case .alreadyClosed:
+            return
+        case .closed:
+            break
+        case .closedAfterFailedStart(let exitCode):
             reportFailedStart(exitCode: exitCode)
-            window?.close()
         }
+        if set.active.panes.isEmpty { window?.close() }
     }
 
     private func reportFailedStart(exitCode: Int?) {
@@ -78,11 +96,15 @@ final class AppComposition {
 
     /// Login shell by default. `-SmaltiShellCommand <command>` (launch argument) overrides it; UI tests use it
     /// to run a shell without startup files. F1 moves this to `[shell] command` in config.toml.
-    private static func sessionSpec(in home: WorkingDirectory) -> TerminalSessionSpec {
+    private static func shellCommand() -> TerminalCommand {
         guard let command = UserDefaults.standard.string(forKey: "SmaltiShellCommand"), !command.isEmpty else {
-            return .loginShell(in: home)
+            return .loginShell
         }
-        return TerminalSessionSpec(workingDirectory: home, command: .custom(command))
+        return .custom(command)
+    }
+
+    private static func area(of container: NSView) -> Rect {
+        Rect(x: 0, y: 0, width: container.bounds.width, height: container.bounds.height)
     }
 
     private func homeDirectory() throws(TerminalEngineError) -> WorkingDirectory {
@@ -94,7 +116,7 @@ final class AppComposition {
         }
     }
 
-    private func fail(_ error: TerminalEngineError) {
+    private func fail(_ error: any Error) {
         logger.error("terminal engine failed: \(String(describing: error), privacy: .public)")
         let alert = NSAlert()
         alert.messageText = "Smalti no pudo iniciar la terminal"
@@ -103,11 +125,15 @@ final class AppComposition {
         NSApp.terminate(nil)
     }
 
-    private static func describe(_ error: TerminalEngineError) -> String {
+    private static func describe(_ error: any Error) -> String {
         switch error {
-        case .engineStartFailed(let reason): reason
-        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
-        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
+        case OpenPaneError.paneTooSmall(let minimum):
+            "No cabe un panel de \(Int(minimum.width)) × \(Int(minimum.height)) pt."
+        case OpenPaneError.engine(let engineError): describe(engineError)
+        case TerminalEngineError.engineStartFailed(let reason): reason
+        case TerminalEngineError.configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
+        case TerminalEngineError.surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
+        default: String(describing: error)
         }
     }
 

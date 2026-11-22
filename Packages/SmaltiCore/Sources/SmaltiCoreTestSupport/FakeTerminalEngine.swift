@@ -5,6 +5,8 @@ import SmaltiCore
 public final class FakeTerminalEngine: TerminalEngine {
     public private(set) var openedSpecs: [TerminalSessionSpec] = []
     public private(set) var closedPanes: [PaneID] = []
+    public private(set) var shownPanes: [PaneID] = []
+    public private(set) var hiddenPanes: [PaneID] = []
     public var failure: TerminalEngineError?
     private var streams:
         [PaneID: (stream: AsyncStream<TerminalEvent>, continuation: AsyncStream<TerminalEvent>.Continuation)] = [:]
@@ -22,6 +24,14 @@ public final class FakeTerminalEngine: TerminalEngine {
     public func close(_ pane: PaneID) {
         closedPanes.append(pane)
         streams.removeValue(forKey: pane)?.continuation.finish()
+    }
+
+    public func show(_ pane: PaneID) {
+        shownPanes.append(pane)
+    }
+
+    public func hide(_ pane: PaneID) {
+        hiddenPanes.append(pane)
     }
 
     public func events(for pane: PaneID) -> AsyncStream<TerminalEvent> {

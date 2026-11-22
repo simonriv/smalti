@@ -27,6 +27,14 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         view.removeFromSuperview()
     }
 
+    public func show(_ pane: PaneID) {
+        // Occlusion arrives in F1 Task 13.
+    }
+
+    public func hide(_ pane: PaneID) {
+        // Occlusion arrives in F1 Task 13.
+    }
+
     public func events(for pane: PaneID) -> AsyncStream<TerminalEvent> {
         views[pane]?.events ?? AsyncStream { $0.finish() }
     }
