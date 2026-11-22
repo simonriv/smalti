@@ -25,7 +25,7 @@
 - [x] T6 · App de Xcode con ventana de vidrio
 - [x] T7 · Terminal viva tras `TerminalEngine`
 - [x] T8 · Lista de render, mediciones y pregunta técnica 7
-- [x] T9 · Informe del spike (`docs/specs/F0-spike-report.md`); Muter descartado por ahora (issue #321), decisión pendiente
+- [x] T9 · Informe del spike (`docs/specs/F0-spike-report.md`); Muter reemplazado por `scripts/mutation/mutate.py` (100 % en SmaltiCore)
 - [ ] Cierre formal de F0: pendientes manuales de Simón (ver informe)
 
 ## F1 · Tiling y workspaces

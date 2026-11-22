@@ -30,7 +30,7 @@
 | A15 | ✅ | 13,5:1 sobre el escritorio actual; 5,25:1 sobre blanco |
 | A16 | ⏳ | Requiere a Simón |
 
-Pruebas automáticas al cierre: `SmaltiCore` 28, `GhosttyAdapter` 20 y XCUITest 10, todas en verde.
+Pruebas automáticas al cierre: `SmaltiCore` 28, `GhosttyAdapter` 20 y XCUITest 10, todas en verde. Mutation testing de `SmaltiCore` con `scripts/mutation/mutate.py`: 100 % (12 muertos, 0 sobrevivientes, 3 inválidos de 15). El mutador detecta un sobreviviente al quitar una prueba.
 
 ## Preguntas técnicas
 
@@ -71,7 +71,7 @@ Pruebas automáticas al cierre: `SmaltiCore` 28, `GhosttyAdapter` 20 y XCUITest 
 | F2 | El estado de prompt y de agente depende del IPC y de hooks, no de libghostty |
 | F4 | Overlay del editor de input sin evento de inicio de prompt (pregunta 7) |
 | F7 | `smaltid` dueño de los PTY choca con que libghostty sea dueño del PTY y del proceso |
-| Proceso | Mutation testing: Muter v16 no funciona con SwiftPM + Swift Testing (issue #321: 0 % falso); decisión pendiente de Simón |
+| Proceso | Mutation testing: Muter v16 no funciona con SwiftPM + Swift Testing (issue #321). Lo reemplaza `scripts/mutation/mutate.py`; todavía no cubre paquetes con dependencias relativas (`GhosttyAdapter`) |
 
 ## Pendientes para el cierre formal (Simón, unos 15 min)
 

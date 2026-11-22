@@ -73,7 +73,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - TDD: la prueba que falla va antes del código de producción.
 - **Unitarias y de dominio:** Swift Testing (`import Testing`), en formato Arrange/Act/Assert, un concepto por prueba. Prueba los límites: 0, 1 y 9 paneles, ratios en los bordes y tamaños mínimos.
 - **Contrato compartido:** obligatorio para cada puerto con más de una implementación.
-- **Mutation testing:** Muter (Stryker no soporta Swift). Antes de configurarlo, confirma que soporta Swift Testing; si solo soporta XCTest, avisa a Simón antes de elegir.
+- **Mutation testing:** `scripts/mutation/mutate.py` (propio; Muter v16 no aplica mutaciones con SwiftPM + Swift Testing, issue #321). Puntuación mínima 80 % en `SmaltiCore`; los sobrevivientes se arreglan con una prueba nueva, no se ignoran.
 - **E2E de la UI nativa:** XCUITest, solo las pruebas afectadas por el cambio.
 - **Verificación manual:** las listas de render y las mediciones de cada spec se registran en el PR o en el informe de la fase.
 - **Suites largas:** toda suite de más de ~30 s se lanza con `"$KB_ROOT/_system/bin/kb-progress" run <etiqueta> -- <comando>` y muestra `[n/total] ok|FAIL <unidad>`.
@@ -88,6 +88,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app (`build/Build/Products/Debug/Smalti.app`).
 - `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
 - `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests`: formato.
+- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
 - Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
 
 ## Git
