@@ -93,7 +93,7 @@ public struct CloseWorkspace {
         let closing = set.workspaces.first { $0.id == id }
         let updated = try set.removing(id)
         closing?.panes.forEach { engine.close($0.id) }
-        if id == set.activeID, closing != nil {
+        if id == set.activeID {
             updated.active.panes.forEach { engine.show($0.id) }
         }
         set = updated

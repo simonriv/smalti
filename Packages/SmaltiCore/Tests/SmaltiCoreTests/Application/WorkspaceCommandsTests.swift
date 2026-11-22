@@ -83,12 +83,13 @@ struct WorkspaceCommandsTests {
         switchWorkspace.execute(.id(firstWorkspace), in: &set)
 
         #expect(set.activeID == firstWorkspace)
-        #expect(engine.hiddenPanes.suffix(1) == [secondPane])
+        #expect(engine.hiddenPanes == [first, secondPane])
         #expect(engine.shownPanes == [first])
 
         switchWorkspace.execute(.index(2), in: &set)
 
         #expect(set.activeID == second)
+        #expect(engine.hiddenPanes == [first, secondPane, first])
         #expect(engine.shownPanes == [first, secondPane])
     }
 
@@ -118,14 +119,28 @@ struct WorkspaceCommandsTests {
     }
 
     @Test mutating func closeInactiveWorkspaceShowsNothing() throws {
-        _ = try openInActive()
+        let first = try openInActive()
         let firstWorkspace = set.activeID
-        _ = try creator().execute(create(roomy), in: &set)
+        let second = try creator().execute(create(roomy), in: &set)
 
         try CloseWorkspace(engine: engine).execute(firstWorkspace, in: &set)
 
         #expect(engine.shownPanes.isEmpty)
-        #expect(engine.closedPanes.count == 1)
+        #expect(engine.closedPanes == [first])
+        #expect(set.activeID == second)
+    }
+
+    @Test mutating func closeUnknownWorkspaceDoesNothing() throws {
+        _ = try openInActive()
+        _ = try creator().execute(create(roomy), in: &set)
+        let before = set
+
+        try CloseWorkspace(engine: engine).execute(WorkspaceID(), in: &set)
+
+        #expect(set == before)
+        #expect(engine.closedPanes.isEmpty)
+        #expect(engine.shownPanes.isEmpty)
+        #expect(engine.hiddenPanes.count == 1)
     }
 
     @Test mutating func closeLastWorkspaceThrows() throws {

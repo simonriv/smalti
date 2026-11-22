@@ -65,15 +65,25 @@ struct ArrangePanesTests {
     }
 
     @Test mutating func resizeStepsFivePercent() {
-        let before = set.active.tree
         set = set.updating(set.activeID) { $0.focusing(ids[0]) }
 
         ResizePane().execute(toward: .right, geometry: geometry, in: &set)
 
-        let expected = before?.resizing(
-            ResizeRequest(pane: ids[0], direction: .right, step: ResizeRequest.defaultStep), within: geometry)
-        #expect(set.active.tree == expected)
-        #expect(set.active.tree != before)
+        guard case .split(_, let ratio, _, _) = set.active.tree else {
+            Issue.record("expected a split")
+            return
+        }
+        #expect(abs(ratio.value - 0.55) < 1e-9)
+    }
+
+    @Test mutating func resizeWithoutFocusDoesNothing() throws {
+        let root = try WorkingDirectory(path: "/tmp")
+        set = WorkspaceSet(first: .empty(name: "tmp", rootDirectory: root, layout: ColumnsLayout()))
+        let before = set
+
+        ResizePane().execute(toward: .right, geometry: geometry, in: &set)
+
+        #expect(set == before)
     }
 
     @Test mutating func equalizeRestoresEvenSplits() {
