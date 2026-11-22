@@ -49,7 +49,12 @@ struct CommandCatalogTests {
 
         let equalize = try #require(commands.first { $0.id == .panesEqualize })
         #expect(equalize.icon?.frame == nil)
-        #expect(equalize.icon?.strokes.count == 4)
+        #expect(
+            equalize.icon?.strokes == [
+                [Point(x: 2, y: 5), Point(x: 14, y: 5)], [Point(x: 2, y: 11), Point(x: 14, y: 11)],
+                [Point(x: 5, y: 2.5), Point(x: 2, y: 5), Point(x: 5, y: 7.5)],
+                [Point(x: 11, y: 8.5), Point(x: 14, y: 11), Point(x: 11, y: 13.5)],
+            ])
     }
 
     @Test func commandsWithoutBoardIconHaveNone() {

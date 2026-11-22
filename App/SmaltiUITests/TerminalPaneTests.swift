@@ -5,12 +5,12 @@ final class TerminalPaneTests: XCTestCase {
     private var app: XCUIApplication!  // Assigned in setUp before every test; XCTest has no init-time setup.
     private var outputFile: URL!  // Same: created per test in setUp.
     private var exitMarker: URL!  // Same: written by the app only when it terminates cleanly.
-    /// The user's pasteboard text, restored in tearDown, which XCTest runs even when a test fails.
-    private var savedPasteboard: String?
+    /// The user's whole pasteboard, restored in tearDown, which XCTest runs even when a test fails (R9).
+    private var pasteboard: PasteboardGuard!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        savedPasteboard = NSPasteboard.general.string(forType: .string)
+        pasteboard = PasteboardGuard()
         outputFile = FileManager.default.temporaryDirectory.appending(path: "smalti-uitest-\(UUID().uuidString)")
         exitMarker = FileManager.default.temporaryDirectory.appending(path: "smalti-exit-\(UUID().uuidString)")
         app = XCUIApplication.isolatedSmalti()
@@ -20,9 +20,8 @@ final class TerminalPaneTests: XCTestCase {
     }
 
     override func tearDown() {
-        NSPasteboard.general.clearContents()
-        if let savedPasteboard { NSPasteboard.general.setString(savedPasteboard, forType: .string) }
         app.terminate()
+        pasteboard.restore()
         try? FileManager.default.removeItem(at: outputFile)
         try? FileManager.default.removeItem(at: exitMarker)
     }

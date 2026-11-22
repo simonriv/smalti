@@ -60,6 +60,17 @@ final class CommandPaletteTests: XCTestCase {
         XCTAssertEqual(element("smalti.workspace").label, "solen")
     }
 
+    /// ⌘Z undoes typing in the field: "col" then ⌘Z leaves no query, so every group shows again.
+    func testCommandZUndoesTypingInTheField() {
+        openPalette()
+        app.typeText("col")
+
+        app.typeKey("z", modifierFlags: .command)
+
+        let field = element("smalti.paletteField")
+        XCTAssertEqual(field.value as? String ?? "", "")
+    }
+
     func testEscapeCancelsRename() {
         let original = element("smalti.workspace").label
         openPalette()

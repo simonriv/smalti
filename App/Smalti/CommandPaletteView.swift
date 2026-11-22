@@ -194,17 +194,40 @@ private final class FlippedView: NSView {
 }
 
 /// The palette's text field. Smalti has no Edit menu (the terminal owns ⌘C/⌘V), so the editing shortcuts are
-/// handled here: ⌘A, ⌘C, ⌘V, ⌘X and ⌘Z go to the field editor.
+/// handled here: ⌘A, ⌘C, ⌘V, ⌘X, ⌘Z and ⇧⌘Z go to the field editor.
 final class PaletteField: NSTextField {
-    private static let editActions: [String: Selector] = [
-        "a": #selector(NSResponder.selectAll(_:)), "c": #selector(NSText.copy(_:)), "v": #selector(NSText.paste(_:)),
-        "x": #selector(NSText.cut(_:)), "z": Selector(("undo:")),
+    private struct Shortcut: Hashable {
+        let key: String
+        let isShifted: Bool
+    }
+
+    private static let editActions: [Shortcut: Selector] = [
+        Shortcut(key: "a", isShifted: false): #selector(NSResponder.selectAll(_:)),
+        Shortcut(key: "c", isShifted: false): #selector(NSText.copy(_:)),
+        Shortcut(key: "v", isShifted: false): #selector(NSText.paste(_:)),
+        Shortcut(key: "x", isShifted: false): #selector(NSText.cut(_:)),
+        Shortcut(key: "z", isShifted: false): undo,
+        Shortcut(key: "z", isShifted: true): redo,
     ]
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard let editor = currentEditor(), event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-            let key = event.charactersIgnoringModifiers?.lowercased(), let action = Self.editActions[key]
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard let editor = currentEditor(), flags.subtracting(.shift) == .command,
+            let key = event.charactersIgnoringModifiers?.lowercased(),
+            let action = Self.editActions[Shortcut(key: key, isShifted: flags.contains(.shift))]
         else { return super.performKeyEquivalent(with: event) }
-        return NSApp.sendAction(action, to: editor, from: self)
+        // Undo and redo live on the window's undo manager, up the responder chain from the field editor.
+        let isHistory = action == Self.undo || action == Self.redo
+        return NSApp.sendAction(action, to: isHistory ? nil : editor, from: self)
+    }
+
+    private static let undo = Selector(("undo:"))
+    private static let redo = Selector(("redo:"))
+
+    /// The shared field editor does not record undo by default.
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        (currentEditor() as? NSTextView)?.allowsUndo = true
+        return accepted
     }
 }
