@@ -67,8 +67,17 @@ final class CommandPaletteTests: XCTestCase {
 
         app.typeKey("z", modifierFlags: .command)
 
-        let field = element("smalti.paletteField")
-        XCTAssertEqual(field.value as? String ?? "", "")
+        expect(element("smalti.paletteField"), value: "")
+    }
+
+    func testShiftCommandZRedoesTypingInTheField() {
+        openPalette()
+        app.typeText("col")
+        app.typeKey("z", modifierFlags: .command)
+
+        app.typeKey("z", modifierFlags: [.command, .shift])
+
+        expect(element("smalti.paletteField"), value: "col")
     }
 
     func testEscapeCancelsRename() {
@@ -100,6 +109,12 @@ final class CommandPaletteTests: XCTestCase {
 
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any)[identifier].firstMatch
+    }
+
+    private func expect(_ element: XCUIElement, value: String) {
+        let matched = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (element.value as? String ?? "") == value }, object: nil)
+        wait(for: [matched], timeout: 5)
     }
 
     private func expect(_ element: XCUIElement, valueEndsWith suffix: String) {

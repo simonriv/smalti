@@ -94,6 +94,7 @@ final class PaneGridView: NSView {
                 PaneHeaderContent($0, index: state.set.paneIndex(of: pane), keymap: state.config.keys, home: state.home)
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
+            container.setAccessibilityLabel(workspace.index(of: pane).map { "Panel \($0)" })
         }
     }
 

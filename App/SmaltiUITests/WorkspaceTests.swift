@@ -15,11 +15,12 @@ final class WorkspaceTests: SmaltiUITestCase {
 
     /// B9, automated with a marker file instead of `say`: a process keeps running in a hidden workspace.
     func testWorkspaceSwitchKeepsProcessesAlive() {
-        app.run("sleep 2; <<<listo>\"$SMALTI_UITEST_OUT\"")
+        app.run("sleep 4; <<<listo>\"$SMALTI_UITEST_OUT\"")
 
         app.typeKey("n", modifierFlags: [.control, .command])
         XCTAssertTrue(app.elements("smalti.workspace").element(boundBy: 1).waitForExistence(timeout: 5))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outputFile.path(percentEncoded: false)))
 
-        waitForOutput("listo\n", timeout: 10)
+        waitForOutput("listo\n", timeout: 15)
     }
 }

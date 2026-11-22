@@ -57,6 +57,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     func close() {
         guard isOpen else { return }
+        // The field editor's undo stack is the window's; a later palette must not undo this one's typing.
+        window.undoManager?.removeAllActions()
         view?.removeFromSuperview()
         view = nil
         rows = []

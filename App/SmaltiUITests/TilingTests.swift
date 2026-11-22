@@ -24,16 +24,19 @@ final class TilingTests: SmaltiUITestCase {
         app.run("<<<focused>\"$SMALTI_UITEST_OUT\"")
 
         waitForOutput("focused\n")
-        XCTAssertEqual(app.elements("smalti.pane").element(boundBy: 1).value as? String, "focused")
+        XCTAssertEqual(pane("Panel 2").value as? String, "focused")
     }
 
+    /// The first pane runs `cat`; `exit` in the second closes only the second.
     func testExitClosesOnlyThatPane() {
+        app.typeText("cat\n")
         app.typeKey("d", modifierFlags: .command)
         waitForPaneCount(2)
 
         app.typeText("exit\n")
 
         waitForPaneCount(1)
+        expect(app.element("smalti.paneHeader"), label: "cat")
         XCTAssertTrue(app.windows["smalti.window"].exists)
     }
 
@@ -57,7 +60,7 @@ final class TilingTests: SmaltiUITestCase {
     }
 
     /// B16: ⌘K and ⌘1 reach Smalti, not the terminal's own bindings (cleared, R6).
-    func testCmdKOpensPaletteAndCmd1Focuses() {
+    func testCmdKAndCmd1ReachSmaltiNotTheTerminal() {
         app.typeKey("d", modifierFlags: .command)
         waitForPaneCount(2)
 
@@ -66,12 +69,16 @@ final class TilingTests: SmaltiUITestCase {
         app.typeKey(.escape, modifierFlags: [])
         app.typeKey("1", modifierFlags: .command)
 
-        XCTAssertEqual(app.elements("smalti.pane").element(boundBy: 0).value as? String, "focused")
+        XCTAssertEqual(pane("Panel 1").value as? String, "focused")
     }
 
     /// The app names the first workspace after its home folder; the test runner's own home may differ.
     private var workspaceName: String {
         app.element("smalti.workspace").label
+    }
+
+    private func pane(_ label: String) -> XCUIElement {
+        app.elements("smalti.pane").matching(NSPredicate(format: "label == %@", label)).firstMatch
     }
 
     private func expect(_ element: XCUIElement, label: String) {
