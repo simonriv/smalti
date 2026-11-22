@@ -144,6 +144,14 @@ struct LayoutStrategyTests {
         #expect(names == [["Dwindle", "dwindle"], ["Columnas", "columnas"], ["Maestro + pila", "maestro"]])
     }
 
+    @Test func unknownLayoutFallsBackToTheFirstRegistered() {
+        #expect(LayoutCatalog.standard.strategyOrDefault(for: LayoutID(rawValue: "spiral")).id == .dwindle)
+    }
+
+    @Test func knownLayoutIsReturnedByStrategyOrDefault() {
+        #expect(LayoutCatalog.standard.strategyOrDefault(for: .columns).id == .columns)
+    }
+
     @Test func catalogFindsStrategiesById() {
         let catalog = LayoutCatalog.standard
 

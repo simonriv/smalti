@@ -3,6 +3,10 @@ import Testing
 
 @Suite("Geometry")
 struct GeometryTests {
+    @Test func zeroRectIsEmptyAtTheOrigin() {
+        #expect(Rect.zero == Rect(x: 0, y: 0, width: 0, height: 0))
+    }
+
     @Test func insetShrinksEverySide() {
         let rect = Rect(x: 0, y: 0, width: 100, height: 50)
 

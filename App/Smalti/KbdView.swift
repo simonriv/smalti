@@ -11,7 +11,7 @@ final class KbdView: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = theme.kbd.cornerRadius
-        layer?.borderWidth = 1
+        layer?.borderWidth = theme.kbd.borderWidth
         layer?.borderColor = theme.kbd.border.nsColor.cgColor
         layer?.backgroundColor = theme.kbd.background.nsColor.cgColor
         label.font = theme.kbdFont

@@ -23,7 +23,6 @@ final class PaneContainerView: NSView {
         glowMask.fillRule = .evenOdd
         glow.mask = glowMask
         glow.fillColor = nil
-        glow.lineWidth = 1
         layer?.addSublayer(glow)
         clip.wantsLayer = true
         clip.layer?.cornerCurve = .continuous
@@ -57,6 +56,7 @@ final class PaneContainerView: NSView {
         clip.layer?.borderColor = (isFocused ? theme.focus.ring : theme.panel.border).nsColor.cgColor
         clip.layer?.backgroundColor = theme.panel.background.nsColor.cgColor
         glow.isHidden = !isFocused
+        glow.lineWidth = theme.focus.ringWidth
         glow.strokeColor = theme.focus.glow.nsColor.cgColor
         glow.shadowColor = theme.focus.glow.withAlpha(1).nsColor.cgColor
         glow.shadowOpacity = Float(theme.focus.glow.alpha)
@@ -77,15 +77,18 @@ final class PaneContainerView: NSView {
         needsLayout = true
     }
 
-    /// The ring sits 0.5 pt outside the border (`0 0 0 1px`); the mask keeps everything outside the panel.
+    /// The glow ring is stroked half its width outside the border (`0 0 0 1px`); the mask keeps everything outside
+    /// the panel.
     private func layoutGlow() {
         let radius = theme.panel.cornerRadius
         let panel = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
+        // CSS blur reaches about twice its radius.
         let reach = theme.focus.glowRadius * 2
+        let ringOffset = theme.focus.ringWidth / 2
         glow.frame = bounds
         glow.path = CGPath(
-            roundedRect: bounds.insetBy(dx: -0.5, dy: -0.5), cornerWidth: radius + 0.5, cornerHeight: radius + 0.5,
-            transform: nil)
+            roundedRect: bounds.insetBy(dx: -ringOffset, dy: -ringOffset), cornerWidth: radius + ringOffset,
+            cornerHeight: radius + ringOffset, transform: nil)
         glow.shadowPath = panel
         let outside = CGMutablePath()
         outside.addRect(bounds.insetBy(dx: -reach, dy: -reach))

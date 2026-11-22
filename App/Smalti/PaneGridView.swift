@@ -13,6 +13,8 @@ final class PaneGridView: NSView {
     private var theme: Theme
     private var workspace: Workspace?
     private var clickMonitor: Any?
+    /// Increases with every animation; only the latest one may unfreeze terminal content when it ends.
+    private var animationGeneration = 0
 
     init(theme: Theme) {
         self.theme = theme
@@ -45,15 +47,17 @@ final class PaneGridView: NSView {
 
     /// Shows `set.active`. Containers of panes in other workspaces leave the view but stay alive (their processes
     /// keep running); containers of panes that no longer exist are dropped.
-    func render(_ set: WorkspaceSet, config: SmaltiConfig, theme: Theme, views: (PaneID) -> NSView?) {
-        self.theme = theme
+    func render(_ state: TilingState, views: (PaneID) -> NSView?) {
+        theme = state.theme
+        let set = state.set
         let active = set.active
         let isRearrangement = workspace.map { $0.id == active.id && $0.tree != active.tree } ?? false
         workspace = active
         dropContainers(keeping: Set(set.workspaces.flatMap { $0.panes.map(\.id) }))
         attach(active, views: views)
         emptyState.isHidden = !active.panes.isEmpty
-        emptyState.show(newPane: config.keys.chord(for: .paneNew), palette: config.keys.chord(for: .paletteOpen))
+        let keys = state.config.keys
+        emptyState.show(newPane: keys.chord(for: .paneNew), palette: keys.chord(for: .paletteOpen))
         place(animated: isRearrangement && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
@@ -80,13 +84,21 @@ final class PaneGridView: NSView {
         for (pane, container) in containers where !visible.contains(pane) {
             container.removeFromSuperview()
         }
+        let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
         for pane in workspace.panes.map(\.id) {
-            let container = containers[pane] ?? PaneContainerView(pane: pane, theme: theme)
-            containers[pane] = container
+            let container = containers[pane] ?? newContainer(for: pane, at: frames[pane])
             if let view = views(pane) { container.embed(view) }
             if container.superview !== self { addSubview(container) }
             container.apply(theme, isFocused: pane == workspace.focusedPane)
         }
+    }
+
+    /// A new pane appears at its place; only the panes that already existed move.
+    private func newContainer(for pane: PaneID, at frame: Rect?) -> PaneContainerView {
+        let container = PaneContainerView(pane: pane, theme: theme)
+        if let frame { container.frame = NSRect(frame) }
+        containers[pane] = container
+        return container
     }
 
     private func dropContainers(keeping alive: Set<PaneID>) {
@@ -108,21 +120,28 @@ final class PaneGridView: NSView {
 
     /// Only the frames move; each terminal jumps to its final size first so the Metal surface never stretches.
     private func animate(_ targets: [(PaneContainerView, NSRect)]) {
+        animationGeneration += 1
+        let generation = animationGeneration
         targets.forEach { container, frame in container.freezeContent(at: frame.size) }
         NSAnimationContext.runAnimationGroup { context in
             context.duration = theme.motion.rearrangeDuration
             targets.forEach { container, frame in container.animator().frame = frame }
-        } completionHandler: {
-            MainActor.assumeIsolated { targets.forEach { container, _ in container.unfreezeContent() } }
+        } completionHandler: { [weak self] in
+            // AppKit runs animation completions on the main thread.
+            MainActor.assumeIsolated {
+                guard let self, generation == self.animationGeneration else { return }
+                self.containers.values.forEach { $0.unfreezeContent() }
+            }
         }
     }
 
     private func paneClicked(by event: NSEvent) {
         guard event.window === window else { return }
-        let point = convert(event.locationInWindow, from: nil)
-        guard let hit = containers.values.first(where: { $0.superview === self && $0.frame.contains(point) })
+        // Hit-test the whole window so a view above the grid (the ⌘K palette) keeps its clicks.
+        guard let hit = window?.contentView?.hitTest(event.locationInWindow),
+            let pane = containers.values.first(where: { $0.superview === self && hit.isDescendant(of: $0) })?.pane
         else { return }
-        onPaneClicked?(hit.pane)
+        onPaneClicked?(pane)
     }
 }
 

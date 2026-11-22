@@ -63,11 +63,12 @@ extension Theme {
             bottomBorder: white(0.05)),
         kbd: KbdTokens(
             fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
-            cornerRadius: 5, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
+            cornerRadius: 5, borderWidth: 1, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
         statusBar: StatusBarTokens(
             height: 28, padding: 16, gap: 16, fontSize: 11, text: obsidianSecondaryText, topBorder: white(0.05)),
         focus: FocusTokens(
-            ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28),
+            ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28,
+            ringWidth: 1),
         palette: PaletteTokens(
             width: 640, cornerRadius: 14, background: RGBAColor(red: 20, green: 22, blue: 30, alpha: 0.82),
             blurRadius: 36, border: white(0.12), fieldHeight: 52, fieldPadding: 16, rowHeight: 38,

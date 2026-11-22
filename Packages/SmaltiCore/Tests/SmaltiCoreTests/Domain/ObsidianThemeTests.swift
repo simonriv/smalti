@@ -119,6 +119,12 @@ struct ObsidianThemeTests {
         #expect(bar.topBorder == white(0.05))
     }
 
+    /// `.kbd` border and the `0 0 0 1px` focus ring are 1 px in Main.dc.html.
+    @Test func lineWidthTokens() {
+        #expect(theme.kbd.borderWidth == 1)
+        #expect(theme.focus.ringWidth == 1)
+    }
+
     @Test func focusTokensDeriveFromTheAccent() {
         #expect(theme.focus.ring == theme.accent.withAlpha(0x80 / 255))
         #expect(theme.focus.glow == theme.accent.withAlpha(0x22 / 255))

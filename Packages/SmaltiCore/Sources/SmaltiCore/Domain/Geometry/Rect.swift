@@ -1,5 +1,7 @@
 /// A rectangle in points, origin at the top left, y growing downward.
 public struct Rect: Hashable, Sendable {
+    public static let zero = Rect(x: 0, y: 0, width: 0, height: 0)
+
     public let origin: Point
     public let size: Size
 

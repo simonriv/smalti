@@ -13,35 +13,54 @@ final class AppComposition {
     private var engine: GhosttyTerminalEngine?
     private var controller: TilingController?
 
+    /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
+    private struct Startup {
+        let settings: LaunchSettings
+        let store: TOMLConfigStore
+        let initial: ConfigReload
+        let theme: Theme
+    }
+
     func showMainWindow() {
-        let options = LaunchOptions.current()
-        let store = TOMLConfigStore(file: options.configFile)
-        let initial = ReloadConfig(store: store).execute()
-        let theme = Theme.obsidian.applying(initial.config.appearance)
-        let window = SmaltiWindow(theme: theme)
+        let startup = Self.readStartup()
+        let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
-        WindowGlass.apply(blurRadius: theme.window.blurRadius, to: window)
+        WindowGlass.apply(blurRadius: startup.theme.window.blurRadius, to: window)
         self.window = window
         do {
-            try start(in: window, options: options, store: store, initial: initial)
+            try start(startup, in: window)
         } catch {
             fail(error)
         }
     }
 
-    private func start(
-        in window: SmaltiWindow, options: LaunchOptions, store: TOMLConfigStore, initial: ConfigReload
-    ) throws(TerminalEngineError) {
-        let runtime = try makeRuntime(Theme.obsidian.applying(initial.config.appearance).terminal)
+    private static func readStartup() -> Startup {
+        let settings = LaunchSettings(
+            arguments: launchArguments(), home: FileManager.default.homeDirectoryForCurrentUser)
+        let store = TOMLConfigStore(file: settings.configFile)
+        let initial = ReloadConfig(store: store).execute()
+        return Startup(
+            settings: settings, store: store, initial: initial,
+            theme: Theme.obsidian.applying(initial.config.appearance))
+    }
+
+    /// `-Key value` launch arguments land in the argument domain of the user defaults.
+    private static func launchArguments() -> [String: String] {
+        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey]
+        return keys.reduce(into: [:]) { arguments, key in arguments[key] = UserDefaults.standard.string(forKey: key) }
+    }
+
+    private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
+        let runtime = try makeRuntime(startup.theme.terminal)
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let controller = TilingController(
             .init(
-                engine: engine, configStore: store, version: Self.version, home: try homeDirectory(),
-                shellOverride: options.shellOverride,
+                engine: engine, configStore: startup.store, version: Self.version, home: try homeDirectory(),
+                shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
                     try runtime?.apply(appearance)
                 }),
-            initial: initial)
+            initial: startup.initial)
         connect(controller, to: window, engine: engine)
         self.runtime = runtime
         self.engine = engine
@@ -53,9 +72,9 @@ final class AppComposition {
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
         let grid = window.paneGrid
-        controller.area = { [weak grid] in grid?.area ?? Rect(x: 0, y: 0, width: 0, height: 0) }
+        controller.area = { [weak grid] in grid?.area ?? .zero }
         controller.onChange = { [weak self, weak grid] state in
-            grid?.render(state.set, config: state.config, theme: state.theme) { engine.view(for: $0) }
+            grid?.render(state) { engine.view(for: $0) }
             self?.focusKeyboard(on: state.set.active.focusedPane)
             if let message = state.message { self?.logger.info("status: \(message.text, privacy: .public)") }
         }

@@ -94,6 +94,7 @@ public struct KbdTokens: Equatable, Sendable {
     public let paddingVertical: Double
     public let paddingHorizontal: Double
     public let cornerRadius: Double
+    public let borderWidth: Double
     public let border: RGBAColor
     public let text: RGBAColor
     public let background: RGBAColor
@@ -113,6 +114,8 @@ public struct FocusTokens: Equatable, Sendable {
     public private(set) var ring: RGBAColor
     public private(set) var glow: RGBAColor
     public let glowRadius: Double
+    /// Width of the accent ring and of the `0 0 0 1px` glow ring around it.
+    public let ringWidth: Double
 
     func following(_ accent: RGBAColor) -> FocusTokens {
         var copy = self

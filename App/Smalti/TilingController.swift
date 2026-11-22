@@ -29,7 +29,9 @@ final class TilingController {
 
     var onChange: ((TilingState) -> Void)?
     /// Supplies the pane area of the grid; the views own geometry.
-    var area: () -> Rect = { Rect(x: 0, y: 0, width: 0, height: 0) }
+    var area: () -> Rect = { .zero }
+    /// Commands that open UI instead of changing tiling (the palette, the rename prompt) go to the views.
+    var onViewCommand: ((CommandID) -> Void)?
 
     private let deps: Dependencies
     private let layouts = LayoutCatalog.standard
@@ -44,7 +46,7 @@ final class TilingController {
     init(_ deps: Dependencies, initial reload: ConfigReload) {
         self.deps = deps
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
-        let layout = LayoutCatalog.standard.strategy(for: config.defaultLayout) ?? DwindleLayout()
+        let layout = LayoutCatalog.standard.strategyOrDefault(for: config.defaultLayout)
         set = WorkspaceSet(first: .empty(name: deps.home.lastComponent, rootDirectory: deps.home, layout: layout))
         message = reload.error.map(StatusMessage.invalidConfig)
     }
@@ -62,6 +64,10 @@ final class TilingController {
     }
 
     func perform(_ command: CommandID) {
+        if Self.viewCommands.contains(command) {
+            onViewCommand?(command)
+            return
+        }
         guard let action = action(for: command) else {
             logger.error("unknown command \(command.rawValue, privacy: .public)")
             return
@@ -82,6 +88,8 @@ final class TilingController {
     }
 
     // MARK: - Commands
+
+    private static let viewCommands: Set<CommandID> = [.paletteOpen, .workspaceRename]
 
     private func action(for command: CommandID) -> (() -> Void)? {
         if let action = fixedActions[command] { return action }
@@ -150,7 +158,7 @@ final class TilingController {
     }
 
     private func createWorkspace() {
-        let layout = layouts.strategy(for: config.defaultLayout) ?? DwindleLayout()
+        let layout = layouts.strategyOrDefault(for: config.defaultLayout)
         let request = CreateWorkspaceRequest(
             pane: OpenPaneRequest(shell: config.shell, geometry: geometry), layout: layout)
         do {
@@ -171,9 +179,16 @@ final class TilingController {
         openedAt[pane] = nil
     }
 
-    /// Closing the only workspace is not offered (the catalog hides it), so the refusal needs no message.
+    /// The only workspace cannot close; a shortcut bound in config.toml can still ask, and the refusal leaves
+    /// everything as it was (the palette does not offer the command then).
     private func closeActiveWorkspace() {
-        try? CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+        do {
+            try CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+        } catch {
+            switch error {
+            case .cannotCloseLastWorkspace: logger.debug("refused to close the last workspace")
+            }
+        }
     }
 
     private func reloadConfig() {
