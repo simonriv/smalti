@@ -10,6 +10,7 @@ struct ObsidianThemeTests {
         #expect(theme.window.blurRadius == 28)
         #expect(theme.window.border == RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.09))
         #expect(theme.window.cornerRadius == 16)
+        #expect(theme.window.borderWidth == 1)
     }
 
     @Test func panelTokens() {
@@ -18,6 +19,7 @@ struct ObsidianThemeTests {
         #expect(theme.panel.cornerRadius == 11)
         #expect(theme.panel.gap == 8)
         #expect(theme.panel.areaPadding == 10)
+        #expect(theme.panel.borderWidth == 1)
     }
 
     @Test func chromeTokens() {

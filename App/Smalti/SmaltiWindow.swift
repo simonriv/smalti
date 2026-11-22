@@ -22,6 +22,8 @@ final class SmaltiWindow: NSWindow {
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
             standardWindowButton(button)?.isHidden = true
         }
+        // AppComposition owns the window; AppKit must not release it again on close.
+        isReleasedWhenClosed = false
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
@@ -44,7 +46,7 @@ final class WindowContentView: NSView {
         layer?.cornerRadius = theme.window.cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
+        layer?.borderWidth = theme.window.borderWidth
         layer?.borderColor = theme.window.border.nsColor.cgColor
         layer?.backgroundColor = theme.window.background.nsColor.cgColor
         layout(strip: DragStripView(), theme: theme)

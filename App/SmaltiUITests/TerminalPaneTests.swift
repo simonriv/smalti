@@ -4,6 +4,7 @@ import XCTest
 final class TerminalPaneTests: XCTestCase {
     private var app: XCUIApplication!  // Assigned in setUp before every test; XCTest has no init-time setup.
     private var outputFile: URL!  // Same: created per test in setUp.
+    private var exitMarker: URL!  // Same: written by the app only when it terminates cleanly.
     /// The user's pasteboard text, restored in tearDown, which XCTest runs even when a test fails.
     private var savedPasteboard: String?
 
@@ -11,8 +12,10 @@ final class TerminalPaneTests: XCTestCase {
         continueAfterFailure = false
         savedPasteboard = NSPasteboard.general.string(forType: .string)
         outputFile = FileManager.default.temporaryDirectory.appending(path: "smalti-uitest-\(UUID().uuidString)")
+        exitMarker = FileManager.default.temporaryDirectory.appending(path: "smalti-exit-\(UUID().uuidString)")
         app = XCUIApplication.isolatedSmalti()
         app.launchEnvironment["SMALTI_UITEST_OUT"] = outputFile.path(percentEncoded: false)
+        app.launchArguments += ["-SmaltiExitMarker", exitMarker.path(percentEncoded: false)]
         app.launch()
     }
 
@@ -21,6 +24,7 @@ final class TerminalPaneTests: XCTestCase {
         if let savedPasteboard { NSPasteboard.general.setString(savedPasteboard, forType: .string) }
         app.terminate()
         try? FileManager.default.removeItem(at: outputFile)
+        try? FileManager.default.removeItem(at: exitMarker)
     }
 
     func testPaneHostsTerminalSurface() {
@@ -54,6 +58,7 @@ final class TerminalPaneTests: XCTestCase {
         app.typeText("exit\n")
 
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: exitMarker.path), "the app must quit cleanly, not crash")
     }
 
     /// A11 (synthesized input): accented letters and the characters ⌥ produces on the Latin American layout
@@ -97,6 +102,7 @@ final class TerminalPaneTests: XCTestCase {
         app.typeKey("q", modifierFlags: .command)
 
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: exitMarker.path), "the app must quit cleanly, not crash")
     }
 
     /// Review finding #1: a multi-line paste into a program without bracketed paste (here `cat`) asks for
@@ -119,5 +125,18 @@ final class TerminalPaneTests: XCTestCase {
                 (try? String(contentsOf: self.outputFile, encoding: .utf8)) == "uno\ndos\n"
             }, evaluatedWith: nil)
         wait(for: [written], timeout: 10)
+    }
+
+    /// A shell that dies right after starting is reported instead of the window vanishing.
+    func testShellThatFailsToStartIsReported() {
+        app.terminate()
+        let failing = XCUIApplication()
+        failing.launchArguments += ["-SmaltiShellCommand", "/usr/bin/false"]
+        failing.launch()
+
+        let message = failing.staticTexts["El shell terminó al iniciar"]
+        XCTAssertTrue(message.waitForExistence(timeout: 10))
+        failing.buttons["Cerrar"].click()
+        XCTAssertTrue(failing.wait(for: .notRunning, timeout: 10))
     }
 }

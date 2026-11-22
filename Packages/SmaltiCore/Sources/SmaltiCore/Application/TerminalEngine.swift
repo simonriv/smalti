@@ -4,6 +4,7 @@
 public protocol TerminalEngine: AnyObject {
     func open(_ spec: TerminalSessionSpec) throws(TerminalEngineError) -> PaneID
     func close(_ pane: PaneID)
+    /// The pane's events. The stream has a single consumer: iterate it once per pane.
     func events(for pane: PaneID) -> AsyncStream<TerminalEvent>
 }
 

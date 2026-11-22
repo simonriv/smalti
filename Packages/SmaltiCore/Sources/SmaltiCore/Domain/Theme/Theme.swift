@@ -13,12 +13,14 @@ public struct WindowTokens: Equatable, Sendable {
     public let background: RGBAColor
     public let blurRadius: Double
     public let border: RGBAColor
+    public let borderWidth: Double
     public let cornerRadius: Double
 }
 
 public struct PanelTokens: Equatable, Sendable {
     public let background: RGBAColor
     public let border: RGBAColor
+    public let borderWidth: Double
     public let cornerRadius: Double
     public let gap: Double
     public let areaPadding: Double

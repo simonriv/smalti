@@ -11,6 +11,7 @@ final class AppComposition {
     private var window: SmaltiWindow?
     private var engine: GhosttyTerminalEngine?
     private var pane: Pane?
+    private var paneOpenedAt: ContinuousClock.Instant?
 
     func showMainWindow() {
         let window = SmaltiWindow(theme: theme)
@@ -36,6 +37,7 @@ final class AppComposition {
         window.makeFirstResponder(view)
         self.engine = engine
         self.pane = pane
+        paneOpenedAt = .now
         observe(engine.events(for: pane.id))
     }
 
@@ -45,12 +47,33 @@ final class AppComposition {
                 guard let self else { return }
                 self.logger.info("pane event: \(String(describing: event), privacy: .public)")
                 self.pane = self.pane?.applying(event)
-                if self.pane?.isRunning == false {
-                    self.window?.close()
+                if case .exited(let code) = event {
+                    self.paneDidExit(code: code)
                     return
                 }
             }
         }
+    }
+
+    private func paneDidExit(code: Int?) {
+        let lifetime = paneOpenedAt.map { ContinuousClock.now - $0 } ?? .zero
+        switch HandlePaneExit().execute(exitCode: code, lifetime: lifetime) {
+        case .closePane:
+            window?.close()
+        case .reportFailedStart(let exitCode):
+            reportFailedStart(exitCode: exitCode)
+            window?.close()
+        }
+    }
+
+    private func reportFailedStart(exitCode: Int?) {
+        let alert = NSAlert()
+        alert.messageText = "El shell terminó al iniciar"
+        alert.informativeText =
+            (exitCode.map { "Código de salida: \($0). " } ?? "")
+            + "Revisa el comando del shell y sus archivos de inicio (por ejemplo ~/.zshrc)."
+        alert.addButton(withTitle: "Cerrar")
+        alert.runModal()
     }
 
     /// Login shell by default. `-SmaltiShellCommand <command>` (launch argument) overrides it; UI tests use it

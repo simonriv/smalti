@@ -2,15 +2,21 @@ import SmaltiCore
 
 /// Renders Smalti's terminal appearance as a libghostty config file.
 public enum GhosttyConfigText {
-    /// Extra cell height over JetBrains Mono's natural line height to approach the design's 1.62 line height.
-    /// Starting value; calibrated against Main.dc.html in the F0 spike.
-    static let cellHeightAdjustment = "23%"
+    /// JetBrains Mono's natural line height in em: (ascender 1020 + |descender| 300 + line gap 0) / 1000 units.
+    /// libghostty's cell height starts there; `adjust-cell-height` adds the rest of the theme's line height.
+    static let naturalLineHeight = 1.32
+
+    /// Percentage that turns the font's natural line height into `lineHeight` (1.62 → "23%"; measured in the F0
+    /// spike at 21.0 pt against the design's 21.06 pt).
+    static func cellHeightAdjustment(lineHeight: Double) -> String {
+        "\(Int(((lineHeight / naturalLineHeight - 1) * 100).rounded()))%"
+    }
 
     public static func render(_ appearance: TerminalAppearance) -> String {
         let settings = [
             "font-family = \"\(appearance.fontFamily)\"",
             "font-size = \(number(appearance.fontSize))",
-            "adjust-cell-height = \(cellHeightAdjustment)",
+            "adjust-cell-height = \(cellHeightAdjustment(lineHeight: appearance.lineHeight))",
             "foreground = \(hex(appearance.foreground))",
             "cursor-color = \(hex(appearance.cursor))",
             // The pane container paints the panel background; the surface stays transparent over the glass.

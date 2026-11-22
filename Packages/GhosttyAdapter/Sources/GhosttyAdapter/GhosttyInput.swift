@@ -56,6 +56,42 @@ enum GhosttyInput {
         }
     }
 
+    /// PRESS or RELEASE for a modifier key event, telling left from right: releasing right Shift while left
+    /// Shift is still held is a release, even though the Shift flag stays set. Nil for non-modifier keys.
+    static func modifierAction(keyCode: UInt16, flags: NSEvent.ModifierFlags) -> ghostty_input_action_e? {
+        guard let modifier = modifier(forKeyCode: keyCode) else { return nil }
+        guard mods(flags).rawValue & modifier != 0 else { return GHOSTTY_ACTION_RELEASE }
+        let raw = flags.rawValue
+        let sidePressed: Bool =
+            switch keyCode {
+            case 0x38: raw & UInt(NX_DEVICELSHIFTKEYMASK) != 0
+            case 0x3C: raw & UInt(NX_DEVICERSHIFTKEYMASK) != 0
+            case 0x3B: raw & UInt(NX_DEVICELCTLKEYMASK) != 0
+            case 0x3E: raw & UInt(NX_DEVICERCTLKEYMASK) != 0
+            case 0x3A: raw & UInt(NX_DEVICELALTKEYMASK) != 0
+            case 0x3D: raw & UInt(NX_DEVICERALTKEYMASK) != 0
+            case 0x37: raw & UInt(NX_DEVICELCMDKEYMASK) != 0
+            case 0x36: raw & UInt(NX_DEVICERCMDKEYMASK) != 0
+            default: true
+            }
+        return sidePressed ? GHOSTTY_ACTION_PRESS : GHOSTTY_ACTION_RELEASE
+    }
+
+    /// Arrow keys that commit a preedit still move the cursor; plain ← is left out because AppKit already
+    /// leaves the caret in place after some IMEs commit (Ghostty's rule).
+    static func shouldReplayAfterCommittingPreedit(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
+        switch keyCode {
+        case 124, 125, 126: true
+        case 123: !modifiers.isDisjoint(with: [.shift, .control, .option, .command])
+        default: false
+        }
+    }
+
+    /// The key changed the input source (and was not part of a composition): it must not reach the terminal.
+    static func isInputSourceSwitch(hadMarkedText: Bool, layoutBefore: String?, layoutAfter: String?) -> Bool {
+        !hadMarkedText && layoutBefore != layoutAfter
+    }
+
     /// Applies libghostty's translation modifiers (option-as-alt) while keeping the event's hidden bits,
     /// which dead keys depend on. The original event must be reused when nothing changes (Korean IME).
     static func translationEvent(for event: NSEvent, surface: ghostty_surface_t) -> NSEvent {

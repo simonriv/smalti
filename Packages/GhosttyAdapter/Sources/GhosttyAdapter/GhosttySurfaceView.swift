@@ -236,11 +236,18 @@ extension GhosttySurfaceView {
         let translationEvent = GhosttyInput.translationEvent(for: event, surface: surface)
         let action = event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS
         let hadMarkedText = markedText.length > 0
+        let layoutBefore = hadMarkedText ? nil : KeyboardLayout.currentID
 
         keyTextAccumulator = []
         defer { keyTextAccumulator = nil }
         lastPerformKeyEvent = nil
         interpretKeyEvents([translationEvent])
+        // The key that switched the input source (e.g. ⌃Space) belongs to macOS, not to the terminal.
+        if GhosttyInput.isInputSourceSwitch(
+            hadMarkedText: hadMarkedText, layoutBefore: layoutBefore, layoutAfter: KeyboardLayout.currentID)
+        {
+            return
+        }
         syncPreedit(clearIfNeeded: hadMarkedText)
 
         let composing = markedText.length > 0 || hadMarkedText
@@ -249,6 +256,12 @@ extension GhosttySurfaceView {
             // The input method committed its preedit (e.g. a dead key + vowel): send the text alone.
             committed.filter { !GhosttyInput.isControlInput($0, composing: composing) }
                 .forEach { sendCommittedText($0, action: action) }
+            // A key that also moves the cursor (´ then →) must still reach the terminal after the commit.
+            if GhosttyInput.shouldReplayAfterCommittingPreedit(
+                keyCode: translationEvent.keyCode, modifiers: translationEvent.modifierFlags)
+            {
+                sendKey(action, event: event, translationEvent: translationEvent)
+            }
             return
         }
         if !committed.isEmpty {
@@ -267,9 +280,10 @@ extension GhosttySurfaceView {
     }
 
     override func flagsChanged(with event: NSEvent) {
-        guard let modifier = GhosttyInput.modifier(forKeyCode: event.keyCode), !hasMarkedText() else { return }
-        let pressed = GhosttyInput.mods(event.modifierFlags).rawValue & modifier != 0
-        sendKey(pressed ? GHOSTTY_ACTION_PRESS : GHOSTTY_ACTION_RELEASE, event: event)
+        guard !hasMarkedText(),
+            let action = GhosttyInput.modifierAction(keyCode: event.keyCode, flags: event.modifierFlags)
+        else { return }
+        sendKey(action, event: event)
     }
 
     /// ⌘/⌃ chords reach here before `keyDown`. Menu shortcuts (⌘Q, ⌘H) win; libghostty bindings (⌘C, ⌘V…)

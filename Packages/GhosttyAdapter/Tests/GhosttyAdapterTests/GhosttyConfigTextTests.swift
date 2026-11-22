@@ -1,4 +1,4 @@
-import GhosttyAdapter
+@testable import GhosttyAdapter
 import SmaltiCore
 import Testing
 
@@ -32,5 +32,13 @@ struct GhosttyConfigTextTests {
         #expect(palette.count == 16)
         #expect(palette.first == "palette = 0=#15161e")
         #expect(palette.last == "palette = 15=#c0caf5")
+    }
+
+    @Test func cellHeightFollowsTheThemeLineHeight() {
+        #expect(GhosttyConfigText.cellHeightAdjustment(lineHeight: 1.62) == "23%")
+    }
+
+    @Test func naturalLineHeightNeedsNoAdjustment() {
+        #expect(GhosttyConfigText.cellHeightAdjustment(lineHeight: GhosttyConfigText.naturalLineHeight) == "0%")
     }
 }

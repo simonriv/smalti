@@ -18,10 +18,12 @@ extension Theme {
             background: RGBAColor(red: 13, green: 15, blue: 21, alpha: 0.62),
             blurRadius: 28,
             border: RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.09),
+            borderWidth: 1,
             cornerRadius: 16),
         panel: PanelTokens(
             background: RGBAColor(red: 6, green: 7, blue: 10, alpha: 0.34),
             border: RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.07),
+            borderWidth: 1,
             cornerRadius: 11,
             gap: 8,
             areaPadding: 10),

@@ -9,7 +9,7 @@ final class PaneContainerView: NSView {
         layer?.cornerRadius = theme.panel.cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
+        layer?.borderWidth = theme.panel.borderWidth
         layer?.borderColor = theme.panel.border.nsColor.cgColor
         layer?.backgroundColor = theme.panel.background.nsColor.cgColor
         setAccessibilityElement(true)
