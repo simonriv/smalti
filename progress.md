@@ -14,10 +14,18 @@
 - [x] Aprobada (2026-11-22)
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F0-spike.md`)
+- [x] Plan de implementación (`docs/plans/F0-spike.md`), pendiente de revisión de Simón
 
 ### Tareas
-- (se listan al aprobar el plan)
+- [ ] T1 · Esqueleto, `SmaltiCore` y guarda de imports
+- [ ] T2 · Dominio del panel y tema Obsidiana
+- [ ] T3 · Puerto `TerminalEngine`, `OpenPane` y fake
+- [ ] T4 · Ghostty v1.4.0 fijado y build de GhosttyKit
+- [ ] T5 · `GhosttyAdapter`: config, acciones y tamaños
+- [ ] T6 · App de Xcode con ventana de vidrio
+- [ ] T7 · Terminal viva tras `TerminalEngine`
+- [ ] T8 · Lista de render, mediciones y pregunta técnica 7
+- [ ] T9 · Informe del spike, Muter y cierre
 
 ## F1 · Tiling y workspaces
 
