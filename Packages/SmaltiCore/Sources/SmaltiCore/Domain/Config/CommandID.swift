@@ -1,0 +1,57 @@
+/// Identifies something the user can do. The raw values are what users write in `config.toml`.
+public struct CommandID: Hashable, Sendable, RawRepresentable {
+    public let rawValue: String
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public static let paletteOpen = CommandID(rawValue: "palette.open")
+    public static let layoutDwindle = CommandID(rawValue: "layout.dwindle")
+    public static let layoutColumns = CommandID(rawValue: "layout.columns")
+    public static let layoutMaster = CommandID(rawValue: "layout.master")
+    public static let panesEqualize = CommandID(rawValue: "panes.equalize")
+    public static let paneNew = CommandID(rawValue: "pane.new")
+    public static let paneClose = CommandID(rawValue: "pane.close")
+    public static let workspaceNew = CommandID(rawValue: "workspace.new")
+    public static let workspaceRename = CommandID(rawValue: "workspace.rename")
+    public static let workspaceClose = CommandID(rawValue: "workspace.close")
+    public static let configReload = CommandID(rawValue: "config.reload")
+
+    /// Focus the nth pane, `number` in 1…9.
+    public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
+    public static func paneFocus(_ direction: Direction) -> CommandID {
+        CommandID(rawValue: "pane.focus.\(direction.name)")
+    }
+    public static func paneSwap(_ direction: Direction) -> CommandID {
+        CommandID(rawValue: "pane.swap.\(direction.name)")
+    }
+    public static func paneResize(_ direction: Direction) -> CommandID {
+        CommandID(rawValue: "pane.resize.\(direction.name)")
+    }
+    /// Go to the nth workspace, `number` in 1…9.
+    public static func workspace(_ number: Int) -> CommandID { CommandID(rawValue: "workspace.\(number)") }
+
+    /// Every command the app ships, bound or not.
+    public static let allStandard: [CommandID] =
+        [
+            paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
+            workspaceNew, workspaceRename, workspaceClose, configReload,
+        ]
+        + digits.map { paneFocus($0) } + digits.map { workspace($0) }
+        + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
+
+    static let digits = Array(1...9)
+}
+
+extension Direction {
+    /// The word used in command identifiers and key names.
+    var name: String {
+        switch self {
+        case .left: "left"
+        case .right: "right"
+        case .up: "up"
+        case .down: "down"
+        }
+    }
+}

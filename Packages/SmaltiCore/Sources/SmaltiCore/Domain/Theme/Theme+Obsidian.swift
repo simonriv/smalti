@@ -8,6 +8,10 @@ private func rgb(_ value: UInt32) -> RGBAColor {
         alpha: 1)
 }
 
+private func white(_ alpha: Double) -> RGBAColor {
+    RGBAColor(red: 255, green: 255, blue: 255, alpha: alpha)
+}
+
 private let obsidianAccent = rgb(0x7aa2f7)
 private let obsidianPrimaryText = rgb(0xd7dae0)
 
@@ -41,5 +45,27 @@ extension Theme {
                 0x414868, 0xff99ad, 0xb9f27c, 0xffc777, 0xa3bdfa, 0xd3b8ff, 0xa4e3ff, 0xc0caf5,
             ].map(rgb),
             paddingX: 16,
-            paddingY: 12))
+            paddingY: 12),
+        strip: StripTokens(
+            pillHeight: 26, pillCornerRadius: 7, pillPadding: 11, pillGap: 6, paddingLeading: 16,
+            paddingTrailing: 14, inactiveText: rgb(0x9aa0ab), dotSize: 6, dot: rgb(0x565c68),
+            bottomBorder: white(0.05)),
+        header: HeaderTokens(
+            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: rgb(0x9aa0ab),
+            bottomBorder: white(0.05)),
+        kbd: KbdTokens(
+            fontFamily: "JetBrains Mono", fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
+            cornerRadius: 5, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
+        statusBar: StatusBarTokens(
+            height: 28, padding: 16, gap: 16, fontSize: 11, text: rgb(0x8b919c), topBorder: white(0.05)),
+        focus: FocusTokens(
+            ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28),
+        palette: PaletteTokens(
+            width: 640, cornerRadius: 14, background: RGBAColor(red: 20, green: 22, blue: 30, alpha: 0.82),
+            blurRadius: 36, border: white(0.12), fieldHeight: 52, fieldPadding: 16, rowHeight: 38,
+            rowCornerRadius: 8, rowGap: 12, rowFontSize: 13.5, groupFontSize: 10.5, groupTracking: 0.06,
+            groupPaddingTop: 10, groupPaddingHorizontal: 12, groupPaddingBottom: 4,
+            selection: obsidianAccent.withAlpha(0x26 / 255), footerHeight: 36, footerFontSize: 11.5,
+            footerBorder: white(0.07), topOffset: 110, panelsBackdropOpacity: 0.45),
+        motion: MotionTokens(rearrangeDuration: 0.15))
 }
