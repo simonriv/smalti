@@ -35,6 +35,7 @@ public enum ConfigStoreContract {
     private static func missingSourceGivesDefaults(_ harness: some ConfigStoreHarness) throws {
         harness.write(.missing)
         let store = harness.makeStore()
+        #expect(store.current() == .defaults)
 
         let reloaded = try store.reload()
 

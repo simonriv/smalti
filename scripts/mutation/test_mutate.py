@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mutate import Mutant, mutants_for_line, mutants_for_source, source_files
+from mutate import Mutant, mutants_for_line, mutants_for_source, missing_sources_message, source_files
 
 
 def replacements(line):
@@ -111,10 +111,6 @@ class SourceLevel(unittest.TestCase):
         self.assertEqual(mutant.describe(), "Domain/Pane.swift:7 == → !=")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class SourceFiles(unittest.TestCase):
     def test_only_the_package_own_target_is_mutated(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -127,3 +123,17 @@ class SourceFiles(unittest.TestCase):
             found = source_files(package)
 
             self.assertEqual(found, [package / "Sources" / "SmaltiCore" / "Domain" / "A.swift"])
+
+
+class MissingSources(unittest.TestCase):
+    def test_no_files_is_an_error_naming_the_directory(self):
+        message = missing_sources_message(Path("/x/SmaltiCore"), [])
+
+        self.assertEqual(message, "no sources under Sources/SmaltiCore")
+
+    def test_some_files_is_not_an_error(self):
+        self.assertIsNone(missing_sources_message(Path("/x/SmaltiCore"), [Path("A.swift")]))
+
+
+if __name__ == "__main__":
+    unittest.main()

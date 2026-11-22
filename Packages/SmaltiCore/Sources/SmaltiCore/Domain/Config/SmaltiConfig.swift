@@ -1,4 +1,4 @@
-/// Look settings the user can change. Defaults are the Obsidiana theme.
+/// Look settings the user can change; the named parameter object that carries appearance into `Theme.applying`. Defaults are the Obsidiana theme.
 public struct AppearanceSettings: Equatable, Sendable {
     public var accent: RGBAColor
     public var glassOpacity: Double

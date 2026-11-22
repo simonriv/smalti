@@ -6,6 +6,8 @@ public struct Keymap: Sendable, Equatable {
         self.commandsByChord = commandsByChord
     }
 
+    var bindings: [KeyChord: CommandID] { commandsByChord }
+
     public static let standard = Keymap(commandsByChord: standardBindings)
 
     public func command(for chord: KeyChord) -> CommandID? {

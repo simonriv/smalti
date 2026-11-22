@@ -24,6 +24,23 @@ struct KeyChordTests {
         #expect(throws: KeyChordError.unknownKey("home")) { try KeyChord.parse("cmd+home") }
     }
 
+    @Test func rejectsChordsWithoutCommandControlOrOption() {
+        #expect(throws: KeyChordError.missingModifier("d")) { try KeyChord.parse("d") }
+        #expect(throws: KeyChordError.missingModifier("shift+d")) { try KeyChord.parse("shift+d") }
+    }
+
+    @Test func rejectsRepeatedModifiers() {
+        #expect(throws: KeyChordError.duplicateModifier("cmd")) { try KeyChord.parse("cmd+cmd+k") }
+        #expect(throws: KeyChordError.duplicateModifier("command")) { try KeyChord.parse("cmd+command+k") }
+    }
+
+    @Test func parsesPlusAsANamedKey() throws {
+        let chord = try KeyChord.parse("cmd+plus")
+
+        #expect(chord.key == "plus")
+        #expect(chord.display == "⌘+")
+    }
+
     @Test func displayUsesAppleOrder() throws {
         #expect(try KeyChord.parse("shift+cmd+opt+left").display == "⌥⇧⌘←")
         #expect(try KeyChord.parse("ctrl+cmd+opt+up").display == "⌃⌥⌘↑")

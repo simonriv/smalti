@@ -1,4 +1,4 @@
-import SmaltiCore
+@testable import SmaltiCore
 import Testing
 
 @Suite("Keymap")
@@ -6,9 +6,19 @@ struct KeymapTests {
     private func chord(_ text: String) throws -> KeyChord { try KeyChord.parse(text) }
 
     @Test func standardKeymapHasNoOptionOnlyChord() {
-        let offenders = CommandID.allStandard.compactMap { Keymap.standard.chord(for: $0) }.filter(\.usesOptionAlone)
+        let offenders = Keymap.standard.bindings.keys.filter(\.usesOptionAlone)
 
         #expect(offenders.isEmpty)
+    }
+
+    @Test(arguments: Direction.allCases)
+    func standardKeymapBindsDirectionChords(_ direction: Direction) throws {
+        let keymap = Keymap.standard
+        let arrow = direction.name
+
+        #expect(keymap.command(for: try chord("cmd+opt+\(arrow)")) == .paneFocus(direction))
+        #expect(keymap.command(for: try chord("shift+cmd+opt+\(arrow)")) == .paneSwap(direction))
+        #expect(keymap.command(for: try chord("ctrl+cmd+opt+\(arrow)")) == .paneResize(direction))
     }
 
     @Test func standardKeymapBindsTheDocumentedShortcuts() throws {
@@ -23,9 +33,6 @@ struct KeymapTests {
         #expect(keymap.command(for: try chord("cmd+w")) == .paneClose)
         #expect(keymap.command(for: try chord("cmd+1")) == .paneFocus(1))
         #expect(keymap.command(for: try chord("cmd+9")) == .paneFocus(9))
-        #expect(keymap.command(for: try chord("cmd+opt+left")) == .paneFocus(.left))
-        #expect(keymap.command(for: try chord("shift+cmd+opt+down")) == .paneSwap(.down))
-        #expect(keymap.command(for: try chord("ctrl+cmd+opt+right")) == .paneResize(.right))
         #expect(keymap.command(for: try chord("ctrl+1")) == .workspace(1))
         #expect(keymap.command(for: try chord("ctrl+9")) == .workspace(9))
         #expect(keymap.command(for: try chord("ctrl+cmd+n")) == .workspaceNew)
@@ -57,6 +64,16 @@ struct KeymapTests {
         #expect(keymap.chord(for: .paletteOpen) == newChord)
         #expect(keymap.command(for: oldChord) == nil)
         #expect(keymap.chord(for: .paneClose) == nil)
+    }
+
+    @Test func rebindingUsedChordReleasesPreviousCommand() throws {
+        let usedChord = try chord("cmd+d")
+
+        let keymap = try Keymap.standard.overriding([usedChord: .layoutDwindle])
+
+        #expect(keymap.command(for: usedChord) == .layoutDwindle)
+        #expect(keymap.chord(for: .paneNew) == nil)
+        #expect(keymap.chord(for: .layoutDwindle) == usedChord)
     }
 
     @Test func overridingRejectsOptionOnlyChord() throws {

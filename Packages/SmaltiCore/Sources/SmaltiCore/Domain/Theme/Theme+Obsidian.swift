@@ -1,4 +1,5 @@
-// The only file with literal design tokens. Source: docs/design/README.md and Apariencia.dc.html.
+// The only file with literal design tokens. Sources: docs/design/README.md, Apariencia.dc.html, Main.dc.html and
+// Paleta.dc.html.
 
 private func rgb(_ value: UInt32) -> RGBAColor {
     RGBAColor(
@@ -14,6 +15,7 @@ private func white(_ alpha: Double) -> RGBAColor {
 
 private let obsidianAccent = rgb(0x7aa2f7)
 private let obsidianPrimaryText = rgb(0xd7dae0)
+private let obsidianTitleText = rgb(0xe6e9ef)
 
 extension Theme {
     public static let obsidian = Theme(
@@ -32,7 +34,7 @@ extension Theme {
             gap: 8,
             areaPadding: 10),
         chrome: ChromeTokens(topStripHeight: 40),
-        text: TextTokens(primary: obsidianPrimaryText, title: rgb(0xe6e9ef), secondary: rgb(0x8b919c)),
+        text: TextTokens(primary: obsidianPrimaryText, title: obsidianTitleText, secondary: rgb(0x8b919c)),
         accent: obsidianAccent,
         terminal: TerminalAppearance(
             fontFamily: "JetBrains Mono",
@@ -48,7 +50,8 @@ extension Theme {
             paddingY: 12),
         strip: StripTokens(
             pillHeight: 26, pillCornerRadius: 7, pillPadding: 11, pillGap: 6, paddingLeading: 16,
-            paddingTrailing: 14, inactiveText: rgb(0x9aa0ab), dotSize: 6, dot: rgb(0x565c68),
+            paddingTrailing: 14, inactiveText: rgb(0x9aa0ab), activeText: obsidianTitleText, labelGap: 7, fontSize: 12,
+            fontWeight: 500, dotSize: 6, dot: rgb(0x565c68),
             bottomBorder: white(0.05)),
         header: HeaderTokens(
             height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, directory: rgb(0x9aa0ab),

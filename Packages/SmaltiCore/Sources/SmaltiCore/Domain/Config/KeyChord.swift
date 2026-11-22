@@ -8,6 +8,9 @@ public enum KeyModifier: CaseIterable, Hashable, Sendable {
 public enum KeyChordError: Error, Equatable, Sendable {
     case unknownModifier(String)
     case unknownKey(String)
+    case duplicateModifier(String)
+    /// Without ⌘, ⌃ or ⌥ the chord would be plain typing.
+    case missingModifier(String)
     case missingKey(String)
 }
 
@@ -29,8 +32,9 @@ public struct KeyChord: Hashable, Sendable {
         var modifiers: Set<KeyModifier> = []
         for name in parts.dropLast() {
             guard let modifier = modifierNames[name] else { throw .unknownModifier(name) }
-            modifiers.insert(modifier)
+            guard modifiers.insert(modifier).inserted else { throw .duplicateModifier(name) }
         }
+        guard !modifiers.isDisjoint(with: [.command, .control, .option]) else { throw .missingModifier(text) }
         return KeyChord(key: key, modifiers: modifiers)
     }
 
@@ -46,7 +50,7 @@ public struct KeyChord: Hashable, Sendable {
     }
 
     private static let namedKeySymbols = [
-        "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "escape": "⎋", "tab": "⇥",
+        "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "escape": "⎋", "tab": "⇥", "plus": "+",
     ]
     private static let namedKeys = Set(namedKeySymbols.keys)
     private static let modifierNames: [String: KeyModifier] = [

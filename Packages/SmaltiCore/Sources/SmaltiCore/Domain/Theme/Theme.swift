@@ -64,6 +64,11 @@ public struct StripTokens: Equatable, Sendable {
     public let paddingLeading: Double
     public let paddingTrailing: Double
     public let inactiveText: RGBAColor
+    public let activeText: RGBAColor
+    /// Gap between a pill's dot and its label.
+    public let labelGap: Double
+    public let fontSize: Double
+    public let fontWeight: Int
     public let dotSize: Double
     public let dot: RGBAColor
     public let bottomBorder: RGBAColor
@@ -103,12 +108,15 @@ public struct StatusBarTokens: Equatable, Sendable {
 
 /// Focused-pane highlight. Both colors are the accent at a fixed opacity.
 public struct FocusTokens: Equatable, Sendable {
-    public let ring: RGBAColor
-    public let glow: RGBAColor
+    public private(set) var ring: RGBAColor
+    public private(set) var glow: RGBAColor
     public let glowRadius: Double
 
     func following(_ accent: RGBAColor) -> FocusTokens {
-        FocusTokens(ring: accent.withAlpha(ring.alpha), glow: accent.withAlpha(glow.alpha), glowRadius: glowRadius)
+        var copy = self
+        copy.ring = accent.withAlpha(ring.alpha)
+        copy.glow = accent.withAlpha(glow.alpha)
+        return copy
     }
 }
 
@@ -132,7 +140,7 @@ public struct PaletteTokens: Equatable, Sendable {
     public let groupPaddingHorizontal: Double
     public let groupPaddingBottom: Double
     /// The accent at a fixed opacity.
-    public let selection: RGBAColor
+    public private(set) var selection: RGBAColor
     public let footerHeight: Double
     public let footerFontSize: Double
     public let footerBorder: RGBAColor
@@ -141,15 +149,9 @@ public struct PaletteTokens: Equatable, Sendable {
     public let panelsBackdropOpacity: Double
 
     func following(_ accent: RGBAColor) -> PaletteTokens {
-        PaletteTokens(
-            width: width, cornerRadius: cornerRadius, background: background, blurRadius: blurRadius,
-            border: border, fieldHeight: fieldHeight, fieldPadding: fieldPadding, rowHeight: rowHeight,
-            rowCornerRadius: rowCornerRadius, rowGap: rowGap, rowFontSize: rowFontSize,
-            groupFontSize: groupFontSize, groupTracking: groupTracking, groupPaddingTop: groupPaddingTop,
-            groupPaddingHorizontal: groupPaddingHorizontal, groupPaddingBottom: groupPaddingBottom,
-            selection: accent.withAlpha(selection.alpha), footerHeight: footerHeight,
-            footerFontSize: footerFontSize, footerBorder: footerBorder, topOffset: topOffset,
-            panelsBackdropOpacity: panelsBackdropOpacity)
+        var copy = self
+        copy.selection = accent.withAlpha(selection.alpha)
+        return copy
     }
 }
 

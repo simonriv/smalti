@@ -154,6 +154,11 @@ def source_files(package: Path) -> list[Path]:
     return sorted((package / "Sources" / package.name).rglob("*.swift"))
 
 
+def missing_sources_message(package: Path, files: list[Path]) -> str | None:
+    """An error message when there is nothing to mutate; a silent 100 % score would be misleading."""
+    return None if files else f"no sources under Sources/{package.name}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--package", default="Packages/SmaltiCore")
@@ -163,6 +168,10 @@ def main() -> int:
 
     source_package = Path(args.package).resolve()
     sources = source_files(source_package)
+    problem = missing_sources_message(source_package, sources)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 2
     mutants = [
         mutant
         for file in sources
