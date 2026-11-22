@@ -41,9 +41,11 @@ struct WorkspaceInvariantTests {
             let operation = Int.random(in: 0...6, using: &generator)
             workspace = try apply(operation: operation, to: workspace, using: &generator)
 
-            let context = "seed 0x5A17, step \(step), operation \(operation)"
+            let seed = String(Self.seed, radix: 16, uppercase: true)
+            let context = "seed 0x\(seed), step \(step), operation \(operation)"
             let paneIDs = workspace.panes.map(\.id)
             #expect(Set(workspace.tree?.panes ?? []) == Set(paneIDs), "\(context)")
+            #expect(workspace.tree?.panes ?? [] == paneIDs, "\(context)")
             #expect(workspace.tree?.panes.count ?? 0 == paneIDs.count, "\(context)")
             #expect(workspace.panes.isEmpty == (workspace.focusedPane == nil), "\(context)")
             if let focused = workspace.focusedPane {

@@ -42,6 +42,13 @@ struct WorkingDirectoryTests {
         #expect(sibling.abbreviated(home: home) == "/Users/sam/dev")
     }
 
+    @Test func rootHomeDoesNotAbbreviateOtherPaths() throws {
+        let home = try WorkingDirectory(path: "/")
+
+        #expect(try WorkingDirectory(path: "/tmp/x").abbreviated(home: home) == "/tmp/x")
+        #expect(home.abbreviated(home: home) == "~")
+    }
+
     @Test func lastComponentIsTheFolderName() throws {
         #expect(try WorkingDirectory(path: "/Users/s/dev/x").lastComponent == "x")
         #expect(try WorkingDirectory(path: "/").lastComponent == "/")

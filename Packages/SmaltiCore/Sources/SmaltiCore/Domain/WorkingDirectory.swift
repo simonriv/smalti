@@ -10,6 +10,7 @@ public struct WorkingDirectory: Hashable, Sendable {
     /// The path with `home` written as `~`; unchanged when outside `home`.
     public func abbreviated(home: WorkingDirectory) -> String {
         if self == home { return "~" }
+        if home.path == "/" { return path }
         let homePrefix = home.path.hasSuffix("/") ? home.path : home.path + "/"
         guard path.hasPrefix(homePrefix) else { return path }
         return "~/" + path.dropFirst(homePrefix.count)

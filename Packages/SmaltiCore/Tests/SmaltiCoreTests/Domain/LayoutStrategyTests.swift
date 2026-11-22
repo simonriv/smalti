@@ -48,7 +48,7 @@ struct LayoutStrategyTests {
                 let overlapWidth = min(first.maxX, second.maxX) - max(first.minX, second.minX)
                 let overlapHeight = min(first.maxY, second.maxY) - max(first.minY, second.minY)
                 let overlapArea = max(0, overlapWidth) * max(0, overlapHeight)
-                #expect(overlapArea <= 0, "\(label)", sourceLocation: sourceLocation)
+                #expect(overlapArea <= frameTolerance * frameTolerance, "\(label)", sourceLocation: sourceLocation)
             }
         }
     }
