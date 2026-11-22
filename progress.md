@@ -40,7 +40,7 @@
 
 ### Tareas
 - [x] T1 · Geometría y `Ratio`
-- [ ] T2 · `LayoutTree`: frames e igualar
+- [x] T2 · `LayoutTree`: frames e igualar
 - [ ] T3 · `LayoutTree`: redimensionar, intercambiar y vecino
 - [ ] T4 · Estrategias de layout y catálogo
 - [ ] T5 · `Pane` ampliado y `Workspace`
