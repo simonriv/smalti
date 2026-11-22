@@ -51,7 +51,7 @@
 - [x] T10 · Casos de uso de distribución y workspaces
 - [x] T11 · `ReloadConfig` y `SearchCommands`
 - [x] T12 · `TOMLConfigAdapter`
-- [ ] T13 · `GhosttyAdapter` para F1
+- [x] T13 · `GhosttyAdapter` para F1
 - [ ] T14 · Composition root y rejilla
 - [ ] T15 · `KeyRouter`, franja, cabecera y barra de estado
 - [ ] T16 · Paleta ⌘K
