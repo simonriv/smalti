@@ -19,6 +19,20 @@ struct GeometryTests {
         #expect(inset.size == Size(width: 0, height: 0))
     }
 
+    @Test func nanInsetLeavesRectUnchanged() {
+        let rect = Rect(x: 4, y: 6, width: 100, height: 50)
+
+        let inset = rect.insetBy(.nan)
+
+        #expect(inset == rect)
+    }
+
+    @Test func negativeSizeIsClampedToZero() {
+        let rect = Rect(x: 1, y: 2, width: -5, height: -7)
+
+        #expect(rect.size == Size(width: 0, height: 0))
+    }
+
     @Test func collapsedInsetStaysCenteredInsideOriginal() {
         let rect = Rect(x: 0, y: 0, width: 10, height: 10)
 
