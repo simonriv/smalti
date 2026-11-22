@@ -21,8 +21,7 @@ struct OpenPaneTests {
     }
 
     @Test mutating func openPassesSmaltiEnvironment() throws {
-        let environment = ChildEnvironment.smalti(version: "1.2")
-        let open = OpenPane(engine: engine, environment: environment)
+        let open = OpenPane(engine: engine, version: "1.2", environment: [:])
 
         _ = try open.execute(request(roomy), in: &set)
 
@@ -30,22 +29,26 @@ struct OpenPaneTests {
     }
 
     @Test mutating func openKeepsSpecEnvironmentAndAddsSmalti() throws {
-        let environment = ["EDITOR": "vim"].merging(ChildEnvironment.smalti(version: "1")) { $1 }
-        let open = OpenPane(engine: engine, environment: environment)
+        let open = OpenPane(engine: engine, version: "1", environment: ["EDITOR": "vim", "SMALTI": "0"])
 
         _ = try open.execute(request(roomy), in: &set)
 
-        #expect(engine.openedSpecs.first?.environment == ["EDITOR": "vim", "SMALTI": "1", "SMALTI_VERSION": "1"])
+        let environment = engine.openedSpecs.first?.environment
+        #expect(environment?["EDITOR"] == "vim")
+        #expect(environment?["SMALTI"] == "1")
+        #expect(environment?["SMALTI_VERSION"] == "1")
     }
 
     @Test mutating func openAddsThePaneWithTheEngineId() throws {
-        let open = OpenPane(engine: engine, environment: [:])
+        let open = OpenPane(engine: engine, version: "1")
 
         let id = try open.execute(request(roomy), in: &set)
 
         #expect(set.active.panes.map(\.id) == [id])
         #expect(set.active.focusedPane == id)
-        #expect(engine.openedSpecs == [TerminalSessionSpec(workingDirectory: tmp, command: .loginShell)])
+        let spec = TerminalSessionSpec(
+            workingDirectory: tmp, command: .loginShell, environment: ChildEnvironment.smalti(version: "1"))
+        #expect(engine.openedSpecs == [spec])
     }
 
     @Test mutating func openUsesFocusedPaneDirectory() throws {
@@ -53,13 +56,13 @@ struct OpenPaneTests {
         let first = Pane(id: PaneID(), workingDirectory: elsewhere)
         set = set.updating(set.activeID) { $0.adding(first) }
 
-        _ = try OpenPane(engine: engine, environment: [:]).execute(request(roomy), in: &set)
+        _ = try OpenPane(engine: engine, version: "1").execute(request(roomy), in: &set)
 
         #expect(engine.openedSpecs.first?.workingDirectory == elsewhere)
     }
 
     @Test mutating func openRefusesWhenMinimumWouldBreak() throws {
-        let open = OpenPane(engine: engine, environment: [:])
+        let open = OpenPane(engine: engine, version: "1")
         _ = try open.execute(request(cramped), in: &set)
         let before = set
 
@@ -76,7 +79,7 @@ struct OpenPaneTests {
         let before = set
 
         #expect(throws: OpenPaneError.engine(failure)) {
-            try OpenPane(engine: engine, environment: [:]).execute(request(roomy), in: &set)
+            try OpenPane(engine: engine, version: "1").execute(request(roomy), in: &set)
         }
         #expect(set == before)
     }

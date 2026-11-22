@@ -14,14 +14,17 @@ public enum OpenPaneError: Error, Equatable, Sendable {
 }
 
 /// Opens a terminal in the active workspace, unless the layout would shrink a pane below the minimum.
+///
+/// R1 is enforced here, not by the caller: every pane's environment carries `ChildEnvironment.smalti`, which
+/// wins over any extra variable with the same name.
 @MainActor
 public struct OpenPane {
     private let engine: any TerminalEngine
     private let environment: [String: String]
 
-    public init(engine: any TerminalEngine, environment: [String: String]) {
+    public init(engine: any TerminalEngine, version: String, environment: [String: String] = [:]) {
         self.engine = engine
-        self.environment = environment
+        self.environment = environment.merging(ChildEnvironment.smalti(version: version)) { _, smalti in smalti }
     }
 
     public func execute(_ request: OpenPaneRequest, in set: inout WorkspaceSet) throws(OpenPaneError) -> PaneID {
@@ -45,8 +48,10 @@ public struct OpenPane {
         _ geometry: LayoutGeometry, adding directory: WorkingDirectory, to workspace: Workspace
     ) throws(OpenPaneError) {
         let candidate = workspace.adding(Pane(id: PaneID(), workingDirectory: directory))
-        guard let tree = candidate.tree, geometry.fits(tree) else {
-            throw .paneTooSmall(minimum: geometry.minimumPaneSize)
+        guard let tree = candidate.tree else {
+            // `adding` always rebuilds the tree from at least one pane.
+            preconditionFailure("Workspace has no layout tree after adding a pane")
         }
+        guard geometry.fits(tree) else { throw .paneTooSmall(minimum: geometry.minimumPaneSize) }
     }
 }

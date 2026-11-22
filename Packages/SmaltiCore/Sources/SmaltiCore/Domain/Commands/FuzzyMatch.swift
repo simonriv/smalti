@@ -14,7 +14,8 @@ public struct RankedCommand: Hashable, Sendable {
 private let consecutiveBonus = 10
 private let wordStartBonus = 8
 private let titlePrefixBonus = 15
-private let skippedCharacterPenalty = 1
+/// Fixed at 1: `bestAlignmentScore` keeps a running maximum that only works with a unit penalty. Do not tune it.
+private let unitSkipPenalty = 1
 
 /// The commands whose title and subtitle contain `query` as a subsequence, best first.
 ///
@@ -62,7 +63,7 @@ private func bestAlignmentScore(of needle: [Character], in haystack: [Character]
             }
             guard haystack[index] == character else { continue }
             let afterConsecutive = index >= 1 ? previous[index - 1].map { $0 + consecutiveBonus } : nil
-            let afterSkipping = bestDistant.map { $0 + skippedCharacterPenalty - index }
+            let afterSkipping = bestDistant.map { $0 + unitSkipPenalty - index }
             guard let before = [afterConsecutive, afterSkipping].compactMap({ $0 }).max() else { continue }
             current[index] = before + wordStartScore(at: index, in: haystack)
         }

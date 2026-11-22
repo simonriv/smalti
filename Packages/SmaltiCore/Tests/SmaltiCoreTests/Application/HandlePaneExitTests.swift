@@ -15,7 +15,7 @@ struct HandlePaneExitTests {
     }
 
     private mutating func openPane() throws -> PaneID {
-        try OpenPane(engine: engine, environment: [:])
+        try OpenPane(engine: engine, version: "1")
             .execute(OpenPaneRequest(shell: .loginShell, geometry: geometry), in: &set)
     }
 

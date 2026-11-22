@@ -25,11 +25,8 @@ final class AppComposition {
         }
     }
 
-    private func openTerminal(in window: SmaltiWindow) throws {
-        try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
-        let config = try GhosttyConfig.load(
-            text: GhosttyConfigText.render(theme.terminal), writingTo: Self.engineConfigFile)
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+    private func openTerminal(in window: SmaltiWindow) throws(OpenPaneError) {
+        let engine = try makeEngine()
         let home = try homeDirectory()
         var set = WorkspaceSet(
             first: .empty(name: home.lastComponent, rootDirectory: home, layout: DwindleLayout()))
@@ -37,7 +34,7 @@ final class AppComposition {
         let request = OpenPaneRequest(
             shell: Self.shellCommand(), geometry: .standard(area: Self.area(of: window.paneContainer)))
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-        let open = OpenPane(engine: engine, environment: ChildEnvironment.smalti(version: version))
+        let open = OpenPane(engine: engine, version: version)
         let pane = try open.execute(request, in: &set)
         guard let view = (engine as TerminalViewProvider).view(for: pane) else { return }
         window.paneContainer.embed(view)
@@ -46,6 +43,18 @@ final class AppComposition {
         workspaces = set
         paneOpenedAt = .now
         observe(engine.events(for: pane), of: pane)
+    }
+
+    private func makeEngine() throws(OpenPaneError) -> GhosttyTerminalEngine {
+        do {
+            try GhosttyProcess.ensureInitialized(
+                resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
+            let config = try GhosttyConfig.load(
+                text: GhosttyConfigText.render(theme.terminal), writingTo: Self.engineConfigFile)
+            return GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        } catch {
+            throw .engine(error)
+        }
     }
 
     private func observe(_ events: AsyncStream<TerminalEvent>, of pane: PaneID) {
@@ -107,16 +116,16 @@ final class AppComposition {
         Rect(x: 0, y: 0, width: container.bounds.width, height: container.bounds.height)
     }
 
-    private func homeDirectory() throws(TerminalEngineError) -> WorkingDirectory {
+    private func homeDirectory() throws(OpenPaneError) -> WorkingDirectory {
         let path = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
         do {
             return try WorkingDirectory(path: path)
         } catch {
-            throw .surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute")
+            throw .engine(.surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute"))
         }
     }
 
-    private func fail(_ error: any Error) {
+    private func fail(_ error: OpenPaneError) {
         logger.error("terminal engine failed: \(String(describing: error), privacy: .public)")
         let alert = NSAlert()
         alert.messageText = "Smalti no pudo iniciar la terminal"
@@ -125,15 +134,20 @@ final class AppComposition {
         NSApp.terminate(nil)
     }
 
-    private static func describe(_ error: any Error) -> String {
+    private static func describe(_ error: OpenPaneError) -> String {
         switch error {
-        case OpenPaneError.paneTooSmall(let minimum):
+        case .paneTooSmall(let minimum):
             "No cabe un panel de \(Int(minimum.width)) × \(Int(minimum.height)) pt."
-        case OpenPaneError.engine(let engineError): describe(engineError)
-        case TerminalEngineError.engineStartFailed(let reason): reason
-        case TerminalEngineError.configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
-        case TerminalEngineError.surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
-        default: String(describing: error)
+        case .engine(let engineError):
+            describe(engineError)
+        }
+    }
+
+    private static func describe(_ error: TerminalEngineError) -> String {
+        switch error {
+        case .engineStartFailed(let reason): reason
+        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
+        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
         }
     }
 
