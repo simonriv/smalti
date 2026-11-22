@@ -14,12 +14,13 @@ public struct RankedCommand: Hashable, Sendable {
 private let consecutiveBonus = 10
 private let wordStartBonus = 8
 private let titlePrefixBonus = 15
+private let skippedCharacterPenalty = 1
 
 /// The commands whose title and subtitle contain `query` as a subsequence, best first.
 ///
 /// Case, accents and surrounding whitespace are ignored. The score is that of the best alignment of the query
 /// in `title + " " + subtitle`: each matched character earns +10 when it follows the previous match directly and
-/// +8 when it starts a word; each character skipped between two matches costs 1 (the running maximum below assumes exactly 1) (characters before the first
+/// +8 when it starts a word; each character skipped between two matches costs 1 (characters before the first
 /// match cost nothing); a title that starts with the query earns +15. An empty query returns every command in
 /// its given order, and ties keep that order.
 public func fuzzyMatch(_ query: String, in commands: [Command]) -> [RankedCommand] {
@@ -46,7 +47,8 @@ private func score(_ needle: [Character], for command: Command) -> Int? {
 ///
 /// Dynamic program in O(needle × haystack): `previous[i]` is the best score with the prior needle character
 /// matched at `i`. A character matched at `i` either follows a match at `i - 1` (consecutive bonus) or a match
-/// at `p < i - 1` (penalty `i - p - 1`, rewritten as `(previous[p] + p) + 1 - i` so a running maximum suffices).
+/// at `p < i - 1` (penalty `i - p - 1`, rewritten as `(previous[p] + p) + 1 - i` so a running maximum suffices;
+/// that form relies on the penalty being exactly one per character).
 private func bestAlignmentScore(of needle: [Character], in haystack: [Character]) -> Int? {
     var previous: [Int?] = haystack.indices.map { index in
         haystack[index] == needle[0] ? wordStartScore(at: index, in: haystack) : nil
@@ -60,7 +62,7 @@ private func bestAlignmentScore(of needle: [Character], in haystack: [Character]
             }
             guard haystack[index] == character else { continue }
             let afterConsecutive = index >= 1 ? previous[index - 1].map { $0 + consecutiveBonus } : nil
-            let afterSkipping = bestDistant.map { $0 + 1 - index }
+            let afterSkipping = bestDistant.map { $0 + skippedCharacterPenalty - index }
             guard let before = [afterConsecutive, afterSkipping].compactMap({ $0 }).max() else { continue }
             current[index] = before + wordStartScore(at: index, in: haystack)
         }
