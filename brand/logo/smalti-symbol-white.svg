@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Smalti</title>
+  <g fill="#ffffff">
+  <path d="M42 24 H102.6 L158.33 232 H42 A18 18 0 0 1 24 214 V42 A18 18 0 0 1 42 24 Z"/>
+  <path d="M125.37 24 H214 A18 18 0 0 1 232 42 V117 H150.29 Z"/>
+  <path d="M156.19 139 H232 V214 A18 18 0 0 1 214 232 H181.11 Z"/>
+  </g>
+</svg>
