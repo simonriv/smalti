@@ -36,4 +36,24 @@
 - [x] Revisada con el informe de F0: ajustes R1–R10 aprobados; requisito de cmux descartado (2026-11-22)
 
 ### Plan
-- [x] Plan de implementación (`docs/plans/F1-tiling.md`), pendiente de aprobación de Simón
+- [x] Plan de implementación (`docs/plans/F1-tiling.md`), aprobado (2026-11-22)
+
+### Tareas
+- [x] T1 · Geometría y `Ratio`
+- [ ] T2 · `LayoutTree`: frames e igualar
+- [ ] T3 · `LayoutTree`: redimensionar, intercambiar y vecino
+- [ ] T4 · Estrategias de layout y catálogo
+- [ ] T5 · `Pane` ampliado y `Workspace`
+- [ ] T6 · `WorkspaceSet`
+- [ ] T7 · Config, atajos, `ConfigStore`, contrato y tokens
+- [ ] T8 · Comandos y búsqueda difusa
+- [ ] T9 · Abrir, cerrar y salida de paneles
+- [ ] T10 · Casos de uso de distribución y workspaces
+- [ ] T11 · `ReloadConfig` y `SearchCommands`
+- [ ] T12 · `TOMLConfigAdapter`
+- [ ] T13 · `GhosttyAdapter` para F1
+- [ ] T14 · Composition root y rejilla
+- [ ] T15 · `KeyRouter`, franja, cabecera y barra de estado
+- [ ] T16 · Paleta ⌘K
+- [ ] T17 · UI tests de F1
+- [ ] T18 · Mediciones, capturas y cierre
