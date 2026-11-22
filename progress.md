@@ -46,7 +46,7 @@
 - [x] T5 · `Pane` ampliado y `Workspace`
 - [x] T6 · `WorkspaceSet`
 - [x] T7 · Config, atajos, `ConfigStore`, contrato y tokens
-- [ ] T8 · Comandos y búsqueda difusa
+- [x] T8 · Comandos y búsqueda difusa
 - [ ] T9 · Abrir, cerrar y salida de paneles
 - [ ] T10 · Casos de uso de distribución y workspaces
 - [ ] T11 · `ReloadConfig` y `SearchCommands`
