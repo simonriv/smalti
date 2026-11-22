@@ -3,25 +3,10 @@ import Testing
 
 @Suite("LayoutTree frames")
 struct LayoutTreeFramesTests {
-    private let tolerance = 0.01
     private let a = PaneID()
     private let b = PaneID()
     private let c = PaneID()
     private let d = PaneID()
-
-    private func expectFrame(
-        _ frame: Rect?, x: Double, y: Double, width: Double, height: Double,
-        sourceLocation: SourceLocation = #_sourceLocation
-    ) {
-        guard let frame else {
-            Issue.record("missing frame", sourceLocation: sourceLocation)
-            return
-        }
-        #expect(abs(frame.minX - x) < tolerance, sourceLocation: sourceLocation)
-        #expect(abs(frame.minY - y) < tolerance, sourceLocation: sourceLocation)
-        #expect(abs(frame.size.width - width) < tolerance, sourceLocation: sourceLocation)
-        #expect(abs(frame.size.height - height) < tolerance, sourceLocation: sourceLocation)
-    }
 
     @Test func singleLeafFillsTheArea() {
         let area = Rect(x: 10, y: 20, width: 300, height: 200)
@@ -120,7 +105,7 @@ struct LayoutTreeFramesTests {
 
         let widths = tree.panes.compactMap { frames[$0]?.size.width }
         #expect(widths.count == 4)
-        #expect(widths.allSatisfy { abs($0 - widths[0]) < tolerance })
+        #expect(widths.allSatisfy { abs($0 - widths[0]) < frameTolerance })
     }
 
     @Test func equalizedDwindleBalancesEachAxis() {
@@ -131,8 +116,8 @@ struct LayoutTreeFramesTests {
 
         let frames = tree.equalized().frames(in: Rect(x: 0, y: 0, width: 900, height: 600), gap: 8)
 
-        #expect(abs((frames[a]?.size.width ?? 0) - (frames[b]?.size.width ?? -1)) < tolerance)
-        #expect(abs((frames[b]?.size.height ?? 0) - (frames[c]?.size.height ?? -1)) < tolerance)
+        #expect(abs((frames[a]?.size.width ?? 0) - (frames[b]?.size.width ?? -1)) < frameTolerance)
+        #expect(abs((frames[b]?.size.height ?? 0) - (frames[c]?.size.height ?? -1)) < frameTolerance)
     }
 
     @Test func fitsRejectsFramesBelowMinimum() {
