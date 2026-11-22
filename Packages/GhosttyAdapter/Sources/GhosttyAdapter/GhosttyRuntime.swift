@@ -36,10 +36,29 @@ public final class GhosttyRuntime {
     /// Reloads the engine with a new appearance ("Recargar configuración"): rewrites the generated config file and
     /// hands it to the app and every surface. Main thread, like every libghostty app call.
     public func apply(_ appearance: TerminalAppearance) throws(TerminalEngineError) {
-        let config = try GhosttyConfig.load(text: GhosttyConfigText.render(appearance), writingTo: configFile)
+        try reload(configText: GhosttyConfigText.render(appearance))
+    }
+
+    /// Validates `configText` from a temporary file next to the engine config and replaces the config only when
+    /// libghostty accepts it, so a rejected reload leaves the file in effect untouched.
+    func reload(configText: String) throws(TerminalEngineError) {
+        let candidate = configFile.deletingLastPathComponent()
+            .appending(path: ".\(configFile.lastPathComponent).\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: candidate) }
+        let config = try GhosttyConfig.load(text: configText, writingTo: candidate)
+        try Self.replace(configFile, with: candidate)
         // libghostty derives the surfaces' settings synchronously and clones the app-level config ("the caller
         // owns the param", embedded.zig), so `config` is freed when it goes out of scope, as Ghostty.App does.
         ghostty_app_update_config(app, config.handle)
+    }
+
+    /// `rename(2)` swaps the file atomically within one directory, replacing any existing target.
+    private static func replace(_ target: URL, with candidate: URL) throws(TerminalEngineError) {
+        guard rename(candidate.path(percentEncoded: false), target.path(percentEncoded: false)) == 0 else {
+            let reason = String(cString: strerror(errno))
+            throw .configurationInvalid(
+                diagnostics: ["cannot replace \(target.path(percentEncoded: false)): \(reason)"])
+        }
     }
 
     /// The app that pending wakeups tick; nil once its runtime is gone.
