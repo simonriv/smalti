@@ -19,6 +19,10 @@ final class GhosttySurfaceView: NSView {
     /// Timestamp of a ⌘/⌃ key equivalent AppKit should bounce back to `keyDown` (see `performKeyEquivalent`).
     private var lastPerformKeyEvent: TimeInterval?
     private var trackingArea: NSTrackingArea?
+    private var screenObserver: NSObjectProtocol?
+    /// Display last given to libghostty (drives its CVDisplayLink / vsync) and how many times it was applied.
+    private(set) var appliedDisplayID: UInt32?
+    private(set) var displayUpdates = 0
 
     init(app: ghostty_app_t, spec: TerminalSessionSpec) throws(TerminalEngineError) {
         (events, continuation) = AsyncStream.makeStream()
@@ -47,12 +51,24 @@ final class GhosttySurfaceView: NSView {
         continuation.finish()
     }
 
+    isolated deinit {
+        // A view released without shutDown() must not leave libghostty a surface whose userdata dangles.
+        shutDown()
+        screenObserver.map(NotificationCenter.default.removeObserver)
+    }
+
+    var surfaceAddress: Int { surface.map { Int(bitPattern: $0) } ?? 0 }
+
     func deliver(_ event: TerminalEvent) {
         continuation.yield(event)
     }
 
+    /// libghostty asks to close from inside its own call stack (e.g. ⌘W during keyDown); closing is deferred
+    /// so the view is never freed while one of its methods is still running.
     func requestClose() {
-        onCloseRequested?()
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.onCloseRequested?() }
+        }
     }
 
     // MARK: - Surface creation
@@ -101,6 +117,37 @@ final class GhosttySurfaceView: NSView {
         let result = super.resignFirstResponder()
         if result, let surface { ghostty_surface_set_focus(surface, false) }
         return result
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        screenObserver.map(NotificationCenter.default.removeObserver)
+        screenObserver = nil
+        guard let window else { return }
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeScreenNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.screenDidChange() }
+        }
+        // The initial scale must come from this window's screen, not NSScreen.main.
+        applyDisplay()
+        viewDidChangeBackingProperties()
+    }
+
+    /// Adapted from ghostty v1.4.0 SurfaceView_AppKit.windowDidChangeScreen: viewDidChangeBackingProperties is
+    /// not always called when the screen changes (ghostty issue #2731), so the scale is refreshed explicitly.
+    private func screenDidChange() {
+        applyDisplay()
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.viewDidChangeBackingProperties() }
+        }
+    }
+
+    private func applyDisplay() {
+        guard let surface, let displayID = window?.screen?.displayID else { return }
+        ghostty_surface_set_display_id(surface, displayID)
+        appliedDisplayID = displayID
+        displayUpdates += 1
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -351,5 +398,12 @@ extension GhosttySurfaceView: @preconcurrency NSTextInputClient {
         } else if !text.isEmpty {
             sendCommittedText(text, action: GHOSTTY_ACTION_PRESS)
         }
+    }
+}
+
+extension NSScreen {
+    /// CoreGraphics display ID of this screen, as libghostty expects it.
+    var displayID: UInt32? {
+        (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
     }
 }

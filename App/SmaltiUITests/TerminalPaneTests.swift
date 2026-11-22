@@ -4,9 +4,12 @@ import XCTest
 final class TerminalPaneTests: XCTestCase {
     private var app: XCUIApplication!  // Assigned in setUp before every test; XCTest has no init-time setup.
     private var outputFile: URL!  // Same: created per test in setUp.
+    /// The user's pasteboard text, restored in tearDown, which XCTest runs even when a test fails.
+    private var savedPasteboard: String?
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        savedPasteboard = NSPasteboard.general.string(forType: .string)
         outputFile = FileManager.default.temporaryDirectory.appending(path: "smalti-uitest-\(UUID().uuidString)")
         app = XCUIApplication.isolatedSmalti()
         app.launchEnvironment["SMALTI_UITEST_OUT"] = outputFile.path(percentEncoded: false)
@@ -14,6 +17,8 @@ final class TerminalPaneTests: XCTestCase {
     }
 
     override func tearDown() {
+        NSPasteboard.general.clearContents()
+        if let savedPasteboard { NSPasteboard.general.setString(savedPasteboard, forType: .string) }
         app.terminate()
         try? FileManager.default.removeItem(at: outputFile)
     }
@@ -71,12 +76,6 @@ final class TerminalPaneTests: XCTestCase {
     func testCommandVPastesClipboard() {
         XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
         sleep(2)
-        let previous = NSPasteboard.general.string(forType: .string)
-        defer {
-            // The test borrows the user's real pasteboard; give it back.
-            NSPasteboard.general.clearContents()
-            if let previous { NSPasteboard.general.setString(previous, forType: .string) }
-        }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString("pegado-ok", forType: .string)
 
@@ -98,5 +97,27 @@ final class TerminalPaneTests: XCTestCase {
         app.typeKey("q", modifierFlags: .command)
 
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+    }
+
+    /// Review finding #1: a multi-line paste into a program without bracketed paste (here `cat`) asks for
+    /// confirmation and pastes after "Pegar".
+    func testMultilinePasteAsksAndPastes() {
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
+        sleep(2)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("uno\ndos\n", forType: .string)
+        app.typeText("cat>\"$SMALTI_UITEST_OUT\"\n")
+
+        app.typeKey("v", modifierFlags: .command)
+        let confirm = app.buttons["Pegar"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "multi-line paste must ask, not vanish")
+        confirm.click()
+        app.typeKey("d", modifierFlags: .control)
+
+        let written = expectation(
+            for: NSPredicate { _, _ in
+                (try? String(contentsOf: self.outputFile, encoding: .utf8)) == "uno\ndos\n"
+            }, evaluatedWith: nil)
+        wait(for: [written], timeout: 10)
     }
 }
