@@ -98,7 +98,7 @@ struct SurfaceLifetimeTests {
 
     /// Under `abnormal-command-exit-runtime` (250 ms) libghostty sends only SHOW_CHILD_EXITED, never close_surface.
     @Test func abnormalEarlyExitDeliversOneExited() async throws {
-        let exits = try await exitsDelivered(running: "/bin/zsh -f -c 'exit 3'")
+        let exits = try await exitsDelivered(running: "/bin/zsh -f -c 'exit 3'").exits
 
         // macOS may report the code as 0 (Surface.zig:1304), so only the count is asserted.
         #expect(exits.count == 1)
@@ -109,15 +109,16 @@ struct SurfaceLifetimeTests {
     /// close_surface_cb when a key is pressed on the finished surface (Surface.zig keyCallback). Every surface here has
     /// an explicit `zsh -f` command, so a login shell can never start.
     @Test func normalExitThroughBothCallbacksDeliversOneExited() async throws {
-        let exits = try await exitsDelivered(
+        let run = try await exitsDelivered(
             running: "/bin/zsh -f -c 'sleep 0.4; exit 3'", afterExit: { view in Self.pressKey(on: view) })
 
-        #expect(exits.count == 1)
+        #expect(run.exits.count == 1)
+        #expect(run.closeRequests >= 1)
     }
 
     /// A surface-level command waits after exiting, so only SHOW_CHILD_EXITED reports the exit.
     @Test func customCommandExitDeliversOneExited() async throws {
-        let exits = try await exitsDelivered(running: "/bin/zsh -f -c 'sleep 0.4; exit 3'")
+        let exits = try await exitsDelivered(running: "/bin/zsh -f -c 'sleep 0.4; exit 3'").exits
 
         #expect(exits.count == 1)
     }
@@ -150,7 +151,7 @@ struct SurfaceLifetimeTests {
     /// `.exited` seen until the exit is due plus a grace period. `afterExit` runs once the first `.exited` arrives.
     private func exitsDelivered(
         running command: String, afterExit: @escaping @MainActor (GhosttySurfaceView) -> Void = { _ in }
-    ) async throws -> [TerminalEvent] {
+    ) async throws -> ExitRun {
         let runtime = try GhosttyRuntime(config: config)
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let pane = try engine.open(
@@ -175,7 +176,14 @@ struct SurfaceLifetimeTests {
             try await Task.sleep(for: .milliseconds(20))
         }
         collector.cancel()
-        return await collector.value
+        return ExitRun(exits: await collector.value, closeRequests: view.closeRequestsReceived)
+    }
+
+    /// What a real surface reported while its command exited.
+    private struct ExitRun {
+        let exits: [TerminalEvent]
+        /// Times libghostty called `close_surface_cb`; proves the second exit path ran, not just the first.
+        let closeRequests: Int
     }
 
     /// Presses "a" on the surface, as a user would on a finished pane.

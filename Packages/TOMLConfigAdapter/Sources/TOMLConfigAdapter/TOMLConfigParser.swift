@@ -55,7 +55,8 @@ private enum AppearanceReader {
     private static let accentReason = "se esperaba un color #rrggbb"
     private static let fontFamilyKey = "font_family"
     private static let fontFamilyReason =
-        "se esperaba un nombre de 1 a 100 caracteres sin comillas, \\ ni caracteres de control"
+        "se esperaba un nombre de 1 a \(AppearanceSettings.maximumFontFamilyLength) caracteres sin comillas, "
+        + "\\ ni caracteres de control"
 
     static func read(_ section: TOMLSection, over defaults: AppearanceSettings) throws(ConfigError)
         -> AppearanceSettings

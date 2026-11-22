@@ -19,6 +19,8 @@ final class GhosttySurfaceView: NSView {
     /// Last code from SHOW_CHILD_EXITED; `.exited` carries it even when it comes from `close_surface_cb`.
     private var lastExitCode: Int?
     private var hasRequestedExit = false
+    /// Times libghostty called `close_surface_cb` for this surface; lets tests observe the second exit path.
+    private(set) var closeRequestsReceived = 0
 
     private var markedText = NSMutableAttributedString()
     /// Non-nil only while `keyDown` runs `interpretKeyEvents`; collects text committed by the input system.
@@ -84,6 +86,7 @@ final class GhosttySurfaceView: NSView {
     /// `ClosePane` never frees the view while one of its methods is still running.
     func requestClose() {
         guard let surface else { return }
+        closeRequestsReceived += 1
         if ghostty_surface_process_exited(surface) {
             requestExit()
         } else {
