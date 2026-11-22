@@ -12,6 +12,15 @@ public enum GhosttyConfigText {
         "\(Int(((lineHeight / naturalLineHeight - 1) * 100).rounded()))%"
     }
 
+    /// libghostty's default bindings (⌘K clear_screen, ⌘D new_split, ⌘1…9 goto_tab, ⌘W close_surface…) would take
+    /// Smalti's own shortcuts before the `KeyRouter` sees them (R6), so they are cleared and only copy and paste,
+    /// which need the terminal's selection, come back.
+    static let keybinds = [
+        "keybind = clear",
+        "keybind = super+c=copy_to_clipboard",
+        "keybind = super+v=paste_from_clipboard",
+    ]
+
     public static func render(_ appearance: TerminalAppearance) -> String {
         let settings = [
             "font-family = \"\(appearance.fontFamily)\"",
@@ -30,7 +39,7 @@ public enum GhosttyConfigText {
             "confirm-close-surface = false",
         ]
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
-        return (settings + palette).joined(separator: "\n") + "\n"
+        return (keybinds + settings + palette).joined(separator: "\n") + "\n"
     }
 
     private static func hex(_ color: RGBAColor) -> String {

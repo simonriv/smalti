@@ -15,24 +15,22 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     public func open(_ spec: TerminalSessionSpec) throws(TerminalEngineError) -> PaneID {
         let view = try GhosttySurfaceView(app: runtime.app, spec: spec)
         let id = PaneID()
-        view.onCloseRequested = { [weak self] in self?.close(id) }
         views[id] = view
         return id
     }
 
     public func close(_ pane: PaneID) {
         guard let view = views.removeValue(forKey: pane) else { return }
-        view.deliver(.exited(code: nil))
         view.shutDown()
         view.removeFromSuperview()
     }
 
     public func show(_ pane: PaneID) {
-        // Occlusion arrives in F1 Task 13.
+        views[pane]?.show()
     }
 
     public func hide(_ pane: PaneID) {
-        // Occlusion arrives in F1 Task 13.
+        views[pane]?.hide()
     }
 
     public func events(for pane: PaneID) -> AsyncStream<TerminalEvent> {

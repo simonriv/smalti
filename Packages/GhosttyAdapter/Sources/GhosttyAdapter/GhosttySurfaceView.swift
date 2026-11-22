@@ -11,7 +11,14 @@ final class GhosttySurfaceView: NSView {
     private(set) var surface: ghostty_surface_t?
     let events: AsyncStream<TerminalEvent>
     private let continuation: AsyncStream<TerminalEvent>.Continuation
-    var onCloseRequested: (() -> Void)?
+
+    /// Visible surfaces render and poll their foreground process; hidden ones are occluded (R7).
+    private(set) var isVisible = true
+    private var foregroundPoll: Timer?
+    private var processNames = ProcessNameTracker()
+    /// Last code from SHOW_CHILD_EXITED; `.exited` carries it even when it comes from `close_surface_cb`.
+    private var lastExitCode: Int?
+    private var hasRequestedExit = false
 
     private var markedText = NSMutableAttributedString()
     /// Non-nil only while `keyDown` runs `interpretKeyEvents`; collects text committed by the input system.
@@ -38,6 +45,7 @@ final class GhosttySurfaceView: NSView {
         }
         GhosttyRuntime.register(self)
         updateTrackingAreas()
+        startForegroundPoll()
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -45,6 +53,7 @@ final class GhosttySurfaceView: NSView {
 
     /// Frees the surface (and with it the PTY and child process) and ends the event stream.
     func shutDown() {
+        stopForegroundPoll()
         GhosttyRuntime.unregister(self)
         if let surface { ghostty_surface_free(surface) }
         surface = nil
@@ -59,15 +68,103 @@ final class GhosttySurfaceView: NSView {
 
     var surfaceAddress: Int { surface.map { Int(bitPattern: $0) } ?? 0 }
 
+    /// Main thread. A child exit becomes the pane's single exit request; a new title or a finished command may mean
+    /// another program took the foreground.
     func deliver(_ event: TerminalEvent) {
+        if case .exited(let code) = event {
+            childExited(code: code)
+            return
+        }
         continuation.yield(event)
+        if Self.mayChangeForegroundProcess(event) { refreshForegroundProcess() }
     }
 
-    /// libghostty asks to close from inside its own call stack (e.g. ⌘W during keyDown); closing is deferred
-    /// so the view is never freed while one of its methods is still running.
+    /// libghostty asks to close from inside its own call stack (`close_surface_cb`, main thread). A finished child
+    /// becomes `.exited`, a live one `.closeRequested`; both wait for the next main loop turn so the app's
+    /// `ClosePane` never frees the view while one of its methods is still running.
     func requestClose() {
+        guard let surface else { return }
+        if ghostty_surface_process_exited(surface) {
+            requestExit()
+        } else {
+            deliverOnNextTurn(.closeRequested)
+        }
+    }
+
+    // MARK: - Visibility and foreground process
+
+    /// Main thread. Ghostty's own app passes `true` for visible (BaseTerminalController).
+    func show() {
+        guard let surface, !isVisible else { return }
+        ghostty_surface_set_occlusion(surface, true)
+        isVisible = true
+        startForegroundPoll()
+        refreshForegroundProcess()
+    }
+
+    /// Main thread. The renderer pauses; the child process keeps running.
+    func hide() {
+        guard let surface, isVisible else { return }
+        ghostty_surface_set_occlusion(surface, false)
+        isVisible = false
+        stopForegroundPoll()
+    }
+
+    var isPollingForegroundProcess: Bool { foregroundPoll != nil }
+
+    private func startForegroundPoll() {
+        guard foregroundPoll == nil else { return }
+        let timer = Timer(timeInterval: Self.foregroundPollInterval, repeats: true) { [weak self] _ in
+            // Main thread: the timer is scheduled on the main run loop below.
+            MainActor.assumeIsolated { self?.refreshForegroundProcess() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        foregroundPoll = timer
+    }
+
+    private func stopForegroundPoll() {
+        foregroundPoll?.invalidate()
+        foregroundPoll = nil
+    }
+
+    private static let foregroundPollInterval: TimeInterval = 1
+
+    private func refreshForegroundProcess() {
+        guard let surface else { return }
+        // 0 means libghostty has no pid (no PTY yet, or the child is gone).
+        let name = pid_t(exactly: ghostty_surface_foreground_pid(surface)).flatMap(ForegroundProcess.name)
+        if let event = processNames.observe(name) { continuation.yield(event) }
+    }
+
+    private static func mayChangeForegroundProcess(_ event: TerminalEvent) -> Bool {
+        switch event {
+        case .titleChanged, .commandFinished: true
+        default: false
+        }
+    }
+
+    // MARK: - Exit
+
+    private func childExited(code: Int?) {
+        lastExitCode = code
+        requestExit()
+    }
+
+    /// SHOW_CHILD_EXITED and the `close_surface_cb` that usually follows it ask for the same exit: deliver it once.
+    private func requestExit() {
+        guard !hasRequestedExit else { return }
+        hasRequestedExit = true
         DispatchQueue.main.async { [weak self] in
-            MainActor.assumeIsolated { self?.onCloseRequested?() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.continuation.yield(.exited(code: self.lastExitCode))
+            }
+        }
+    }
+
+    private func deliverOnNextTurn(_ event: TerminalEvent) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { _ = self?.continuation.yield(event) }
         }
     }
 

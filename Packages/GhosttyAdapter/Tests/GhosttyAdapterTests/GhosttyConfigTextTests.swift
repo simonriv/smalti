@@ -24,6 +24,23 @@ struct GhosttyConfigTextTests {
         #expect(lines.contains(line))
     }
 
+    @Test func configStartsWithKeybindClear() {
+        let firstLine = GhosttyConfigText.render(Theme.obsidian.terminal).split(separator: "\n").first
+
+        #expect(firstLine == "keybind = clear")
+    }
+
+    @Test func configRebindsOnlyCopyAndPaste() {
+        let keybinds = GhosttyConfigText.render(Theme.obsidian.terminal)
+            .split(separator: "\n")
+            .filter { $0.hasPrefix("keybind = ") }
+
+        #expect(
+            keybinds == [
+                "keybind = clear", "keybind = super+c=copy_to_clipboard", "keybind = super+v=paste_from_clipboard",
+            ])
+    }
+
     @Test func listsTheSixteenPaletteEntriesInOrder() {
         let palette = GhosttyConfigText.render(Theme.obsidian.terminal)
             .split(separator: "\n")

@@ -67,6 +67,10 @@ final class AppComposition {
                     self.paneDidExit(pane, code: code)
                     return
                 }
+                if event == .closeRequested {
+                    self.paneDidRequestClose(pane)
+                    return
+                }
             }
         }
     }
@@ -90,6 +94,14 @@ final class AppComposition {
         case .closedAfterFailedStart(let exitCode):
             reportFailedStart(exitCode: exitCode)
         }
+        if set.active.panes.isEmpty { window?.close() }
+    }
+
+    /// The terminal asked to close its pane with the process still running; the engine never closes on its own.
+    private func paneDidRequestClose(_ pane: PaneID) {
+        guard let engine, var set = workspaces else { return }
+        _ = ClosePane(engine: engine).execute(pane, in: &set)
+        workspaces = set
         if set.active.panes.isEmpty { window?.close() }
     }
 

@@ -10,6 +10,8 @@ import SmaltiCore
 @MainActor
 public final class GhosttyRuntime {
     let app: ghostty_app_t
+    /// Smalti's generated engine config file; `apply` rewrites it.
+    private let configFile: URL
     private var observers: [NSObjectProtocol] = []
 
     /// `ghostty_app_new` clones `config`, so the caller may release it afterwards.
@@ -19,6 +21,7 @@ public final class GhosttyRuntime {
             throw .engineStartFailed(reason: "ghostty_app_new returned null")
         }
         self.app = app
+        configFile = config.file
         Self.current = app
         ghostty_app_set_focus(app, NSApp?.isActive ?? false)
         observeAppFocusAndKeyboardLayout()
@@ -28,6 +31,15 @@ public final class GhosttyRuntime {
         observers.forEach(NotificationCenter.default.removeObserver)
         if Self.current == app { Self.current = nil }
         ghostty_app_free(app)
+    }
+
+    /// Reloads the engine with a new appearance ("Recargar configuración"): rewrites the generated config file and
+    /// hands it to the app and every surface. Main thread, like every libghostty app call.
+    public func apply(_ appearance: TerminalAppearance) throws(TerminalEngineError) {
+        let config = try GhosttyConfig.load(text: GhosttyConfigText.render(appearance), writingTo: configFile)
+        // libghostty derives the surfaces' settings synchronously and clones the app-level config ("the caller
+        // owns the param", embedded.zig), so `config` is freed when it goes out of scope, as Ghostty.App does.
+        ghostty_app_update_config(app, config.handle)
     }
 
     /// The app that pending wakeups tick; nil once its runtime is gone.
@@ -110,6 +122,8 @@ public final class GhosttyRuntime {
         return true
     }
 
+    /// `close_surface_cb`: main thread, inside `ghostty_app_tick` (after a child exit, or a close binding). The view
+    /// turns it into `.exited` or `.closeRequested` and delivers it on the next main loop turn.
     nonisolated private static func closeSurface(_ userdata: UnsafeMutableRawPointer?) {
         // Safe: called on the main thread inside ghostty_app_tick, so the pointer never crosses threads.
         nonisolated(unsafe) let userdata = userdata

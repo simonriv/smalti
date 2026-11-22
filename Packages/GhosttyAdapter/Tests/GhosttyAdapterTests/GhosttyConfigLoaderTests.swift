@@ -16,6 +16,18 @@ struct GhosttyConfigLoaderTests {
         _ = try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file)
     }
 
+    @Test func applyingAppearanceReloadsWithoutDiagnostics() throws {
+        let runtime = try GhosttyRuntime(
+            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file))
+        var settings = AppearanceSettings.obsidian
+        settings.fontSize = 15
+        let appearance = Theme.obsidian.applying(settings).terminal
+
+        try runtime.apply(appearance)
+
+        #expect(try String(contentsOf: file, encoding: .utf8) == GhosttyConfigText.render(appearance))
+    }
+
     @Test func invalidKeyThrowsWithDiagnostics() {
         #expect {
             _ = try GhosttyConfig.load(text: "not-a-real-key = 1\n", writingTo: file)
