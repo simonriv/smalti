@@ -29,6 +29,12 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static func paneResize(_ direction: Direction) -> CommandID {
         CommandID(rawValue: "pane.resize.\(direction.name)")
     }
+    /// Select the layout with this id; matches the `layoutDwindle`, `layoutColumns` and `layoutMaster` members.
+    public static func layout(_ id: LayoutID) -> CommandID { CommandID(rawValue: "layout.\(id.rawValue)") }
+    /// Go to one workspace by identity. Not bindable: it is only offered by the command palette.
+    public static func workspaceGo(_ id: WorkspaceID) -> CommandID {
+        CommandID(rawValue: "workspace.go.\(id.rawValue.uuidString)")
+    }
     /// Go to the nth workspace, `number` in 1…9.
     public static func workspace(_ number: Int) -> CommandID { CommandID(rawValue: "workspace.\(number)") }
 
