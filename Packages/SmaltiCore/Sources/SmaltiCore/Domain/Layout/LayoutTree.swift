@@ -87,10 +87,7 @@ public indirect enum LayoutTree: Hashable, Sendable {
             return NeighborCandidate(id: id, frame: frame, origin: origin, direction: direction)
         }
         .filter { $0.isBeyondEdge && $0.overlap > 0 }
-        return candidates.reduce(nil as NeighborCandidate?) { best, candidate in
-            guard let best else { return candidate }
-            return candidate.isCloser(than: best) ? candidate : best
-        }?.id
+        return NeighborCandidate.closestCandidate(candidates)?.id
     }
 
     /// The tree with the ratio of the nearest ancestor that owns the requested
@@ -158,7 +155,7 @@ public indirect enum LayoutTree: Hashable, Sendable {
 }
 
 /// A pane considered as the neighbor of `origin` in `direction`.
-private struct NeighborCandidate {
+struct NeighborCandidate {
     /// Slack for frames that touch the edge of the origin up to rounding.
     private static let edgeTolerance = 0.5
 
@@ -194,11 +191,15 @@ private struct NeighborCandidate {
         }
     }
 
-    /// Strictly better than `other`; an equal candidate keeps the earlier one.
-    func isCloser(than other: NeighborCandidate) -> Bool {
-        if abs(distance - other.distance) > Self.edgeTolerance {
-            return distance < other.distance
+    /// Keeps the candidates within `edgeTolerance` of the smallest facing-edge
+    /// distance, then picks the largest overlap; an exact tie keeps the earlier
+    /// candidate. Independent of the order of `candidates` except for that tie.
+    static func closestCandidate(_ candidates: [NeighborCandidate]) -> NeighborCandidate? {
+        guard let nearest = candidates.map(\.distance).min() else { return nil }
+        let nearby = candidates.filter { $0.distance - nearest <= edgeTolerance }
+        return nearby.reduce(nil as NeighborCandidate?) { best, candidate in
+            guard let best else { return candidate }
+            return candidate.overlap > best.overlap ? candidate : best
         }
-        return overlap > other.overlap
     }
 }

@@ -1,4 +1,4 @@
-import SmaltiCore
+@testable import SmaltiCore
 import Testing
 
 @Suite("LayoutTree editing")
@@ -22,9 +22,6 @@ struct LayoutTreeEditingTests {
     private var dwindle: LayoutTree {
         sideBySide(0.5, .leaf(a), stacked(0.5, .leaf(b), .leaf(c)))
     }
-
-    /// a as master on the left; b over c in the stack on the right.
-    private var master: LayoutTree { dwindle }
 
     private func ratio(of tree: LayoutTree) -> Double? {
         guard case .split(_, let ratio, _, _) = tree else { return nil }
@@ -126,13 +123,13 @@ struct LayoutTreeEditingTests {
     }
 
     @Test func neighborDownInStack() {
-        let neighbor = master.neighbor(of: b, toward: .down, in: wideArea, gap: 8)
+        let neighbor = dwindle.neighbor(of: b, toward: .down, in: wideArea, gap: 8)
 
         #expect(neighbor == c)
     }
 
     @Test func neighborLeftFromStackReturnsMaster() {
-        let neighbor = master.neighbor(of: c, toward: .left, in: wideArea, gap: 8)
+        let neighbor = dwindle.neighbor(of: c, toward: .left, in: wideArea, gap: 8)
 
         #expect(neighbor == a)
     }
@@ -166,5 +163,69 @@ struct LayoutTreeEditingTests {
         let neighbor = tree.neighbor(of: c, toward: .right, in: wideArea, gap: 8)
 
         #expect(neighbor == nil)
+    }
+
+    @Test func neighborUpFromStackBottom() {
+        let neighbor = dwindle.neighbor(of: c, toward: .up, in: wideArea, gap: 8)
+
+        #expect(neighbor == b)
+    }
+
+    @Test func neighborLeftFromRightColumn() {
+        let tree = sideBySide(0.5, .leaf(a), .leaf(b))
+
+        let neighbor = tree.neighbor(of: b, toward: .left, in: wideArea, gap: 8)
+
+        #expect(neighbor == a)
+    }
+
+    @Test func resizeUpFromSecondChildShrinksFirst() {
+        let tree = stacked(0.5, .leaf(a), .leaf(b))
+
+        let resized = tree.resizing(request(b, .up), within: wideGeometry)
+
+        #expect(abs((ratio(of: resized) ?? 0) - 0.45) < 1e-9)
+    }
+
+    @Test func resizeOfUnknownPaneDoesNothing() {
+        let tree = sideBySide(0.5, .leaf(a), .leaf(b))
+
+        let resized = tree.resizing(request(PaneID(), .right), within: wideGeometry)
+
+        #expect(resized == tree)
+    }
+
+    @Test func neighborTieBreaksByPaneOrder() {
+        // Two equal panes stacked on the right of a: same distance, same overlap.
+        let tree = sideBySide(0.5, .leaf(a), stacked(0.5, .leaf(b), .leaf(c)))
+        let area = Rect(x: 0, y: 0, width: 1008, height: 1008)
+
+        let neighbor = tree.neighbor(of: a, toward: .right, in: area, gap: 0)
+
+        #expect(neighbor == b)
+    }
+
+    @Test func neighborChoiceIsOrderIndependentWithNearTies() {
+        let origin = Rect(x: 0, y: 0, width: 100, height: 400)
+        let farthest = candidate(PaneID(), gapFromEdge: 0.8, overlap: 300, origin: origin)
+        let nearest = candidate(PaneID(), gapFromEdge: 0, overlap: 100, origin: origin)
+        let nearby = candidate(PaneID(), gapFromEdge: 0.4, overlap: 150, origin: origin)
+
+        let orders = [
+            [farthest, nearest, nearby], [farthest, nearby, nearest],
+            [nearest, farthest, nearby], [nearest, nearby, farthest],
+            [nearby, farthest, nearest], [nearby, nearest, farthest],
+        ]
+
+        for order in orders {
+            #expect(NeighborCandidate.closestCandidate(order)?.id == nearby.id)
+        }
+    }
+
+    private func candidate(
+        _ id: PaneID, gapFromEdge: Double, overlap: Double, origin: Rect
+    ) -> NeighborCandidate {
+        let frame = Rect(x: origin.maxX + gapFromEdge, y: 0, width: 100, height: overlap)
+        return NeighborCandidate(id: id, frame: frame, origin: origin, direction: .right)
     }
 }
