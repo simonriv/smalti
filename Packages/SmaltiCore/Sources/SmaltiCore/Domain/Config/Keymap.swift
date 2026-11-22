@@ -23,7 +23,7 @@ public struct Keymap: Sendable, Equatable {
     public func overriding(_ bindings: [KeyChord: CommandID?]) throws(ConfigError) -> Keymap {
         var updated = commandsByChord
         for (chord, command) in bindings.sorted(by: { $0.key.display < $1.key.display }) {
-            if chord.usesOptionAlone { throw Self.optionAloneError(chord) }
+            try Self.validate(chord)
             updated[chord] = nil
             guard let command else { continue }
             updated = updated.filter { $0.value != command }
@@ -32,8 +32,10 @@ public struct Keymap: Sendable, Equatable {
         return Keymap(commandsByChord: updated)
     }
 
-    private static func optionAloneError(_ chord: KeyChord) -> ConfigError {
-        ConfigError(
+    /// Rejects a chord no keymap may bind: ⌥ without ⌘ or ⌃ (R8). `file` and `line` are left for the config reader.
+    public static func validate(_ chord: KeyChord) throws(ConfigError) {
+        guard chord.usesOptionAlone else { return }
+        throw ConfigError(
             file: "", line: nil, key: chord.display, reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
     }
 

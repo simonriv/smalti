@@ -52,32 +52,37 @@ struct TOMLSection {
 
     /// The nested table at `key`, or `nil` when it is not written.
     func section(_ key: String) throws(ConfigError) -> TOMLSection? {
-        guard table.contains(key: key) else { return nil }
-        do {
-            let nested = try table.table(forKey: key)
-            return TOMLSection(name: name.isEmpty ? key : "\(name).\(key)", table: nested, source: source)
-        } catch {
-            throw self.error(at: key, Self.tableReason)
-        }
+        try value(
+            at: key, read: { (table) throws(TOMLError) in try table.table(forKey: key) },
+            reason: { _ in Self.tableReason }
+        )
+        .map { TOMLSection(name: name.isEmpty ? key : "\(name).\(key)", table: $0, source: source) }
     }
 
-    /// An integer or float at `key`, or `nil` when it is not written.
+    /// An integer or float at `key`, or `nil` when it is not written. `nan` and `inf` come back as written.
     func number(_ key: String) throws(ConfigError) -> Double? {
-        guard table.contains(key: key) else { return nil }
-        do {
-            return try table.float(forKey: key)
-        } catch {
-            throw self.error(at: key, Self.numberReason)
+        try value(
+            at: key, read: { (table) throws(TOMLError) in try table.float(forKey: key) },
+            reason: { _ in Self.numberReason })
+    }
+
+    /// A string at `key`, or `nil` when it is not written. `reason` explains a value of another type; a string
+    /// the library cannot decode (an invalid escape, which it only reports on read) is a syntax error.
+    func text(_ key: String, reason: String = textReason) throws(ConfigError) -> String? {
+        try value(at: key, read: { (table) throws(TOMLError) in try table.string(forKey: key) }) { error in
+            Self.isTypeMismatch(error) ? reason : Self.syntaxReason
         }
     }
 
-    /// A string at `key`, or `nil` when it is not written. `reason` explains a value of another type.
-    func text(_ key: String, reason: String = textReason) throws(ConfigError) -> String? {
+    /// Reads `key` with `read`, or `nil` when it is not written; a failure becomes a `ConfigError` at `key`.
+    private func value<Value>(
+        at key: String, read: (TOMLTable) throws(TOMLError) -> Value, reason: (TOMLError) -> String
+    ) throws(ConfigError) -> Value? {
         guard table.contains(key: key) else { return nil }
         do {
-            return try table.string(forKey: key)
+            return try read(table)
         } catch {
-            throw self.error(at: key, reason)
+            throw self.error(at: key, reason(error))
         }
     }
 
@@ -92,6 +97,11 @@ struct TOMLSection {
         } catch {
             return false
         }
+    }
+
+    /// TOMLDecoder keeps the failure kind in a non-public field; its description names a type mismatch.
+    private static func isTypeMismatch(_ error: TOMLError) -> Bool {
+        String(describing: error).contains("Type mismatch")
     }
 
     /// TOMLDecoder keeps the line in a non-public field; its description starts with `(Line N)`.

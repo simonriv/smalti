@@ -19,11 +19,14 @@ struct TOMLAdapterGuardTests {
     @Test func onlyThisAdapterImportsTheTOMLLibrary() throws {
         let packages = try packageNames()
         let otherSources = packages.filter { $0 != Self.adapterPackage }.map(sources(ofPackage:))
-        let scanned = otherSources + [repositoryRoot.appending(path: "App")]
+        let app = repositoryRoot.appending(path: "App")
+        let scanned = otherSources + [app]
 
         let violations = try scanned.flatMap(scanner.violations(inDirectory:))
 
         #expect(packages.contains(Self.adapterPackage) && packages.contains("SmaltiCore"))
+        #expect(FileManager.default.fileExists(atPath: app.path(percentEncoded: false)))
+        #expect(!ImportScanner.swiftFiles(in: app).isEmpty)
         #expect(
             violations.isEmpty,
             "\(Self.tomlLibrary) imported outside \(Self.adapterPackage):\n\(violations.map(\.description).joined(separator: "\n"))"

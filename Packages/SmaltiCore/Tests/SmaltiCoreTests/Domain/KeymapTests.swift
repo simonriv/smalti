@@ -102,4 +102,20 @@ struct KeymapTests {
 
         #expect(keymap.chord(for: .paletteOpen) == KeyChord(key: "m", modifiers: [.command]))
     }
+
+    @Test func validateRejectsOptionAloneChord() throws {
+        let optionAlone = try chord("opt+k")
+
+        #expect(
+            throws: ConfigError(file: "", line: nil, key: "⌥K", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+        ) {
+            try Keymap.validate(optionAlone)
+        }
+    }
+
+    @Test func validateAcceptsOptionWithCommand() throws {
+        let chord = try chord("cmd+opt+k")
+
+        #expect(throws: Never.self) { try Keymap.validate(chord) }
+    }
 }

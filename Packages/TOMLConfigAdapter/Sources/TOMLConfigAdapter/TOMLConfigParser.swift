@@ -28,18 +28,30 @@ enum TOMLConfigParser {
             config.shell = try ShellReader.read(section) ?? config.shell
         }
         if let section = try root.section(Table.keys) {
-            config.keys = try KeysReader.read(section, over: config.keys)
+            config.keys = try TOMLKeysReader.read(section, over: config.keys)
         }
         return config
     }
 }
 
-/// `[appearance]`. Ranges come from the sliders in `docs/design/Apariencia.dc.html`.
+/// `[appearance]`. Glass and blur ranges come from the sliders in `docs/design/Apariencia.dc.html`; font size, gap
+/// and radius have no board range, so theirs are sanity bounds that can be widened. Non-finite values never pass.
 private enum AppearanceReader {
-    private static let glassOpacityRange = 0.3...0.95
-    private static let glassOpacityReason = "se esperaba un número entre 0,3 y 0,95"
-    private static let blurRange = 0.0...48.0
-    private static let blurReason = "se esperaba un número entre 0 y 48"
+    private struct Bounds {
+        let range: ClosedRange<Double>
+        let reason: String
+
+        init(_ range: ClosedRange<Double>, _ text: String) {
+            self.range = range
+            self.reason = "se esperaba un número entre \(text)"
+        }
+    }
+
+    private static let glassOpacity = Bounds(0.3...0.95, "0,3 y 0,95")
+    private static let blur = Bounds(0...48, "0 y 48")
+    private static let fontSize = Bounds(6...72, "6 y 72")
+    private static let gap = Bounds(0...32, "0 y 32")
+    private static let radius = Bounds(0...32, "0 y 32")
     private static let accentReason = "se esperaba un color #rrggbb"
 
     static func read(_ section: TOMLSection, over defaults: AppearanceSettings) throws(ConfigError)
@@ -50,14 +62,12 @@ private enum AppearanceReader {
         ])
         var appearance = defaults
         appearance.accent = try accent(in: section) ?? appearance.accent
-        appearance.glassOpacity =
-            try number("glass_opacity", in: section, within: glassOpacityRange, reason: glassOpacityReason)
-            ?? appearance.glassOpacity
-        appearance.blur = try number("blur", in: section, within: blurRange, reason: blurReason) ?? appearance.blur
+        appearance.glassOpacity = try number("glass_opacity", in: section, glassOpacity) ?? appearance.glassOpacity
+        appearance.blur = try number("blur", in: section, blur) ?? appearance.blur
         appearance.fontFamily = try section.text("font_family") ?? appearance.fontFamily
-        appearance.fontSize = try section.number("font_size") ?? appearance.fontSize
-        appearance.gap = try section.number("gap") ?? appearance.gap
-        appearance.radius = try section.number("radius") ?? appearance.radius
+        appearance.fontSize = try number("font_size", in: section, fontSize) ?? appearance.fontSize
+        appearance.gap = try number("gap", in: section, gap) ?? appearance.gap
+        appearance.radius = try number("radius", in: section, radius) ?? appearance.radius
         return appearance
     }
 
@@ -71,11 +81,11 @@ private enum AppearanceReader {
         }
     }
 
-    private static func number(
-        _ key: String, in section: TOMLSection, within range: ClosedRange<Double>, reason: String
-    ) throws(ConfigError) -> Double? {
+    private static func number(_ key: String, in section: TOMLSection, _ bounds: Bounds) throws(ConfigError)
+        -> Double?
+    {
         guard let value = try section.number(key) else { return nil }
-        guard range.contains(value) else { throw section.error(at: key, reason) }
+        guard value.isFinite, bounds.range.contains(value) else { throw section.error(at: key, bounds.reason) }
         return value
     }
 }

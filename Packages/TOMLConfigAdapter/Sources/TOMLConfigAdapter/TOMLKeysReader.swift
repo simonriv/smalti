@@ -2,7 +2,7 @@ import SmaltiCore
 
 /// `[keys]`: chord → command id, or `"none"` to unbind. Every error names the chord as the user wrote it and its
 /// line, including the ones `Keymap.overriding` raises (R8).
-enum KeysReader {
+enum TOMLKeysReader {
     private static let unbindKeyword = "none"
     private static let valueReason = "se esperaba un id de comando o \"none\""
     private static let knownCommands = Set(CommandID.allStandard)
@@ -15,6 +15,7 @@ enum KeysReader {
             if let first = writtenChords[chord] {
                 throw section.error(at: text, "atajo repetido; ya aparece como \(first)")
             }
+            try validate(chord, writtenAs: text, in: section)
             writtenChords[chord] = text
             bindings[chord] = try command(at: text, in: section)
         }
@@ -26,6 +27,17 @@ enum KeysReader {
             return try KeyChord.parse(text)
         } catch {
             throw section.error(at: text, reason(for: error))
+        }
+    }
+
+    /// Checked here, in file order, so the first offending chord is the one reported.
+    private static func validate(_ chord: KeyChord, writtenAs text: String, in section: TOMLSection)
+        throws(ConfigError)
+    {
+        do {
+            try Keymap.validate(chord)
+        } catch {
+            throw section.error(at: text, error.reason)
         }
     }
 

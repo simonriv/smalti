@@ -178,6 +178,78 @@ struct TOMLConfigParserTests {
             error == ConfigError(file: Self.file, line: 2, key: "blur", reason: "se esperaba un número entre 0 y 48"))
     }
 
+    @Test(arguments: ["font_size", "gap", "radius", "glass_opacity", "blur"], ["nan", "inf", "-inf"])
+    func nonFiniteNumberIsRejected(key: String, value: String) {
+        let error = error(parsing: "[appearance]\n\(key) = \(value)")
+
+        #expect(error?.key == key)
+        #expect(error?.line == 2)
+    }
+
+    @Test func glassOpacityNaNIsRejected() {
+        let error = error(parsing: "[appearance]\nglass_opacity = nan")
+
+        #expect(
+            error
+                == ConfigError(
+                    file: Self.file, line: 2, key: "glass_opacity", reason: "se esperaba un número entre 0,3 y 0,95"))
+    }
+
+    @Test func blurInfinityIsRejected() {
+        let error = error(parsing: "[appearance]\nblur = inf")
+
+        #expect(
+            error == ConfigError(file: Self.file, line: 2, key: "blur", reason: "se esperaba un número entre 0 y 48"))
+    }
+
+    @Test(arguments: [5, 73])
+    func fontSizeOutsideRangeIsRejected(value: Int) {
+        let error = error(parsing: "[appearance]\nfont_size = \(value)")
+
+        #expect(
+            error
+                == ConfigError(file: Self.file, line: 2, key: "font_size", reason: "se esperaba un número entre 6 y 72")
+        )
+    }
+
+    @Test(arguments: [-1, 33])
+    func gapOutsideRangeIsRejected(value: Int) {
+        let error = error(parsing: "[appearance]\ngap = \(value)")
+
+        #expect(
+            error == ConfigError(file: Self.file, line: 2, key: "gap", reason: "se esperaba un número entre 0 y 32"))
+    }
+
+    @Test(arguments: [-1, 33])
+    func radiusOutsideRangeIsRejected(value: Int) {
+        let error = error(parsing: "[appearance]\nradius = \(value)")
+
+        #expect(
+            error == ConfigError(file: Self.file, line: 2, key: "radius", reason: "se esperaba un número entre 0 y 32"))
+    }
+
+    @Test(arguments: [6, 72])
+    func fontSizeAcceptsItsBounds(value: Int) throws {
+        let config = try parse("[appearance]\nfont_size = \(value)")
+
+        #expect(config.appearance.fontSize == Double(value))
+    }
+
+    @Test(arguments: [0, 32])
+    func gapAndRadiusAcceptTheirBounds(value: Int) throws {
+        let appearance = try parse("[appearance]\ngap = \(value)\nradius = \(value)").appearance
+
+        #expect(appearance.gap == Double(value))
+        #expect(appearance.radius == Double(value))
+    }
+
+    @Test func invalidEscapeInATextIsASyntaxError() {
+        let error = error(parsing: "[appearance]\n\nfont_family = \"Jet\\qBrains\"")
+
+        #expect(
+            error == ConfigError(file: Self.file, line: 3, key: "font_family", reason: "sintaxis TOML no válida"))
+    }
+
     @Test func emptyShellCommandIsRejected() {
         let error = error(parsing: "[shell]\ncommand = \"  \"")
 
@@ -215,6 +287,15 @@ struct TOMLConfigParserTests {
             error
                 == ConfigError(
                     file: Self.file, line: 3, key: "opt+k", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir"))
+    }
+
+    @Test func firstOptionOnlyChordInFileOrderIsReported() {
+        let error = error(parsing: "[keys]\n\"opt+z\" = \"pane.new\"\n\"opt+a\" = \"pane.close\"")
+
+        #expect(
+            error
+                == ConfigError(
+                    file: Self.file, line: 2, key: "opt+z", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir"))
     }
 
     @Test func unknownCommandIsReportedWithLine() {

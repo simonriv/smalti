@@ -38,6 +38,37 @@ struct TOMLConfigStoreContractTests {
         }
     }
 
+    @Test func fileThatIsNotUTF8IsReportedAsSuch() throws {
+        let harness = try TemporaryFileHarness()
+        defer { harness.removeDirectory() }
+        let file = try harness.writeBytes([0x5B, 0x6B, 0x65, 0x79, 0x73, 0x5D, 0x0A, 0xFF, 0xFE, 0xFD])
+        let store = TOMLConfigStore(file: file)
+
+        #expect(
+            throws: ConfigError(
+                file: file.path(percentEncoded: false), line: nil, key: nil, reason: "el archivo no está en UTF-8")
+        ) {
+            try store.reload()
+        }
+    }
+
+    @Test func fileWithoutReadPermissionIsReportedAsSuch() throws {
+        let harness = try TemporaryFileHarness()
+        defer { harness.removeDirectory() }
+        let file = try harness.writeBytes(Array("[keys]\n".utf8))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: file.path(percentEncoded: false))
+        let store = TOMLConfigStore(file: file)
+
+        #expect(
+            throws: ConfigError(
+                file: file.path(percentEncoded: false), line: nil, key: nil,
+                reason: "no se pudo leer el archivo: sin permiso de lectura")
+        ) {
+            try store.reload()
+        }
+    }
+
     @Test func tomlStoreSatisfiesContract() throws {
         let harness = try TemporaryFileHarness()
         defer { harness.removeDirectory() }
@@ -75,6 +106,12 @@ private final class TemporaryFileHarness: ConfigStoreHarness {
         } catch {
             Issue.record(error, "Could not remove \(directory.path(percentEncoded: false))")
         }
+    }
+
+    /// Writes raw bytes to the store's file and returns its URL.
+    func writeBytes(_ bytes: [UInt8]) throws -> URL {
+        try Data(bytes).write(to: file)
+        return file
     }
 
     private func apply(_ scenario: ConfigScenario) throws {

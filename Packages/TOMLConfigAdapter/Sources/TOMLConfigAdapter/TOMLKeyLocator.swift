@@ -1,5 +1,8 @@
 /// Finds where a key is written in the raw TOML text, so semantic errors can name a line even though the TOML
 /// library only reports lines for syntax errors.
+///
+/// It reads line by line without a TOML parser, so text inside a multiline string (`"""…"""` or `'''…'''`)
+/// that looks like `key = …` or `[table]` can be taken for one. Inline tables and dotted keys are not placed.
 enum TOMLKeyLocator {
     /// The 1-based line where `key = …` appears inside `[table]` (`""` for the top level, before any header), or
     /// where `[table.key]` is declared. Comments and other tables are skipped; quoted keys are compared unquoted.
