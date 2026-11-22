@@ -22,6 +22,7 @@ final class AppComposition {
     }
 
     func showMainWindow() {
+        AppFonts.registerBundled()
         let startup = Self.readStartup()
         let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
@@ -67,33 +68,29 @@ final class AppComposition {
         self.controller = controller
         window.contentView?.layoutSubtreeIfNeeded()
         controller.start()
-        openDebugPanes(controller)
     }
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
         let grid = window.paneGrid
         controller.area = { [weak grid] in grid?.area ?? .zero }
-        controller.onChange = { [weak self, weak grid] state in
-            grid?.render(state) { engine.view(for: $0) }
+        controller.onChange = { [weak self, weak window] state in
+            window?.strip.render(state)
+            window?.paneGrid.render(state) { engine.view(for: $0) }
+            window?.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
-            if let message = state.message { self?.logger.info("status: \(message.text, privacy: .public)") }
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
+        window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        let router = KeyRouter(
+            keymap: { [weak controller] in controller?.config.keys ?? .standard },
+            perform: { [weak controller] command in controller?.perform(command) })
+        window.routeKey = { router.route($0) }
     }
 
     /// Keystrokes go to the focused pane's terminal.
     private func focusKeyboard(on pane: PaneID?) {
         guard let window, let pane, let view = engine?.view(for: pane), window.firstResponder !== view else { return }
         window.makeFirstResponder(view)
-    }
-
-    /// `-SmaltiDebugPanes <n>` (Debug builds only) opens n panes at launch so the grid can be checked before the
-    /// key router exists (F1 Task 15 removes it).
-    private func openDebugPanes(_ controller: TilingController) {
-        #if DEBUG
-            let count = UserDefaults.standard.integer(forKey: "SmaltiDebugPanes")
-            for _ in 1..<max(count, 1) { controller.perform(.paneNew) }
-        #endif
     }
 
     private func makeRuntime(_ appearance: TerminalAppearance) throws(TerminalEngineError) -> GhosttyRuntime {

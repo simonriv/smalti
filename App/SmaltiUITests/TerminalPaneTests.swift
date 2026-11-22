@@ -128,15 +128,17 @@ final class TerminalPaneTests: XCTestCase {
         wait(for: [written], timeout: 10)
     }
 
-    /// A shell that dies right after starting no longer takes the window with it (the status bar reports it, F1 T15).
-    func testShellThatFailsToStartKeepsTheWindow() {
+    /// A shell that dies right after starting is reported in the status bar; the window stays (spec R4).
+    func testShellThatFailsToStartIsReportedInTheStatusBar() {
         app.terminate()
         let failing = XCUIApplication.isolatedSmalti(shell: "/usr/bin/false")
         failing.launch()
 
-        XCTAssertTrue(
-            failing.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertTrue(failing.windows["smalti.window"].exists)
+        let statusBar = failing.descendants(matching: .any)["smalti.statusBar"].firstMatch
+        let reported = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value BEGINSWITH 'El shell terminó al iniciar'"), object: statusBar)
+        wait(for: [reported], timeout: 10)
+        XCTAssertTrue(failing.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.exists)
         failing.terminate()
     }
 }

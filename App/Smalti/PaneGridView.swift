@@ -54,7 +54,7 @@ final class PaneGridView: NSView {
         let isRearrangement = workspace.map { $0.id == active.id && $0.tree != active.tree } ?? false
         workspace = active
         dropContainers(keeping: Set(set.workspaces.flatMap { $0.panes.map(\.id) }))
-        attach(active, views: views)
+        attach(state, views: views)
         emptyState.isHidden = !active.panes.isEmpty
         let keys = state.config.keys
         emptyState.show(newPane: keys.chord(for: .paneNew), palette: keys.chord(for: .paletteOpen))
@@ -79,7 +79,8 @@ final class PaneGridView: NSView {
         }
     }
 
-    private func attach(_ workspace: Workspace, views: (PaneID) -> NSView?) {
+    private func attach(_ state: TilingState, views: (PaneID) -> NSView?) {
+        let workspace = state.set.active
         let visible = Set(workspace.panes.map(\.id))
         for (pane, container) in containers where !visible.contains(pane) {
             container.removeFromSuperview()
@@ -89,7 +90,10 @@ final class PaneGridView: NSView {
             let container = containers[pane] ?? newContainer(for: pane, at: frames[pane])
             if let view = views(pane) { container.embed(view) }
             if container.superview !== self { addSubview(container) }
-            container.apply(theme, isFocused: pane == workspace.focusedPane)
+            let header = workspace.panes.first { $0.id == pane }.map {
+                PaneHeader($0, index: state.set.paneIndex(of: pane), state: state)
+            }
+            container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
         }
     }
 

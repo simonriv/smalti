@@ -11,6 +11,8 @@ struct TilingState {
     let config: SmaltiConfig
     let theme: Theme
     let message: StatusMessage?
+    /// Directories show relative to it (`~/dev/xolken`).
+    let home: WorkingDirectory
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -261,6 +263,6 @@ final class TilingController {
     }
 
     private func publish() {
-        onChange?(TilingState(set: set, config: config, theme: theme, message: message))
+        onChange?(TilingState(set: set, config: config, theme: theme, message: message, home: deps.home))
     }
 }

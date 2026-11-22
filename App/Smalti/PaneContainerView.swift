@@ -12,12 +12,14 @@ final class PaneContainerView: NSView {
     private let glowMask = CAShapeLayer()
     private var theme: Theme
     private var terminalView: NSView?
+    private let header: PaneHeaderView
     /// While panes move, the terminal keeps its final size and only the frame animates (spec: no blank frames).
     private var frozenContentSize: NSSize?
 
     init(pane: PaneID, theme: Theme) {
         self.pane = pane
         self.theme = theme
+        header = PaneHeaderView(theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
         glowMask.fillRule = .evenOdd
@@ -28,10 +30,11 @@ final class PaneContainerView: NSView {
         clip.layer?.cornerCurve = .continuous
         clip.layer?.masksToBounds = true
         addSubview(clip)
+        clip.addSubview(header)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.pane")
-        apply(theme, isFocused: false)
+        apply(theme, isFocused: false, header: nil)
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -48,8 +51,9 @@ final class PaneContainerView: NSView {
         needsLayout = true
     }
 
-    func apply(_ theme: Theme, isFocused: Bool) {
+    func apply(_ theme: Theme, isFocused: Bool, header content: PaneHeader?) {
         self.theme = theme
+        content.map { header.show($0, theme: theme) }
         let radius = theme.panel.cornerRadius
         clip.layer?.cornerRadius = radius
         clip.layer?.borderWidth = theme.panel.borderWidth
@@ -69,7 +73,7 @@ final class PaneContainerView: NSView {
     /// Keeps the terminal at `size` until `unfreezeContent()`, so a frame animation never resizes the surface.
     func freezeContent(at size: NSSize) {
         frozenContentSize = size
-        terminalView?.frame = NSRect(origin: .zero, size: size)
+        terminalView?.frame = NSRect(x: 0, y: 0, width: size.width, height: max(0, size.height - theme.header.height))
     }
 
     func unfreezeContent() {
@@ -100,8 +104,10 @@ final class PaneContainerView: NSView {
     override func layout() {
         super.layout()
         clip.frame = bounds
+        let headerHeight = min(theme.header.height, bounds.height)
+        header.frame = NSRect(x: 0, y: bounds.height - headerHeight, width: bounds.width, height: headerHeight)
         layoutGlow()
         guard frozenContentSize == nil else { return }
-        terminalView?.frame = clip.bounds
+        terminalView?.frame = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height - headerHeight)
     }
 }

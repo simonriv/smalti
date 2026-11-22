@@ -45,6 +45,14 @@ final class MainWindowTests: XCTestCase {
         XCTAssertEqual(pane.frame.minX - window.frame.minX, 10)
         XCTAssertEqual(pane.frame.minY - strip.frame.maxY, 10)
         XCTAssertEqual(window.frame.maxX - pane.frame.maxX, 10)
-        XCTAssertEqual(window.frame.maxY - pane.frame.maxY, 10)
+        XCTAssertEqual(element("smalti.statusBar").frame.minY - pane.frame.maxY, 10)
+    }
+
+    /// Main.dc.html footer: 28 pt, flush with the bottom of the window.
+    func testStatusBarIs28PointsAtTheBottom() {
+        let statusBar = element("smalti.statusBar")
+        XCTAssertTrue(statusBar.waitForExistence(timeout: 5))
+        XCTAssertEqual(statusBar.frame.height, 28)
+        XCTAssertEqual(statusBar.frame.maxY, window.frame.maxY)
     }
 }
