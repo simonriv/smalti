@@ -46,6 +46,70 @@ public indirect enum LayoutTree: Hashable, Sendable {
         }
     }
 
+    /// Moves the edge of `request.pane` that faces `request.direction`, or
+    /// returns `self` when there is no such edge or the result would leave a
+    /// pane below `geometry.minimumPaneSize`.
+    public func resizing(_ request: ResizeRequest, within geometry: LayoutGeometry) -> LayoutTree {
+        guard let resized = movingEdge(of: request), geometry.fits(resized) else { return self }
+        return resized
+    }
+
+    /// The same tree with the leaves `a` and `b` exchanged, ratios untouched;
+    /// `self` when either is not in the tree.
+    public func swapping(_ a: PaneID, _ b: PaneID) -> LayoutTree {
+        let present = panes
+        guard present.contains(a), present.contains(b) else { return self }
+        return exchangingLeaves(a, b)
+    }
+
+    private func exchangingLeaves(_ a: PaneID, _ b: PaneID) -> LayoutTree {
+        switch self {
+        case .leaf(let id):
+            return .leaf(id == a ? b : (id == b ? a : id))
+        case .split(let axis, let ratio, let first, let second):
+            return .split(
+                axis: axis, ratio: ratio,
+                first: first.exchangingLeaves(a, b), second: second.exchangingLeaves(a, b))
+        }
+    }
+
+    /// The pane next to `pane` on the side `direction` points to, or `nil` when
+    /// there is none. Among panes beyond that edge that overlap it across the
+    /// other axis, the closest wins; ties go to the larger overlap and then to
+    /// the earlier pane in `panes`.
+    public func neighbor(
+        of pane: PaneID, toward direction: Direction, in area: Rect, gap: Double
+    ) -> PaneID? {
+        let frames = frames(in: area, gap: gap)
+        guard let origin = frames[pane] else { return nil }
+        let candidates = panes.compactMap { id -> NeighborCandidate? in
+            guard id != pane, let frame = frames[id] else { return nil }
+            return NeighborCandidate(id: id, frame: frame, origin: origin, direction: direction)
+        }
+        .filter { $0.isBeyondEdge && $0.overlap > 0 }
+        return candidates.reduce(nil as NeighborCandidate?) { best, candidate in
+            guard let best else { return candidate }
+            return candidate.isCloser(than: best) ? candidate : best
+        }?.id
+    }
+
+    /// The tree with the ratio of the nearest ancestor that owns the requested
+    /// edge moved, or `nil` when no ancestor owns it.
+    private func movingEdge(of request: ResizeRequest) -> LayoutTree? {
+        guard case .split(let axis, let ratio, let first, let second) = self else { return nil }
+        let inFirst = first.panes.contains(request.pane)
+        let child = inFirst ? first : second
+        if let resizedChild = child.movingEdge(of: request) {
+            return inFirst
+                ? .split(axis: axis, ratio: ratio, first: resizedChild, second: second)
+                : .split(axis: axis, ratio: ratio, first: first, second: resizedChild)
+        }
+        let ownsEdge = axis == request.direction.axis && inFirst == request.direction.pointsTowardSecond
+        guard ownsEdge else { return nil }
+        let delta = request.direction.pointsTowardSecond ? request.step : -request.step
+        return .split(axis: axis, ratio: ratio.adding(delta), first: first, second: second)
+    }
+
     /// How many leaves lie side by side along `axis`: a leaf counts 1, a split
     /// on the same axis adds its children, a split on the other axis takes the
     /// larger child.
@@ -90,5 +154,51 @@ public indirect enum LayoutTree: Hashable, Sendable {
             first.place(in: firstArea, gap: gap, into: &result)
             second.place(in: secondArea, gap: gap, into: &result)
         }
+    }
+}
+
+/// A pane considered as the neighbor of `origin` in `direction`.
+private struct NeighborCandidate {
+    /// Slack for frames that touch the edge of the origin up to rounding.
+    private static let edgeTolerance = 0.5
+
+    let id: PaneID
+    let frame: Rect
+    let origin: Rect
+    let direction: Direction
+
+    var isBeyondEdge: Bool {
+        switch direction {
+        case .right: frame.minX >= origin.maxX - Self.edgeTolerance
+        case .left: frame.maxX <= origin.minX + Self.edgeTolerance
+        case .down: frame.minY >= origin.maxY - Self.edgeTolerance
+        case .up: frame.maxY <= origin.minY + Self.edgeTolerance
+        }
+    }
+
+    /// Distance between the facing edges.
+    var distance: Double {
+        switch direction {
+        case .right: frame.minX - origin.maxX
+        case .left: origin.minX - frame.maxX
+        case .down: frame.minY - origin.maxY
+        case .up: origin.minY - frame.maxY
+        }
+    }
+
+    /// Length shared with `origin` along the axis perpendicular to `direction`.
+    var overlap: Double {
+        switch direction.axis {
+        case .sideBySide: min(frame.maxY, origin.maxY) - max(frame.minY, origin.minY)
+        case .stacked: min(frame.maxX, origin.maxX) - max(frame.minX, origin.minX)
+        }
+    }
+
+    /// Strictly better than `other`; an equal candidate keeps the earlier one.
+    func isCloser(than other: NeighborCandidate) -> Bool {
+        if abs(distance - other.distance) > Self.edgeTolerance {
+            return distance < other.distance
+        }
+        return overlap > other.overlap
     }
 }
