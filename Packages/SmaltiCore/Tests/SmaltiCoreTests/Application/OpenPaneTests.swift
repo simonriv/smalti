@@ -1,4 +1,5 @@
 import SmaltiCore
+import SmaltiCoreTestSupport
 import Testing
 
 @MainActor
