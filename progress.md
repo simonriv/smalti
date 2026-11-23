@@ -184,7 +184,7 @@
 - [x] T4 · Acciones del terminal, tamaño de letra y confirmar cierre (ocupado = programa en primer plano que no es el shell, sin depender de OSC 133)
 - [x] T5 · Catálogo, ayuda y modelo del menú
 #### Bloque 2 · Adaptadores
-- [ ] T6 · Feedback, plantilla del TOML y versión
+- [x] T6 · Feedback, plantilla del TOML y versión (0.4.5 y commit en el Info.plist)
 - [ ] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra
 - [ ] T8 · FileSessionAdapter: sesión v2
 - [ ] T9 · DiagnosticsAdapter

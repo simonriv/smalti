@@ -387,3 +387,33 @@ struct TOMLConfigParserTests {
         #expect(error == ConfigError(file: Self.file, line: 3, key: chord, reason: reason))
     }
 }
+
+@Suite("TOML · F4.5")
+struct TOMLF45Tests {
+    private func parse(_ text: String) throws -> SmaltiConfig {
+        try TOMLConfigParser.parse(text, file: "config.toml")
+    }
+
+    /// C12: the template ⌘, writes, with every value uncommented, reads as the defaults.
+    @Test func templateUncommentedEqualsDefaults() throws {
+        let text = ConfigTemplate.uncommented(ConfigTemplate.text(defaults: .defaults))
+
+        #expect(try parse(text) == .defaults)
+    }
+
+    @Test func templateAsWrittenReadsAsDefaults() throws {
+        #expect(try parse(ConfigTemplate.text(defaults: .defaults)) == .defaults)
+    }
+
+    @Test func windowConfirmCloseParses() throws {
+        #expect(try parse("[window]\nconfirm_close = false").window.confirmClose == false)
+    }
+
+    @Test func windowConfirmCloseRejectsNonBool() {
+        #expect(throws: ConfigError.self) { try parse("[window]\nconfirm_close = \"no\"") }
+    }
+
+    @Test func windowRejectsUnknownKeys() {
+        #expect(throws: ConfigError.self) { try parse("[window]\nconfirm = true") }
+    }
+}

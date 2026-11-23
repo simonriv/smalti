@@ -102,6 +102,7 @@
 				82A968CB662751220D4DFE2D /* Resources */,
 				C25A501B472CEDF18639FE6A /* Copy Ghostty resources */,
 				E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */,
+				5A11C0DE4F45A7B0C0FFEE01 /* Stamp commit */,
 			);
 			buildRules = (
 			);
@@ -266,6 +267,21 @@
 			shellPath = /bin/bash;
 			shellScript = "\"$SRCROOT/../scripts/embed-cli-and-plugin.sh\"\n";
 		};
+		5A11C0DE4F45A7B0C0FFEE01 /* Stamp commit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Stamp commit";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/stamp-commit.sh\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -347,7 +363,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.dev;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "Smalti Dev";
@@ -367,7 +383,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -379,7 +395,7 @@
 			buildSettings = {
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -391,7 +407,7 @@
 			buildSettings = {
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
