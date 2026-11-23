@@ -13,16 +13,16 @@
 | B5 | ✅ | Todos los casos de uso con `FakeTerminalEngine` / `InMemoryConfigStore`; `ConfigStoreContract` pasa con el fake y con `TOMLConfigStore` |
 | B6 | ✅ | `TOMLConfigParserTests` (55): valores por defecto sin archivo; un archivo inválido conserva la configuración previa y da archivo, línea y clave |
 | B7 | ✅ | `fuzzyMatch("lay")` → los 3 layouts primero; la paleta abre en **21–32 ms** (8 aperturas, signpost `palette.open` con Instruments, build Release; antes de virtualizar las filas, 41–53 ms); navegación solo con teclado en `CommandPaletteTests` |
-| B8 | ✅ con nota | Ver "Rendimiento". Escribir no bloquea el hilo principal más de 16 ms con 4 ni con 9 superficies; cada reacomodo cuesta un fotograma de ~20 ms |
+| B8 | ⚠️ parcial, aceptado por Simón | Ver "Rendimiento". Escribir no bloquea el hilo principal más de 16 ms con 4 ni con 9 superficies. Pendiente: cada reacomodo bloquea 18–21 ms (más de un fotograma de 16 ms); la GPU en reposo queda en ~26 % frente al 3 % de Ghostty (issue #5, a F5); y "sin fotogramas en blanco" no tiene evidencia directa más allá del diseño (el contenido se congela durante el reacomodo), sin captura fotograma a fotograma |
 | B9 | ✅ automatizado | `WorkspaceTests.testWorkspaceSwitchKeepsProcessesAlive`: `sleep 4; <<<listo>…` termina mientras otro workspace está visible (archivo marcador en lugar de `say`) |
 | B10 | ✅ con desviaciones | Capturas superpuestas al 50 % sobre los tableros renderizados con Chrome a 1440 × 900: `b10-dwindle-overlay.png`, `b10-columns-overlay.png`, `b10-master-overlay.png`, `b10-palette-overlay.png`. Bordes, cabeceras, franja, barra de estado y paleta coinciden a 1–2 px |
 | B11 | ⏳ teclado físico | Con entrada sintetizada: ⌥ nunca forma atajo (`KeyRoutingTests`, `KeyChordTranslatorTests`), ⇧⌘0 → igualar en el layout Latin American; falta la lista manual con teclado físico (abajo) |
 | B12 | ✅ | `ImportGuardTests` (SmaltiCore) y `TOMLAdapterGuardTests`: solo `TOMLConfigAdapter` importa TOMLDecoder; la guarda comprueba que escanea `App/` |
-| B13 | ✅ | `ChildEnvironmentTests`: `$SMALTI` = 1 en dos paneles; `tmux list-clients` igual antes y después (dentro de la prueba cuando el runner llega al servidor tmux y desde el shell en todas las corridas) |
+| B13 | ✅ con nota | `ChildEnvironmentTests`: `$SMALTI` = 1 en dos paneles; `ConfigTests.testShellComesFromTheConfigFile`: `$SMALTI` = 1 con el shell de `[shell] command`. Las pruebas usan `zsh -f`, que no lee `.zshrc`, así que la garantía real es que `$SMALTI` llega al shell (lo que un `.zshrc` necesita para no engancharse a tmux); la comparación de `tmux list-clients` antes y después (dentro de la prueba cuando el runner llega al servidor tmux y desde el shell en todas las corridas) es solo una guarda de regresión |
 | B14 | ✅ | `TilingTests.testHeaderShowsForegroundProcess`: la cabecera dice `cat` y vuelve a `zsh` |
 | B15 | ✅ | `TilingTests` (salida y ⌘W cierran una sola vez, el último panel deja el workspace vacío y la ventana abierta) y `TerminalPaneTests.testShellThatFailsToStartIsReportedInTheStatusBar` |
 | B16 | ✅ | `GhosttyConfigTextTests` (`keybind = clear` + ⌘C/⌘V) y `TilingTests.testCmdKAndCmd1ReachSmaltiNotTheTerminal` |
-| B17 | ✅ | `PasteboardGuard` en todas las UI tests; comprobado con texto + HTML en el portapapeles antes de las suites: vuelven intactos |
+| B17 | ✅ | `PasteboardGuard` en todas las UI tests: todas las clases heredan de `SmaltiUITestCase`, que lo guarda en `setUp` y lo restaura en `tearDown` (`CommandPaletteTests` y `MainWindowTests` no lo hacían antes de la ronda final); comprobado con texto + HTML en el portapapeles antes de las suites: vuelven intactos |
 
 Pruebas al cierre: `SmaltiCore` 300, `GhosttyAdapter` 73, `TOMLConfigAdapter` 55, XCUITest 30 (MainWindow 5, TerminalPane 8, Tiling 6, Workspace 2, ChildEnvironment 1, CommandPalette 8).
 
