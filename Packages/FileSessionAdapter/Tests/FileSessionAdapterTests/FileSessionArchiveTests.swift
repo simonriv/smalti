@@ -39,7 +39,7 @@ struct FileSessionArchiveTests {
         try FileSessionArchive(directory: directory).save(snapshot())
 
         let text = try String(contentsOf: file("session.json"), encoding: .utf8)
-        #expect(text.contains("\"version\" : 1"))
+        #expect(text.contains("\"version\" : 2"))
     }
 
     @Test func scrollbackRoundTripsCompressed() throws {

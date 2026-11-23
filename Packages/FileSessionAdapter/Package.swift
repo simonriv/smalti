@@ -20,6 +20,7 @@ let package = Package(
                 "FileSessionAdapter",
                 .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
-            ]),
+            ],
+            resources: [.copy("Fixtures")]),
     ]
 )

@@ -186,7 +186,7 @@
 #### Bloque 2 · Adaptadores
 - [x] T6 · Feedback, plantilla del TOML y versión (0.4.5 y commit en el Info.plist)
 - [x] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra (config del motor solo con `keybind = clear` y entrada segura automática)
-- [ ] T8 · FileSessionAdapter: sesión v2
+- [x] T8 · FileSessionAdapter: sesión v2 (lee v1 y v2, guarda v2, aparta versiones desconocidas)
 - [ ] T9 · DiagnosticsAdapter
 #### Bloque 3 · Ventanas en la app
 - [ ] T10 · `WindowComposition` (refactor)
