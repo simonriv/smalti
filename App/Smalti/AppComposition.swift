@@ -89,7 +89,8 @@ final class AppComposition {
         let environment = PaneEnvironment(version: Self.version, files: PaneFileLocator(stateDirectory: state))
         let controller = TilingController(
             .init(
-                engine: engine, configStore: startup.store, paneEnvironment: environment, home: try homeDirectory(),
+                engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
+                harnesses: HarnessRegistry([ClaudeHarness()]), home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
                     try runtime?.apply(appearance)
@@ -103,7 +104,11 @@ final class AppComposition {
         self.controller = controller
         sessionKeeper = keeper
         window.contentView?.layoutSubtreeIfNeeded()
-        controller.start()
+        let choice = LoadLastSession(archive: archive, preferences: archive).execute()
+        controller.start(from: choice) { [weak controller] snapshot in
+            // The resume screen arrives in T14; until then, asking restores everything.
+            controller?.restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+        }
         keeper.start(with: controller.set)
     }
 

@@ -35,6 +35,15 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }
 
+    static func unreadableSession(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
+    }
+
+    static func restoreFailures(first: String, count: Int) -> StatusMessage {
+        let more = count > 1 ? " (y \(count - 1) más)" : ""
+        return StatusMessage(text: "No se restauró todo: \(first)\(more)", isTransient: true)
+    }
+
     static func engineFailure(_ error: TerminalEngineError) -> StatusMessage {
         StatusMessage(text: EngineErrorText.describe(error), isTransient: true)
     }

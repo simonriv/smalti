@@ -15,7 +15,8 @@ struct RestoreSessionTests {
         RestoreSession(
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([FakeHarnessAdapter()]),
-                environment: PaneEnvironment(version: "2", files: files), clock: { SessionFixtures.now }))
+                environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
+                clock: { SessionFixtures.now }))
     }
 
     private func run(_ workspaces: [PlannedWorkspace], activeIndex: Int = 0) -> RestoreResult {
@@ -198,5 +199,11 @@ struct RestoreSessionTests {
         let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
 
         #expect(result.failures.first?.contains("no such directory") == true)
+    }
+
+    @Test func restoreUsesTheConfiguredShell() {
+        _ = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
+
+        #expect(engine.openedSpecs.first?.command == .custom("/bin/zsh -f"))
     }
 }

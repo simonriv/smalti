@@ -23,6 +23,8 @@ final class TilingController {
         let engine: any PaneEngine
         let configStore: any ConfigStore
         let paneEnvironment: PaneEnvironment
+        let transcripts: any PaneTranscripts
+        let harnesses: HarnessRegistry
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
         /// Reloads the terminal engine's appearance ("Recargar configuración").
@@ -43,6 +45,9 @@ final class TilingController {
     private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
+    /// `restore` signpost: ends when every restored pane's shell reported its directory (it is interactive).
+    private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
+    private var pendingRestore: (interval: OSSignpostIntervalState, panes: Set<PaneID>)?
 
     /// `initial` is the startup load, done before the engine exists because the engine needs its appearance.
     init(_ deps: Dependencies, initial reload: ConfigReload) {
@@ -62,6 +67,42 @@ final class TilingController {
     /// Opens the first pane of the first workspace.
     func start() {
         openPane()
+        publish()
+    }
+
+    /// Starts from what the last run left: a fresh window, or the restored workspaces.
+    func start(from choice: StartupChoice, onAsk: (SessionSnapshot) -> Void) {
+        switch choice {
+        case .startFresh:
+            start()
+        case .startFreshAfterUnreadable(let reason):
+            start()
+            report(.unreadableSession(reason))
+        case .restoreAll(let snapshot):
+            restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+        case .ask(let snapshot):
+            onAsk(snapshot)
+        }
+    }
+
+    /// Rebuilds the saved workspaces; if none could open, starts as usual.
+    func restore(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+        let interval = signposter.beginInterval("restore", id: signposter.makeSignpostID())
+        let plan = RestorePlan.make(from: snapshot, mode: mode, selection: selection)
+        let result = RestoreSession(
+            .init(
+                engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now })
+        ).execute(plan, savedAt: snapshot.savedAt, home: deps.home)
+        guard let restored = result.set else {
+            signposter.endInterval("restore", interval)
+            start()
+            return
+        }
+        set = restored
+        pendingRestore = (interval, Set(set.workspaces.flatMap(\.panes).map(\.id)))
+        set.workspaces.flatMap(\.panes).forEach { observe($0.id) }
+        if let failure = result.failures.first { show(.restoreFailures(first: failure, count: result.failures.count)) }
         publish()
     }
 
@@ -239,6 +280,7 @@ final class TilingController {
     }
 
     private func handle(_ event: TerminalEvent, from pane: PaneID) {
+        if case .workingDirectoryChanged = event { restoredPaneIsInteractive(pane) }
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
@@ -247,6 +289,16 @@ final class TilingController {
             set = set.updating(owner) { $0.applying(event, to: pane) }
         }
         publish()
+    }
+
+    private func restoredPaneIsInteractive(_ pane: PaneID) {
+        guard var pending = pendingRestore, pending.panes.remove(pane) != nil else { return }
+        if pending.panes.isEmpty {
+            signposter.endInterval("restore", pending.interval)
+            pendingRestore = nil
+        } else {
+            pendingRestore = pending
+        }
     }
 
     private func paneExited(_ pane: PaneID, code: Int?) {

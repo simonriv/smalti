@@ -17,16 +17,19 @@ public struct RestoreSession {
         let transcripts: any PaneTranscripts
         let harnesses: HarnessRegistry
         let environment: PaneEnvironment
+        /// The configured shell (`[shell] command`, or the test override), as for any new pane.
+        let shell: TerminalCommand
         let clock: @Sendable () -> Date
 
         public init(
             engine: any TerminalEngine, transcripts: any PaneTranscripts, harnesses: HarnessRegistry,
-            environment: PaneEnvironment, clock: @escaping @Sendable () -> Date
+            environment: PaneEnvironment, shell: TerminalCommand, clock: @escaping @Sendable () -> Date
         ) {
             self.engine = engine
             self.transcripts = transcripts
             self.harnesses = harnesses
             self.environment = environment
+            self.shell = shell
             self.clock = clock
         }
     }
@@ -108,7 +111,7 @@ public struct RestoreSession {
         var lastError = "invalid directory"
         for directory in ([saved].compactMap { $0 } + fallbacks) where !unreachable.contains(directory) {
             let spec = TerminalSessionSpec(
-                workingDirectory: directory, command: .loginShell, environment: deps.environment.variables(for: id),
+                workingDirectory: directory, command: deps.shell, environment: deps.environment.variables(for: id),
                 restoration: restoration, initialInput: start.input)
             do {
                 try deps.engine.open(spec, as: id)
