@@ -17,6 +17,14 @@ struct PaneTests {
         #expect(pane.lastCommand == nil)
     }
 
+    /// F4.5: search, link and secure-input events are for the view; the pane's model stays as it was.
+    @Test(arguments: [
+        TerminalEvent.searchTotal(3), .searchSelected(1), .linkHovered("https://a.b"), .secureInputRequested(true),
+    ])
+    func viewOnlyEventsLeavePaneUnchanged(_ event: TerminalEvent) {
+        #expect(pane.applying(event) == pane)
+    }
+
     @Test func titleChangedUpdatesTitle() {
         #expect(pane.applying(.titleChanged("claude")).title == "claude")
     }
