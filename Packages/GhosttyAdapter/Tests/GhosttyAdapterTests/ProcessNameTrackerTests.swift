@@ -12,9 +12,9 @@ struct ProcessNameTrackerTests {
 
         #expect(
             events == [
-                .foregroundProcessChanged(ForegroundProcess(name: "zsh")), nil,
-                .foregroundProcessChanged(ForegroundProcess(name: "sleep")),
-                .foregroundProcessChanged(ForegroundProcess(name: "zsh")),
+                .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: "zsh")), nil,
+                .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: "sleep")),
+                .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: "zsh")),
             ])
     }
 
@@ -23,6 +23,6 @@ struct ProcessNameTrackerTests {
 
         let events = ["zsh", nil, "zsh"].map { tracker.observe($0) }
 
-        #expect(events == [.foregroundProcessChanged(ForegroundProcess(name: "zsh")), nil, nil])
+        #expect(events == [.foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: "zsh")), nil, nil])
     }
 }
