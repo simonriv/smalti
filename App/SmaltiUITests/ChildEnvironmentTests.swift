@@ -43,4 +43,18 @@ final class ChildEnvironmentTests: SmaltiUITestCase {
         XCTAssertTrue(fields[1] == "smalti.sock" || (fields[1].hasPrefix("smalti-") && fields[1].hasSuffix(".sock")))
         XCTAssertEqual(fields[2], "bin/smalti")
     }
+
+    /// Started from inside a Claude Code session, Smalti must not hand that session's markers to its panes:
+    /// Claude would think it is a child session and stop saving transcripts.
+    func testPanesDoNotInheritAParentClaudeSession() {
+        app.terminate()
+        let fresh = XCUIApplication.isolatedSmalti()
+        fresh.launchEnvironment["CLAUDECODE"] = "1"
+        fresh.launchEnvironment["CLAUDE_CODE_CHILD_SESSION"] = "1"
+        launch(fresh)
+
+        fresh.run(#"print -r -- "${CLAUDECODE:-none}|${CLAUDE_CODE_CHILD_SESSION:-none}" > "$SMALTI_UITEST_OUT""#)
+
+        waitForOutput("none|none\n")
+    }
 }
