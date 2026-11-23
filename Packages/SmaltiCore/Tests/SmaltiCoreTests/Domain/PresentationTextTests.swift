@@ -34,27 +34,36 @@ struct PresentationTextTests {
 
         let header = PaneHeaderContent(pane, index: 3, context: HeaderContext(keymap: .standard, home: home, now: .now))
 
-        #expect(header == PaneHeaderContent(process: "claude", directory: "~/dev/xolken", status: nil, detail: nil, shortcut: "⌘3"))
+        #expect(
+            header
+                == PaneHeaderContent(
+                    process: "claude", directory: "~/dev/xolken", status: nil, detail: nil, shortcut: "⌘3"))
     }
 
     @Test func headerWithoutIndexHasNoShortcut() throws {
         let pane = Pane(id: PaneID(), workingDirectory: home).applying(.titleChanged("vim notes.md"))
 
-        let header = PaneHeaderContent(pane, index: nil, context: HeaderContext(keymap: .standard, home: home, now: .now))
+        let header = PaneHeaderContent(
+            pane, index: nil, context: HeaderContext(keymap: .standard, home: home, now: .now))
 
-        #expect(header == PaneHeaderContent(process: "vim notes.md", directory: "~", status: nil, detail: nil, shortcut: ""))
+        #expect(
+            header == PaneHeaderContent(process: "vim notes.md", directory: "~", status: nil, detail: nil, shortcut: "")
+        )
     }
 
     // MARK: - Agent state (F2)
 
     private func agentPane(_ hook: AgentHook, at start: Date) throws -> Pane {
         let base = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/s/dev/web"))
-        return base.applying(AgentEvent(pane: base.id, hook: hook, at: start, sessionID: "s1", prompt: "x", message: "m")).0
+        return base.applying(
+            AgentEvent(pane: base.id, hook: hook, at: start, sessionID: "s1", prompt: "x", message: "m")
+        ).0
     }
 
     private func header(_ pane: Pane, now: Date) throws -> PaneHeaderContent {
         PaneHeaderContent(
-            pane, index: 1, context: HeaderContext(keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now))
+            pane, index: 1,
+            context: HeaderContext(keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now))
     }
 
     @Test func waitingHeaderSaysForHowLong() throws {
@@ -93,8 +102,14 @@ struct PresentationTextTests {
     @Test func countersNameEachStateAndSkipZeros() {
         #expect(
             StripCounter.counters(AgentCounts(working: 2, waiting: 1, failed: 0))
-                == [StripCounter(kind: .working, text: "2 trabajando"), StripCounter(kind: .waiting, text: "1 te espera")])
-        #expect(StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 3)) == [StripCounter(kind: .failed, text: "3 error")])
+                == [
+                    StripCounter(kind: .working, text: "2 trabajando"),
+                    StripCounter(kind: .waiting, text: "1 te espera"),
+                ])
+        #expect(
+            StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 3)) == [
+                StripCounter(kind: .failed, text: "3 error")
+            ])
         #expect(StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 0)).isEmpty)
     }
 }
