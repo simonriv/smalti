@@ -13,6 +13,8 @@ final class AppComposition {
     private var engine: GhosttyTerminalEngine?
     private var controller: TilingController?
     private var palette: CommandPaletteController?
+    /// What the glass was last painted with, so a publish that does not change it repaints nothing.
+    private var appliedWindowTokens: WindowTokens?
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
     private struct Startup {
@@ -27,8 +29,8 @@ final class AppComposition {
         let startup = Self.readStartup()
         let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
-        WindowGlass.apply(blurRadius: startup.theme.window.blurRadius, to: window)
         self.window = window
+        applyGlass(startup.theme, to: window)
         do {
             try start(startup, in: window)
         } catch {
@@ -75,9 +77,11 @@ final class AppComposition {
         let grid = window.paneGrid
         controller.area = { [weak grid] in grid?.area ?? .zero }
         controller.onChange = { [weak self, weak window] state in
-            window?.strip.render(state)
-            window?.paneGrid.render(state) { engine.view(for: $0) }
-            window?.statusBar.render(state)
+            guard let window else { return }
+            self?.applyGlass(state.theme, to: window)
+            window.strip.render(state)
+            window.paneGrid.render(state) { engine.view(for: $0) }
+            window.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
@@ -117,6 +121,13 @@ final class AppComposition {
             allowing: { [weak self] in self?.palette?.isOpen == true ? [.paletteOpen] : nil },
             perform: { [weak controller] command in controller?.perform(command) })
         window.routeKey = { router.route($0, composing: $1) }
+    }
+
+    /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.
+    private func applyGlass(_ theme: Theme, to window: SmaltiWindow) {
+        guard theme.window != appliedWindowTokens else { return }
+        window.applyGlass(theme)
+        appliedWindowTokens = theme.window
     }
 
     /// Keystrokes go to the focused pane's terminal.

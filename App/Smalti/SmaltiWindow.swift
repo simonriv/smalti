@@ -10,11 +10,13 @@ final class SmaltiWindow: NSWindow {
     let paneGrid: PaneGridView
     let strip: WorkspaceStripView
     let statusBar: StatusBarView
+    private let content: WindowContentView
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
     var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 
     init(theme: Theme) {
         let content = WindowContentView(theme: theme)
+        self.content = content
         paneGrid = content.paneGrid
         strip = content.strip
         statusBar = content.statusBar
@@ -38,6 +40,12 @@ final class SmaltiWindow: NSWindow {
         setContentSize(Self.defaultContentSize)
         setAccessibilityIdentifier("smalti.window")
         center()
+    }
+
+    /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
+    func applyGlass(_ theme: Theme) {
+        let blur = WindowGlass.apply(blurRadius: theme.window.blurRadius, to: self)
+        content.apply(theme.window, blur: blur)
     }
 
     /// ⌘ shortcuts arrive here first, before the menu and the terminal's own key equivalents.
@@ -72,10 +80,11 @@ final class WindowContentView: NSView {
         layer?.cornerRadius = theme.window.cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
-        layer?.borderWidth = theme.window.borderWidth
-        layer?.borderColor = theme.window.border.nsColor.cgColor
-        layer?.backgroundColor = theme.window.background.nsColor.cgColor
+        paint(theme.window)
         layoutChrome(theme: theme)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityIdentifier("smalti.glass")
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -84,6 +93,21 @@ final class WindowContentView: NSView {
     override func layout() {
         super.layout()
         window?.invalidateShadow()
+    }
+
+    /// Repaints the glass and states what was applied as the accessibility value, e.g. "vidrio 0.62 · desenfoque 28",
+    /// read back from the layer so tests see what is on screen rather than what was asked for.
+    func apply(_ tokens: WindowTokens, blur: GlassBlur) {
+        paint(tokens)
+        let opacity = layer?.backgroundColor?.alpha ?? 0
+        setAccessibilityValue("vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)")
+    }
+
+    private func paint(_ tokens: WindowTokens) {
+        layer?.cornerRadius = tokens.cornerRadius
+        layer?.borderWidth = tokens.borderWidth
+        layer?.borderColor = tokens.border.nsColor.cgColor
+        layer?.backgroundColor = tokens.background.nsColor.cgColor
     }
 
     private func layoutChrome(theme: Theme) {
@@ -106,5 +130,14 @@ final class WindowContentView: NSView {
             statusBar.bottomAnchor.constraint(equalTo: bottomAnchor),
             statusBar.heightAnchor.constraint(equalToConstant: theme.statusBar.height),
         ])
+    }
+}
+
+extension GlassBlur {
+    fileprivate var description: String {
+        switch self {
+        case .exact(let radius): "\(radius)"
+        case .systemMaterial: "del sistema"
+        }
     }
 }
