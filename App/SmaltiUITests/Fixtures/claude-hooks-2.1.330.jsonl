@@ -1,0 +1,13 @@
+{"hook":"SessionStart","expect":"waiting","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","transcript_path":"/tmp/t.jsonl","cwd":"/tmp","hook_event_name":"SessionStart","source":"startup"}}
+{"hook":"UserPromptSubmit","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"UserPromptSubmit","prompt":"Corre las pruebas"}}
+{"hook":"PreToolUse","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/a.ts"}}}
+{"hook":"PostToolUse","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"PostToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/a.ts"},"tool_response":{}}}
+{"hook":"PermissionRequest","expect":"waiting","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"pnpm test"}}}
+{"hook":"Notification","expect":"waiting","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"}}
+{"hook":"PreToolUse","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"pnpm test"}}}
+{"hook":"PostToolUse","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"pnpm test"},"tool_response":{}}}
+{"hook":"Stop","expect":"waiting","hidden":true,"payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"Stop","stop_hook_active":false}}
+{"hook":"Notification","expect":"waiting","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"Notification","notification_type":"idle_prompt","message":"Claude is waiting for your input"}}
+{"hook":"UserPromptSubmit","expect":"working","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"UserPromptSubmit","prompt":"Sigue"}}
+{"hook":"StopFailure","expect":"failed","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"StopFailure","error":"API error 529"}}
+{"hook":"SessionEnd","expect":"stopped","payload":{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","hook_event_name":"SessionEnd","reason":"exit"}}
