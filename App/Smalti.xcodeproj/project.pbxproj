@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 94B308E204A0832409E16986 /* UserNotificationsAdapter */; };
+		DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */; };
+		49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 7C2E287A90F14917779861A7 /* OllamaAdapter */; };
+		7E137F07F38705B9A3AD0840 /* ClaudeTelemetryAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */; };
 		26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2F7A6887BBCCFE90DCDF359C /* IPCAdapter */; };
 		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
 		0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 6432A366F755335850ECF0B4 /* FileSessionAdapter */; };
@@ -45,6 +48,9 @@
 				C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */,
 				81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */,
 				FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */,
+				DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */,
+				49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */,
+				7E137F07F38705B9A3AD0840 /* ClaudeTelemetryAdapter in Frameworks */,
 				26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */,
 				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
 				0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */,
@@ -106,6 +112,9 @@
 				2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */,
 				1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */,
 				94B308E204A0832409E16986 /* UserNotificationsAdapter */,
+				5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */,
+				7C2E287A90F14917779861A7 /* OllamaAdapter */,
+				A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */,
 				2F7A6887BBCCFE90DCDF359C /* IPCAdapter */,
 				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
 				6432A366F755335850ECF0B4 /* FileSessionAdapter */,
@@ -168,6 +177,9 @@
 				1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */,
 				B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */,
 				B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */,
+				CEF936168A22DB49BFDBAC7E /* XCLocalSwiftPackageReference "../Packages/DarwinMetricsAdapter" */,
+				884BB93075592D7EAABE6AD1 /* XCLocalSwiftPackageReference "../Packages/OllamaAdapter" */,
+				B7F80D654F1419802E8154C8 /* XCLocalSwiftPackageReference "../Packages/ClaudeTelemetryAdapter" */,
 				14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */,
 				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
 				595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */,
@@ -411,6 +423,18 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		B7F80D654F1419802E8154C8 /* XCLocalSwiftPackageReference "../Packages/ClaudeTelemetryAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/ClaudeTelemetryAdapter;
+		};
+		884BB93075592D7EAABE6AD1 /* XCLocalSwiftPackageReference "../Packages/OllamaAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/OllamaAdapter;
+		};
+		CEF936168A22DB49BFDBAC7E /* XCLocalSwiftPackageReference "../Packages/DarwinMetricsAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DarwinMetricsAdapter;
+		};
 		B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/UserNotificationsAdapter;
@@ -442,6 +466,18 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ClaudeTelemetryAdapter;
+		};
+		7C2E287A90F14917779861A7 /* OllamaAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OllamaAdapter;
+		};
+		5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DarwinMetricsAdapter;
+		};
 		94B308E204A0832409E16986 /* UserNotificationsAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = UserNotificationsAdapter;

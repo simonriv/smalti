@@ -50,6 +50,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var defaultLayout: LayoutID
     public var shell: TerminalCommand
     public var keys: Keymap
+    /// Not in the initializer: every other table predates it, and the defaults are what nearly everyone wants.
+    public var observatory = ObservatorySettings.standard
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

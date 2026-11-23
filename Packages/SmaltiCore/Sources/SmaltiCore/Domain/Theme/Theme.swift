@@ -17,6 +17,7 @@ public struct Theme: Equatable, Sendable {
     public let emptyState: EmptyStateTokens
     public let resume: ResumeTokens
     public let agent: AgentStatusTokens
+    public let observatory: ObservatoryTokens
 }
 
 /// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
@@ -133,6 +134,10 @@ public struct HeaderTokens: Equatable, Sendable {
     public let bottomBorder: RGBAColor
     /// The process name is semibold in the title color.
     public let processFontWeight: Int
+    /// "ctx 41%" bar of a working agent (Main.dc.html: 44 × 4, radius 2, track white 8 %).
+    public let contextBarWidth: Double
+    public let contextBarHeight: Double
+    public let contextBarTrack: RGBAColor
 }
 
 /// Keycap-style label that shows a shortcut.
@@ -155,6 +160,8 @@ public struct StatusBarTokens: Equatable, Sendable {
     public let fontSize: Double
     public let text: RGBAColor
     public let topBorder: RGBAColor
+    /// "hoy 1.24M tokens", a step brighter than the other figures.
+    public let todayTokens: RGBAColor
 }
 
 /// Focused-pane highlight. Both colors are the accent at a fixed opacity.
@@ -324,6 +331,88 @@ extension Theme {
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
-            motion: motion, emptyState: emptyState, resume: resume, agent: agent)
+            motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory)
     }
+}
+
+/// Observatorio.dc.html: cards, the sessions table, the activity chart and the system curves.
+public struct ObservatoryTokens: Equatable, Sendable {
+    public let stripTitleSize: Double
+    /// "Observatorio" is semibold (600), the period pill medium (500), as the board's CSS weights.
+    public let stripTitleWeight: Int
+    public let pillWeight: Int
+    public let stripSubtitleSize: Double
+    public let stripGap: Double
+    public let stripPaddingLeading: Double
+    public let stripPaddingTrailing: Double
+    public let pillHeight: Double
+    public let pillPadding: Double
+    public let pillRadius: Double
+    public let pillFontSize: Double
+    public let pillBorder: RGBAColor
+    public let pillText: RGBAColor
+    public let padding: Double
+    public let gap: Double
+    public let sideColumnWidth: Double
+    public let cardGap: Double
+    public let cardBackground: RGBAColor
+    public let cardBorder: RGBAColor
+    public let cardRadius: Double
+    public let cardPaddingVertical: Double
+    public let cardPaddingHorizontal: Double
+    public let labelSize: Double
+    public let labelTracking: Double
+    public let valueSize: Double
+    public let noteSize: Double
+    public let tableHeaderHeight: Double
+    public let rowHeight: Double
+    public let rowFontSize: Double
+    public let rowBorder: RGBAColor
+    public let cellPadding: Double
+    /// Column widths in points; nil columns share the rest (`minmax(0, 1.3fr)` twice).
+    public let columns: [Double?]
+    public let tableDot: Double
+    public let contextBarWidth: Double
+    public let activityFontSize: Double
+    public let activityRowGap: Double
+    public let activityTimeWidth: Double
+    public let activityToolWidth: Double
+    public let chartHeight: Double
+    public let chartLineWidth: Double
+    public let chartPeakRadius: Double
+    public let chartGrid: RGBAColor
+    public let chartGridFaint: RGBAColor
+    public let sparklineHeight: Double
+    public let sparklineWidth: Double
+    public let cpu: RGBAColor
+    public let gpu: RGBAColor
+    public let memoryModel: RGBAColor
+    public let memoryRest: RGBAColor
+    public let memoryTrack: RGBAColor
+    public let memoryBarHeight: Double
+    public let separator: RGBAColor
+    public let footnoteSize: Double
+    public let modelNameSize: Double
+    public let systemRowSize: Double
+    /// Fade in and out, unless "Reducir movimiento".
+    public let fadeDuration: Double
+    /// Spacings and sizes of the board's inline styles (`gap: 6px`, `gap: 7px`, …).
+    public let spacing: ObservatorySpacing
+}
+
+public struct ObservatorySpacing: Equatable, Sendable {
+    public let cardStack: Double
+    public let stateDot: Double
+    public let contextBar: Double
+    public let selectionBar: Double
+    public let detailColumns: Double
+    public let detailStack: Double
+    /// Activity column against chart column (`minmax(0, 1.2fr) minmax(0, 1fr)`).
+    public let detailRatio: Double
+    public let activityColumns: Double
+    public let chartLabelSize: Double
+    public let localModels: Double
+    public let modelLines: Double
+    public let system: Double
+    public let systemGroup: Double
 }

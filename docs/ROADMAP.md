@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1 y F2.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2 y F3.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -64,8 +64,9 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F3 · Observatorio (⌘⇧A)
 
 - **Objetivo:** ver de un vistazo el consumo y el estado de todos los agentes y modelos locales.
-- **Entregables:** receptor OTLP local inyectado a los procesos hijos; lector de transcripts JSONL; resumen (sesiones, tokens de entrada con % de caché, tokens de salida, equivalente estimado en USD); tabla por sesión; detalle con últimas herramientas, tokens por minuto y compactaciones; modelos de Ollama; CPU, GPU y memoria unificada sin sudo; lado derecho de la barra de estado (`Observatorio.dc.html`, pie de `Main.dc.html`).
+- **Entregables:** lector de transcripts JSONL con índice incremental (todas las sesiones de Claude de la máquina, periodos hoy / 7 días / 30 días); sesiones vivas desde `~/.claude/sessions`; resumen (sesiones, tokens de entrada con % de caché, tokens de salida, equivalente estimado en USD con tabla de precios editable); tabla por sesión; detalle con últimas herramientas, tokens por minuto y compactaciones; modelos de Ollama; CPU, GPU y memoria unificada sin sudo; lado derecho de la barra de estado y modelo + `ctx %` en la cabecera (`Observatorio.dc.html`, pie de `Main.dc.html`). Spec: `docs/specs/F3-observatory.md`. Sin OTLP (pasa a F7) ni filtros por harness (F6), decidido por Simón (2026-11-22).
 - **Criterio de cierre:** para 3 sesiones reales, los tokens de entrada y salida del observatorio coinciden exactamente con la suma de los transcripts JSONL. Una prueba sobre fixtures compara ambos. Lo que no se pueda medir sin privilegios aparece marcado como "no disponible", nunca como 0.
+- **Cerrada (2026-11-23):** ver `docs/specs/F3-checklist.md`. C1 con 4 sesiones reales (incluidos un subagente y un fork) contra un oráculo independiente.
 - **Dependencias:** F2 (plugin de hooks, IPC, modelo `AgentSession`). Técnicamente es independiente de F4.
 
 ## F4 · Input inteligente
@@ -85,13 +86,13 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F6 · Multi-harness y Neovim
 
 - **Objetivo:** retomar sesiones de cualquier harness y aprobar los diffs de Claude en Neovim.
-- **Entregables:** adaptadores `HarnessAdapter` de Codex, Gemini CLI, Antigravity y OpenCode (`detect`, `captureSessionId`, `listSessions`, `resumeCommand`); respaldo "continuar la última del directorio"; buscador de sesiones del disco filtrable por harness; `EditorBridge` con Neovim por socket; instalador de claudecode.nvim en NvChad; enlaces "Abrir en Neovim".
+- **Entregables:** adaptadores `HarnessAdapter` de Codex, Gemini CLI, Antigravity y OpenCode (`detect`, `captureSessionId`, `listSessions`, `resumeCommand`); respaldo "continuar la última del directorio"; buscador de sesiones del disco filtrable por harness; `EditorBridge` con Neovim por socket; instalador de claudecode.nvim en NvChad; enlaces "Abrir en Neovim"; filtros por harness del Observatorio (Todas, Claude Code, OpenCode, Locales).
 - **Criterio de cierre:** una prueba de contrato compartida pasa para los 5 adaptadores sobre fixtures reales. Una prueba de integración retoma una sesión de fixture de cada harness con su comando real. Un diff de Claude se acepta con `:w` y se rechaza con `:q`.
 - **Dependencias:** F2 (puerto `HarnessAdapter` y adaptador de Claude como primera implementación). F3 suma la telemetría de OpenCode, pero no bloquea.
 
 ## F7 · Extras
 
 - **Objetivo:** capacidades opcionales que no tocan el rendimiento base.
-- **Entregables:** predicción con API propia (Anthropic, OpenAI, OpenRouter o compatible) y con `claude -p`; daemon `smaltid` dueño de los PTY (se decide en Swift o Rust al llegar); layouts compartibles.
+- **Entregables:** predicción con API propia (Anthropic, OpenAI, OpenRouter o compatible) y con `claude -p`; daemon `smaltid` dueño de los PTY (se decide en Swift o Rust al llegar); layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
 - **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Ningún secreto sale a una API; las pruebas del filtro lo cubren.
 - **Dependencias:** F4 (`PredictionProvider`) y F2 (persistencia). El daemon choca con que libghostty sea dueño del PTY (ver riesgos de F0) y necesita su propio spike.

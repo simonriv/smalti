@@ -41,6 +41,8 @@ public struct HeaderContext: Sendable {
     public let keymap: Keymap
     public let home: WorkingDirectory
     public let now: Date
+    /// Model family and context load per agent session, from the observatory (F3); empty until it reports.
+    public var agentDetails: [String: PaneAgentDetail] = [:]
 
     public init(keymap: Keymap, home: WorkingDirectory, now: Date) {
         self.keymap = keymap
@@ -59,6 +61,8 @@ public struct PaneHeaderContent: Equatable, Sendable {
     public let status: AgentStateKind?
     public let detail: HeaderDetail?
     public let shortcut: String
+    /// "ctx 41%" before the lifetime, only while the agent works and its load is known (Main.dc.html).
+    public private(set) var context: ContextLoad?
 
     public init(process: String, directory: String, status: AgentStateKind?, detail: HeaderDetail?, shortcut: String) {
         self.process = process
@@ -70,10 +74,15 @@ public struct PaneHeaderContent: Equatable, Sendable {
 
     /// `index` is the pane's 1-based position when it has a shortcut (1…9), nil otherwise.
     public init(_ pane: Pane, index: Int?, context: HeaderContext) {
+        let agentDetail = pane.agent.flatMap { context.agentDetails[$0.sessionID] }
+        let directory = pane.workingDirectory.abbreviated(home: context.home)
         self.init(
-            process: pane.headerName, directory: pane.workingDirectory.abbreviated(home: context.home),
+            process: pane.headerName, directory: agentDetail?.family.map { "\(directory) · \($0)" } ?? directory,
             status: pane.agent?.state.kind, detail: HeaderDetail.of(pane.agent, now: context.now),
             shortcut: index.flatMap { context.keymap.chord(for: .paneFocus($0))?.display } ?? "")
+        if pane.agent?.state.kind == .working, let load = agentDetail?.context, load != .unavailable {
+            self.context = load
+        }
     }
 }
 

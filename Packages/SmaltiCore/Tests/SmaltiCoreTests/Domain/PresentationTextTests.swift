@@ -112,4 +112,79 @@ struct PresentationTextTests {
             ])
         #expect(StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 0)).isEmpty)
     }
+
+    // MARK: - Observatory details (F3)
+
+    private func header(_ pane: Pane, now: Date, details: [String: PaneAgentDetail]) throws -> PaneHeaderContent {
+        var context = HeaderContext(keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now)
+        context.agentDetails = details
+        return PaneHeaderContent(pane, index: 1, context: context)
+    }
+
+    @Test func headerDirectoryGainsModelFamily() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let content = try header(
+            try agentPane(.userPromptSubmit, at: start), now: start,
+            details: ["s1": PaneAgentDetail(family: "opus", context: .percent(41))])
+
+        #expect(content.directory == "~/dev/web · opus")
+    }
+
+    @Test func workingHeaderShowsContext() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let content = try header(
+            try agentPane(.userPromptSubmit, at: start), now: start.addingTimeInterval(4_320),
+            details: ["s1": PaneAgentDetail(family: "opus", context: .percent(41))])
+
+        #expect(content.context == .percent(41))
+        #expect(content.detail == HeaderDetail(text: "1h 12m", tone: .secondary))
+    }
+
+    @Test func waitingHeaderHidesContext() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let content = try header(
+            try agentPane(.stop, at: start), now: start,
+            details: ["s1": PaneAgentDetail(family: "sonnet", context: .percent(63))])
+
+        #expect(content.context == nil)
+        #expect(content.directory == "~/dev/web · sonnet")
+    }
+
+    @Test func unknownContextIsNotShown() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let content = try header(
+            try agentPane(.userPromptSubmit, at: start), now: start,
+            details: ["s1": PaneAgentDetail(family: nil, context: .unavailable)])
+
+        #expect(content.context == nil)
+        #expect(content.directory == "~/dev/web")
+    }
+
+    @Test func headerWithoutDetailsIsUnchanged() throws {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/s/dev/web"))
+
+        let content = try header(
+            pane, now: .now, details: ["s1": PaneAgentDetail(family: "opus", context: .percent(1))])
+
+        #expect(content.directory == "~/dev/web")
+        #expect(content.context == nil)
+    }
+
+    @Test func paneAgentsCarryTheWorkspaceLabel() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let pane = try agentPane(.userPromptSubmit, at: start)
+        let root = try WorkingDirectory(path: "/Users/s/dev")
+        let set = WorkspaceSet(
+            first: Workspace.empty(name: "rizaria", rootDirectory: root, layout: DwindleLayout()).adding(pane))
+
+        let agents = PaneAgent.all(in: set)
+
+        #expect(agents.map(\.label) == ["rizaria/web"])
+        #expect(agents.map(\.session.sessionID) == ["s1"])
+        #expect(agents.map(\.pane) == [pane.id])
+    }
 }

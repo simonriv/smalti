@@ -94,7 +94,7 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 - Detalle de la sesión seleccionada: últimas herramientas usadas y tokens por minuto, con las compactaciones.
 - Modelos locales de Ollama: cargados, tamaño en memoria, contexto y tokens/s.
 - Sistema: CPU, GPU y memoria unificada, desglosada en modelo, agentes y resto.
-- Fuentes: hooks, transcripts en disco y la telemetría OpenTelemetry de Claude Code, recibida por un receptor OTLP local que Smalti inyecta a sus procesos hijos.
+- Fuentes: hooks, transcripts en disco (todas las sesiones de Claude de la máquina, por periodos de hoy, 7 y 30 días) y la API local de Ollama. La telemetría OpenTelemetry de Claude Code (receptor OTLP local) queda como extra de F7 (decidido por Simón, 2026-11-22).
 
 ### 5. Input inteligente y predicción
 
@@ -176,8 +176,8 @@ Smalti es una app nativa en Swift sobre libghostty, organizada en arquitectura h
 │ HarnessAdapter·5 CLIs │   │ LayoutTree       │   │ EditorBridge·socket   │
 ├───────────────────────┤   │ ShellSession     │   ├───────────────────────┤
 │ Telemetría            │◀──┤ AgentSession     ├──▶│ Configuración         │
-│ hooks·JSONL·OTLP·     │   │ Theme            │   │ ConfigStore·TOML      │
-│ Ollama                │   │ PromptConfig     │   │                       │
+│ hooks·JSONL·Ollama    │   │ Theme            │   │ ConfigStore·TOML      │
+│ (OTLP en F7)          │   │ PromptConfig     │   │                       │
 ├───────────────────────┤   │                  │   ├───────────────────────┤
 │ Sistema               │◀──┤                  ├──▶│ Notificaciones        │
 │ SystemMetrics         │   │                  │   │ Notifier·macOS        │
@@ -209,7 +209,7 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
 - **Adaptadores:**
     - `TerminalEngine` → libghostty.
     - `HarnessAdapter` → Claude Code, Codex, Gemini CLI, Antigravity, OpenCode. Cada uno implementa `detect`, `captureSessionId`, `listSessions` y `resumeCommand`.
-    - `TelemetrySource` → hooks vía socket, lector de transcripts JSONL, receptor OTLP local, API de Ollama.
+    - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. Receptor OTLP local en F7.
     - `CompletionProvider` → specs de Fig e historial.
     - `PredictionProvider` → heurístico (por defecto), API del usuario, `claude -p`.
     - `EditorBridge` → Neovim por socket.
@@ -255,7 +255,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
     - Cierre: reemplaza a Ghostty para trabajar con 3 sesiones de Claude.
 3. **F2 · Persistencia e integración con Claude Code.** Guardar y restaurar layout, directorio y scrollback; plugin de Claude Code con hooks; estado por panel; notificaciones con contexto; salto al agente que espera; reanudación de Claude; drag-and-drop de imágenes.
     - Cierre: cerrar y reabrir devuelve todo en menos de 5 s; ningún "te espera" pasa inadvertido.
-4. **F3 · Observatorio.** Receptor OTLP local, lector de transcripts, tabla de sesiones, detalle por sesión, Ollama y métricas del sistema.
+4. **F3 · Observatorio.** Lector de transcripts con índice incremental, tabla de sesiones de toda la máquina por periodos, detalle por sesión, Ollama y métricas del sistema.
     - Cierre: los tokens coinciden con los transcripts de Claude Code.
 5. **F4 · Input inteligente.** Editor en el prompt del shell, completions con specs de Fig, historial por directorio, ⌃R difuso y predicción heurística.
     - Cierre: sugerencias en menos de 16 ms y ninguna regresión en programas de pantalla completa.
@@ -263,7 +263,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
     - Cierre: tema, prompt y layout se cambian sin editar archivos.
 7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Gemini CLI, Antigravity y OpenCode; buscador de sesiones; puente con Neovim e instalador de claudecode.nvim.
     - Cierre: se retoman sesiones de los 5 harnesses y los diffs de Claude se aprueban en Neovim.
-8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles.
+8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
 
 ## Riesgos y preguntas abiertas

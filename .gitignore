@@ -12,3 +12,5 @@ Packages/GhosttyAdapter/Frameworks/
 # Superpowers plan-execution scratch
 .superpowers/
 .build-embed/
+# Personal markers for scripts/observatory/record-fixtures.sh
+scripts/observatory/markers.local

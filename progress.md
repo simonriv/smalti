@@ -102,3 +102,34 @@
 - [x] T24 · UI tests del estado y la atención (ejecutados al cierre: 53/53) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
 #### Bloque 7 · Cierre
 - [x] T25 · Mediciones (C6: 0,27–0,52 s), checklist (`docs/specs/F2-checklist.md`), revisión final (1 crítico, 3 importantes y 9 menores corregidos), mutación 94,7 % con los 19 sobrevivientes muertos, XCUITest 53/53 con el diario intacto
+
+## F3 · Observatorio
+
+### Spec
+- [x] Aprobada (`docs/specs/F3-observatory.md`, 2026-11-22): todas las sesiones de la máquina, sin OTLP (a F7), periodos hoy / 7 / 30 días
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F3-observatory.md`)
+
+### Tareas
+#### Bloque 0 · Arreglo de la paleta (PR propio, `fix/palette-keeps-selection-visible`)
+- [x] T0 · La fila seleccionada de ⌘K siempre se ve entera (PR #17 → develop, #18 → main; revisión: 5 menores corregidos)
+#### Bloque 1 · Dominio y configuración (`feature/f3-observatory`)
+- [x] T1 · Tokens, catálogo de modelos, costo, contexto y formato
+- [x] T2 · Registros del transcript y plegado de la sesión
+- [x] T3 · Periodos, sesiones observadas y lo que pinta cada vista
+- [x] T4 · Puertos, fakes, contratos, caso de uso y comandos
+- [x] T5 · Precios y ventanas en el TOML (revisión del bloque 1: 5 importantes y 7 menores corregidos)
+#### Bloque 2 · Adaptadores
+- [x] T6 · Fixtures reales y oráculo independiente
+- [x] T7 · `ClaudeTranscripts` con índice incremental
+- [x] T8 · `ClaudeSessionRegistry`
+- [x] T9 · `OllamaAdapter`
+- [x] T10 · `DarwinMetricsAdapter` (revisión del bloque 2: 2 importantes y 9 menores corregidos; hallazgo: los forks copian ids)
+#### Bloque 3 · App
+- [x] T11 · Composición, refresco, barra de estado y cabecera
+- [x] T12 · Vista del Observatorio
+- [x] T13 · Presentación, teclado y ⌘K
+- [x] T14 · UI tests de datos, aislamiento y capturas (revisión del bloque 3: 1 crítico, 6 importantes y 8 menores corregidos)
+#### Bloque 4 · Cierre
+- [x] T15 · Mediciones (C10 1,3 s / 11 ms / 53 MB; C11 ⚠️ 1 tick de 17,3 ms, igual que en reposo), checklist (`docs/specs/F3-checklist.md`), revisión final (5 importantes y 9 menores corregidos), mutación 100 %, XCUITest 71/71 con el diario intacto

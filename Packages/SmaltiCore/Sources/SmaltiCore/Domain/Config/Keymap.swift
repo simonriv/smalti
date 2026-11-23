@@ -50,6 +50,8 @@ public struct Keymap: Sendable, Equatable {
             chord("w", .command): .paneClose,
             chord("n", .control, .command): .workspaceNew,
             chord("j", .command): .agentJump,
+            chord("a", .shift, .command): .observatoryToggle,
+            chord("p", .command): .observatoryPeriod,
         ]
         for number in NumberedShortcuts.range {
             bindings[chord(String(number), .command)] = .paneFocus(number)
