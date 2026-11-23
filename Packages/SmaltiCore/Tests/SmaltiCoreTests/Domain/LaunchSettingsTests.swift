@@ -20,6 +20,20 @@ struct LaunchSettingsTests {
         #expect(settings.configFile == URL(filePath: "/Users/simon/.config/smalti/config.toml"))
     }
 
+    @Test func userZdotdirArgumentIsRead() {
+        let settings = LaunchSettings(
+            arguments: ["SmaltiUserZdotdir": "/tmp/zdot"], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.userZdotdir == "/tmp/zdot")
+    }
+
+    @Test func emptyUserZdotdirIsAbsent() {
+        let settings = LaunchSettings(
+            arguments: ["SmaltiUserZdotdir": ""], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.userZdotdir == nil)
+    }
+
     @Test func shellArgumentBecomesTheOverride() {
         let settings = LaunchSettings(
             arguments: ["SmaltiShellCommand": "/bin/zsh -f"], home: home, defaultStateDirectory: defaultState)

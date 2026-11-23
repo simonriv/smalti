@@ -220,7 +220,7 @@ final class TilingController {
     // MARK: - Commands
 
     private static let viewCommands: Set<CommandID> = [
-        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod,
+        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {

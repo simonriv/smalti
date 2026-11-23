@@ -12,6 +12,15 @@ public struct RGBAColor: Equatable, Hashable, Sendable {
         self.alpha = alpha
     }
 
+    /// `#rrggbb`, lowercase, without alpha: how zsh and config files write a color.
+    public var hexString: String {
+        "#"
+            + [red, green, blue].map { byte in
+                let digits = String(byte, radix: 16)
+                return digits.count == 1 ? "0" + digits : digits
+            }.joined()
+    }
+
     /// Parses `#rrggbb` with full opacity.
     public init(hex: String) throws(ColorError) {
         let digits = hex.dropFirst()

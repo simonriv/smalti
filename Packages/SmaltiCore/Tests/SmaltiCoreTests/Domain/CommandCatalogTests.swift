@@ -197,6 +197,18 @@ struct CommandCatalogTests {
         [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
     }
 
+    @Test func searchHistoryIsListed() {
+        let search = commands(paneCount: 1).first { $0.id == .historySearch }
+        #expect(search?.title == "Buscar en el historial")
+        #expect(search?.group == .panes)
+        // ⌃R belongs to zsh in the pane, not to Smalti's keymap.
+        #expect(search?.shortcut == nil)
+    }
+
+    @Test func searchHistoryNeedsAPane() {
+        #expect(!commands(paneCount: 0).contains { $0.id == .historySearch })
+    }
+
     @Test func paletteListsOpenObservatory() {
         let commands = CommandCatalog.commands(
             for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)

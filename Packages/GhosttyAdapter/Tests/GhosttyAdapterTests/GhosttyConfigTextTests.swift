@@ -17,7 +17,7 @@ struct GhosttyConfigTextTests {
         "window-padding-balance = false",
         "macos-option-as-alt = false",
         "shell-integration = zsh",
-        "confirm-close-surface = false",
+        "confirm-close-surface = true",
         "adjust-cell-height = 23%",
     ])
     func containsSetting(_ line: String) {

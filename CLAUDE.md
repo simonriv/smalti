@@ -27,7 +27,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -86,6 +86,10 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `swift test --package-path Packages/SmaltiCore`: dominio y casos de uso.
 - `swift test --package-path Packages/GhosttyAdapter`: adaptador de libghostty (requiere GhosttyKit construido).
 - `swift test --package-path Packages/TOMLConfigAdapter`: adaptador de configuración TOML.
+- `swift test --package-path Packages/<FigCompletionAdapter|ProjectContextAdapter|IPCAdapter|FileSessionAdapter>`: adaptadores del input (F4): specs de Fig con JavaScriptCore, contexto de git y del proyecto, socket de input e historial de comandos.
+- `cd scripts/fig && python3 vendor_specs.py` (pruebas: `python3 -m unittest test_vendor_specs`): regenera las specs de Fig vendorizadas desde `commands.txt` (`@withfig/autocomplete` fijado en `package.json`).
+- `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-input.sh 5 [--real-history]`: C1 de F4, latencia de la sugerencia de extremo a extremo con 50.000 entradas; `--real-history` lee `~/.zsh_history` solo en lectura y en memoria.
+- `TEST_RUNNER_SMALTI_MEASURE=1 scripts/test-ui.sh InputLatencyTests`: C13 de F4, a demanda (`TEST_RUNNER_SMALTI_MEASURE_IDLE=1` da la línea base).
 - `swift test --package-path Packages/<ClaudeTelemetryAdapter|OllamaAdapter|DarwinMetricsAdapter>`: adaptadores del Observatorio (F3). Las pruebas nunca leen el `~/.claude` real; las de UI pasan `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales.
 - `cd scripts/observatory && python3 -m unittest test_sum_transcripts test_sanitize_fixture`: oráculo de tokens y saneador de fixtures. `scripts/observatory/record-fixtures.sh <dir>` regraba los fixtures reales con `claude -p` (API de pago) y exige los marcadores personales en `scripts/observatory/markers.local`, que no se versiona.
 - `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-observatory.sh 5`: C10 de F3 sobre el `~/.claude` real, solo lectura.
@@ -93,9 +97,9 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
 - `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.
 - `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
-- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter`: formato.
+- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter Packages/FigCompletionAdapter/Sources Packages/FigCompletionAdapter/Tests Packages/ProjectContextAdapter Packages/IPCAdapter Packages/FileSessionAdapter scripts/input-bench/Sources`: formato.
 - `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
-- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
+- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux). Las que necesitan la integración de shell (F4: OSC 133 y widgets) usan `"/bin/zsh -d"` con un ZDOTDIR temporal vacío vía `-SmaltiUserZdotdir`.
 
 ## Git
 

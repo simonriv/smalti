@@ -2,10 +2,12 @@ import AppKit
 import ClaudeHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
+import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import IPCAdapter
 import OllamaAdapter
+import ProjectContextAdapter
 import UserNotificationsAdapter
 import OSLog
 import SmaltiCore
@@ -24,6 +26,9 @@ final class AppComposition {
     private var restoreScreen: RestoreController?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
+    private var input: InputCoordinator?
+    private var completionMenu: CompletionMenuController?
+    private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
     private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
@@ -75,7 +80,7 @@ final class AppComposition {
     private static func launchArguments() -> [String: String] {
         let keys = [
             LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
-            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey,
+            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
         ]
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
         arguments[LaunchSettings.claudeConfigDirKey] =
@@ -103,13 +108,20 @@ final class AppComposition {
         let state = startup.settings.stateDirectory
         let engine = GhosttyTerminalEngine(
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
-            userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
+            userZdotdir: startup.settings.userZdotdir ?? ProcessInfo.processInfo.environment["ZDOTDIR"])
         let archive = FileSessionArchive(directory: state)
         let socket = SocketLocation.socketFile(
             stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
+        let inputSettings = startup.initial.config.input
+        let inputSocket =
+            inputSettings.isEnabled
+            ? SocketLocation.socketFile(
+                named: "input", stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
+            : nil
         let environment = PaneEnvironment(
-            version: Self.version, files: PaneFileLocator(stateDirectory: state), ipc: Self.ipcEndpoints(socket: socket)
-        )
+            version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
+            files: PaneFileLocator(stateDirectory: state),
+            ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
         let controller = TilingController(
             .init(
                 engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
@@ -125,6 +137,7 @@ final class AppComposition {
                 }),
             initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
+        if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
         startObservatory(startup, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
@@ -260,12 +273,47 @@ final class AppComposition {
         }
     }
 
-    private static func ipcEndpoints(socket: URL) -> IPCEndpoints? {
+    /// F4: the input session over its adapters, and the socket every pane's zsh connects to. User specs live next
+    /// to the config file (`~/.config/smalti/completions`), so UI tests with a temporary config never read the real
+    /// ones.
+    private func startInput(on socket: URL, settings: InputSettings, startup: Startup, engine: GhosttyTerminalEngine) {
+        let state = startup.settings.stateDirectory
+        let ports = InputSession.Ports(
+            history: FileCommandHistory(
+                file: state.appending(path: "input/history.jsonl"), limit: settings.historyLimit),
+            project: FileProjectContext(),
+            completions: FigSpecs(
+                user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
+                runner: GeneratorRunner(timeout: settings.generatorTimeout)),
+            predictor: HeuristicPredictor())
+        let session = InputSession(ports: ports, settings: settings, clock: { .now })
+        let coordinator = InputCoordinator(session: session, provider: engine) { [weak self] pane in
+            self?.controller?.set.workspaces.lazy.flatMap(\.panes).first { $0.id == pane }?.workingDirectory.path
+        }
+        do {
+            try coordinator.start(socketFile: socket)
+            input = coordinator
+            completionMenu = CompletionMenuController(
+                coordinator: coordinator, provider: engine,
+                theme: { [weak self] in self?.controller?.theme ?? startup.theme })
+            historyPalette = HistoryPaletteController(
+                coordinator: coordinator, provider: engine,
+                context: (
+                    theme: { [weak self] in self?.controller?.theme ?? startup.theme },
+                    onOpen: { [weak self] in self?.completionMenu?.close() },
+                    returnFocus: { [weak self] pane in self?.focusKeyboard(on: pane) }
+                ))
+        } catch {
+            logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private static func ipcEndpoints(socket: URL, inputSocket: URL?) -> IPCEndpoints? {
         guard let cli = Bundle.main.resourceURL?.appending(path: "bin/smalti"),
             FileManager.default.isExecutableFile(atPath: cli.path(percentEncoded: false))
         else { return nil }
         let path = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
-        return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path)
+        return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path, inputSocket: inputSocket)
     }
 
     /// `claude` is wherever the user's interactive zsh puts it; `SMALTI=1` keeps that shell out of tmux.
@@ -284,6 +332,7 @@ final class AppComposition {
         sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()
+        input?.stop()
     }
 
     /// Writes the transcripts index's pending changes, giving up after a second so quitting never hangs.
@@ -308,6 +357,7 @@ final class AppComposition {
             window.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
             self?.sessionKeeper?.changed(state.set)
+            self?.input?.keepOnly(Set(state.set.workspaces.flatMap { $0.panes.map(\.id) }))
         }
         controller.onObservatoryChange = { [weak window] state in
             guard let window else { return }
@@ -338,15 +388,19 @@ final class AppComposition {
             guard let window, let controller else { return }
             window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
             if !isOpen { self?.focusKeyboard(on: controller.set.active.focusedPane) }
+            // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
+            if isOpen { self?.completionMenu?.close() }
         }
         let screen = observatoryScreen(controller, in: window)
         observatoryScreen = screen
-        controller.onViewCommand = { [weak palette, weak controller, weak screen] command in
+        controller.onViewCommand = { [weak self, weak palette, weak controller, weak screen] command in
             guard let palette, let theme = controller?.theme else { return }
             switch command {
             case .workspaceRename: palette.beginRename(theme: theme)
             case .observatoryToggle: screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
+            case .historySearch:
+                if let pane = controller?.set.active.focusedPane { self?.input?.openHistory(for: pane) }
             default: palette.toggle(theme: theme)
             }
         }
@@ -369,7 +423,10 @@ final class AppComposition {
                         self?.focusKeyboard(on: controller.set.active.focusedPane)
                     }
                 },
-                openChanged: { [weak self] isOpen in self?.observatory?.isObservatoryOpen = isOpen }))
+                openChanged: { [weak self] isOpen in
+                    self?.observatory?.isObservatoryOpen = isOpen
+                    if isOpen { self?.completionMenu?.close() }
+                }))
     }
 
     private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
@@ -379,7 +436,10 @@ final class AppComposition {
             perform: { [weak controller] command in controller?.perform(command) })
         // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
         window.routeKey = { [weak self] event, composing in
-            self?.restoreScreen == nil && router.route(event, composing: composing)
+            guard self?.restoreScreen == nil else { return false }
+            if !composing, self?.completionMenu?.handle(event) == true { return true }
+            if self?.historyPalette?.handle(event) == true { return true }
+            return router.route(event, composing: composing)
         }
     }
 
@@ -387,6 +447,8 @@ final class AppComposition {
     /// reaches the terminal while the observatory is closed.
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return KeyContext(allowing: [.paletteOpen]) }
+        // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
+        if historyPalette?.isOpen == true { return KeyContext(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
         return KeyContext(passingThrough: [.observatoryPeriod])
     }
@@ -402,7 +464,8 @@ final class AppComposition {
     /// The palette and the observatory own the keyboard while open: a publish (a hook, the minute tick) must not
     /// hand it back to a terminal they cover.
     private func focusKeyboard(on pane: PaneID?) {
-        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, let window, let pane,
+        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, historyPalette?.isOpen != true,
+            let window, let pane,
             let view = engine?.view(for: pane),
             window.firstResponder !== view
         else { return }

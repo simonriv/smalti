@@ -35,6 +35,7 @@ Estos seis archivos son la referencia visual obligatoria. Son mockups en HTML co
 | Estado: error | `#f7768e` |
 | Estado: detenido | círculo hueco `#6b717c` |
 | Otros ANSI | morado `#bb9af7`, cian `#7dcfff` |
+| Texto fantasma (F4) | `#5f6672`; ~3:1 sobre el vidrio, excepción al 4.5:1 aceptada hasta F5 (es un indicio, no texto) |
 | Tipografía terminal | JetBrains Mono 12.5–13 px, interlineado 1.62 |
 | Tipografía interfaz | Inter 11–13 px; etiquetas en mayúsculas 10.5 px con tracking 0.06em |
 

@@ -10,6 +10,8 @@
 		FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 94B308E204A0832409E16986 /* UserNotificationsAdapter */; };
 		DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */; };
 		49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 7C2E287A90F14917779861A7 /* OllamaAdapter */; };
+		8062C966C3D66A43ECAEB51E /* ProjectContextAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 8F3B0D5E1EABA0FBE4D170CF /* ProjectContextAdapter */; };
+		F4D2D5A35AE3666A94268DBA /* FigCompletionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = C8F4A6EAB33C8C39D16E5810 /* FigCompletionAdapter */; };
 		7E137F07F38705B9A3AD0840 /* ClaudeTelemetryAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */; };
 		26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2F7A6887BBCCFE90DCDF359C /* IPCAdapter */; };
 		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
@@ -50,6 +52,8 @@
 				FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */,
 				DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */,
 				49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */,
+				8062C966C3D66A43ECAEB51E /* ProjectContextAdapter in Frameworks */,
+				F4D2D5A35AE3666A94268DBA /* FigCompletionAdapter in Frameworks */,
 				7E137F07F38705B9A3AD0840 /* ClaudeTelemetryAdapter in Frameworks */,
 				26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */,
 				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
@@ -114,6 +118,8 @@
 				94B308E204A0832409E16986 /* UserNotificationsAdapter */,
 				5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */,
 				7C2E287A90F14917779861A7 /* OllamaAdapter */,
+				8F3B0D5E1EABA0FBE4D170CF /* ProjectContextAdapter */,
+				C8F4A6EAB33C8C39D16E5810 /* FigCompletionAdapter */,
 				A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */,
 				2F7A6887BBCCFE90DCDF359C /* IPCAdapter */,
 				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
@@ -179,6 +185,8 @@
 				B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */,
 				CEF936168A22DB49BFDBAC7E /* XCLocalSwiftPackageReference "../Packages/DarwinMetricsAdapter" */,
 				884BB93075592D7EAABE6AD1 /* XCLocalSwiftPackageReference "../Packages/OllamaAdapter" */,
+				062B03E7C0A004ECA2172731 /* XCLocalSwiftPackageReference "../Packages/ProjectContextAdapter" */,
+				EA096ECCA1EE54F339305520 /* XCLocalSwiftPackageReference "../Packages/FigCompletionAdapter" */,
 				B7F80D654F1419802E8154C8 /* XCLocalSwiftPackageReference "../Packages/ClaudeTelemetryAdapter" */,
 				14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */,
 				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
@@ -427,6 +435,14 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/ClaudeTelemetryAdapter;
 		};
+		EA096ECCA1EE54F339305520 /* XCLocalSwiftPackageReference "../Packages/FigCompletionAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/FigCompletionAdapter;
+		};
+		062B03E7C0A004ECA2172731 /* XCLocalSwiftPackageReference "../Packages/ProjectContextAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/ProjectContextAdapter;
+		};
 		884BB93075592D7EAABE6AD1 /* XCLocalSwiftPackageReference "../Packages/OllamaAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/OllamaAdapter;
@@ -469,6 +485,14 @@
 		A6976E41565BC89E142B8B2A /* ClaudeTelemetryAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ClaudeTelemetryAdapter;
+		};
+		C8F4A6EAB33C8C39D16E5810 /* FigCompletionAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FigCompletionAdapter;
+		};
+		8F3B0D5E1EABA0FBE4D170CF /* ProjectContextAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ProjectContextAdapter;
 		};
 		7C2E287A90F14917779861A7 /* OllamaAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -14,6 +14,7 @@ struct TOMLSection {
     private static let tableReason = "se esperaba una tabla"
     private static let numberReason = "se esperaba un número"
     private static let textReason = "se esperaba un texto"
+    private static let flagReason = "se esperaba true o false"
 
     /// Dotted path of the table, `""` for the top level.
     let name: String
@@ -64,6 +65,13 @@ struct TOMLSection {
         try value(
             at: key, read: { (table) throws(TOMLError) in try table.float(forKey: key) },
             reason: { _ in Self.numberReason })
+    }
+
+    /// A boolean at `key`, or `nil` when it is not written.
+    func flag(_ key: String) throws(ConfigError) -> Bool? {
+        try value(
+            at: key, read: { (table) throws(TOMLError) in try table.bool(forKey: key) },
+            reason: { _ in Self.flagReason })
     }
 
     /// A string at `key`, or `nil` when it is not written. `reason` explains a value of another type; a string
