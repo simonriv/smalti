@@ -102,3 +102,34 @@
 - [x] T24 · UI tests del estado y la atención (ejecutados al cierre: 53/53) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
 #### Bloque 7 · Cierre
 - [x] T25 · Mediciones (C6: 0,27–0,52 s), checklist (`docs/specs/F2-checklist.md`), revisión final (1 crítico, 3 importantes y 9 menores corregidos), mutación 94,7 % con los 19 sobrevivientes muertos, XCUITest 53/53 con el diario intacto
+
+## F3 · Observatorio
+
+### Spec
+- [x] Aprobada (`docs/specs/F3-observatory.md`, 2026-11-22): todas las sesiones de la máquina, sin OTLP (a F7), periodos hoy / 7 / 30 días
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F3-observatory.md`)
+
+### Tareas
+#### Bloque 0 · Arreglo de la paleta (PR propio, `fix/palette-keeps-selection-visible`)
+- [ ] T0 · La fila seleccionada de ⌘K siempre se ve entera
+#### Bloque 1 · Dominio y configuración (`feature/f3-observatory`)
+- [ ] T1 · Tokens, catálogo de modelos, costo, contexto y formato
+- [ ] T2 · Registros del transcript y plegado de la sesión
+- [ ] T3 · Periodos, sesiones observadas y lo que pinta cada vista
+- [ ] T4 · Puertos, fakes, contratos, caso de uso y comandos
+- [ ] T5 · Precios y ventanas en el TOML
+#### Bloque 2 · Adaptadores
+- [ ] T6 · Fixtures reales y oráculo independiente
+- [ ] T7 · `ClaudeTranscripts` con índice incremental
+- [ ] T8 · `ClaudeSessionRegistry`
+- [ ] T9 · `OllamaAdapter`
+- [ ] T10 · `DarwinMetricsAdapter`
+#### Bloque 3 · App
+- [ ] T11 · Composición, refresco, barra de estado y cabecera
+- [ ] T12 · Vista del Observatorio
+- [ ] T13 · Presentación, teclado y ⌘K
+- [ ] T14 · UI tests de datos, aislamiento y capturas
+#### Bloque 4 · Cierre
+- [ ] T15 · Mediciones, checklist, revisión final, mutación y PR
