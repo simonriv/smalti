@@ -22,7 +22,7 @@ struct EventCommandTests {
         transport: any EventTransport = RecordingTransport()
     ) -> Int32 {
         EventCommand.run(
-            Invocation(arguments: arguments, environment: environment ?? self.environment, input: Data(input.utf8)),
+            Invocation(arguments: arguments, environment: environment ?? self.environment, input: { Data(input.utf8) }),
             transport: transport)
     }
 
@@ -67,6 +67,33 @@ struct EventCommandTests {
 
         #expect(run(["event", "Stop"], input: huge, transport: transport) == 0)
         #expect(transport.sent.isEmpty)
+    }
+
+    /// Only `event` reads stdin: `--version` from a terminal or a pipe left open must return at once.
+    @Test func versionDoesNotReadInput() {
+        var reads = 0
+        let invocation = Invocation(
+            arguments: ["--version"], environment: [:],
+            input: {
+                reads += 1
+                return Data()
+            })
+
+        #expect(EventCommand.run(invocation, transport: RecordingTransport()) == 0)
+        #expect(reads == 0)
+    }
+
+    @Test func eventWithoutSocketDoesNotReadInput() {
+        var reads = 0
+        let invocation = Invocation(
+            arguments: ["event", "Stop"], environment: [:],
+            input: {
+                reads += 1
+                return Data()
+            })
+
+        #expect(EventCommand.run(invocation, transport: RecordingTransport()) == 0)
+        #expect(reads == 0)
     }
 
     @Test func versionSucceeds() {

@@ -1,11 +1,12 @@
 import Foundation
 import SmaltiIPCProtocol
 
-/// What the CLI was asked: its arguments (without the program name), its environment and its standard input.
+/// What the CLI was asked: its arguments (without the program name), its environment and, read only when needed,
+/// its standard input.
 struct Invocation {
     let arguments: [String]
     let environment: [String: String]
-    let input: Data
+    let input: () -> Data
 }
 
 enum TransportError: Error {
@@ -40,9 +41,11 @@ enum EventCommand {
 
     private static func forward(hook: String, _ invocation: Invocation, transport: any EventTransport) {
         guard let socket = invocation.environment["SMALTI_SOCKET"], !socket.isEmpty,
-            let pane = invocation.environment["SMALTI_PANE_ID"], !pane.isEmpty,
-            invocation.input.count <= IPCLimits.maxMessageBytes,
-            let line = try? IPCCodec.encode(IPCRequest(pane: pane, hook: hook, payload: invocation.input))
+            let pane = invocation.environment["SMALTI_PANE_ID"], !pane.isEmpty
+        else { return }
+        let input = invocation.input()
+        guard input.count <= IPCLimits.maxMessageBytes,
+            let line = try? IPCCodec.encode(IPCRequest(pane: pane, hook: hook, payload: input))
         else { return }
         try? transport.send(line, to: socket, timeout: connectTimeout)
     }

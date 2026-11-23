@@ -1,0 +1,16 @@
+{
+  "name": "smalti",
+  "owner": {
+    "name": "Smalti"
+  },
+  "metadata": {
+    "description": "Integración de Smalti con Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "smalti",
+      "source": "./plugins/smalti",
+      "description": "Estado de Claude Code en los paneles de Smalti: trabajando, te espera, error y detenido."
+    }
+  ]
+}

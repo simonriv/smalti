@@ -87,6 +87,7 @@
 				0248D6DB510EB0F7E9C05175 /* Frameworks */,
 				82A968CB662751220D4DFE2D /* Resources */,
 				C25A501B472CEDF18639FE6A /* Copy Ghostty resources */,
+				E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */,
 			);
 			buildRules = (
 			);
@@ -221,6 +222,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "set -euo pipefail\nsrc=\"$SRCROOT/../Packages/GhosttyAdapter/Frameworks/ghostty-resources\"\ndst=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nrsync -a --delete \"$src/ghostty\" \"$src/terminfo\" \"$dst/\"\n";
+		};
+		E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Embed smalti CLI and Claude plugin";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/embed-cli-and-plugin.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
