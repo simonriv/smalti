@@ -296,10 +296,17 @@ struct TOMLConfigParserTests {
 
     // MARK: Keys
 
-    @Test func shortcutReplacesTheStandardChord() throws {
+    /// F4.5: a chord written for a command is added after its own; the standard one stays the primary.
+    @Test func tomlAliasesAccumulate() throws {
         let config = try parse("[keys]\n\"cmd+j\" = \"palette.open\"")
 
-        #expect(config.keys.chord(for: .paletteOpen) == KeyChord(key: "j", modifiers: [.command]))
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+k"), try chord("cmd+j")])
+    }
+
+    @Test func shortcutMovesWithNoneOnTheStandardChord() throws {
+        let config = try parse("[keys]\n\"cmd+j\" = \"palette.open\"\n\"cmd+k\" = \"none\"")
+
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+j")])
     }
 
     @Test func unbindWithNone() throws {
@@ -312,7 +319,7 @@ struct TOMLConfigParserTests {
     @Test func plusKeyIsWrittenPlus() throws {
         let config = try parse("[keys]\n\"cmd+plus\" = \"panes.equalize\"")
 
-        #expect(config.keys.chord(for: .panesEqualize) == KeyChord(key: "plus", modifiers: [.command]))
+        #expect(config.keys.command(for: KeyChord(key: "plus", modifiers: [.command])) == .panesEqualize)
     }
 
     @Test func optionOnlyShortcutIsRejectedWithLine() throws {

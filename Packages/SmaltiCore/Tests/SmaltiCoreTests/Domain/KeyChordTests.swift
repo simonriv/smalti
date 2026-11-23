@@ -21,7 +21,7 @@ struct KeyChordTests {
 
     @Test func rejectsEmptyAndUnknownKeys() {
         #expect(throws: KeyChordError.missingKey("cmd+")) { try KeyChord.parse("cmd+") }
-        #expect(throws: KeyChordError.unknownKey("home")) { try KeyChord.parse("cmd+home") }
+        #expect(throws: KeyChordError.unknownKey("insert")) { try KeyChord.parse("cmd+insert") }
     }
 
     @Test func rejectsChordsWithoutCommandControlOrOption() {

@@ -15,13 +15,22 @@ public enum KeyChordError: Error, Equatable, Sendable {
 }
 
 /// A key plus modifiers. `key` is a single lowercase character or one of `KeyChord.namedKeys`.
+///
+/// ⇧ is part of the character on a symbol key (`=` is ⇧0 on the Latin American layout, `+` is ⇧= on US), so a chord
+/// on a symbol never keeps ⇧: ⌃⌘= is the same chord on every layout. Letters and named keys keep it (⇧⌘A, ⇧⌘←).
 public struct KeyChord: Hashable, Sendable {
     public let key: String
     public let modifiers: Set<KeyModifier>
 
     public init(key: String, modifiers: Set<KeyModifier>) {
         self.key = key
-        self.modifiers = modifiers
+        self.modifiers = Self.isSymbol(key) ? modifiers.subtracting([.shift]) : modifiers
+    }
+
+    private static func isSymbol(_ key: String) -> Bool {
+        if key == "plus" { return true }
+        guard key.count == 1, let character = key.first else { return false }
+        return !character.isLetter
     }
 
     /// Parses `"cmd+opt+d"`, `"ctrl+1"`, `"shift+cmd+="` or `"cmd+opt+left"`.
@@ -51,6 +60,7 @@ public struct KeyChord: Hashable, Sendable {
 
     private static let namedKeySymbols = [
         "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "escape": "⎋", "tab": "⇥", "plus": "+",
+        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
     ]
     private static let namedKeys = Set(namedKeySymbols.keys)
     private static let modifierNames: [String: KeyModifier] = [
