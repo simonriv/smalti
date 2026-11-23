@@ -166,3 +166,12 @@
 - [x] T16 · UI tests, aislamiento y capturas
 #### Bloque 5 · Cierre
 - [x] T17 · Mediciones, checklist, revisión final, mutación y PR (checklist `docs/specs/F4-checklist.md`; mutación 98,6 %)
+
+## F4.5 · Ayuda, ventanas y funciones básicas
+
+### Spec
+- [x] Auditoría de usabilidad aprobada (`docs/specs/F4.5-auditoria.md`, 2026-11-23): 25 huecos entran en F4.5
+- [x] Aprobada (`docs/specs/F4.5-ayuda-ventanas.md`, 2026-11-23): enfoque A de ventanas, menú y ayuda desde el `Keymap`, búsqueda de libghostty, sesión v2
+
+### Plan
+- [ ] Plan de implementación (`docs/plans/F4.5-ayuda-ventanas.md`)
