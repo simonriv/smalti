@@ -46,8 +46,12 @@ struct StatusMessage: Equatable {
         text: "Notificaciones desactivadas en macOS; el estado sigue en los paneles", isTransient: true)
 
     /// Another instance of this build owns the socket.
-    static let agentSocketUnavailable = StatusMessage(
+    static let agentSocketInUse = StatusMessage(
         text: "Otra ventana de Smalti recibe ya los avisos de Claude; esta no mostrará su estado", isTransient: true)
+
+    static func agentSocketFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo abrir el canal de avisos de Claude: \(reason)", isTransient: true)
+    }
 
     static func layoutSaveFailed(_ name: String, reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo guardar el layout “\(name)”: \(reason)", isTransient: true)

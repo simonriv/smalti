@@ -54,7 +54,7 @@ final class TilingController {
     private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
-    /// `restore` signpost: ends when every restored pane's shell reported its directory (it is interactive).
+    /// `restore` signpost: ends when every restored pane's shell showed its first prompt (it is interactive).
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
     private var pendingRestore: (interval: OSSignpostIntervalState, panes: Set<PaneID>)?
     private var minuteTicker: Task<Void, Never>?
@@ -357,7 +357,7 @@ final class TilingController {
     }
 
     private func handle(_ event: TerminalEvent, from pane: PaneID) {
-        if case .workingDirectoryChanged = event { restoredPaneIsInteractive(pane) }
+        if Self.showsAPrompt(event) { restoredPaneIsInteractive(pane) }
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
@@ -366,6 +366,14 @@ final class TilingController {
             set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
         }
         publish()
+    }
+
+    /// The shell integration reports title and directory at every prompt: the first one means the pane is ready.
+    private static func showsAPrompt(_ event: TerminalEvent) -> Bool {
+        switch event {
+        case .titleChanged, .workingDirectoryChanged: true
+        default: false
+        }
     }
 
     private func reportRestoreFailures(_ failures: [String]) {
@@ -416,9 +424,12 @@ final class TilingController {
         keepMinutesFresh()
     }
 
-    /// "te espera · 2m" counts minutes: while an agent waits or failed, the headers are redrawn once a minute.
+    /// "te espera · 2m" and a working agent's lifetime count minutes: while any agent runs, waits or failed, the
+    /// headers are redrawn once a minute (a minute may show up to a minute late).
     private func keepMinutesFresh() {
-        let needed = !AttentionQueue.panes(in: set).isEmpty
+        let needed = set.workspaces.flatMap(\.panes).contains { pane in
+            pane.agent.map { $0.state.kind != .stopped } ?? false
+        }
         guard needed != (minuteTicker != nil) else { return }
         minuteTicker?.cancel()
         minuteTicker =

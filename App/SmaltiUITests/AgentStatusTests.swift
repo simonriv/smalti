@@ -45,6 +45,7 @@ final class AgentStatusTests: SmaltiUITestCase {
         app.typeKey("n", modifierFlags: [.control, .command])
         waitForShells(count: 1)
         send(steps[8])  // Stop in the second workspace: waiting later
+        expectCounter("waiting", "2 te espera")
 
         app.typeKey("j", modifierFlags: .command)
 

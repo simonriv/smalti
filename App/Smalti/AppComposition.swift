@@ -91,7 +91,7 @@ final class AppComposition {
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
             userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
         let archive = FileSessionArchive(directory: state)
-        let socket = state.appending(path: "smalti.sock")
+        let socket = SocketLocation.socketFile(stateDirectory: state)
         let environment = PaneEnvironment(
             version: Self.version, files: PaneFileLocator(stateDirectory: state), ipc: Self.ipcEndpoints(socket: socket)
         )
@@ -176,6 +176,8 @@ final class AppComposition {
         return UserNotificationsNotifier(
             onActivate: { [weak self] pane in
                 NSApp.activate()
+                if self?.window?.isMiniaturized == true { self?.window?.deminiaturize(nil) }
+                self?.window?.makeKeyAndOrderFront(nil)
                 self?.controller?.activate(pane)
             },
             onDenied: { [weak self] in self?.controller?.report(.notificationsDisabled) })
@@ -191,14 +193,18 @@ final class AppComposition {
             Task { [weak controller] in
                 for await event in events { controller?.handle(event) }
             }
+        } catch IPCError.socketInUse {
+            controller.report(.agentSocketInUse)
         } catch {
             logger.error("agent socket unavailable: \(String(describing: error), privacy: .public)")
-            controller.report(.agentSocketUnavailable)
+            controller.report(.agentSocketFailed(String(describing: error)))
         }
     }
 
     private static func ipcEndpoints(socket: URL) -> IPCEndpoints? {
-        guard let cli = Bundle.main.resourceURL?.appending(path: "bin/smalti") else { return nil }
+        guard let cli = Bundle.main.resourceURL?.appending(path: "bin/smalti"),
+            FileManager.default.isExecutableFile(atPath: cli.path(percentEncoded: false))
+        else { return nil }
         let path = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
         return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path)
     }

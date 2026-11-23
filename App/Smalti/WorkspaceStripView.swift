@@ -47,6 +47,8 @@ final class WorkspaceStripView: NSView {
             pills.centerYAnchor.constraint(equalTo: centerYAnchor),
             paletteHint.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -theme.strip.paddingTrailing),
             counters.trailingAnchor.constraint(equalTo: paletteHint.leadingAnchor, constant: -theme.agent.counterGap),
+            counters.leadingAnchor.constraint(
+                greaterThanOrEqualTo: pills.trailingAnchor, constant: theme.agent.counterGap),
             counters.centerYAnchor.constraint(equalTo: centerYAnchor),
             paletteHint.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])

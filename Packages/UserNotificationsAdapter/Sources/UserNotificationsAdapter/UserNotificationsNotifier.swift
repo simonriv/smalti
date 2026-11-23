@@ -11,18 +11,25 @@ public final class UserNotificationsNotifier: NSObject, Notifier {
     nonisolated private static let paneKey = "pane"
     private let center: UNUserNotificationCenter
     private let onActivate: @MainActor (PaneID) -> Void
-    private let onDenied: @MainActor () -> Void
-    private var hasAsked = false
-    private var isAllowed = false
-    private var hasReportedDenial = false
+    private var gate: AuthorizationGate?
     private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "notifications")
 
     public init(onActivate: @escaping @MainActor (PaneID) -> Void, onDenied: @escaping @MainActor () -> Void) {
-        center = .current()
+        let center = UNUserNotificationCenter.current()
+        self.center = center
         self.onActivate = onActivate
-        self.onDenied = onDenied
         super.init()
         center.delegate = self
+        gate = AuthorizationGate(
+            current: {
+                switch await center.notificationSettings().authorizationStatus {
+                case .notDetermined: nil
+                case .authorized, .provisional, .ephemeral: true
+                default: false
+                }
+            },
+            request: { (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false },
+            onDenied: onDenied)
     }
 
     public func notify(_ notice: AttentionNotice) {
@@ -30,7 +37,7 @@ public final class UserNotificationsNotifier: NSObject, Notifier {
     }
 
     private func deliver(_ notice: AttentionNotice) async {
-        guard await allowed() else { return }
+        guard let gate, await gate.isAllowed() else { return }
         let content = UNMutableNotificationContent()
         content.title = notice.title
         content.body = notice.body
@@ -41,18 +48,6 @@ public final class UserNotificationsNotifier: NSObject, Notifier {
         } catch {
             logger.error("could not post a notification: \(String(describing: error), privacy: .public)")
         }
-    }
-
-    private func allowed() async -> Bool {
-        if !hasAsked {
-            hasAsked = true
-            isAllowed = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
-        }
-        if !isAllowed, !hasReportedDenial {
-            hasReportedDenial = true
-            onDenied()
-        }
-        return isAllowed
     }
 
     fileprivate func activate(_ userInfo: [AnyHashable: Any]) {

@@ -19,6 +19,10 @@ struct DroppedFilesTests {
         #expect(text == #"/tmp/a\'b\"c\&d\;e\|f\<g\>h\*i\?j\$k\`l.png"#)
     }
 
+    @Test func escapesTabsLikeGhostty() {
+        #expect(DroppedFiles.pasteText(for: [URL(filePath: "/tmp/a\tb.png")]) == "/tmp/a\\\tb.png")
+    }
+
     @Test func joinsSeveralFilesWithSpaces() {
         let text = DroppedFiles.pasteText(for: [URL(filePath: "/tmp/a.png"), URL(filePath: "/tmp/b.png")])
 
