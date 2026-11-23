@@ -125,6 +125,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private func refitList() {
         guard mode == .searching else { return }
         view?.fitList(maximumHeight: maximumListHeight)
+        // A shorter list (macOS tiling halves the window with the palette open) can clip the selection again.
+        revealSelection()
     }
 
     // MARK: - NSTextFieldDelegate
@@ -189,6 +191,12 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private func highlight() {
         let selected = resultWindow.selection - resultWindow.visible.lowerBound
         for (index, row) in rows.enumerated() { row.setSelected(index == selected) }
+        revealSelection()
+    }
+
+    private func revealSelection() {
+        let selected = resultWindow.selection - resultWindow.visible.lowerBound
+        if rows.indices.contains(selected) { view?.reveal(rows[selected]) }
     }
 
     /// Rows that fit in the list area; group labels take a little more, and the list scrolls if they overflow.

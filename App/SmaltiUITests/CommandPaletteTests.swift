@@ -90,4 +90,61 @@ final class CommandPaletteTests: SmaltiUITestCase {
             predicate: NSPredicate(format: "value ENDSWITH %@", suffix), object: element)
         wait(for: [matched], timeout: 5)
     }
+
+    // MARK: - The selected row stays in view (F3 Task 0)
+
+    /// Accessibility frames are rounded to half points; a row flush with the list edge can land half a point out.
+    private static let subpixelTolerance = 0.5
+
+    func testArrowDownKeepsSelectedRowInsideTheList() {
+        openPalette()
+        let rows = app.elements("smalti.paletteRow")
+        let count = rows.count
+        XCTAssertGreaterThan(count, 1)
+        XCTAssertFalse(
+            isInsideTheList(rows.element(boundBy: count - 1)), "the list does not overflow: nothing to prove")
+
+        for _ in 1..<count {
+            app.typeKey(.downArrow, modifierFlags: [])
+            assertSelectedRowIsInsideTheList()
+        }
+    }
+
+    func testArrowUpWrapsAndRevealsLastRow() {
+        openPalette()
+
+        app.typeKey(.upArrow, modifierFlags: [])
+
+        assertSelectedRowIsInsideTheList()
+    }
+
+    func testArrowDownPastTheEndRevealsFirstRowAndItsGroup() {
+        openPalette()
+        let firstTitle = app.elements("smalti.paletteRow").firstMatch.label
+        app.typeKey(.upArrow, modifierFlags: [])
+
+        app.typeKey(.downArrow, modifierFlags: [])
+
+        XCTAssertEqual(selectedRow.label, firstTitle)
+        assertSelectedRowIsInsideTheList()
+        XCTAssertTrue(isInsideTheList(app.elements("smalti.paletteGroup").firstMatch))
+    }
+
+    private var selectedRow: XCUIElement {
+        app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
+    }
+
+    private func isInsideTheList(_ element: XCUIElement) -> Bool {
+        let tolerance = -Self.subpixelTolerance
+        return app.element("smalti.palette.list").frame.insetBy(dx: tolerance, dy: tolerance).contains(element.frame)
+    }
+
+    private func assertSelectedRowIsInsideTheList(file: StaticString = #filePath, line: UInt = #line) {
+        let selected = selectedRow
+        XCTAssertTrue(selected.waitForExistence(timeout: 2), "no selected row", file: file, line: line)
+        XCTAssertTrue(
+            isInsideTheList(selected),
+            "\(selected.label) at \(selected.frame) is not inside the list \(app.element("smalti.palette.list").frame)",
+            file: file, line: line)
+    }
 }

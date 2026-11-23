@@ -10,6 +10,8 @@ final class CommandPaletteView: NSView {
     private let list = NSStackView()
     private let scroll = NSScrollView()
     private var scrollHeight: NSLayoutConstraint?
+    /// The row `reveal` scrolls to once the list has settled; only the latest request counts.
+    private var pendingReveal: NSView?
     /// Under the list; hidden with it so the field and the footer never show a doubled line.
     private let listSeparator = NSView()
     private var navigateHint: NSView?
@@ -39,6 +41,35 @@ final class CommandPaletteView: NSView {
     func fitList(maximumHeight: Double) {
         list.layoutSubtreeIfNeeded()
         scrollHeight?.constant = min(list.fittingSize.height, maximumHeight)
+    }
+
+    /// Scrolls the list just enough to show `row` whole, with its group label when it opens a group. The window of
+    /// built rows counts rows only, while group labels take height too, so the selection can sit below the clipped
+    /// edge without this. It runs on the next turn of the main loop: rows were just rebuilt, and the stack view and
+    /// the clip view settle their frames in a later layout pass than this one.
+    func reveal(_ row: NSView) {
+        pendingReveal = row
+        DispatchQueue.main.async { [weak self] in self?.revealPending() }
+    }
+
+    private func revealPending() {
+        // The rows may have been replaced (rename mode) before this turn ran; a detached row has no frame to show.
+        guard let row = pendingReveal, let document = scroll.documentView, row.isDescendant(of: document) else {
+            pendingReveal = nil
+            return
+        }
+        pendingReveal = nil
+        window?.layoutIfNeeded()
+        var target = row.convert(row.bounds, to: document)
+        if let label = groupLabel(above: row) { target = target.union(label.convert(label.bounds, to: document)) }
+        scroll.contentView.scrollToVisible(target)
+        scroll.reflectScrolledClipView(scroll.contentView)
+    }
+
+    private func groupLabel(above row: NSView) -> NSView? {
+        let views = list.arrangedSubviews
+        guard let index = views.firstIndex(of: row), index > 0 else { return nil }
+        return views[index - 1] is CommandGroupLabel ? views[index - 1] : nil
     }
 
     /// The rename prompt has nothing to navigate; only "↵ ejecutar" applies.
@@ -129,6 +160,7 @@ final class CommandPaletteView: NSView {
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
+        scroll.setAccessibilityIdentifier("smalti.palette.list")
         document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
         scrollHeight = scroll.heightAnchor.constraint(equalToConstant: 0)
         scrollHeight?.isActive = true

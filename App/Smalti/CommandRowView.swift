@@ -16,6 +16,7 @@ final class CommandGroupLabel: NSView {
                     .kern: palette.groupTracking * palette.groupFontSize,
                 ]))
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.setAccessibilityIdentifier("smalti.paletteGroup")
         addSubview(label)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: palette.groupPaddingHorizontal),
