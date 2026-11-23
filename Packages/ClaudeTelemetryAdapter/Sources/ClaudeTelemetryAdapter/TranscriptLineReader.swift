@@ -20,17 +20,25 @@ enum TranscriptLineReader {
             defer { try? handle.close() }
             try handle.seek(toOffset: offset)
             var pending = Data()
-            while let block = try handle.read(upToCount: blockSize), !block.isEmpty {
-                let start = pending.count
-                pending.append(block)
-                // Only the new block can hold a new line end: an earlier one would have been handed over already.
-                guard let lastInBlock = block.lastIndex(of: newline) else { continue }
-                let end = start + block.distance(from: block.startIndex, to: lastInBlock) + 1
-                for piece in pending[..<end].split(separator: newline, omittingEmptySubsequences: true) {
-                    line(Data(piece))
+            var reachedEnd = false
+            while !reachedEnd {
+                // Each block's buffers are autoreleased: drained here, not when the whole file is done.
+                try autoreleasepool {
+                    guard let block = try handle.read(upToCount: blockSize), !block.isEmpty else {
+                        reachedEnd = true
+                        return
+                    }
+                    let start = pending.count
+                    pending.append(block)
+                    // Only the new block can hold a new line end: an earlier one was handed over already.
+                    guard let lastInBlock = block.lastIndex(of: newline) else { return }
+                    let end = start + block.distance(from: block.startIndex, to: lastInBlock) + 1
+                    for piece in pending[..<end].split(separator: newline, omittingEmptySubsequences: true) {
+                        line(Data(piece))
+                    }
+                    consumed += UInt64(end)
+                    pending = Data(pending[end...])
                 }
-                consumed += UInt64(end)
-                pending = Data(pending[end...])
             }
             return Outcome(offset: consumed, failure: nil)
         } catch {

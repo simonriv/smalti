@@ -162,12 +162,16 @@ public actor ClaudeTranscripts: AgentTranscripts {
         var records: [TranscriptRecord] = []
         var derivedFrom: [String] = []
         let outcome = TranscriptLineReader.read(file.url, from: offset) { line in
-            do {
-                let translated = try translator.translate(line, isSubagent: file.isSubagent)
-                records += translated.records
-                derivedFrom += translated.derivedFrom
-            } catch {
-                skippedLines += 1
+            // JSONSerialization autoreleases what it builds, and an actor's executor drains no pool between lines:
+            // without one per line, a first read of 30 days keeps every parsed line alive until it ends.
+            autoreleasepool {
+                do {
+                    let translated = try translator.translate(line, isSubagent: file.isSubagent)
+                    records += translated.records
+                    derivedFrom += translated.derivedFrom
+                } catch {
+                    skippedLines += 1
+                }
             }
         }
         if outcome.failure != nil { readFailures += 1 }
