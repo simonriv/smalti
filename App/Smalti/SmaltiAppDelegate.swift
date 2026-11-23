@@ -15,6 +15,11 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         latencyProbe?.start()
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        composition?.saveForQuit()
+        return .terminateNow
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
     }

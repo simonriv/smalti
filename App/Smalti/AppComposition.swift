@@ -1,4 +1,6 @@
 import AppKit
+import ClaudeHarnessAdapter
+import FileSessionAdapter
 import GhosttyAdapter
 import OSLog
 import SmaltiCore
@@ -13,6 +15,7 @@ final class AppComposition {
     private var engine: GhosttyTerminalEngine?
     private var controller: TilingController?
     private var palette: CommandPaletteController?
+    private var sessionKeeper: SessionKeeper?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
 
@@ -78,21 +81,34 @@ final class AppComposition {
     private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
         let runtime = try makeRuntime(
             startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
-        let engine = GhosttyTerminalEngine(runtime: runtime)
+        let state = startup.settings.stateDirectory
+        let engine = GhosttyTerminalEngine(
+            runtime: runtime, zshDirectory: state.appending(path: "zsh"),
+            userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
+        let archive = FileSessionArchive(directory: state)
+        let environment = PaneEnvironment(version: Self.version, files: PaneFileLocator(stateDirectory: state))
         let controller = TilingController(
             .init(
-                engine: engine, configStore: startup.store, version: Self.version, home: try homeDirectory(),
+                engine: engine, configStore: startup.store, paneEnvironment: environment, home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
                     try runtime?.apply(appearance)
                 }),
             initial: startup.initial)
+        let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         connect(controller, to: window, engine: engine)
         self.runtime = runtime
         self.engine = engine
         self.controller = controller
+        sessionKeeper = keeper
         window.contentView?.layoutSubtreeIfNeeded()
         controller.start()
+        keeper.start(with: controller.set)
+    }
+
+    /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
+    func saveForQuit() {
+        sessionKeeper?.saveForQuit()
     }
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
@@ -105,6 +121,7 @@ final class AppComposition {
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
+            self?.sessionKeeper?.changed(state.set)
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }

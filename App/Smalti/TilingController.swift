@@ -22,7 +22,7 @@ final class TilingController {
     struct Dependencies {
         let engine: any PaneEngine
         let configStore: any ConfigStore
-        let version: String
+        let paneEnvironment: PaneEnvironment
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
         /// Reloads the terminal engine's appearance ("Recargar configuración").
@@ -154,7 +154,7 @@ final class TilingController {
     private func openPane() {
         let request = OpenPaneRequest(shell: config.shell, geometry: geometry)
         do {
-            let pane = try OpenPane(engine: deps.engine, version: deps.version).execute(request, in: &set)
+            let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             observe(pane)
         } catch {
             show(Self.message(for: error))
@@ -166,7 +166,7 @@ final class TilingController {
         let request = CreateWorkspaceRequest(
             pane: OpenPaneRequest(shell: config.shell, geometry: geometry), layout: layout)
         do {
-            _ = try CreateWorkspace(engine: deps.engine, version: deps.version).execute(request, in: &set)
+            _ = try CreateWorkspace(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             set.active.panes.forEach { observe($0.id) }
         } catch {
             show(Self.message(for: error))
