@@ -133,3 +133,12 @@
 - [x] T14 · UI tests de datos, aislamiento y capturas (revisión del bloque 3: 1 crítico, 6 importantes y 8 menores corregidos)
 #### Bloque 4 · Cierre
 - [x] T15 · Mediciones (C10 1,3 s / 11 ms / 53 MB; C11 ⚠️ 1 tick de 17,3 ms, igual que en reposo), checklist (`docs/specs/F3-checklist.md`), revisión final (5 importantes y 9 menores corregidos), mutación 100 %, XCUITest 71/71 con el diario intacto
+
+## F4 · Input inteligente
+
+### Spec
+- [x] Mini-spike (`spike/f4-prompt-overlay`, desechable): prompt por `needs_confirm_quit` (OSC 133) y fantasma sobre libghostty
+- [x] Aprobada (`docs/specs/F4-input.md`, 2026-11-23): zsh edita y Smalti sugiere, input en línea, ⌃R en paleta, historial desde cero, toma de control de plugins
+
+### Plan
+- [ ] Plan de implementación (`docs/plans/F4-input.md`)

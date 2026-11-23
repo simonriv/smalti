@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2 y F3.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3 y F4.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -72,9 +72,16 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F4 · Input inteligente
 
 - **Objetivo:** escribir comandos con completions, historial y predicción sin romper ningún programa de pantalla completa.
-- **Entregables:** editor de input solo en el prompt del shell (detectado por OSC 133); completions con specs de Fig; historial por directorio; ⌃R difuso; predicción heurística con texto fantasma (frecuencia, recencia, secuencias, contexto del proyecto, recuperación según el código de salida); filtro de secretos listo para F7.
+- **Entregables:** sugerencias sobre el prompt de zsh, que sigue siendo el editor (prompt detectado por OSC 133; canal por socket con un widget de zsh); toma de control de zsh-autosuggestions, ⌃R de fzf y Tab dentro de los paneles de Smalti; historial propio que empieza vacío; completions con specs de Fig; historial por directorio; ⌃R difuso; predicción heurística con texto fantasma (frecuencia, recencia, secuencias, contexto del proyecto, recuperación según el código de salida); filtro de secretos listo para F7.
 - **Criterio de cierre:** p99 de la sugerencia por debajo de 16 ms en un benchmark con un historial de 50.000 entradas. Claude Code, nvim, htop y less siguen pasando la lista de render de F0, porque el editor no intercepta nada fuera del prompt.
 - **Dependencias:** F0 (OSC 133 confirmado) y F1. Es la fase de mayor riesgo técnico (ver riesgos de F0): conviene un mini-spike al inicio.
+
+## F4.5 · Ayuda y ventana
+
+- **Objetivo:** que todo atajo y función se pueda descubrir sin leer documentación, y que la ventana pueda ocupar toda la pantalla.
+- **Entregables:** vista de ayuda con la guía de todos los atajos y acciones (⌘? y desde ⌘K); pantalla completa nativa de macOS (⌃⌘F); otras ideas de Simón que se sumen antes de su spec.
+- **Criterio de cierre:** se define en su spec.
+- **Dependencias:** F4 (sus atajos aparecen en la ayuda). Añadida por Simón en el brainstorming de F4 (2026-11-23).
 
 ## F5 · Apariencia y prompt
 

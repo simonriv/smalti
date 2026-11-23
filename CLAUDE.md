@@ -27,7 +27,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -95,7 +95,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
 - `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter`: formato.
 - `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
-- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
+- Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux). Las que necesitan la integración de shell (F4: OSC 133 y widgets) usan `"/bin/zsh -d"` con un ZDOTDIR temporal vacío vía `-SmaltiUserZdotdir`.
 
 ## Git
 

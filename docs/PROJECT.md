@@ -98,7 +98,7 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 
 ### 5. Input inteligente y predicción
 
-- Editor de input en el prompt del shell (no dentro de TUIs como Claude Code): selección, multilínea, atajos de editor.
+- zsh sigue siendo el editor de la línea; Smalti sugiere encima en el prompt del shell (no dentro de TUIs como Claude Code): texto fantasma, menú de Tab y ⌃R. Un editor propio (selección con ratón, multilínea, atajos propios) queda para después de F4 (spec F4, 2026-11-23).
 - Completions declarativas compatibles con las specs de Fig; las propias se escriben en el mismo formato.
 - Historial por directorio y búsqueda difusa con ⌃R.
 - **Predicción heurística por defecto** (texto fantasma, en menos de 16 ms): frecuencia y recencia por directorio, secuencias aprendidas (`git add` → `git commit`), contexto del proyecto (scripts de `package.json`, Makefile, estado de git) y sugerencias de recuperación según el código de salida.
@@ -234,6 +234,7 @@ Estas decisiones están cerradas; cambiarlas exige volver a este documento.
 | Predicción | Heurística local + API propia opcional bajo demanda | Modelo local: arranque en frío, compite por 16 GB de RAM. API gratuita: se agota |
 | Plugins | Integraciones propias (Claude Code, harnesses, Neovim, Ollama) | Sistema de plugins genérico en la v1: frena el proyecto |
 | Autocompletado | Solo en el prompt del shell | Dentro de Claude Code: el input es de Claude |
+| Input en el prompt | zsh (ZLE) edita; Smalti sugiere por un widget y un socket | Editor propio estilo Warp: pierde ZLE y rompe TUIs (spec F4) |
 | Procesos al reabrir | Se relanzan (shell, agentes con su comando) | Revivirlos en vivo: requiere el daemon, queda para después |
 | Prompt | Nativo, dibujado por Smalti, exportable a Starship | Powerlevel10k: lento y genérico |
 
