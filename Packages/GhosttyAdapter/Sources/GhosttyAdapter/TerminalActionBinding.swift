@@ -25,6 +25,9 @@ enum TerminalActionBinding {
 
     static let endSearch = "end_search"
 
+    /// Validated by parsing them as keybinds, since running them would touch the user's clipboard.
+    static let clipboardActions = [action(for: .copy), action(for: .paste)]
+
     private static func scroll(_ target: ScrollTarget) -> String {
         switch target {
         case .pageUp: "scroll_page_up"

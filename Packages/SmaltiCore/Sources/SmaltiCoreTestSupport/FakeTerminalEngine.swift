@@ -72,7 +72,17 @@ public final class FakeTerminalEngine: TerminalEngine {
 
     public private(set) var performed: [PerformedAction] = []
     public private(set) var searches: [Search] = []
-    public private(set) var searchNavigations: [SearchDirection] = []
+    public struct SearchNavigation: Equatable, Sendable {
+        public let direction: SearchDirection
+        public let pane: PaneID
+
+        public init(direction: SearchDirection, pane: PaneID) {
+            self.direction = direction
+            self.pane = pane
+        }
+    }
+
+    public private(set) var searchNavigations: [SearchNavigation] = []
     public private(set) var endedSearches: [PaneID] = []
     public var visibleTexts: [PaneID: String] = [:]
 
@@ -90,7 +100,7 @@ public final class FakeTerminalEngine: TerminalEngine {
 
     public func navigateSearch(_ direction: SearchDirection, in pane: PaneID) {
         guard isOpen(pane) else { return }
-        searchNavigations.append(direction)
+        searchNavigations.append(SearchNavigation(direction: direction, pane: pane))
     }
 
     public func endSearch(in pane: PaneID) {

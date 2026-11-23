@@ -51,6 +51,27 @@ struct WindowFrameTests {
         #expect(fitted == Rect(x: 1500, y: 0, width: 800, height: 1080))
     }
 
+    @Test func frameAcrossTwoScreensBelongsToTheOneShowingMore() {
+        let tall = Rect(x: 1340, y: 0, width: 800, height: 1000)
+
+        let fitted = WindowFrame.fitted(tall, screens: [main, right], main: main)
+
+        #expect(fitted == Rect(x: 1340, y: 0, width: 800, height: 1000))
+    }
+
+    @Test func frameAboveTheTopIsPulledDownToKeepTheTitleBarReachable() {
+        let high = Rect(x: 100, y: 500, width: 800, height: 600)
+
+        #expect(WindowFrame.fitted(high, screens: [main], main: main) == Rect(x: 100, y: 300, width: 800, height: 600))
+    }
+
+    @Test func screenLeftOfMainWithNegativeOriginKeepsItsWindow() {
+        let left = Rect(x: -1920, y: -200, width: 1920, height: 1080)
+        let onLeft = Rect(x: -1500, y: 0, width: 800, height: 600)
+
+        #expect(WindowFrame.fitted(onLeft, screens: [main, left], main: main) == onLeft)
+    }
+
     @Test func cascadeStepsDownRight() {
         let front = Rect(x: 100, y: 300, width: 800, height: 600)
 

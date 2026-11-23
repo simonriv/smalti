@@ -62,10 +62,19 @@ struct KeymapF45Tests {
         #expect(try chord("shift+cmd+\(key)") != (try chord("cmd+\(key)")))
     }
 
-    @Test func bindingAnotherChordKeepsTheDefaultAsPrimary() throws {
+    @Test func bindingAnotherChordReplacesTheDefault() throws {
         let keymap = try Keymap.standard.overriding([try chord("shift+cmd+p"): .paletteOpen])
 
-        #expect(keymap.chords(for: .paletteOpen) == [try chord("cmd+k"), try chord("shift+cmd+p")])
+        #expect(keymap.chords(for: .paletteOpen) == [try chord("shift+cmd+p")])
+        #expect(keymap.command(for: try chord("cmd+k")) == nil)
+    }
+
+    @Test func orderedBindingsKeepTheirOrderAsAliases() throws {
+        let keymap = try Keymap.standard.overriding(ordered: [
+            (try chord("cmd+m"), .paletteOpen), (try chord("cmd+j"), .paletteOpen),
+        ])
+
+        #expect(keymap.chords(for: .paletteOpen) == [try chord("cmd+m"), try chord("cmd+j")])
     }
 
     @Test func rebindingMovesEveryAlias() throws {

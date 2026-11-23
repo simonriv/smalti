@@ -32,15 +32,21 @@ public struct Keymap: Sendable, Equatable {
         entries.first { $0.command == command }?.chord
     }
 
-    /// A copy with `bindings` applied in display order: a command takes the chord from whichever command had it and
-    /// adds it after its own chords; `nil` unbinds the chord. `file` and `line` of the error are left for the config
-    /// reader to fill.
+    /// A copy with `bindings` applied, sorted by display (the order a dictionary cannot keep).
     public func overriding(_ bindings: [KeyChord: CommandID?]) throws(ConfigError) -> Keymap {
-        var updated = entries
-        for (chord, command) in bindings.sorted(by: { $0.key.display < $1.key.display }) {
-            try Self.validate(chord)
+        try overriding(ordered: bindings.sorted { $0.key.display < $1.key.display }.map { ($0.key, $0.value) })
+    }
+
+    /// A copy with `bindings` applied in their order (the TOML file's): the chords written for a command replace its
+    /// own, the first written becoming its primary, and are taken from whichever command had them; `nil` unbinds the
+    /// chord. `file` and `line` of the error are left for the config reader to fill.
+    public func overriding(ordered bindings: [(chord: KeyChord, command: CommandID?)]) throws(ConfigError) -> Keymap {
+        for binding in bindings { try Self.validate(binding.chord) }
+        let rebound = Set(bindings.compactMap(\.command))
+        let written = Set(bindings.map(\.chord))
+        var updated = entries.filter { !rebound.contains($0.command) && !written.contains($0.chord) }
+        for case let (chord, command?) in bindings {
             updated.removeAll { $0.chord == chord }
-            guard let command else { continue }
             updated.append((chord, command))
         }
         return Keymap(entries: updated)

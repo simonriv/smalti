@@ -183,4 +183,30 @@ struct LibghosttyF45ApiTests {
 
         #expect(hovered)
     }
+
+    /// Copy and paste are not run here (they touch the user's clipboard); libghostty parses them as keybinds, which
+    /// validates the same action names Smalti sends.
+    @Test(arguments: TerminalActionBinding.clipboardActions)
+    func clipboardActionNameIsValid(_ action: String) throws {
+        let file = work.appending(path: "kb-\(UUID()).conf")
+
+        _ = try GhosttyConfig.load(text: "keybind = super+y=\(action)\n", writingTo: file)
+    }
+
+    @Test func invalidActionNameIsRejectedByTheConfig() {
+        let file = work.appending(path: "kb-bad.conf")
+
+        #expect(throws: TerminalEngineError.self) {
+            _ = try GhosttyConfig.load(text: "keybind = super+y=copy_to_clipboard:bogus\n", writingTo: file)
+        }
+    }
+
+    @Test func unknownBindingActionReportsFailure() async throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        #expect(await wait { !visible(pane.view).isEmpty })
+
+        #expect(!pane.view.bind("no_such_action"))
+        #expect(pane.view.bind("select_all"))
+    }
 }

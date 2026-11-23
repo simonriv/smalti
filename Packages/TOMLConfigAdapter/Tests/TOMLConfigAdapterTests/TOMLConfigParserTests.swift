@@ -296,11 +296,17 @@ struct TOMLConfigParserTests {
 
     // MARK: Keys
 
-    /// F4.5: a chord written for a command is added after its own; the standard one stays the primary.
-    @Test func tomlAliasesAccumulate() throws {
+    @Test func shortcutReplacesTheStandardChord() throws {
         let config = try parse("[keys]\n\"cmd+j\" = \"palette.open\"")
 
-        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+k"), try chord("cmd+j")])
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+j")])
+    }
+
+    /// F4.5: two lines for one command give it two chords; the first one written is its primary.
+    @Test func twoLinesGiveTwoChordsInFileOrder() throws {
+        let config = try parse("[keys]\n\"cmd+m\" = \"palette.open\"\n\"cmd+j\" = \"palette.open\"")
+
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+m"), try chord("cmd+j")])
     }
 
     @Test func shortcutMovesWithNoneOnTheStandardChord() throws {

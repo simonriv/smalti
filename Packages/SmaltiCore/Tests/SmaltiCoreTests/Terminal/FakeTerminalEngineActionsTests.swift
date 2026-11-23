@@ -21,7 +21,7 @@ struct FakeTerminalEngineActionsTests {
 
         #expect(engine.performed == [.init(action: .scroll(.top), pane: pane)])
         #expect(engine.searches == [.init(text: "warn", pane: pane)])
-        #expect(engine.searchNavigations == [.next])
+        #expect(engine.searchNavigations == [.init(direction: .next, pane: pane)])
         #expect(engine.endedSearches == [pane])
     }
 

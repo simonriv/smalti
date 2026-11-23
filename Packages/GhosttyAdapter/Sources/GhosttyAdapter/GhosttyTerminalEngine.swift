@@ -145,7 +145,12 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     // MARK: - F4.5
 
     public func perform(_ action: TerminalAction, in pane: PaneID) {
-        views[pane]?.bind(TerminalActionBinding.action(for: action))
+        guard let view = views[pane] else { return }
+        let name = TerminalActionBinding.action(for: action)
+        if !view.bind(name) {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "smalti", category: "engine")
+                .error("libghostty did not run \(name, privacy: .public)")
+        }
     }
 
     public func search(_ text: String, in pane: PaneID) {

@@ -16,6 +16,16 @@ public struct MenuItem: Equatable, Sendable {
     public let chord: KeyChord?
     public let isEnabled: Bool
     public let children: [MenuItem]
+    /// Shown with a ✓ ("Entrada de teclado segura" while it is on).
+    public var isChecked = false
+
+    public init(title: String, action: MenuAction?, chord: KeyChord?, isEnabled: Bool, children: [MenuItem]) {
+        self.title = title
+        self.action = action
+        self.chord = chord
+        self.isEnabled = isEnabled
+        self.children = children
+    }
 
     public static let separator = MenuItem(title: "", action: nil, chord: nil, isEnabled: false, children: [])
 
@@ -44,11 +54,24 @@ public struct MenuBar: Equatable, Sendable {
     public let menus: [Menu]
 }
 
+/// What the menus reflect besides the keymap: the front window's workspaces and the toggles that are on.
+public struct MenuState: Sendable {
+    public let workspaces: WorkspaceSet
+    public let checked: Set<CommandID>
+
+    public init(workspaces: WorkspaceSet, checked: Set<CommandID>) {
+        self.workspaces = workspaces
+        self.checked = checked
+    }
+}
+
 /// The menus of macOS (F4.5), built from the keymap in effect and the palette's commands for the current state: an
 /// item shows its command's primary chord and is enabled when ⌘K would offer it.
 public enum MenuModel {
-    public static func bar(keymap: Keymap, commands: [Command], workspaces: WorkspaceSet) -> MenuBar {
-        let builder = Builder(keymap: keymap, available: Set(commands.map(\.id)).union(alwaysAvailable))
+    public static func bar(keymap: Keymap, commands: [Command], state: MenuState) -> MenuBar {
+        let builder = Builder(
+            keymap: keymap, available: Set(commands.map(\.id)).union(alwaysAvailable), checked: state.checked)
+        let workspaces = state.workspaces
         return MenuBar(menus: [
             Menu(title: "Smalti", items: builder.app),
             Menu(title: "Archivo", items: builder.file),
@@ -60,7 +83,7 @@ public enum MenuModel {
     }
 
     public static func contextMenu(keymap: Keymap) -> [MenuItem] {
-        let builder = Builder(keymap: keymap, available: nil)
+        let builder = Builder(keymap: keymap, available: nil, checked: [])
         return [
             builder.item(.terminalCopy), builder.item(.terminalPaste), builder.item(.terminalSelectAll), .separator,
             builder.item(.searchOpen), builder.item(.terminalClear), .separator, builder.item(.paneNew),
@@ -69,7 +92,7 @@ public enum MenuModel {
     }
 
     public static func dockMenu() -> [MenuItem] {
-        [Builder(keymap: .standard, available: nil).item(.windowNew, chord: nil)]
+        [Builder(keymap: .standard, available: nil, checked: []).item(.windowNew, chord: nil)]
     }
 
     /// Commands the palette does not list but that always apply.
@@ -80,6 +103,7 @@ private struct Builder {
     let keymap: Keymap
     /// nil: everything is enabled (the context menu acts on the pane it was opened on).
     let available: Set<CommandID>?
+    let checked: Set<CommandID>
 
     private static let titles: [CommandID: String] = CommandCatalog.titles.merging([
         .paneNew: "Nuevo panel", .paneClose: "Cerrar panel", .workspaceNew: "Nuevo workspace",
@@ -95,9 +119,11 @@ private struct Builder {
     }
 
     func item(_ id: CommandID, chord: KeyChord?, title: String? = nil) -> MenuItem {
-        MenuItem(
+        var item = MenuItem(
             title: title ?? Self.titles[id] ?? id.rawValue, action: .command(id), chord: chord,
             isEnabled: available?.contains(id) ?? true, children: [])
+        item.isChecked = checked.contains(id)
+        return item
     }
 
     private func system(_ title: String, _ action: SystemMenuAction, _ chord: String? = nil) -> MenuItem {

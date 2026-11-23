@@ -81,6 +81,34 @@ struct CloseGuardTests {
         #expect(CloseGuard.windowsWithBusyPanes(busy, in: windows) == 2)
     }
 
+    /// Block 1 review: many panes or very long command lines keep the dialog short.
+    @Test func longListsShowThreeCommandsAndHowManyMore() {
+        let busy = (1...5).map { BusyPane(pane: PaneID(), command: "job \($0)") }
+
+        let question = CloseGuard.question(for: .window, busy: busy, settings: on)
+
+        #expect(question?.detail == "Hay 5 procesos en marcha: job 1, job 2, job 3 y 2 más.")
+    }
+
+    @Test func longCommandIsCutWithAnEllipsis() {
+        let long = BusyPane(pane: PaneID(), command: "npm run dev -- --port 3000 --host 0.0.0.0 --open --verbose")
+
+        let question = CloseGuard.question(for: .pane, busy: [long], settings: on)
+
+        #expect(
+            question?.detail
+                == "npm run dev -- --port 3000 --host 0.0.0.… sigue en marcha. Si cierras el panel, el proceso termina."
+        )
+    }
+
+    @Test(arguments: ["dash", "ksh", "tcsh", "csh", "nu", "xonsh", "elvish", "-ksh"])
+    func otherShellsAreNotBusy(_ shell: String) throws {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp"))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: shell)))
+
+        #expect(!pane.isBusy)
+    }
+
     @Test func busyPaneNamesItsForegroundCommandLine() throws {
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp"))
             .applying(.foregroundProcessChanged(ForegroundProcess(name: "npm", commandLine: ["npm", "run", "dev"])))

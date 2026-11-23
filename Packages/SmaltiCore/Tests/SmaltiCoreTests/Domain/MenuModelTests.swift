@@ -18,11 +18,13 @@ struct MenuModelTests {
         return all.dropFirst().reduce(WorkspaceSet(first: all[0])) { $0.adding($1) }
     }
 
-    private func bar(keymap: Keymap = .standard, workspaces set: WorkspaceSet? = nil) -> MenuBar {
+    private func bar(keymap: Keymap = .standard, workspaces set: WorkspaceSet? = nil, checked: Set<CommandID> = [])
+        -> MenuBar
+    {
         let set = set ?? workspaces()
         return MenuModel.bar(
             keymap: keymap, commands: CommandCatalog.commands(for: set, keymap: keymap, layouts: .standard),
-            workspaces: set)
+            state: MenuState(workspaces: set, checked: checked))
     }
 
     private func item(_ title: String, in menu: String, of bar: MenuBar) -> MenuItem? {
@@ -121,6 +123,12 @@ struct MenuModelTests {
         let submenu = bar().menus[3].items.first { $0.title == "Layout" }
 
         #expect(submenu?.children.map(\.title) == ["Dwindle", "Columnas", "Maestro + pila"])
+    }
+
+    @Test func secureInputItemShowsItsCheckmark() {
+        #expect(item("Entrada de teclado segura", in: "Smalti", of: bar())?.isChecked == false)
+        #expect(
+            item("Entrada de teclado segura", in: "Smalti", of: bar(checked: [.secureInputToggle]))?.isChecked == true)
     }
 
     @Test func contextMenuMatchesSpec() {

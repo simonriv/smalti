@@ -73,16 +73,15 @@ struct KeymapTests {
         #expect(CommandID.panesEqualize.rawValue == "panes.equalize")
     }
 
-    /// F4.5: a new chord is an alias; the default stays the primary until the user unbinds it with "none".
-    @Test func overridingAddsAliasesAndUnbinds() throws {
+    @Test func overridingRebindsAndUnbinds() throws {
         let newChord = try chord("cmd+j")
         let oldChord = try chord("cmd+k")
 
         let keymap = try Keymap.standard.overriding([newChord: .paletteOpen, try chord("cmd+w"): nil])
 
         #expect(keymap.command(for: newChord) == .paletteOpen)
-        #expect(keymap.command(for: oldChord) == .paletteOpen)
-        #expect(keymap.chord(for: .paletteOpen) == oldChord)
+        #expect(keymap.chord(for: .paletteOpen) == newChord)
+        #expect(keymap.command(for: oldChord) == nil)
         #expect(keymap.chord(for: .paneClose) == nil)
     }
 
@@ -101,7 +100,7 @@ struct KeymapTests {
 
         #expect(keymap.command(for: usedChord) == .layoutDwindle)
         #expect(keymap.chord(for: .paneNew) == nil)
-        #expect(keymap.chords(for: .layoutDwindle).contains(usedChord))
+        #expect(keymap.chords(for: .layoutDwindle) == [usedChord])
     }
 
     @Test func overridingRejectsOptionOnlyChord() throws {
@@ -138,7 +137,7 @@ struct KeymapTests {
 
         let keymap = try Keymap.standard.overriding([second: .paletteOpen, first: .paletteOpen])
 
-        #expect(keymap.chords(for: .paletteOpen) == [try chord("cmd+k"), first, second])
+        #expect(keymap.chords(for: .paletteOpen) == [first, second])
     }
 
     @Test func validateRejectsOptionAloneChord() throws {

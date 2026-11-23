@@ -72,6 +72,22 @@ struct SessionSnapshotV2Tests {
         #expect(snapshot.frontIndex == 0)
     }
 
+    /// Block 1 review: a format-1 session read and saved again must come back readable, as format 2.
+    @Test func v1SavedAgainIsWrittenAsVersionTwo() throws {
+        let v1 = try savedSnapshot(
+            """
+            {"version":1,"savedAt":"2026-11-20T10:00:00Z","activeIndex":0,"workspaces":[
+            {"name":"solen","rootDirectory":"/tmp","layout":"dwindle","panes":[]}]}
+            """)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+
+        let reread = try savedSnapshot(String(decoding: try encoder.encode(v1), as: UTF8.self))
+
+        #expect(reread.version == 2)
+        #expect(reread.windows == v1.windows)
+    }
+
     @Test func v2RoundTrips() throws {
         let set = WindowSet(first: window("solen", frame: Rect(x: 1, y: 2, width: 3, height: 4)))
             .opening(window("billi", frame: nil, fullScreen: true))

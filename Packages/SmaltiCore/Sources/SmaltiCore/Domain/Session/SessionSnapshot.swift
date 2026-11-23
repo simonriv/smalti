@@ -105,7 +105,8 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(version, forKey: .version)
+        // Always the current format: the body is format 2 even for a session read from format 1.
+        try container.encode(Self.formatVersion, forKey: .version)
         try container.encode(savedAt, forKey: .savedAt)
         try container.encode(windows, forKey: .windows)
         try container.encode(frontIndex, forKey: .frontIndex)

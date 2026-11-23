@@ -43,7 +43,7 @@ public enum CloseGuard {
         case .pane:
             return CloseQuestion(
                 title: "¿Cerrar el panel?",
-                detail: "\(first.command) sigue en marcha. Si cierras el panel, el proceso termina.")
+                detail: "\(shortened(first.command)) sigue en marcha. Si cierras el panel, el proceso termina.")
         case .workspace(let name):
             return CloseQuestion(title: "¿Cerrar el workspace “\(name)”?", detail: listing(busy))
         case .window:
@@ -73,8 +73,19 @@ public enum CloseGuard {
         return pane.processName ?? "un proceso"
     }
 
+    /// Commands named in a dialog, and the characters each keeps.
+    static let listedCommands = 3
+    static let commandLength = 40
+
+    /// "Hay 5 procesos en marcha: job 1, job 2, job 3 y 2 más."
     private static func listing(_ busy: [BusyPane]) -> String {
-        "Hay \(processes(busy.count)) en marcha: \(busy.map(\.command).joined(separator: ", "))."
+        let named = busy.prefix(listedCommands).map { shortened($0.command) }.joined(separator: ", ")
+        let rest = busy.count > listedCommands ? " y \(busy.count - listedCommands) más" : ""
+        return "Hay \(processes(busy.count)) en marcha: \(named)\(rest)."
+    }
+
+    private static func shortened(_ command: String) -> String {
+        command.count > commandLength ? String(command.prefix(commandLength)) + "…" : command
     }
 
     private static func quitDetail(_ count: Int, windows: Int) -> String {
