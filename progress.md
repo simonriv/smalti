@@ -60,3 +60,45 @@
 - [x] Revisión final de la rama: 3 importantes y 10 menores corregidos (M9 sin cambio, decidido); re-revisión: N1 corregido (guarda TMUX)
 - [x] Mutación de SmaltiCore 99,2 % (2 sobrevivientes muertos con prueba nueva); SmaltiCore 317, GhosttyAdapter 76, TOMLConfigAdapter 55, XCUITest 35
 - [x] PR #7 a `develop` y PR #8 `develop` → `main` (fusionados con confirmación de Simón; Release instalado en `/Applications`)
+
+## F2 · Persistencia e integración con Claude Code
+
+### Spec
+- [x] Aprobada (`docs/specs/F2-persistence.md`, 2026-11-22), con el issue #6 como Parte A
+
+### Plan
+- [ ] Plan de implementación (`docs/plans/F2-persistence.md`), pendiente de revisión de Simón
+
+### Tareas
+#### Bloque 1 · Builds `.dev` (PR propio, `feature/f2-dev-builds`)
+- [ ] T1 · Identidad del build y directorio de estado
+- [ ] T2 · Pruebas y scripts que nunca tocan el Smalti diario
+- [ ] T3 · Cierre del bloque 1 y PR de la Parte A
+#### Bloque 2 · Dominio de la persistencia (`feature/f2-persistence`)
+- [ ] T4 · Instantánea, árbol serializable y tipos del agente
+- [ ] T5 · `RestorePlan` y selección por defecto
+- [ ] T6 · Frases de fecha y nombres de layout
+- [ ] T7 · Puertos y casos de uso de persistencia
+#### Bloque 3 · Adaptadores de persistencia
+- [ ] T8 · `FileSessionAdapter`
+- [ ] T9 · Exportar scrollback y leer la línea de comandos
+- [ ] T10 · Reinyectar scrollback y comando inicial
+- [ ] T11 · Historial por panel
+- [ ] T12 · `ClaudeHarnessAdapter` y cableado del guardado
+#### Bloque 4 · Restaurar en la app
+- [ ] T13 · Arranque con instantánea
+- [ ] T14 · Pantalla "Retomar donde quedaste"
+- [ ] T15 · Layouts con nombre y UI tests de restauración
+#### Bloque 5 · Estado del agente, IPC y plugin
+- [ ] T16 · Transiciones del agente y cola de atención
+- [ ] T17 · Casos de uso y puertos del agente
+- [ ] T18 · `IPCAdapter` y CLI `smalti`
+- [ ] T19 · Plugin de Claude Code e instalador
+#### Bloque 6 · Estado y atención en la app
+- [ ] T20 · Entorno de paneles y cableado del IPC
+- [ ] T21 · Estado en cabecera, borde y franja
+- [ ] T22 · Notificaciones y salto ⌘J
+- [ ] T23 · Arrastrar imágenes
+- [ ] T24 · UI tests del estado y la atención
+#### Bloque 7 · Cierre
+- [ ] T25 · Mediciones, checklist, revisión final, mutación y PR
