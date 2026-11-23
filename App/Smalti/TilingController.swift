@@ -104,6 +104,16 @@ final class TilingController {
         publish()
     }
 
+    /// A click on a notification: show its pane (switching workspace); if it is gone, only the app comes forward.
+    func activate(_ pane: PaneID) {
+        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return }
+        publish()
+    }
+
+    private func jumpToWaitingAgent() {
+        if JumpToWaitingAgent(engine: deps.engine).execute(in: &set) == .nobodyWaiting { show(.nobodyWaiting) }
+    }
+
     private func runIntegration(_ command: IntegrationCommand.Type) {
         let integration = deps.agents.integration
         Task { [weak self] in
@@ -220,6 +230,7 @@ final class TilingController {
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
             .configReload: { [unowned self] in reloadConfig() },
+            .agentJump: { [unowned self] in jumpToWaitingAgent() },
             .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
             .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
         ]

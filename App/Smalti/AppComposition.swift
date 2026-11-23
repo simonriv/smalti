@@ -3,6 +3,7 @@ import ClaudeHarnessAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import IPCAdapter
+import UserNotificationsAdapter
 import OSLog
 import SmaltiCore
 import TOMLConfigAdapter
@@ -100,7 +101,7 @@ final class AppComposition {
                 namedLayouts: archive,
                 harnesses: harnesses,
                 agents: .init(
-                    notifier: LogNotifier(), integration: Self.claudeIntegration(),
+                    notifier: makeNotifier(), integration: Self.claudeIntegration(),
                     isAppActive: { NSApp.isActive }),
                 home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
@@ -164,6 +165,20 @@ final class AppComposition {
 
     private func setTilingHidden(_ hidden: Bool, in window: SmaltiWindow) {
         [window.strip, window.paneGrid, window.statusBar].forEach { $0.isHidden = hidden }
+    }
+
+    /// macOS notifications; `-SmaltiNotificationLog <file>` writes them to a file instead (UI tests). A click shows the
+    /// pane: the closures reach the controller once it exists.
+    private func makeNotifier() -> any Notifier {
+        if let log = UserDefaults.standard.string(forKey: "SmaltiNotificationLog"), !log.isEmpty {
+            return FileLogNotifier(file: URL(filePath: log))
+        }
+        return UserNotificationsNotifier(
+            onActivate: { [weak self] pane in
+                NSApp.activate()
+                self?.controller?.activate(pane)
+            },
+            onDenied: { [weak self] in self?.controller?.report(.notificationsDisabled) })
     }
 
     /// Hooks reach the app through `<state>/smalti.sock`. If another instance of this build owns it, this one runs

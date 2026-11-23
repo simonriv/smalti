@@ -46,12 +46,29 @@ public struct JumpToWaitingAgent {
     }
 
     public func execute(in set: inout WorkspaceSet) -> JumpOutcome {
-        guard let pane = AttentionQueue.panes(in: set).first, let owner = set.workspace(containing: pane) else {
+        guard let pane = AttentionQueue.panes(in: set).first, ActivatePane(engine: engine).execute(pane, in: &set)
+        else {
             return .nobodyWaiting
         }
+        return .focused(pane)
+    }
+}
+
+/// A click on a notification: shows the pane, switching workspace if needed. False when the pane is gone (the app
+/// only comes forward).
+@MainActor
+public struct ActivatePane {
+    private let engine: any TerminalEngine
+
+    public init(engine: any TerminalEngine) {
+        self.engine = engine
+    }
+
+    public func execute(_ pane: PaneID, in set: inout WorkspaceSet) -> Bool {
+        guard let owner = set.workspace(containing: pane) else { return false }
         if owner != set.activeID { SwitchWorkspace(engine: engine).execute(.id(owner), in: &set) }
         set = set.updating(owner) { $0.focusing(pane) }
-        return .focused(pane)
+        return true
     }
 }
 

@@ -100,6 +100,7 @@ public enum CommandCatalog {
 
     private static func workspaceCommands(_ context: Context) -> [Command] {
         var commands = [
+            context.command(.agentJump, "Saltar al agente que espera", group: .workspaces),
             context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
             context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
         ]

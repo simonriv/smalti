@@ -197,6 +197,16 @@ struct CommandCatalogTests {
         [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
     }
 
+    @Test func jumpCommandIsInPalette() {
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+
+        let jump = commands.first { $0.id == .agentJump }
+        #expect(jump?.title == "Saltar al agente que espera")
+        #expect(jump?.group == .workspaces)
+        #expect(jump?.shortcut?.display == "⌘J")
+    }
+
     @Test func claudeIntegrationCommandsAreOffered() {
         let commands = CommandCatalog.commands(
             for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)

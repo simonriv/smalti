@@ -40,6 +40,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: line, isTransient: true)
     }
 
+    static let nobodyWaiting = StatusMessage(text: "Ningún agente te espera", isTransient: true)
+
+    static let notificationsDisabled = StatusMessage(
+        text: "Notificaciones desactivadas en macOS; el estado sigue en los paneles", isTransient: true)
+
     /// Another instance of this build owns the socket.
     static let agentSocketUnavailable = StatusMessage(
         text: "Otra ventana de Smalti recibe ya los avisos de Claude; esta no mostrará su estado", isTransient: true)

@@ -17,6 +17,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let workspaceRename = CommandID(rawValue: "workspace.rename")
     public static let workspaceClose = CommandID(rawValue: "workspace.close")
     public static let configReload = CommandID(rawValue: "config.reload")
+    public static let agentJump = CommandID(rawValue: "agent.jump")
     public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
     public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
 
@@ -66,7 +67,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let allStandard: [CommandID] =
         [
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
-            workspaceNew, workspaceRename, workspaceClose, configReload,
+            workspaceNew, workspaceRename, workspaceClose, configReload, agentJump,
         ]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }

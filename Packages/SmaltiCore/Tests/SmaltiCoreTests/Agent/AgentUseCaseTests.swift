@@ -116,6 +116,22 @@ struct AgentUseCaseTests {
         #expect(set == before)
     }
 
+    @Test func activatingAPaneInAHiddenWorkspaceShowsAndFocusesIt() {
+        var set = makeSet()
+
+        #expect(ActivatePane(engine: engine).execute(api.id, in: &set))
+        #expect(set.active.name == "solen")
+        #expect(set.active.focusedPane == api.id)
+    }
+
+    @Test func activatingMissingPaneOnlyActivatesApp() {
+        var set = makeSet()
+        let before = set
+
+        #expect(!ActivatePane(engine: engine).execute(PaneID(), in: &set))
+        #expect(set == before)
+    }
+
     @Test func installReportsSuccess() async {
         let integration = FakeHarnessIntegration()
 
