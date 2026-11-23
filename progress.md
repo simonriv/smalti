@@ -185,7 +185,7 @@
 - [x] T5 · Catálogo, ayuda y modelo del menú
 #### Bloque 2 · Adaptadores
 - [x] T6 · Feedback, plantilla del TOML y versión (0.4.5 y commit en el Info.plist)
-- [ ] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra
+- [x] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra (config del motor solo con `keybind = clear` y entrada segura automática)
 - [ ] T8 · FileSessionAdapter: sesión v2
 - [ ] T9 · DiagnosticsAdapter
 #### Bloque 3 · Ventanas en la app

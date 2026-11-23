@@ -13,13 +13,9 @@ public enum GhosttyConfigText {
     }
 
     /// libghostty's default bindings (⌘K clear_screen, ⌘D new_split, ⌘1…9 goto_tab, ⌘W close_surface…) would take
-    /// Smalti's own shortcuts before the `KeyRouter` sees them (R6), so they are cleared and only copy and paste,
-    /// which need the terminal's selection, come back.
-    static let keybinds = [
-        "keybind = clear",
-        "keybind = super+c=copy_to_clipboard",
-        "keybind = super+v=paste_from_clipboard",
-    ]
+    /// Smalti's own shortcuts before the `KeyRouter` sees them (R6), so they are cleared. Since F4.5 copy, paste and
+    /// the other basics are Smalti commands that reach the engine through `TerminalEngine.perform`.
+    static let keybinds = ["keybind = clear"]
 
     public static func render(_ appearance: TerminalAppearance) -> String {
         let settings = [
@@ -38,6 +34,8 @@ public enum GhosttyConfigText {
             // F4: makes `ghostty_surface_needs_confirm_quit` report OSC 133's "not at the prompt"; Smalti ignores
             // the confirm flag of `close_surface_cb`, so closing is unchanged.
             "confirm-close-surface = true",
+            // F4.5: libghostty asks for secure keyboard entry at password prompts (`SECURE_INPUT`).
+            "macos-auto-secure-input = true",
         ]
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
         return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"
