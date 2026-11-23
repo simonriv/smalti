@@ -71,9 +71,9 @@
 
 ### Tareas
 #### Bloque 1 · Builds `.dev` (PR propio, `feature/f2-dev-builds`)
-- [ ] T1 · Identidad del build y directorio de estado
-- [ ] T2 · Pruebas y scripts que nunca tocan el Smalti diario
-- [ ] T3 · Cierre del bloque 1 y PR de la Parte A
+- [x] T1 · Identidad del build y directorio de estado
+- [x] T2 · Pruebas y scripts que nunca tocan el Smalti diario
+- [x] T3 · Cierre del bloque 1 y PR de la Parte A (revisión: 2 importantes y 6 menores corregidos; XCUITest 38/38 con el diario intacto)
 #### Bloque 2 · Dominio de la persistencia (`feature/f2-persistence`)
 - [ ] T4 · Instantánea, árbol serializable y tipos del agente
 - [ ] T5 · `RestorePlan` y selección por defecto
