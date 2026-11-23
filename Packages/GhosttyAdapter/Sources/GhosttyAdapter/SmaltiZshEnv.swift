@@ -53,7 +53,8 @@ enum SmaltiZshEnv {
     static func install(in directory: URL) throws -> URL {
         try FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        try Data(text.utf8).write(to: directory.appending(path: ".zshenv"), options: .atomic)
+        try Data((text + "\n" + SmaltiInputScript.text + "\n").utf8).write(
+            to: directory.appending(path: ".zshenv"), options: .atomic)
         return directory
     }
 }

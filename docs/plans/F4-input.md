@@ -95,7 +95,7 @@
 ## Review Focus
 
 1. **Texto no ASCII en la línea** (`echo canción 🎵`): `CURSOR` de zsh cuenta caracteres, no bytes. Si se confunde, el fantasma y las ediciones caen en otra posición. Lo cubre T1 (`cursorCountsCharactersNotBytes`) y T11 (integración con `á` y emoji).
-2. **Pegado enorme** (bracketed paste de 20.000 caracteres) o línea de varias líneas: con mensajes `line` gigantes, zsh no debe bloquearse ni Smalti sugerir sobre una línea partida. Un `line` de más de 4096 bytes no se envía y se borra el fantasma. Lo cubren T1 (`lineOverLimitIsNotEncoded`) y T11 (`hugePasteKeepsShellResponsive`).
+2. **Pegado enorme** (bracketed paste de 20.000 caracteres) o línea de varias líneas: con mensajes `line` gigantes, zsh no debe bloquearse ni Smalti sugerir sobre una línea partida. Un mensaje de 2000 bytes o más no se envía y se borra el fantasma. Lo cubren T1 (`lineOverLimitIsNotEncoded`) y T11 (`hugePasteKeepsShellResponsive`).
 3. **`cd` justo antes de pedir sugerencia**: la respuesta de un directorio viejo no debe pintarse. La cubren el `seq` y el directorio leído en el momento del mensaje, en T13 (`suggestionUsesDirectoryAtMessageTime`).
 4. **Varios paneles a la vez y un panel que se cierra con una petición en vuelo**: ninguna respuesta va al panel equivocado y no quedan conexiones huérfanas. Lo cubre T10 (`responsesGoToTheirOwnConnection`, `closedConnectionIsForgotten`).
 5. **Menú junto al borde inferior o derecho del panel, y tras redimensionar o cambiar la fuente**: el menú sube o se desplaza sin salirse. Lo cubre T14 (`menuFlipsAboveNearBottom`, `menuShiftsLeftNearRightEdge`, `menuFollowsCellAfterResize`).
@@ -147,7 +147,7 @@
   - `public enum ShellMessage: Equatable, Sendable { case hello(PaneID), line(seq: Int, CommandLine), exec(seq: Int, command: String), done(seq: Int, exit: Int), complete(seq: Int, CommandLine), history(seq: Int, query: String), bye }`.
   - `public enum SmaltiMessage: Equatable, Sendable { case specs([String]), suggest(seq: Int, String), edit(seq: Int, CommandLine), run(seq: Int), fallback(seq: Int) }`.
   - `public enum InputProtocol`:
-    - `static let maxLineBytes = 4096`;
+    - `static let maxLineBytes = 1999` (T11: bajo el umbral de envío de 2048 bytes);
     - `static func decode(_ line: String) throws(InputProtocolError) -> ShellMessage`;
     - `static func encode(_ message: SmaltiMessage) -> String`;
     - `static func encode(_ message: ShellMessage) -> String?`: lo usan las pruebas y el benchmark; nil si pasa de `maxLineBytes`.
@@ -420,7 +420,7 @@
 - Produces (funciones y widgets zsh, prefijo `_smalti_input_`):
   - conexión y `hello` en el primer `precmd`, con `zmodload zsh/net/socket zsh/zselect` (si falla, no se instala nada);
   - `_smalti_input_send`: la única que escribe (constraints globales);
-  - hook de `zle-line-pre-redraw` vía `add-zle-hook-widget`: si cambiaron `BUFFER` o `CURSOR`, envía `line`; si el mensaje pasa de 4096 bytes, borra el fantasma y no envía; pinta el fantasma: `POSTDISPLAY` + `region_highlight+=("${#BUFFER} $((${#BUFFER}+${#POSTDISPLAY})) fg=#5f6672 memo=smalti")`, quitando antes su entrada anterior;
+  - hook de `zle-line-pre-redraw` vía `add-zle-hook-widget`: si cambiaron `BUFFER` o `CURSOR`, envía `line`; si el mensaje llega a 2000 bytes, borra el fantasma y no envía; pinta el fantasma: `POSTDISPLAY` + `region_highlight+=("${#BUFFER} $((${#BUFFER}+${#POSTDISPLAY})) fg=#5f6672 memo=smalti")`, quitando antes su entrada anterior;
   - `zle -F -w $fd _smalti_input_receive`: aplica `suggest`, `edit`, `run` y `fallback` solo con el `seq` vigente; EOF o error → desactivar;
   - `preexec` → `exec`; `precmd` → `done` con `$?` guardado primero;
   - `smalti-accept`: acepta el fantasma si `CURSOR == ${#BUFFER}`; si no, el widget anterior. Se enlaza a `forward-char` y `end-of-line` (→ y ⌃E) en `emacs` y `viins`.

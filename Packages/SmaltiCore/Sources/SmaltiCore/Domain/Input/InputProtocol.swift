@@ -32,8 +32,10 @@ public struct InputProtocolError: Error, Equatable, Sendable {
 
 /// One message per line; fields separated by tabs, with `\t`, `\n` and `\\` escaped inside them.
 public enum InputProtocol {
-    /// A `line` longer than this is not sent: zsh clears the ghost instead of suggesting on a huge paste.
-    public static let maxLineBytes = 4096
+    /// A message this long or longer is not sent: zsh clears the ghost instead of suggesting on a huge paste. It
+    /// stays under the socket's low-water mark (2048 bytes on Darwin), the room `zselect -w` guarantees, so a
+    /// write never blocks the shell.
+    public static let maxLineBytes = 1999
 
     public static func decode(_ line: String) throws(InputProtocolError) -> ShellMessage {
         var fields = Fields(line: line)
