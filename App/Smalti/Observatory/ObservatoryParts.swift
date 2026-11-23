@@ -6,8 +6,17 @@ import SmaltiCore
 final class ObservatoryCard: NSView {
     let content = NSStackView()
 
-    /// `holdsContent: false` gives the bare card (the table fills it edge to edge, with no padded stack).
-    init(theme: Theme, spacing: Double, holdsContent: Bool = true) {
+    /// How a card's height is decided.
+    enum Height {
+        /// Exactly its content's height (Ollama, the summary cards).
+        case content
+        /// Whatever its column leaves, at least its content (the detail and system cards).
+        case fill
+        /// Set from outside, with no padded stack (the table fills it edge to edge).
+        case bare
+    }
+
+    init(theme: Theme, spacing: Double, height: Height = .content) {
         super.init(frame: .zero)
         let tokens = theme.observatory
         wantsLayer = true
@@ -18,7 +27,7 @@ final class ObservatoryCard: NSView {
         content.orientation = .vertical
         content.alignment = .leading
         content.spacing = spacing
-        guard holdsContent else { return }
+        guard height != .bare else { return }
         content.translatesAutoresizingMaskIntoConstraints = false
         addSubview(content)
         NSLayoutConstraint.activate([
@@ -27,6 +36,9 @@ final class ObservatoryCard: NSView {
             content.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -tokens.cardPaddingHorizontal),
             content.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -tokens.cardPaddingVertical),
         ])
+        // Both reach the bottom padding: a content card by shrinking to its stack, a fill card by stretching its stack
+        // (a flexible view inside, like the system card's spacer, takes the extra height).
+        content.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -tokens.cardPaddingVertical).isActive = true
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -47,11 +59,13 @@ final class ObservatoryCard: NSView {
 /// Labels as the board styles them.
 @MainActor
 enum ObservatoryText {
+    /// One line that truncates, as every board label; a caller that wants wrapping (the footnote) says so.
     static func label(_ text: String, size: Double, color: RGBAColor, theme: Theme, weight: Int = 400) -> NSTextField {
         let field = NSTextField(labelWithString: text)
         field.font = theme.interfaceFont(size: size, weight: weight)
         field.textColor = color.nsColor
         field.lineBreakMode = .byTruncatingTail
+        field.maximumNumberOfLines = 1
         return field
     }
 

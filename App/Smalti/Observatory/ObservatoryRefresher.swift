@@ -2,6 +2,23 @@ import Foundation
 import OSLog
 import SmaltiCore
 
+/// One refresh, ready to paint: the snapshot and what the status bar and the headers show, all computed off the main
+/// thread (C11: a refresh never blocks it more than 16 ms).
+struct ObservatoryFrame: Sendable {
+    let snapshot: ObservatorySnapshot
+    let statusFigures: StatusFigures
+    let paneDetails: [String: PaneAgentDetail]
+
+    static func make(_ snapshot: ObservatorySnapshot) -> ObservatoryFrame {
+        let sessions = snapshot.panes.map(\.session.sessionID)
+        return ObservatoryFrame(
+            snapshot: snapshot, statusFigures: StatusFigures.make(snapshot, calendar: .autoupdatingCurrent),
+            paneDetails: Dictionary(
+                sessions.map { ($0, PaneAgentDetail.make(sessionID: $0, snapshot: snapshot)) }, uniquingKeysWith: { $1 }
+            ))
+    }
+}
+
 /// Primary adapter that keeps the observatory's snapshot fresh: every 2 s while the observatory is open, every 10 s
 /// otherwise (status bar and headers), right away after the hooks that change tokens, and samples the machine every
 /// 2 s on its own. Refreshes never overlap: one asked for during another runs once, after it.
@@ -9,7 +26,7 @@ import SmaltiCore
 final class ObservatoryRefresher {
     private let observe: ObserveAgents
     private let panes: () -> [PaneAgent]
-    private let onSnapshot: (ObservatorySnapshot) -> Void
+    private let onSnapshot: (ObservatoryFrame) -> Void
     private let onError: (String) -> Void
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "observatory")
     private var isRefreshing = false
@@ -31,7 +48,7 @@ final class ObservatoryRefresher {
 
     struct Callbacks {
         let panes: () -> [PaneAgent]
-        let onSnapshot: (ObservatorySnapshot) -> Void
+        let onSnapshot: (ObservatoryFrame) -> Void
         /// A refresh could not read the transcripts; called once per distinct message.
         let onError: (String) -> Void
     }
@@ -82,7 +99,8 @@ final class ObservatoryRefresher {
         Task { [weak self] in
             guard let self else { return }
             let snapshot = await self.observe.snapshot(panes: self.panes(), now: .now)
-            self.deliver(snapshot)
+            let frame = await Task.detached(priority: .utility) { ObservatoryFrame.make(snapshot) }.value
+            self.deliver(frame)
             self.isRefreshing = false
             if self.isQueued {
                 self.isQueued = false
@@ -91,13 +109,14 @@ final class ObservatoryRefresher {
         }
     }
 
-    private func deliver(_ snapshot: ObservatorySnapshot) {
+    private func deliver(_ frame: ObservatoryFrame) {
+        let snapshot = frame.snapshot
         for status in observe.unknownStatuses.subtracting(loggedStatuses) {
             logger.notice("unknown Claude session status \(status, privacy: .public): shown as working")
             loggedStatuses.insert(status)
         }
         if let error = snapshot.lastError, error != lastError { onError(error) }
         lastError = snapshot.lastError
-        onSnapshot(snapshot)
+        onSnapshot(frame)
     }
 }

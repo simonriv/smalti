@@ -18,7 +18,7 @@ final class DetailView: NSView {
 
     init(theme: Theme) {
         self.theme = theme
-        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.detailStack)
+        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.detailStack, height: .fill)
         let tokens = theme.observatory
         activityTitle = ObservatoryText.caption("Actividad", theme: theme)
         compaction = ObservatoryText.label("", size: tokens.noteSize, color: theme.text.secondary, theme: theme)

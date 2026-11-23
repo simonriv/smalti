@@ -44,7 +44,7 @@ final class StatusBarView: NSView {
         label.textColor = theme.statusBar.text.nsColor
         label.stringValue = state.message?.text ?? state.set.active.statusLine
         setAccessibilityValue(label.stringValue)
-        showFigures(state.observatory.map { StatusFigures.make($0, calendar: .autoupdatingCurrent) })
+        showFigures(state.observatory?.statusFigures)
         needsDisplay = true
     }
 

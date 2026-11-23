@@ -223,9 +223,9 @@ final class AppComposition {
             observe: ObserveAgents(sources),
             callbacks: .init(
                 panes: { [weak controller] in controller.map { PaneAgent.all(in: $0.set) } ?? [] },
-                onSnapshot: { [weak self, weak controller] snapshot in
-                    controller?.show(snapshot)
-                    self?.observatoryScreen?.show(snapshot)
+                onSnapshot: { [weak self, weak controller] frame in
+                    controller?.show(frame)
+                    self?.observatoryScreen?.show(frame.snapshot)
                 },
                 onError: { [weak controller] in controller?.report(.transcriptsUnreadable($0)) }))
         refresher.start()

@@ -59,6 +59,20 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "f3-observatory.png")
     }
 
+    /// F3 C12: the status bar's figures and a working Claude header with its model and "ctx N%".
+    func testCaptureStatusAndHeader() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        try app.installObservatoryFixture(from: Bundle(for: Self.self))
+        launch(app)
+        let session = "401a63e1-c076-45fe-9f09-432da1c8cfa6"
+        app.run(#"printf '{"session_id":"\#(session)","source":"startup"}' | "$SMALTI_CLI" event SessionStart; clear"#)
+        app.run(#"printf '{"session_id":"\#(session)","prompt":"x"}' | "$SMALTI_CLI" event UserPromptSubmit; clear"#)
+        XCTAssertTrue(app.element("smalti.paneContext").waitForExistence(timeout: 15))
+        Thread.sleep(forTimeInterval: 2)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f3-status-header.png")
+    }
+
     /// F3 Task 0: the palette after arrowing to its last row (the selection used to sit below the clipped edge).
     func testCapturePaletteLastRowSelected() throws {
         let app = XCUIApplication.isolatedSmalti()

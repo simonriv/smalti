@@ -74,7 +74,7 @@ final class ObservatoryView: NSView {
 
     private func layoutBody() -> NSView {
         let tokens = theme.observatory
-        let tableCard = ObservatoryCard(theme: theme, spacing: 0, holdsContent: false)
+        let tableCard = ObservatoryCard(theme: theme, spacing: 0, height: .bare)
         table.translatesAutoresizingMaskIntoConstraints = false
         tableCard.addSubview(table)
         NSLayoutConstraint.activate([
@@ -111,7 +111,9 @@ final class ObservatoryView: NSView {
         stack.alignment = .leading
         stack.spacing = theme.observatory.gap
         views.forEach { $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
+        // `fill` (the last panel) takes the rest of the column; the other panels size to their content.
         fill.setContentHuggingPriority(.init(1), for: .vertical)
+        fill.bottomAnchor.constraint(equalTo: stack.bottomAnchor).isActive = true
         return stack
     }
 

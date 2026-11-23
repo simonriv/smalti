@@ -95,7 +95,7 @@ final class SystemView: NSView {
 
     init(theme: Theme) {
         self.theme = theme
-        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.system)
+        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.system, height: .fill)
         let tokens = theme.observatory
         title = ObservatoryText.caption("Sistema", theme: theme)
         cpuValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
@@ -110,12 +110,14 @@ final class SystemView: NSView {
         footnote.maximumNumberOfLines = 0
         footnote.preferredMaxLayoutWidth = tokens.sideColumnWidth - tokens.cardPaddingHorizontal * 2
         let memory = group([line("Memoria unificada", value: memoryValue), memoryBar, split])
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.init(1), for: .vertical)
         content.setViews(
             [
                 title, group([line("CPU", value: cpuValue), cpuCurve]),
-                group([line("GPU", value: gpuValue), gpuCurve]), memory, footnote,
-            ],
-            in: .leading)
+                group([line("GPU", value: gpuValue), gpuCurve]),
+                memory, spacer, footnote,
+            ], in: .leading)
         for curve in [cpuCurve, gpuCurve] {
             curve.translatesAutoresizingMaskIntoConstraints = false
             curve.heightAnchor.constraint(equalToConstant: tokens.sparklineHeight).isActive = true

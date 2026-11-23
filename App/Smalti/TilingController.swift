@@ -13,8 +13,8 @@ struct TilingState {
     let message: StatusMessage?
     /// Directories show relative to it (`~/dev/xolken`).
     let home: WorkingDirectory
-    /// The observatory's latest snapshot (F3): status-bar figures and the agents' model and context.
-    var observatory: ObservatorySnapshot?
+    /// The observatory's latest refresh (F3): status-bar figures and the agents' model and context.
+    var observatory: ObservatoryFrame?
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -45,7 +45,7 @@ final class TilingController {
     var onChange: ((TilingState) -> Void)?
     /// A new observatory snapshot: only the status bar and the headers repaint, nothing is saved.
     var onObservatoryChange: ((TilingState) -> Void)?
-    private(set) var observatory: ObservatorySnapshot?
+    private(set) var observatory: ObservatoryFrame?
     /// Supplies the pane area of the grid; the views own geometry.
     var area: () -> Rect = { .zero }
     /// Commands that open UI instead of changing tiling (the palette, the rename prompt) go to the views.
@@ -439,8 +439,8 @@ final class TilingController {
             set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory)
     }
 
-    func show(_ snapshot: ObservatorySnapshot) {
-        observatory = snapshot
+    func show(_ frame: ObservatoryFrame) {
+        observatory = frame
         onObservatoryChange?(state)
     }
 

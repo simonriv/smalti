@@ -22,6 +22,8 @@ final class ObservatoryController {
     private var report: ObservatoryReport?
     private(set) var period = ObservatoryPeriod.today
     private var selection: String?
+    /// Bumped on every render request; a report computed for an older one is dropped.
+    private var renderGeneration = 0
 
     var isOpen: Bool { view != nil }
 
@@ -94,17 +96,26 @@ final class ObservatoryController {
         }
     }
 
+    /// The report is built off the main thread (it walks every session's buckets); only painting happens here.
     private func render() {
         guard let view else { return }
         guard let snapshot else {
             view.showReading(period: period)
             return
         }
-        let report = ObservatoryReport.make(
-            snapshot, period: period, selection: selection, calendar: .autoupdatingCurrent)
-        self.report = report
-        selection = report.detail?.sessionID
-        view.show(report, snapshot: snapshot, period: period)
+        renderGeneration += 1
+        let generation = renderGeneration
+        let period = period
+        let selection = selection
+        Task { [weak self] in
+            let report = await Task.detached(priority: .userInitiated) {
+                ObservatoryReport.make(snapshot, period: period, selection: selection, calendar: .autoupdatingCurrent)
+            }.value
+            guard let self, generation == self.renderGeneration, let view = self.view else { return }
+            self.report = report
+            self.selection = report.detail?.sessionID
+            view.show(report, snapshot: snapshot, period: period)
+        }
     }
 
     private func select(_ id: String) {
