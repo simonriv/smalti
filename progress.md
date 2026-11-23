@@ -165,4 +165,4 @@
 - [x] T15 · Paleta ⌃R y comando de ⌘K
 - [x] T16 · UI tests, aislamiento y capturas
 #### Bloque 5 · Cierre
-- [ ] T17 · Mediciones, checklist, revisión final, mutación y PR
+- [x] T17 · Mediciones, checklist, revisión final, mutación y PR (checklist `docs/specs/F4-checklist.md`; mutación 98,6 %)
