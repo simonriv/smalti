@@ -14,6 +14,8 @@ final class GhosttySurfaceView: NSView {
 
     /// Visible surfaces render and poll their foreground process; hidden ones are occluded (R7).
     private(set) var isVisible = true
+    /// What libghostty was last told about focus (`ghostty_surface_set_focus`).
+    private(set) var hasEngineFocus = false
     private var foregroundPoll: Timer?
     private var processNames = ProcessNameTracker()
     /// Last code from SHOW_CHILD_EXITED; `.exited` carries it even when it comes from `close_surface_cb`.
@@ -101,15 +103,18 @@ final class GhosttySurfaceView: NSView {
         guard let surface, !isVisible else { return }
         ghostty_surface_set_occlusion(surface, true)
         isVisible = true
+        if window?.firstResponder === self { setEngineFocus(true) }
         startForegroundPoll()
         refreshForegroundProcess()
     }
 
-    /// Main thread. The renderer pauses; the child process keeps running.
+    /// Main thread. The renderer pauses; the child process keeps running. The view may stay the window's first
+    /// responder while hidden, so libghostty is told it lost focus here as well.
     func hide() {
         guard let surface, isVisible else { return }
         ghostty_surface_set_occlusion(surface, false)
         isVisible = false
+        setEngineFocus(false)
         stopForegroundPoll()
     }
 
@@ -209,14 +214,21 @@ final class GhosttySurfaceView: NSView {
 
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
-        if result, let surface { ghostty_surface_set_focus(surface, true) }
+        if result { setEngineFocus(true) }
         return result
     }
 
     override func resignFirstResponder() -> Bool {
         let result = super.resignFirstResponder()
-        if result, let surface { ghostty_surface_set_focus(surface, false) }
+        if result { setEngineFocus(false) }
         return result
+    }
+
+    /// Main thread.
+    private func setEngineFocus(_ isFocused: Bool) {
+        guard let surface else { return }
+        ghostty_surface_set_focus(surface, isFocused)
+        hasEngineFocus = isFocused
     }
 
     override func viewDidMoveToWindow() {

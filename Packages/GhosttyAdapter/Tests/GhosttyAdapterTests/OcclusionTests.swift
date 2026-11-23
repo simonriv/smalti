@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SmaltiCore
 import Testing
@@ -61,5 +62,52 @@ struct OcclusionTests {
         engine.close(pane)
 
         #expect(!view.isPollingForegroundProcess)
+    }
+
+    @Test func becomingFirstResponderGivesTheSurfaceEngineFocus() throws {
+        let pane = try engine.open(spec)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        let window = Self.window(holding: view)
+
+        window.makeFirstResponder(view)
+
+        #expect(view.hasEngineFocus)
+    }
+
+    /// A hidden pane may still be the window's first responder; libghostty must not think it is focused.
+    @Test func hideClearsEngineFocus() throws {
+        let pane = try engine.open(spec)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        let window = Self.window(holding: view)
+        window.makeFirstResponder(view)
+
+        engine.hide(pane)
+
+        #expect(!view.hasEngineFocus)
+    }
+
+    /// Shown again while still the first responder: AppKit sends no new `becomeFirstResponder`, so `show` refocuses.
+    @Test func showRestoresEngineFocusOfTheFirstResponder() throws {
+        let pane = try engine.open(spec)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        let window = Self.window(holding: view)
+        window.makeFirstResponder(view)
+        engine.hide(pane)
+
+        engine.show(pane)
+
+        #expect(view.hasEngineFocus)
+    }
+
+    private static func window(holding view: NSView) -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered,
+            defer: true)
+        window.isReleasedWhenClosed = false
+        window.contentView?.addSubview(view)
+        return window
     }
 }
