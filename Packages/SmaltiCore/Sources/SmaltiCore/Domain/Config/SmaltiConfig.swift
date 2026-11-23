@@ -54,6 +54,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var observatory = ObservatorySettings.standard
     /// `[input]` (F4); like `observatory`, outside the initializer.
     public var input = InputSettings.standard
+    /// `[window]` (F4.5); like `observatory`, outside the initializer.
+    public var window = WindowSettings.standard
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

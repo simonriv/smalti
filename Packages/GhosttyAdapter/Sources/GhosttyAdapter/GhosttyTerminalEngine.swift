@@ -141,6 +141,28 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     public func cursorCell(_ pane: PaneID) -> Rect? {
         views[pane]?.cursorCell
     }
+
+    // MARK: - F4.5
+
+    public func perform(_ action: TerminalAction, in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.action(for: action))
+    }
+
+    public func search(_ text: String, in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.search(text))
+    }
+
+    public func navigateSearch(_ direction: SearchDirection, in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.navigate(direction))
+    }
+
+    public func endSearch(in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.endSearch)
+    }
+
+    public func visibleText(of pane: PaneID) -> String {
+        views[pane]?.visibleText ?? ""
+    }
 }
 
 extension GhosttyTerminalEngine: ScrollbackSource {

@@ -446,9 +446,9 @@ final class AppComposition {
     /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
     /// reaches the terminal while the observatory is closed.
     private var keyContext: KeyContext {
-        if palette?.isOpen == true { return KeyContext(allowing: [.paletteOpen]) }
+        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen]) }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
-        if historyPalette?.isOpen == true { return KeyContext(allowing: []) }
+        if historyPalette?.isOpen == true { return .overlay(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
         return KeyContext(passingThrough: [.observatoryPeriod])
     }

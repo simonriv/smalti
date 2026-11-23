@@ -86,3 +86,31 @@ struct PaneTests {
         #expect(!pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "nvim"))).isAtShell)
     }
 }
+
+@Suite("Pane · busy")
+struct PaneBusyTests {
+    private let pane: Pane
+
+    init() throws {
+        pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp"))
+    }
+
+    @Test func freshPaneIsNotBusy() {
+        #expect(!pane.isBusy)
+    }
+
+    @Test func shellInForegroundIsNotBusy() {
+        #expect(!pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh"))).isBusy)
+    }
+
+    @Test func programInForegroundIsBusy() {
+        #expect(pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "claude"))).isBusy)
+    }
+
+    @Test func exitedPaneIsNotBusy() {
+        let finished = pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "sleep"))).applying(
+            .exited(code: 0))
+
+        #expect(!finished.isBusy)
+    }
+}

@@ -243,6 +243,9 @@ final class TilingController {
             .agentJump: { [unowned self] in jumpToWaitingAgent() },
             .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
             .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
+            .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
+            .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
+            .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
         ]
         for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
@@ -255,6 +258,12 @@ final class TilingController {
         for direction in Direction.allCases { actions.merge(directionActions(direction)) { $1 } }
         return actions
     }()
+
+    /// F4.5: ⌘C, ⌘V and ⌘A are Smalti commands now; the engine runs them in the focused pane.
+    private func performInFocusedPane(_ action: TerminalAction) {
+        guard let pane = set.active.focusedPane else { return }
+        deps.engine.perform(action, in: pane)
+    }
 
     private func directionActions(_ direction: Direction) -> [CommandID: () -> Void] {
         [

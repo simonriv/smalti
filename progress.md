@@ -181,7 +181,7 @@
 - [x] T1 · Verificar la API de libghostty v1.4.0: `search:<texto>`, `navigate_search:next|previous` y `end_search` funcionan; `SEARCH_TOTAL` cuenta también la línea del comando y llega con el tick de la app; `-1` es "sin búsqueda". `select_all`, `clear_screen`, `scroll_*`, `jump_to_prompt:±1` y `*_font_size` aceptados. `read -s` emite `SECURE_INPUT` ON (`macos-auto-secure-input` por defecto). `MOUSE_OVER_LINK` con ⌘ llega en un frame posterior al movimiento. El texto visible ya existía (`accessibilityValue`)
 - [x] T2 · Ids nuevos, varios atajos por comando y teclas con nombre (⇧ forma parte del carácter en símbolos: ayuda en ⌘?, ⌘+ en los dos layouts, sin aviso de ⇧⌘=)
 - [x] T3 · Ventanas y sesión v2
-- [ ] T4 · Acciones del terminal, tamaño de letra y confirmar cierre
+- [x] T4 · Acciones del terminal, tamaño de letra y confirmar cierre (ocupado = programa en primer plano que no es el shell, sin depender de OSC 133)
 - [ ] T5 · Catálogo, ayuda y modelo del menú
 #### Bloque 2 · Adaptadores
 - [ ] T6 · Feedback, plantilla del TOML y versión

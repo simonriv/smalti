@@ -47,4 +47,58 @@ public final class FakeTerminalEngine: TerminalEngine {
     public func emit(_ event: TerminalEvent, for pane: PaneID) {
         streams[pane]?.continuation.yield(event)
     }
+
+    // MARK: - F4.5
+
+    public struct PerformedAction: Equatable, Sendable {
+        public let action: TerminalAction
+        public let pane: PaneID
+
+        public init(action: TerminalAction, pane: PaneID) {
+            self.action = action
+            self.pane = pane
+        }
+    }
+
+    public struct Search: Equatable, Sendable {
+        public let text: String
+        public let pane: PaneID
+
+        public init(text: String, pane: PaneID) {
+            self.text = text
+            self.pane = pane
+        }
+    }
+
+    public private(set) var performed: [PerformedAction] = []
+    public private(set) var searches: [Search] = []
+    public private(set) var searchNavigations: [SearchDirection] = []
+    public private(set) var endedSearches: [PaneID] = []
+    public var visibleTexts: [PaneID: String] = [:]
+
+    private func isOpen(_ pane: PaneID) -> Bool { streams[pane] != nil }
+
+    public func perform(_ action: TerminalAction, in pane: PaneID) {
+        guard isOpen(pane) else { return }
+        performed.append(PerformedAction(action: action, pane: pane))
+    }
+
+    public func search(_ text: String, in pane: PaneID) {
+        guard isOpen(pane) else { return }
+        searches.append(Search(text: text, pane: pane))
+    }
+
+    public func navigateSearch(_ direction: SearchDirection, in pane: PaneID) {
+        guard isOpen(pane) else { return }
+        searchNavigations.append(direction)
+    }
+
+    public func endSearch(in pane: PaneID) {
+        guard isOpen(pane) else { return }
+        endedSearches.append(pane)
+    }
+
+    public func visibleText(of pane: PaneID) -> String {
+        isOpen(pane) ? visibleTexts[pane] ?? "" : ""
+    }
 }
