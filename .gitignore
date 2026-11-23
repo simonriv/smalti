@@ -11,3 +11,4 @@ xcuserdata/
 Packages/GhosttyAdapter/Frameworks/
 # Superpowers plan-execution scratch
 .superpowers/
+.build-embed/

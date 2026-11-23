@@ -160,7 +160,8 @@ struct CommandCatalogTests {
     }
 
     @Test func goToPaneShowsTheProcessAsSubtitle() throws {
-        let pane = Pane(id: PaneID(), workingDirectory: root).applying(.foregroundProcessChanged("claude"))
+        let pane = Pane(id: PaneID(), workingDirectory: root).applying(
+            .foregroundProcessChanged(ForegroundProcess(name: "claude")))
         let set = WorkspaceSet(first: makeWorkspace().adding(pane))
 
         let goTo = try #require(commands(for: set).first { $0.id == .paneFocus(1) })
@@ -195,6 +196,27 @@ struct CommandCatalogTests {
     private static func order(_ group: CommandGroup) -> Int {
         [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
     }
+
+    @Test func jumpCommandIsInPalette() {
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+
+        let jump = commands.first { $0.id == .agentJump }
+        #expect(jump?.title == "Saltar al agente que espera")
+        #expect(jump?.group == .workspaces)
+        #expect(jump?.shortcut?.display == "⌘J")
+    }
+
+    @Test func claudeIntegrationCommandsAreOffered() {
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+
+        let install = commands.first { $0.id == .claudeIntegrationInstall }
+        let uninstall = commands.first { $0.id == .claudeIntegrationUninstall }
+        #expect(install?.title == "Instalar integración con Claude Code")
+        #expect(uninstall?.title == "Desinstalar integración con Claude Code")
+        #expect(install?.group == .configuration)
+    }
 }
 
 /// A layout that only exists to show the catalog reads each strategy's own subtitle.
@@ -206,4 +228,5 @@ private struct SubtitledLayout: LayoutStrategy {
     let icon = DwindleLayout().icon
 
     func tree(for panes: [PaneID]) -> LayoutTree? { DwindleLayout().tree(for: panes) }
+
 }

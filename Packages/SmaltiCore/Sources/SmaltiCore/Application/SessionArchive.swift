@@ -1,0 +1,57 @@
+import Foundation
+
+public enum SessionArchiveError: Error, Equatable, Sendable {
+    case writeFailed(file: String, reason: String)
+    case notFound(name: String)
+
+    public var summary: String {
+        switch self {
+        case .writeFailed(let file, let reason): "\(file): \(reason)"
+        case .notFound(let name): "\(name): not found"
+        }
+    }
+}
+
+/// What the last run left behind.
+public enum LastSession: Equatable, Sendable {
+    case none
+    case saved(SessionSnapshot)
+    /// There was one, but it could not be read; the archive already set it aside.
+    case unreadable(reason: String)
+}
+
+/// Port: keeps the snapshot of the window between runs.
+@MainActor
+public protocol SessionArchive: AnyObject {
+    func save(_ snapshot: SessionSnapshot) throws(SessionArchiveError)
+    func lastSession() -> LastSession
+}
+
+/// Port: keeps each pane's scrollback between runs.
+@MainActor
+public protocol PaneTranscripts: AnyObject {
+    func keep(_ scrollback: Scrollback, for pane: PaneID) throws(SessionArchiveError)
+    func scrollback(of pane: PaneID) -> Scrollback?
+    /// Drops what is kept for panes that no longer exist.
+    func forget(allExcept panes: Set<PaneID>)
+}
+
+/// Port: layouts saved by name ("solen-dev").
+@MainActor
+public protocol NamedLayouts: AnyObject {
+    func save(_ layout: WorkspaceSnapshot, as name: LayoutName) throws(SessionArchiveError)
+    func layout(named name: LayoutName) throws(SessionArchiveError) -> WorkspaceSnapshot
+    func names() -> [LayoutName]
+}
+
+/// Whether reopening asks first ("Retomar donde quedaste") or restores everything ("Siempre restaurar").
+public enum RestorePreference: String, Codable, Sendable {
+    case ask, always
+}
+
+/// Port: the "Siempre restaurar" choice (in the app's state until F5 moves it to the TOML).
+@MainActor
+public protocol RestorePreferenceStore: AnyObject {
+    func current() -> RestorePreference
+    func set(_ preference: RestorePreference) throws(SessionArchiveError)
+}

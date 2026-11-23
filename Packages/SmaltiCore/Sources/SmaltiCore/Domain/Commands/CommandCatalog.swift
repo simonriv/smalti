@@ -2,12 +2,33 @@
 public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
-    public static func commands(for set: WorkspaceSet, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
+    public static func commands(
+        for set: WorkspaceSet, keymap: Keymap, layouts: LayoutCatalog, savedLayouts: [NamedLayoutSummary] = []
+    ) -> [Command] {
         let context = Context(workspaces: set, keymap: keymap)
         return tilingCommands(context, layouts)
             + paneCommands(context)
             + workspaceCommands(context)
+            + savedLayouts.map(restoreCommand)
             + configurationCommands(context)
+    }
+
+    /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
+    public static func saveCommand(named query: String) -> Command? {
+        guard let name = try? LayoutName(query) else { return nil }
+        return Command(
+            id: .layoutSave(name), title: "Guardar layout actual como “\(name.rawValue)”", subtitle: nil,
+            group: .workspaces, shortcut: nil, isCurrent: false)
+    }
+
+    /// "Restaurar layout “rizaria-full” — 4 paneles, retoma 2 sesiones de Claude" (Paleta.dc.html).
+    private static func restoreCommand(_ layout: NamedLayoutSummary) -> Command {
+        let panes = "\(layout.paneCount) \(layout.paneCount == 1 ? "panel" : "paneles")"
+        let sessions = layout.agentCount == 1 ? "sesión" : "sesiones"
+        let agents = layout.agentCount > 0 ? ", retoma \(layout.agentCount) \(sessions) de Claude" : ""
+        return Command(
+            id: .layoutRestore(layout.name), title: "Restaurar layout “\(layout.name.rawValue)”",
+            subtitle: "— \(panes)\(agents)", group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
     private struct Context {
@@ -79,6 +100,7 @@ public enum CommandCatalog {
 
     private static func workspaceCommands(_ context: Context) -> [Command] {
         var commands = [
+            context.command(.agentJump, "Saltar al agente que espera", group: .workspaces),
             context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
             context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
         ]
@@ -95,7 +117,10 @@ public enum CommandCatalog {
     private static func configurationCommands(_ context: Context) -> [Command] {
         [
             context.command(
-                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
+                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration),
+            context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration),
+            context.command(
+                .claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration),
         ]
     }
 }
@@ -109,5 +134,22 @@ extension Direction {
         case .up: "arriba"
         case .down: "abajo"
         }
+    }
+}
+
+/// A saved layout as the palette lists it.
+public struct NamedLayoutSummary: Equatable, Sendable {
+    public let name: LayoutName
+    public let paneCount: Int
+    public let agentCount: Int
+
+    public init(name: LayoutName, paneCount: Int, agentCount: Int) {
+        self.name = name
+        self.paneCount = paneCount
+        self.agentCount = agentCount
+    }
+
+    public init(name: LayoutName, layout: WorkspaceSnapshot) {
+        self.init(name: name, paneCount: layout.panes.count, agentCount: layout.panes.count { $0.agent != nil })
     }
 }

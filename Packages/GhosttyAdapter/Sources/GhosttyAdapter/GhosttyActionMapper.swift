@@ -28,4 +28,12 @@ public enum GhosttyActionMapper {
     private static func string(_ pointer: UnsafePointer<CChar>?) -> String? {
         pointer.map { String(cString: $0) }
     }
+
+    /// The URL or path of an OPEN_URL action.
+    static func url(of action: ghostty_action_s) -> String? {
+        let open = action.action.open_url
+        guard let pointer = open.url else { return nil }
+        // Safe: libghostty guarantees `len` bytes at `url` for the duration of the callback.
+        return String(decoding: UnsafeRawBufferPointer(start: pointer, count: Int(open.len)), as: UTF8.self)
+    }
 }

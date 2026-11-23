@@ -70,13 +70,13 @@ class SmaltiUITestCase: XCTestCase {
         try? FileManager.default.removeItem(at: outputFile)
     }
 
-    /// Launches `app` (built by `isolatedSmalti`) and waits for its first shell.
-    func launch(_ app: XCUIApplication) {
+    /// Launches `app` (built by `isolatedSmalti`) and waits for its shells (one, unless a session is restored).
+    func launch(_ app: XCUIApplication, shells: Int = 1) {
         self.app = app
         app.launchEnvironment["SMALTI_UITEST_OUT"] = outputFile.path(percentEncoded: false)
         app.launch()
         XCTAssertTrue(app.element("smalti.terminal").waitForExistence(timeout: 10))
-        waitForShells(count: 1)
+        waitForShells(count: shells)
     }
 
     func openPalette() {

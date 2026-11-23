@@ -75,30 +75,30 @@
 - [x] T2 · Pruebas y scripts que nunca tocan el Smalti diario
 - [x] T3 · Cierre del bloque 1 y PR de la Parte A (revisión: 2 importantes y 6 menores corregidos; XCUITest 38/38 con el diario intacto)
 #### Bloque 2 · Dominio de la persistencia (`feature/f2-persistence`)
-- [ ] T4 · Instantánea, árbol serializable y tipos del agente
-- [ ] T5 · `RestorePlan` y selección por defecto
-- [ ] T6 · Frases de fecha y nombres de layout
-- [ ] T7 · Puertos y casos de uso de persistencia
+- [x] T4 · Instantánea, árbol serializable y tipos del agente
+- [x] T5 · `RestorePlan` y selección por defecto
+- [x] T6 · Frases de fecha y nombres de layout
+- [x] T7 · Puertos y casos de uso de persistencia (revisión del bloque 2: 2 importantes y 6 menores corregidos)
 #### Bloque 3 · Adaptadores de persistencia
-- [ ] T8 · `FileSessionAdapter`
-- [ ] T9 · Exportar scrollback y leer la línea de comandos
-- [ ] T10 · Reinyectar scrollback y comando inicial
-- [ ] T11 · Historial por panel
-- [ ] T12 · `ClaudeHarnessAdapter` y cableado del guardado
+- [x] T8 · `FileSessionAdapter`
+- [x] T9 · Exportar scrollback y leer la línea de comandos
+- [x] T10 · Reinyectar scrollback y comando inicial
+- [x] T11 · Historial por panel
+- [x] T12 · `ClaudeHarnessAdapter` y cableado del guardado (revisión del bloque 3: 2 importantes y 7 menores corregidos)
 #### Bloque 4 · Restaurar en la app
-- [ ] T13 · Arranque con instantánea
-- [ ] T14 · Pantalla "Retomar donde quedaste"
-- [ ] T15 · Layouts con nombre y UI tests de restauración
+- [x] T13 · Arranque con instantánea
+- [x] T14 · Pantalla "Retomar donde quedaste"
+- [x] T15 · Layouts con nombre y UI tests de restauración (revisión del bloque 4: 3 importantes y 9 menores corregidos)
 #### Bloque 5 · Estado del agente, IPC y plugin
-- [ ] T16 · Transiciones del agente y cola de atención
-- [ ] T17 · Casos de uso y puertos del agente
-- [ ] T18 · `IPCAdapter` y CLI `smalti`
-- [ ] T19 · Plugin de Claude Code e instalador
+- [x] T16 · Transiciones del agente y cola de atención
+- [x] T17 · Casos de uso y puertos del agente
+- [x] T18 · `IPCAdapter` y CLI `smalti`
+- [x] T19 · Plugin de Claude Code e instalador (revisión del bloque 5: 2 importantes y 7 menores corregidos; hook `PreToolUse` añadido)
 #### Bloque 6 · Estado y atención en la app
-- [ ] T20 · Entorno de paneles y cableado del IPC
-- [ ] T21 · Estado en cabecera, borde y franja
-- [ ] T22 · Notificaciones y salto ⌘J
-- [ ] T23 · Arrastrar imágenes
-- [ ] T24 · UI tests del estado y la atención
+- [x] T20 · Entorno de paneles y cableado del IPC
+- [x] T21 · Estado en cabecera, borde y franja
+- [x] T22 · Notificaciones y salto ⌘J
+- [x] T23 · Arrastrar imágenes
+- [x] T24 · UI tests del estado y la atención (ejecutados al cierre: 53/53) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
 #### Bloque 7 · Cierre
-- [ ] T25 · Mediciones, checklist, revisión final, mutación y PR
+- [x] T25 · Mediciones (C6: 0,27–0,52 s), checklist (`docs/specs/F2-checklist.md`), revisión final (1 crítico, 3 importantes y 9 menores corregidos), mutación 94,7 % con los 19 sobrevivientes muertos, XCUITest 53/53 con el diario intacto

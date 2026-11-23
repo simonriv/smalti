@@ -30,6 +30,55 @@ struct StatusMessage: Equatable {
         return StatusMessage(text: short.summary, isTransient: false)
     }
 
+    /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.
+    static func sessionSaveFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
+    }
+
+    /// The result line of installing or uninstalling the Claude Code integration.
+    static func integration(_ line: String) -> StatusMessage {
+        StatusMessage(text: line, isTransient: true)
+    }
+
+    static let nobodyWaiting = StatusMessage(text: "Ningún agente te espera", isTransient: true)
+
+    static let notificationsDisabled = StatusMessage(
+        text: "Notificaciones desactivadas en macOS; el estado sigue en los paneles", isTransient: true)
+
+    /// Another instance of this build owns the socket.
+    static let agentSocketInUse = StatusMessage(
+        text: "Otra ventana de Smalti recibe ya los avisos de Claude; esta no mostrará su estado", isTransient: true)
+
+    static func agentSocketFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo abrir el canal de avisos de Claude: \(reason)", isTransient: true)
+    }
+
+    static func layoutSaveFailed(_ name: String, reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo guardar el layout “\(name)”: \(reason)", isTransient: true)
+    }
+
+    static func layoutRestoreFailed(_ name: String, reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo restaurar el layout “\(name)”: \(reason)", isTransient: true)
+    }
+
+    static func layoutSaved(_ name: String) -> StatusMessage {
+        StatusMessage(text: "Layout “\(name)” guardado", isTransient: true)
+    }
+
+    /// A saved layout's agent session already runs in another pane, so that pane opened a plain shell.
+    static func sessionAlreadyOpen(_ session: String) -> StatusMessage {
+        StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)
+    }
+
+    static func unreadableSession(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
+    }
+
+    static func restoreFailures(first: String, count: Int) -> StatusMessage {
+        let more = count > 1 ? " (y \(count - 1) más)" : ""
+        return StatusMessage(text: "No se restauró todo: \(first)\(more)", isTransient: true)
+    }
+
     static func engineFailure(_ error: TerminalEngineError) -> StatusMessage {
         StatusMessage(text: EngineErrorText.describe(error), isTransient: true)
     }
