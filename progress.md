@@ -86,9 +86,9 @@
 - [x] T11 · Historial por panel
 - [x] T12 · `ClaudeHarnessAdapter` y cableado del guardado (revisión del bloque 3: 2 importantes y 7 menores corregidos)
 #### Bloque 4 · Restaurar en la app
-- [ ] T13 · Arranque con instantánea
-- [ ] T14 · Pantalla "Retomar donde quedaste"
-- [ ] T15 · Layouts con nombre y UI tests de restauración
+- [x] T13 · Arranque con instantánea
+- [x] T14 · Pantalla "Retomar donde quedaste"
+- [x] T15 · Layouts con nombre y UI tests de restauración (revisión del bloque 4: 3 importantes y 9 menores corregidos)
 #### Bloque 5 · Estado del agente, IPC y plugin
 - [ ] T16 · Transiciones del agente y cola de atención
 - [ ] T17 · Casos de uso y puertos del agente
