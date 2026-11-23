@@ -11,7 +11,7 @@ struct ObservatoryReportTests {
     private func report(_ snapshot: ObservatorySnapshot, _ period: ObservatoryPeriod = .today, selection: String? = nil)
         -> ObservatoryReport
     {
-        ObservatoryReport.make(snapshot, period: period, selection: selection, calendar: calendar)
+        ObservatoryReport.make(snapshot, for: .init(period: period, selection: selection, calendar: calendar))
     }
 
     @Test func sessionCrossingMidnightCountsOnlyTodayBuckets() {
@@ -207,6 +207,12 @@ struct ObservatoryReportTests {
         #expect(row?.state == .stopped)
     }
 
+    @Test func recentlyStoppedRowUsesTheCompactForm() {
+        let session = F.session("s", [F.turn("1", at: F.date("2026-11-18 10:20"))])
+
+        #expect(report(F.snapshot(sessions: [session], now: now)).rows.first?.lifetime == "hace 22m")
+    }
+
     @Test func summaryCountsLiveStates() {
         let start = F.date("2026-11-18 10:00")
         let snapshot = F.snapshot(
@@ -240,8 +246,8 @@ struct ObservatoryReportTests {
         let snapshot = F.snapshot(sessions: [session], now: F.date("2026-11-18 10:00"))
         let tokyo = F.calendar("Asia/Tokyo")
 
-        let inBogota = ObservatoryReport.make(snapshot, period: .today, selection: nil, calendar: calendar)
-        let inTokyo = ObservatoryReport.make(snapshot, period: .today, selection: nil, calendar: tokyo)
+        let inBogota = ObservatoryReport.make(snapshot, for: .init(period: .today, selection: nil, calendar: calendar))
+        let inTokyo = ObservatoryReport.make(snapshot, for: .init(period: .today, selection: nil, calendar: tokyo))
 
         #expect(inBogota.summary.output == 9)
         #expect(inTokyo.summary.output == 0)
@@ -269,5 +275,33 @@ struct ObservatoryReportTests {
 
         #expect(result.rows.first?.input == "1.5k")
         #expect(result.summary.input == 1_500)
+    }
+
+    @Test func peakIsTheHighestAcrossSessions() {
+        let low = F.session("low", [F.turn("1", at: F.date("2026-11-18 09:00"), output: 300)])
+        let high = F.session("high", [F.turn("2", at: F.date("2026-11-18 09:30"), output: 900)])
+
+        #expect(report(F.snapshot(sessions: [low, high], now: now)).summary.peak?.output == 900)
+        #expect(report(F.snapshot(sessions: [high, low], now: now)).summary.peak?.output == 900)
+    }
+
+    @Test func detailPeakIsTheBusiestMinute() {
+        let session = F.session(
+            "s",
+            [
+                F.turn("1", at: F.date("2026-11-18 10:30"), output: 100),
+                F.turn("2", at: F.date("2026-11-18 10:35"), output: 300),
+            ])
+
+        let peak = report(F.snapshot(sessions: [session], now: now)).detail?.peak
+
+        #expect(peak?.output == 300)
+        #expect(peak?.at == F.date("2026-11-18 10:35"))
+    }
+
+    @Test func quietHourHasNoDetailPeak() {
+        let session = F.session("s", [F.turn("1", at: F.date("2026-11-18 08:00"), output: 100)])
+
+        #expect(report(F.snapshot(sessions: [session], now: now)).detail?.peak == nil)
     }
 }

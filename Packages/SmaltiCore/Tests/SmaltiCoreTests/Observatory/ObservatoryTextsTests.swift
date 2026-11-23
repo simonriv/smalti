@@ -47,11 +47,11 @@ struct ObservatoryTextsTests {
         let two: Set<ModelID> = [ModelID(rawValue: "a"), ModelID(rawValue: "b")]
 
         #expect(
-            ObservatoryTexts.cost(summary(unpriced: one)) == "estimado · incluido en tu plan · sin precio para 1 modelo"
+            ObservatoryTexts.cost(summary(unpriced: one)) == "estimado · sin precio para 1 modelo"
         )
         #expect(
             ObservatoryTexts.cost(summary(unpriced: two))
-                == "estimado · incluido en tu plan · sin precio para 2 modelos")
+                == "estimado · sin precio para 2 modelos")
     }
 
     private func tool(_ name: String, _ outcome: ToolOutcome) -> RecentTool {

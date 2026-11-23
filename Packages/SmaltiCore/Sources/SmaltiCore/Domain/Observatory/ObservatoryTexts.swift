@@ -30,10 +30,10 @@ public enum ObservatoryTexts {
     }
 
     public static func cost(_ summary: ObservatoryReport.Summary) -> String {
-        let base = "estimado · incluido en tu plan"
         let unpriced = summary.cost.unpricedModels.count
-        guard unpriced > 0 else { return base }
-        return "\(base) · sin precio para \(unpriced) \(unpriced == 1 ? "modelo" : "modelos")"
+        // The warning replaces "incluido en tu plan": the card is one line, and a missing price must be read.
+        guard unpriced > 0 else { return "estimado · incluido en tu plan" }
+        return "estimado · sin precio para \(unpriced) \(unpriced == 1 ? "modelo" : "modelos")"
     }
 
     public static func result(of tool: RecentTool) -> ToolResultText {

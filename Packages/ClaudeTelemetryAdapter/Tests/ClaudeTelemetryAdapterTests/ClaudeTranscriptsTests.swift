@@ -279,4 +279,45 @@ struct ClaudeTranscriptsTests {
 
         #expect(await transcripts.indexWriteFailures == 1)
     }
+
+    @Test func indexIsWrittenAtMostEveryThirtySeconds() async throws {
+        let home = try TranscriptHome()
+        let clock = TestClock(TranscriptHome.now)
+        let transcripts = ClaudeTranscripts(
+            claudeHome: home.root, indexFile: home.indexFile, now: { clock.now }, readBudget: .seconds(60))
+        try home.write([TranscriptHome.reply("m1")])
+        _ = try await transcripts.activity(since: since)
+
+        try home.append(TranscriptHome.reply("m2") + "\n")
+        _ = try await transcripts.activity(since: since)
+        let afterBurst = await transcripts.indexWrites
+        clock.advance(by: 31)
+        try home.append(TranscriptHome.reply("m3") + "\n")
+        _ = try await transcripts.activity(since: since)
+
+        #expect(afterBurst == 1)
+        #expect(await transcripts.indexWrites == 2)
+    }
+
+    @Test func pendingChangesAreWrittenOnRequest() async throws {
+        let home = try TranscriptHome()
+        let transcripts = home.transcripts()
+        try home.write([TranscriptHome.reply("m1")])
+        _ = try await transcripts.activity(since: since)
+        try home.append(TranscriptHome.reply("m2") + "\n")
+        _ = try await transcripts.activity(since: since)
+
+        await transcripts.persistIndex()
+
+        #expect(await transcripts.indexWrites == 2)
+    }
+
+    @Test func healthTravelsWithTheActivity() async throws {
+        let home = try TranscriptHome()
+        try home.copySynthetic("malformed.jsonl")
+
+        let activity = try await home.transcripts().activity(since: since)
+
+        #expect(activity.health.skippedLines == 1)
+    }
 }

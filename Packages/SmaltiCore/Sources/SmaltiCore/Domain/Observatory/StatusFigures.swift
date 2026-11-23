@@ -20,6 +20,8 @@ public struct StatusFigures: Equatable, Sendable {
         let window = PeriodWindow(
             start: ObservatoryPeriod.today.start(now: snapshot.now, calendar: calendar), end: snapshot.now)
         let today = snapshot.activity.sessions.flatMap { window.usage(of: $0).values }.reduce(.zero, +)
+        // A partial count would read as a real one: until today is read, the figure says it is coming.
+        let isTodayRead = snapshot.activity.indexedSince <= window.start
         let system = snapshot.system
         return StatusFigures(
             localModel: loadedModel(snapshot.localModels),
@@ -27,7 +29,8 @@ public struct StatusFigures: Equatable, Sendable {
                 + (system.memoryUsed.value.map { ObservatoryFormat.memory(used: $0, total: system.memoryTotal) }
                     ?? unavailable),
             gpu: "GPU " + (system.gpu.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? unavailable),
-            todayTokens: "hoy \(ObservatoryFormat.count(today.inputTotal + today.output)) tokens")
+            todayTokens: isTodayRead
+                ? "hoy \(ObservatoryFormat.count(today.inputTotal + today.output)) tokens" : "hoy …")
     }
 
     private static func loadedModel(_ report: LocalModelsReport) -> String? {

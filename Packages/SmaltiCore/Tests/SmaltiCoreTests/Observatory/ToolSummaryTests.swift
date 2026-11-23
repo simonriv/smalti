@@ -37,4 +37,15 @@ struct ToolSummaryTests {
     @Test func toolWithoutInputShowsNothing() {
         #expect(ToolSummary.text(name: "Task", input: [:], diff: nil) == "")
     }
+
+    @Test func multilineBashShowsItsFirstLine() {
+        let command = "git commit -m \"$(cat <<'EOF'\nfix: x\n\nbody\nEOF\n)\""
+
+        #expect(
+            ToolSummary.text(name: "Bash", input: ["command": command], diff: nil) == "git commit -m \"$(cat <<'EOF'")
+    }
+
+    @Test func leadingBlankLinesAreSkipped() {
+        #expect(ToolSummary.text(name: "Bash", input: ["command": "\n  \n  make test\nmore"], diff: nil) == "make test")
+    }
 }

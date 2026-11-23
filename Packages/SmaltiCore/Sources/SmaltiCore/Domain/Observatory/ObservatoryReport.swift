@@ -75,13 +75,25 @@ public struct ObservatoryReport: Equatable, Sendable {
     /// From 5 % of failed tools the rate turns red (the board shows 2 % plain and 9 % red).
     public static let highErrorRate = 5
 
-    public static func make(
-        _ snapshot: ObservatorySnapshot, period: ObservatoryPeriod, selection: String?, calendar: Calendar
-    ) -> ObservatoryReport {
-        let window = PeriodWindow(start: period.start(now: snapshot.now, calendar: calendar), end: snapshot.now)
+    /// What the screen asks for: a period, the selected session and the calendar that knows the time zone.
+    public struct Request: Sendable {
+        public let period: ObservatoryPeriod
+        public let selection: String?
+        public let calendar: Calendar
+
+        public init(period: ObservatoryPeriod, selection: String?, calendar: Calendar) {
+            self.period = period
+            self.selection = selection
+            self.calendar = calendar
+        }
+    }
+
+    public static func make(_ snapshot: ObservatorySnapshot, for request: Request) -> ObservatoryReport {
+        let start = request.period.start(now: snapshot.now, calendar: request.calendar)
+        let window = PeriodWindow(start: start, end: snapshot.now)
         let sessions = ordered(ObservedSession.merge(snapshot), in: window)
         let rows = sessions.map { row(for: $0, in: window, snapshot: snapshot) }
-        let selected = sessions.first { $0.id == selection } ?? sessions.first
+        let selected = sessions.first { $0.id == request.selection } ?? sessions.first
         return ObservatoryReport(
             summary: summary(sessions, in: window, snapshot: snapshot),
             rows: rows,
@@ -141,7 +153,7 @@ public struct ObservatoryReport: Equatable, Sendable {
 
     private static func lifetime(of session: ObservedSession, now: Date) -> String {
         if session.isLive { return ObservatoryFormat.lifetime(now.timeIntervalSince(session.startedAt ?? now)) }
-        return ObservatoryFormat.ago(now.timeIntervalSince(session.activity.lastActivity ?? now))
+        return ObservatoryFormat.agoCompact(now.timeIntervalSince(session.activity.lastActivity ?? now))
     }
 
     private static let minute: TimeInterval = 60

@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import SmaltiCore
+import SmaltiCoreTestSupport
 import Testing
 
 @testable import DarwinMetricsAdapter
@@ -78,5 +79,13 @@ struct DarwinSystemMetricsTests {
         let sample = DarwinSystemMetrics().sample(agentProcesses: [getpid(), 999_999])
 
         #expect(try #require(sample.agentsMemory.value) > 0)
+    }
+
+    @MainActor
+    @Test func adapterHonoursTheContract() {
+        let metrics = DarwinSystemMetrics()
+        _ = metrics.sample(agentProcesses: [])
+
+        SystemMetricsContract.verify(metrics, agentProcesses: [getpid()])
     }
 }

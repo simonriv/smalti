@@ -159,4 +159,17 @@ struct ObservatoryContractSettlingTests {
     @Test func contractWaitsForAnAdapterThatIndexesInSteps() async {
         await AgentTranscriptsContract.verify(SteppedTranscripts(), since: Date(timeIntervalSince1970: 1_795_000_000))
     }
+
+    @Suite("SystemMetrics contract")
+    @MainActor
+    struct SystemMetricsContractTests {
+        @Test func fakeSystemMetricsHonourTheContract() {
+            let fake = FakeSystemMetrics()
+            fake.next = SystemSample(
+                cpu: .value(12), gpu: .unavailable, memoryUsed: .value(1), memoryTotal: 2, agentsMemory: .unavailable,
+                pressure: .unavailable, machineName: "Mac")
+
+            SystemMetricsContract.verify(fake, agentProcesses: [])
+        }
+    }
 }

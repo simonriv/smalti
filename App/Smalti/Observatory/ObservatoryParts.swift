@@ -59,21 +59,32 @@ final class ObservatoryCard: NSView {
 /// Labels as the board styles them.
 @MainActor
 enum ObservatoryText {
+    /// Size, colour and weight of one label.
+    struct Style {
+        let size: Double
+        let color: RGBAColor
+        var weight: Int = regularWeight
+    }
+
+    nonisolated static let regularWeight = 400
+
     /// One line that truncates, as every board label; a caller that wants wrapping (the footnote) says so.
-    static func label(_ text: String, size: Double, color: RGBAColor, theme: Theme, weight: Int = 400) -> NSTextField {
+    static func label(_ text: String, _ style: Style, theme: Theme) -> NSTextField {
         let field = NSTextField(labelWithString: text)
-        field.font = theme.interfaceFont(size: size, weight: weight)
-        field.textColor = color.nsColor
+        field.font = theme.interfaceFont(size: style.size, weight: style.weight)
+        field.textColor = style.color.nsColor
         field.lineBreakMode = .byTruncatingTail
         field.maximumNumberOfLines = 1
         return field
     }
 
-    static func number(_ text: String, size: Double, color: RGBAColor, theme: Theme) -> NSTextField {
+    /// Figures and commands, in the monospaced face; one line, like the board's `.num` cells.
+    static func number(_ text: String, _ style: Style, theme: Theme) -> NSTextField {
         let field = NSTextField(labelWithString: text)
-        field.font = theme.monospacedFont(size: size)
-        field.textColor = color.nsColor
+        field.font = theme.monospacedFont(size: style.size)
+        field.textColor = style.color.nsColor
         field.lineBreakMode = .byTruncatingTail
+        field.maximumNumberOfLines = 1
         return field
     }
 

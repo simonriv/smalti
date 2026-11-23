@@ -2,7 +2,7 @@ import Foundation
 
 /// A quarter of an hour in UTC. Every time zone is offset by a multiple of 15 minutes, so a local midnight is
 /// always a boundary and a period can be summed from whole buckets.
-public struct QuarterHour: Hashable, Codable, Comparable, Sendable {
+public struct QuarterHour: Hashable, Codable, Sendable {
     public let start: Date
 
     public static let length: TimeInterval = 900
@@ -11,7 +11,6 @@ public struct QuarterHour: Hashable, Codable, Comparable, Sendable {
         start = Date(timeIntervalSince1970: (date.timeIntervalSince1970 / Self.length).rounded(.down) * Self.length)
     }
 
-    public static func < (lhs: QuarterHour, rhs: QuarterHour) -> Bool { lhs.start < rhs.start }
 }
 
 /// What a session did in one quarter hour.

@@ -109,7 +109,8 @@ final class ObservatoryController {
         let selection = selection
         Task { [weak self] in
             let report = await Task.detached(priority: .userInitiated) {
-                ObservatoryReport.make(snapshot, period: period, selection: selection, calendar: .autoupdatingCurrent)
+                ObservatoryReport.make(
+                    snapshot, for: .init(period: period, selection: selection, calendar: .autoupdatingCurrent))
             }.value
             guard let self, generation == self.renderGeneration, let view = self.view else { return }
             self.report = report

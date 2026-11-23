@@ -64,6 +64,7 @@ final class DesignCaptureTests: SmaltiUITestCase {
         let app = XCUIApplication.isolatedSmalti()
         try app.installObservatoryFixture(from: Bundle(for: Self.self))
         launch(app)
+        neutralPrompt(app)
         let session = "401a63e1-c076-45fe-9f09-432da1c8cfa6"
         app.run(#"printf '{"session_id":"\#(session)","source":"startup"}' | "$SMALTI_CLI" event SessionStart; clear"#)
         app.run(#"printf '{"session_id":"\#(session)","prompt":"x"}' | "$SMALTI_CLI" event UserPromptSubmit; clear"#)
@@ -77,6 +78,7 @@ final class DesignCaptureTests: SmaltiUITestCase {
     func testCapturePaletteLastRowSelected() throws {
         let app = XCUIApplication.isolatedSmalti()
         launch(app)
+        neutralPrompt(app)
         openPalette()
         let rows = app.elements("smalti.paletteRow").count
         for _ in 1..<rows { app.typeKey(.downArrow, modifierFlags: []) }
@@ -101,6 +103,18 @@ final class DesignCaptureTests: SmaltiUITestCase {
         XCTAssertTrue(counter.waitForExistence(timeout: 5))
 
         try save(app.windows.firstMatch.screenshot(), as: "c18-status.png")
+    }
+
+    /// Committed captures show no host name, user or login banner: a bare prompt, and the workspace (named after the
+    /// home folder) renamed to the board's "solen".
+    private func neutralPrompt(_ app: XCUIApplication) {
+        app.run("PS1='%# '; clear")
+        openPalette()
+        app.typeText("renombrar")
+        app.typeKey(.return, modifierFlags: [])
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText("solen")
+        app.typeKey(.return, modifierFlags: [])
     }
 
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {

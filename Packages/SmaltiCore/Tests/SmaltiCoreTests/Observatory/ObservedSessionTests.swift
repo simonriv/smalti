@@ -86,4 +86,18 @@ struct ObservedSessionTests {
         #expect(session?.activity.contextTokens == nil)
         #expect(session?.label == "solen/api")
     }
+
+    @Test func paneAgentWithoutProcessIsLiveUntilItStops() {
+        let start = F.date("2026-11-18 10:00")
+        let working = F.snapshot(sessions: [], panes: [F.paneAgent("w", state: .working, startedAt: start)], now: now)
+        let stopped = F.snapshot(sessions: [], panes: [F.paneAgent("s", state: .stopped, startedAt: start)], now: now)
+
+        #expect(merged(working)["w"]?.isLive == true)
+        #expect(merged(stopped)["s"]?.isLive == false)
+    }
+
+    @Test func processWithoutPaneIsLive() {
+        #expect(
+            merged(F.snapshot(sessions: [], running: [F.running("p", startedAt: now)], now: now))["p"]?.isLive == true)
+    }
 }

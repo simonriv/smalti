@@ -21,8 +21,9 @@ final class DetailView: NSView {
         card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.detailStack, height: .fill)
         let tokens = theme.observatory
         activityTitle = ObservatoryText.caption("Actividad", theme: theme)
-        compaction = ObservatoryText.label("", size: tokens.noteSize, color: theme.text.secondary, theme: theme)
-        empty = ObservatoryText.label(Self.noActivity, size: tokens.noteSize, color: theme.text.secondary, theme: theme)
+        compaction = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
+        empty = ObservatoryText.label(
+            Self.noActivity, .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         super.init(frame: .zero)
         card.fill(self)
         content.orientation = .horizontal
@@ -71,8 +72,9 @@ final class DetailView: NSView {
         activityTitle.attributedStringValue = ObservatoryText.caption(detail.title, theme: theme).attributedStringValue
         activity?.setAccessibilityValue(detail.title)
         activityRows.setViews(detail.tools.map { row(for: $0, timeZone: timeZone) }, in: .leading)
+        // Without output the chart keeps its baseline, with "Sin actividad en la última hora" under it.
         let hasOutput = detail.peak != nil
-        chart.isHidden = !hasOutput
+        chart.isHidden = false
         empty.isHidden = hasOutput
         chart.show(
             detail.outputPerMinute.map(Double.init), maximum: nil, style: chartStyle(detail.peak, timeZone: timeZone))
@@ -99,12 +101,13 @@ final class DetailView: NSView {
         let size = tokens.activityFontSize
         let result = ObservatoryTexts.result(of: tool)
         let time = ObservatoryText.number(
-            ObservatoryFormat.clock(tool.startedAt, timeZone: timeZone), size: size, color: theme.text.secondary,
+            ObservatoryFormat.clock(tool.startedAt, timeZone: timeZone), .init(size: size, color: theme.text.secondary),
             theme: theme)
-        let name = ObservatoryText.number(tool.name, size: size, color: theme.accent, theme: theme)
-        let summary = ObservatoryText.number(tool.summary, size: size, color: theme.text.primary, theme: theme)
+        let name = ObservatoryText.number(tool.name, .init(size: size, color: theme.accent), theme: theme)
+        let summary = ObservatoryText.number(tool.summary, .init(size: size, color: theme.text.primary), theme: theme)
         let outcome = ObservatoryText.number(
-            result.text, size: size, color: result.isFailure ? theme.agent.failed : theme.agent.working, theme: theme)
+            result.text, .init(size: size, color: result.isFailure ? theme.agent.failed : theme.agent.working),
+            theme: theme)
         [time, name].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
         time.widthAnchor.constraint(equalToConstant: tokens.activityTimeWidth).isActive = true
         name.widthAnchor.constraint(equalToConstant: tokens.activityToolWidth).isActive = true

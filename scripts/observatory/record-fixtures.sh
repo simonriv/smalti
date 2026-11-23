@@ -15,9 +15,12 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/smalti-rec.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
 model="claude-haiku-5-5"
 statuses="$work/statuses.txt"; : > "$statuses"
-# Compared without case or accents (sanitize_fixture.scan): any of these left in a fixture stops the recording.
-markers=(--marker "Simón" --marker "Rivera" --marker "Agudelo" --marker "simonriv" --marker "srivera"
-  --marker "Protección" --marker "xolken" --marker "@gmail" --marker "Bello" --marker "Medellín")
+# Personal markers live outside the repo, one per line, in scripts/observatory/markers.local (git-ignored). They are
+# compared without case or accents (sanitize_fixture.scan): any of them left in a fixture stops the recording.
+markers_file="$here/markers.local"
+[[ -s "$markers_file" ]] || { echo "write your personal markers, one per line, to $markers_file first"; exit 2; }
+markers=()
+while IFS= read -r marker; do [[ -n "$marker" ]] && markers+=(--marker "$marker"); done < "$markers_file"
 
 run() { # run <dir> <prompt> <claude args…>: a clean-environment claude -p in <dir>, JSON result on stdout.
   # The prompt goes right after -p: --allowedTools takes every following word as a tool name.

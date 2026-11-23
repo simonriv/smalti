@@ -120,9 +120,10 @@ final class ObservatoryView: NSView {
     private func layoutStrip(_ body: NSView) {
         let tokens = theme.observatory
         let title = ObservatoryText.label(
-            "Observatorio", size: tokens.stripTitleSize, color: theme.text.title, theme: theme, weight: 600)
+            "Observatorio",
+            .init(size: tokens.stripTitleSize, color: theme.text.title, weight: tokens.stripTitleWeight), theme: theme)
         let subtitle = ObservatoryText.label(
-            "agentes y modelos en esta máquina", size: tokens.stripSubtitleSize, color: theme.text.secondary,
+            "agentes y modelos en esta máquina", .init(size: tokens.stripSubtitleSize, color: theme.text.secondary),
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
@@ -181,7 +182,8 @@ private final class PeriodPill: NSView {
 
     init(theme: Theme) {
         let tokens = theme.observatory
-        label = ObservatoryText.label("", size: tokens.pillFontSize, color: tokens.pillText, theme: theme, weight: 500)
+        label = ObservatoryText.label(
+            "", .init(size: tokens.pillFontSize, color: tokens.pillText, weight: tokens.pillWeight), theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = tokens.pillRadius

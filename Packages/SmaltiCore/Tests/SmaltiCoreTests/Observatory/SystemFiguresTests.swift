@@ -34,6 +34,10 @@ struct SystemFiguresTests {
         #expect(figures.memory == "11.2 / 16 GB")
         #expect(figures.split == "modelo 6.1 · agentes 3.5 · resto 1.6 GB · presión media")
         #expect(abs(figures.shares.model - 6_549_825_126 / Double(16 * gib)) < 0.000_1)
+        #expect(abs(figures.shares.agents - 3_758_096_384 / Double(16 * gib)) < 0.000_1)
+        #expect(
+            abs(figures.shares.rest - Double(12_025_908_428 - 6_549_825_126 - 3_758_096_384) / Double(16 * gib))
+                < 0.000_1)
     }
 
     @Test func memorySplitOmitsModelWithoutOllama() {

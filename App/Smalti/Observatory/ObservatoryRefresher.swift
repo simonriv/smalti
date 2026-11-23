@@ -35,6 +35,7 @@ final class ObservatoryRefresher {
     private var samplingLoop: Task<Void, Never>?
     private var loggedStatuses: Set<String> = []
     private var lastError: String?
+    private var lastHealth = TranscriptHealth.healthy
 
     static let openInterval: Duration = .seconds(2)
     static let closedInterval: Duration = .seconds(10)
@@ -42,8 +43,9 @@ final class ObservatoryRefresher {
     /// Hooks after which a session's tokens or context changed.
     static let refreshingHooks: Set<AgentHook> = [.stop, .postToolUse, .sessionStart]
 
+    /// Opening restarts the loop, so the 2 s rhythm starts now instead of after the closed 10 s sleep.
     var isObservatoryOpen = false {
-        didSet { if isObservatoryOpen && !oldValue { refreshNow() } }
+        didSet { if isObservatoryOpen && !oldValue { startRefreshLoop() } }
     }
 
     struct Callbacks {
@@ -67,6 +69,11 @@ final class ObservatoryRefresher {
                 try? await Task.sleep(for: Self.samplingInterval)
             }
         }
+        startRefreshLoop()
+    }
+
+    private func startRefreshLoop() {
+        refreshLoop?.cancel()
         refreshLoop = Task { [weak self] in
             while !Task.isCancelled {
                 guard let interval = self?.refreshAndNextInterval() else { return }
@@ -114,6 +121,13 @@ final class ObservatoryRefresher {
         for status in observe.unknownStatuses.subtracting(loggedStatuses) {
             logger.notice("unknown Claude session status \(status, privacy: .public): shown as working")
             loggedStatuses.insert(status)
+        }
+        let health = snapshot.activity.health
+        if health != lastHealth {
+            logger.error(
+                "transcripts: \(health.skippedLines) unreadable lines, \(health.readFailures) interrupted reads, \(health.indexWriteFailures) failed index writes"
+            )
+            lastHealth = health
         }
         if let error = snapshot.lastError, error != lastError { onError(error) }
         lastError = snapshot.lastError

@@ -86,11 +86,14 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `swift test --package-path Packages/SmaltiCore`: dominio y casos de uso.
 - `swift test --package-path Packages/GhosttyAdapter`: adaptador de libghostty (requiere GhosttyKit construido).
 - `swift test --package-path Packages/TOMLConfigAdapter`: adaptador de configuración TOML.
+- `swift test --package-path Packages/<ClaudeTelemetryAdapter|OllamaAdapter|DarwinMetricsAdapter>`: adaptadores del Observatorio (F3). Las pruebas nunca leen el `~/.claude` real; las de UI pasan `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales.
+- `cd scripts/observatory && python3 -m unittest test_sum_transcripts test_sanitize_fixture`: oráculo de tokens y saneador de fixtures. `scripts/observatory/record-fixtures.sh <dir>` regraba los fixtures reales con `claude -p` (API de pago) y exige los marcadores personales en `scripts/observatory/markers.local`, que no se versiona.
+- `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-observatory.sh 5`: C10 de F3 sobre el `~/.claude` real, solo lectura.
 - `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app de desarrollo `build/Build/Products/Debug/Smalti Dev.app` (`dev.simonriv.smalti.dev`, estado propio); el Release (`Smalti.app`, `dev.simonriv.smalti`) es el diario.
 - `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
 - `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.
 - `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
-- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter`: formato.
+- `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter`: formato.
 - `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
 - Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux).
 

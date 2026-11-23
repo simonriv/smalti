@@ -24,8 +24,10 @@ final class AppComposition {
     private var restoreScreen: RestoreController?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
+    private var transcripts: ClaudeTranscripts?
     private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
+    private static let persistTimeout: Duration = .seconds(1)
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
 
@@ -122,8 +124,8 @@ final class AppComposition {
                     try runtime?.apply(appearance)
                 }),
             initial: startup.initial)
-        startObservatory(startup, controller: controller)
         listenForAgents(on: socket, controller: controller)
+        startObservatory(startup, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
         connect(controller, to: window, engine: engine)
@@ -211,10 +213,15 @@ final class AppComposition {
     /// The observatory's sources: Claude's transcripts and session registry, Ollama and the machine (F3).
     private func startObservatory(_ startup: Startup, controller: TilingController) {
         let settings = startup.settings
+        // A second instance of this build (its socket was taken) never writes the first one's state.
+        let indexFile =
+            telemetry == nil
+            ? FileManager.default.temporaryDirectory.appending(path: "smalti-observatory-\(UUID().uuidString).json")
+            : settings.stateDirectory.appending(path: "observatory/index.json")
+        let transcripts = ClaudeTranscripts(claudeHome: settings.claudeHome, indexFile: indexFile, now: { .now })
+        self.transcripts = transcripts
         let sources = ObservatorySources(
-            transcripts: ClaudeTranscripts(
-                claudeHome: settings.claudeHome,
-                indexFile: settings.stateDirectory.appending(path: "observatory/index.json"), now: { .now }),
+            transcripts: transcripts,
             live: ClaudeSessionRegistry(claudeHome: settings.claudeHome),
             localModels: OllamaLocalModels(baseURL: settings.ollamaURL), system: DarwinSystemMetrics(),
             catalog: startup.initial.config.observatory.catalog,
@@ -277,6 +284,17 @@ final class AppComposition {
         sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()
+    }
+
+    /// Writes the transcripts index's pending changes, giving up after a second so quitting never hangs.
+    func persistObservatory() async {
+        guard let transcripts else { return }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await transcripts.persistIndex() }
+            group.addTask { try? await Task.sleep(for: Self.persistTimeout) }
+            await group.next()
+            group.cancelAll()
+        }
     }
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {

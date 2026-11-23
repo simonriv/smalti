@@ -82,14 +82,31 @@ public struct SystemSample: Equatable, Sendable {
     }
 }
 
+/// What went wrong reading the transcripts so far: shown in the log, never silently swallowed.
+public struct TranscriptHealth: Equatable, Sendable {
+    public var skippedLines = 0
+    public var readFailures = 0
+    public var indexWriteFailures = 0
+
+    public init(skippedLines: Int = 0, readFailures: Int = 0, indexWriteFailures: Int = 0) {
+        self.skippedLines = skippedLines
+        self.readFailures = readFailures
+        self.indexWriteFailures = indexWriteFailures
+    }
+
+    public static let healthy = TranscriptHealth()
+}
+
 /// The transcripts' sessions and the date since which the index holds every file.
 public struct TranscriptActivity: Equatable, Sendable {
     public let sessions: [SessionActivity]
     public let indexedSince: Date
+    public let health: TranscriptHealth
 
-    public init(sessions: [SessionActivity], indexedSince: Date) {
+    public init(sessions: [SessionActivity], indexedSince: Date, health: TranscriptHealth = .healthy) {
         self.sessions = sessions
         self.indexedSince = indexedSince
+        self.health = health
     }
 }
 

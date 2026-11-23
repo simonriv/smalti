@@ -41,3 +41,16 @@ public enum LocalModelsContract {
         #expect(Set(loaded.map(\.name)).isDisjoint(with: onDisk.map(\.name)), "a loaded model is not repeated on disk")
     }
 }
+
+/// Every `SystemMetrics` gives readings in range, or says it cannot.
+public enum SystemMetricsContract {
+    @MainActor
+    public static func verify(_ metrics: any SystemMetrics, agentProcesses: [Int32]) {
+        let sample = metrics.sample(agentProcesses: agentProcesses)
+        let percent = 0.0...100.0
+        if let cpu = sample.cpu.value { #expect(percent.contains(cpu), "CPU is a percentage") }
+        if let gpu = sample.gpu.value { #expect(percent.contains(gpu), "GPU is a percentage") }
+        if let used = sample.memoryUsed.value { #expect(used <= sample.memoryTotal, "used memory fits in the total") }
+        #expect(!sample.machineName.isEmpty, "the machine has a name")
+    }
+}

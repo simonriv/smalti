@@ -61,4 +61,14 @@ struct ObservatoryFormatTests {
     @Test func fullMemoryNeverExceedsTotal() {
         #expect(ObservatoryFormat.memory(used: 17_179_869_184, total: 17_179_869_184) == "16.0 / 16 GB")
     }
+
+    static let compactAgos: [(Double, String)] = [
+        (1320, "hace 22m"), (3600, "hace 1h"), (10_800, "hace 3h"), (172_800, "hace 2d"), (20, "hace 0m"),
+    ]
+
+    /// The table's "Vida" column is 76 pt, as the board's: "hace 3h" fits, "hace 22 min" does not.
+    @Test(arguments: compactAgos)
+    func compactAgoFitsTheTable(seconds: Double, text: String) {
+        #expect(ObservatoryFormat.agoCompact(seconds) == text)
+    }
 }

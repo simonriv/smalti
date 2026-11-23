@@ -9,9 +9,9 @@ public enum ObservatoryFormat {
     /// `412`, `61.4k`, `982k`, `1.24M`.
     public static func count(_ value: Int) -> String {
         if value < thousand { return String(value) }
+        // Below 100k the tenths are at most 100.0, which reads "100k" either way.
         if value < oneDecimalLimit {
-            let tenths = rounded(Double(value) / Double(thousand), places: 1)
-            if tenths < Double(oneDecimalLimit / thousand) { return decimal(tenths, places: 1) + "k" }
+            return decimal(rounded(Double(value) / Double(thousand), places: 1), places: 1) + "k"
         }
         let thousands = (Double(value) / Double(thousand)).rounded()
         if thousands < Double(thousand) { return String(Int(thousands)) + "k" }
@@ -41,6 +41,14 @@ public enum ObservatoryFormat {
     }
 
     /// Memory is counted in binary units, as Activity Monitor does, and written "GB" as macOS writes it.
+    /// `hace 22m`, `hace 3h`, `hace 2d`: the sessions table's 76 pt "Vida" column, where "hace 22 min" truncates.
+    public static func agoCompact(_ seconds: TimeInterval) -> String {
+        let whole = max(0, Int(seconds))
+        if whole < secondsPerHour { return "hace \(whole / secondsPerMinute)m" }
+        if whole < secondsPerDay { return "hace \(whole / secondsPerHour)h" }
+        return "hace \(whole / secondsPerDay)d"
+    }
+
     private static let bytesPerGibibyte = 1_073_741_824.0
     private static let bytesPerMebibyte = 1_048_576.0
 

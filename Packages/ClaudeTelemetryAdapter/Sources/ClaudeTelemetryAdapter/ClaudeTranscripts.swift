@@ -26,6 +26,12 @@ public actor ClaudeTranscripts: AgentTranscripts {
     public private(set) var readFailures = 0
     /// Index writes that failed; the index stays in memory and the next change tries again.
     public private(set) var indexWriteFailures = 0
+    /// Index writes done; with agents working, changes come every few seconds and are written every 30 s at most.
+    public private(set) var indexWrites = 0
+    private var hasUnsavedChanges = false
+    private var lastWrite: Date?
+
+    public static let writeInterval: TimeInterval = 30
 
     public static let history: TimeInterval = 30 * 86_400
 
@@ -50,17 +56,35 @@ public actor ClaudeTranscripts: AgentTranscripts {
         prune(&current, before: windowStart)
         index = current
         // Writing the index costs more than a refresh with nothing new; it is written only when it changed.
-        if pending.count > unread.count || current.files != loaded.files { save(current) }
+        if pending.count > unread.count || current.files != loaded.files { hasUnsavedChanges = true }
+        saveIfDue()
         let indexedSince = unread.map(\.modified).max().map { max($0, windowStart) } ?? windowStart
         return TranscriptActivity(
             sessions: current.sessions.values.filter { ($0.lastActivity ?? .distantPast) >= since }
                 .sorted { $0.sessionID < $1.sessionID },
-            indexedSince: indexedSince)
+            indexedSince: indexedSince,
+            health: TranscriptHealth(
+                skippedLines: skippedLines, readFailures: readFailures, indexWriteFailures: indexWriteFailures))
+    }
+
+    /// Writes what is still unsaved (on quit); otherwise a restart would reread up to 30 s of lines.
+    public func persistIndex() {
+        guard hasUnsavedChanges, let index else { return }
+        save(index)
+    }
+
+    private func saveIfDue() {
+        guard hasUnsavedChanges, let index else { return }
+        if let lastWrite, now().timeIntervalSince(lastWrite) < Self.writeInterval { return }
+        save(index)
     }
 
     private func save(_ index: TranscriptIndex) {
+        lastWrite = now()
         do {
             try index.save(to: indexFile)
+            indexWrites += 1
+            hasUnsavedChanges = false
         } catch {
             indexWriteFailures += 1
         }

@@ -26,7 +26,7 @@ final class LocalModelsView: NSView {
                 [
                     caption,
                     ObservatoryText.label(
-                        text, size: theme.observatory.noteSize, color: theme.text.secondary, theme: theme),
+                        text, .init(size: theme.observatory.noteSize, color: theme.text.secondary), theme: theme),
                 ],
                 in: .leading)
             setAccessibilityValue(text)
@@ -44,16 +44,17 @@ final class LocalModelsView: NSView {
     private func model(_ row: LocalModelsFigures.Row) -> NSView {
         let tokens = theme.observatory
         let name = ObservatoryText.label(
-            row.name, size: tokens.modelNameSize, color: row.isLoaded ? theme.text.title : theme.header.directory,
+            row.name,
+            .init(size: tokens.modelNameSize, color: row.isLoaded ? theme.text.title : theme.header.directory),
             theme: theme)
         let status = ObservatoryText.label(
-            row.status, size: tokens.noteSize, color: row.isLoaded ? theme.agent.working : theme.text.secondary,
+            row.status, .init(size: tokens.noteSize, color: row.isLoaded ? theme.agent.working : theme.text.secondary),
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let top = NSStackView(views: [name, spacer, status])
         let detail = ObservatoryText.number(
-            row.detail, size: tokens.noteSize, color: theme.text.secondary, theme: theme)
+            row.detail, .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         let stack = NSStackView(views: [top, detail])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -91,6 +92,9 @@ final class SystemView: NSView {
     private let gpuCurve = Sparkline()
     private let memoryBar = MemoryBar()
 
+    /// CPU and GPU curves are percentages: their scale tops at 100, not at the highest sample.
+    private static let percentScale = 100.0
+
     static let footnote = "Datos: hooks y transcripts de Claude Code y API local de Ollama. El costo es estimado."
 
     init(theme: Theme) {
@@ -98,14 +102,17 @@ final class SystemView: NSView {
         card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.system, height: .fill)
         let tokens = theme.observatory
         title = ObservatoryText.caption("Sistema", theme: theme)
-        cpuValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
-        gpuValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
-        memoryValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
-        split = ObservatoryText.label("", size: tokens.footnoteSize, color: theme.text.secondary, theme: theme)
+        cpuValue = ObservatoryText.number(
+            "", .init(size: tokens.systemRowSize, color: theme.text.primary), theme: theme)
+        gpuValue = ObservatoryText.number(
+            "", .init(size: tokens.systemRowSize, color: theme.text.primary), theme: theme)
+        memoryValue = ObservatoryText.number(
+            "", .init(size: tokens.systemRowSize, color: theme.text.primary), theme: theme)
+        split = ObservatoryText.label("", .init(size: tokens.footnoteSize, color: theme.text.secondary), theme: theme)
         super.init(frame: .zero)
         card.fill(self)
         let footnote = ObservatoryText.label(
-            Self.footnote, size: tokens.footnoteSize, color: theme.text.secondary, theme: theme)
+            Self.footnote, .init(size: tokens.footnoteSize, color: theme.text.secondary), theme: theme)
         footnote.lineBreakMode = .byWordWrapping
         footnote.maximumNumberOfLines = 0
         footnote.preferredMaxLayoutWidth = tokens.sideColumnWidth - tokens.cardPaddingHorizontal * 2
@@ -133,7 +140,7 @@ final class SystemView: NSView {
 
     private func line(_ name: String, value: NSTextField) -> NSView {
         let label = ObservatoryText.label(
-            name, size: theme.observatory.systemRowSize, color: theme.text.primary, theme: theme)
+            name, .init(size: theme.observatory.systemRowSize, color: theme.text.primary), theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let stack = NSStackView(views: [label, spacer, value])
@@ -157,8 +164,10 @@ final class SystemView: NSView {
         ObservatoryText.setText(gpuValue, figures.gpu)
         ObservatoryText.setText(memoryValue, figures.memory)
         ObservatoryText.setText(split, figures.split)
-        cpuCurve.show(cpuHistory, maximum: 100, style: .init(line: tokens.cpu, width: tokens.sparklineWidth))
-        gpuCurve.show(gpuHistory, maximum: 100, style: .init(line: tokens.gpu, width: tokens.sparklineWidth))
+        cpuCurve.show(
+            cpuHistory, maximum: Self.percentScale, style: .init(line: tokens.cpu, width: tokens.sparklineWidth))
+        gpuCurve.show(
+            gpuHistory, maximum: Self.percentScale, style: .init(line: tokens.gpu, width: tokens.sparklineWidth))
         memoryBar.show(figures.shares, theme: theme)
         setAccessibilityLabel(figures.title)
         setAccessibilityValue([figures.cpu, figures.gpu, figures.memory, figures.split].joined(separator: " · "))

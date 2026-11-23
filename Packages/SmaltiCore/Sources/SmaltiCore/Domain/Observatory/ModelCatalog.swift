@@ -87,19 +87,32 @@ public struct ModelCatalog: Equatable, Sendable {
     private static let million = 1_000_000
 
     public static let standard = ModelCatalog(pricings: [
-        "claude-fable-5-2": price(million, 8, 40, 0.20, 10, 16),
-        "claude-fable-5-1": price(million, 10, 50, 0.25, 12.50, 20),
-        "claude-fable-5": price(million, 10, 50, 1.00, 12.50, 20),
-        "claude-opus-5-5": price(million, 4, 20, 0.20, 5, 8),
-        "claude-opus-5": price(million, 5, 25, 0.50, 6.25, 10),
-        "claude-opus-4-8": price(million, 5, 25, 0.50, 6.25, 10),
-        "claude-opus-4-7": price(million, 5, 25, 0.50, 6.25, 10),
-        "claude-opus-4-6": price(million, 5, 25, 0.50, 6.25, 10),
-        "claude-sonnet-5-5": price(million, 2, 10, 0.10, 2.50, 4),
-        "claude-sonnet-5": price(million, 2, 10, 0.20, 2.50, 4),
-        "claude-sonnet-4-6": price(million, 3, 15, 0.30, 3.75, 6),
-        "claude-haiku-5-5": price(million, 0.10, 0.50, 0.01, 0.125, 0.20),
-        "claude-haiku-4-5": price(200_000, 1, 5, 0.10, 1.25, 2),
+        "claude-fable-5-2": ModelPricing(
+            contextWindow: million, input: 8, output: 40, cacheRead: 0.20, cacheWrite5m: 10, cacheWrite1h: 16),
+        "claude-fable-5-1": ModelPricing(
+            contextWindow: million, input: 10, output: 50, cacheRead: 0.25, cacheWrite5m: 12.50, cacheWrite1h: 20),
+        "claude-fable-5": ModelPricing(
+            contextWindow: million, input: 10, output: 50, cacheRead: 1.00, cacheWrite5m: 12.50, cacheWrite1h: 20),
+        "claude-opus-5-5": ModelPricing(
+            contextWindow: million, input: 4, output: 20, cacheRead: 0.20, cacheWrite5m: 5, cacheWrite1h: 8),
+        "claude-opus-5": ModelPricing(
+            contextWindow: million, input: 5, output: 25, cacheRead: 0.50, cacheWrite5m: 6.25, cacheWrite1h: 10),
+        "claude-opus-4-8": ModelPricing(
+            contextWindow: million, input: 5, output: 25, cacheRead: 0.50, cacheWrite5m: 6.25, cacheWrite1h: 10),
+        "claude-opus-4-7": ModelPricing(
+            contextWindow: million, input: 5, output: 25, cacheRead: 0.50, cacheWrite5m: 6.25, cacheWrite1h: 10),
+        "claude-opus-4-6": ModelPricing(
+            contextWindow: million, input: 5, output: 25, cacheRead: 0.50, cacheWrite5m: 6.25, cacheWrite1h: 10),
+        "claude-sonnet-5-5": ModelPricing(
+            contextWindow: million, input: 2, output: 10, cacheRead: 0.10, cacheWrite5m: 2.50, cacheWrite1h: 4),
+        "claude-sonnet-5": ModelPricing(
+            contextWindow: million, input: 2, output: 10, cacheRead: 0.20, cacheWrite5m: 2.50, cacheWrite1h: 4),
+        "claude-sonnet-4-6": ModelPricing(
+            contextWindow: million, input: 3, output: 15, cacheRead: 0.30, cacheWrite5m: 3.75, cacheWrite1h: 6),
+        "claude-haiku-5-5": ModelPricing(
+            contextWindow: million, input: 0.10, output: 0.50, cacheRead: 0.01, cacheWrite5m: 0.125, cacheWrite1h: 0.20),
+        "claude-haiku-4-5": ModelPricing(
+            contextWindow: 200_000, input: 1, output: 5, cacheRead: 0.10, cacheWrite5m: 1.25, cacheWrite1h: 2),
     ])
 
     private init(pricings: [String: ModelPricing]) {
@@ -108,14 +121,6 @@ public struct ModelCatalog: Equatable, Sendable {
 
     private init(byID pricings: [ModelID: ModelPricing]) {
         self.pricings = pricings
-    }
-
-    private static func price(
-        _ window: Int, _ input: Double, _ output: Double, _ read: Double, _ write5m: Double, _ write1h: Double
-    ) -> ModelPricing {
-        ModelPricing(
-            contextWindow: window, input: input, output: output, cacheRead: read, cacheWrite5m: write5m,
-            cacheWrite1h: write1h)
     }
 
     /// Tries the exact id, then without a bracketed suffix (`[1m]`), then without a date suffix (`-20251001`).

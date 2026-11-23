@@ -33,8 +33,8 @@ final class SummaryCardsView: NSStackView {
     private func makeCard(title: String, identifier: String) -> Card {
         let tokens = theme.observatory
         let card = ObservatoryCard(theme: theme, spacing: tokens.spacing.cardStack)
-        let value = ObservatoryText.number("", size: tokens.valueSize, color: theme.text.title, theme: theme)
-        let note = ObservatoryText.label("", size: tokens.noteSize, color: theme.text.secondary, theme: theme)
+        let value = ObservatoryText.number("", .init(size: tokens.valueSize, color: theme.text.title), theme: theme)
+        let note = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         // A long note ("… · sin precio para 1 modelo") truncates instead of widening its card: the four stay equal.
         note.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         card.content.setViews([ObservatoryText.caption(title, theme: theme), value, note], in: .leading)

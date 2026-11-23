@@ -60,14 +60,14 @@ class Sanitize(unittest.TestCase):
 
     def test_scan_ignores_accents_and_case(self):
         with self.assertRaises(PersonalDataError):
-            scan('{"text": "SIMON dijo"}', markers=["Simón"])
+            scan('{"text": "JOSE dijo"}', markers=["José"])
         with self.assertRaises(PersonalDataError):
-            scan('{"text": "contexto de Simón"}', markers=["simon"])
+            scan('{"text": "contexto de José"}', markers=["jose"])
 
     def test_scan_rejects_personal_markers(self):
         with self.assertRaises(PersonalDataError):
-            scan('{"text": "contexto de Simón"}', markers=["Simón"])
-        scan('{"text": "hola"}', markers=["Simón"])
+            scan('{"text": "contexto de José"}', markers=["José"])
+        scan('{"text": "hola"}', markers=["José"])
 
 
 if __name__ == "__main__":

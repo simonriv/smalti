@@ -108,7 +108,8 @@ extension Theme {
             stoppedRingWidth: 1, waitingBorder: RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35), counterGap: 14,
             counterItemGap: 6, counterFontSize: 11.5, counterText: obsidianMutedText),
         observatory: ObservatoryTokens(
-            stripTitleSize: 13, stripSubtitleSize: 12, stripGap: 10, stripPaddingLeading: 18, stripPaddingTrailing: 14,
+            stripTitleSize: 13, stripTitleWeight: 600, pillWeight: 500, stripSubtitleSize: 12, stripGap: 10,
+            stripPaddingLeading: 18, stripPaddingTrailing: 14,
             pillHeight: 26, pillPadding: 10, pillRadius: 7, pillFontSize: 12, pillBorder: white(0.08),
             pillText: rgb(0xc3c7cf), padding: 14, gap: 12, sideColumnWidth: 330, cardGap: 10,
             cardBackground: RGBAColor(red: 6, green: 7, blue: 10, alpha: 0.34), cardBorder: white(0.06), cardRadius: 11,

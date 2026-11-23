@@ -338,6 +338,9 @@ extension Theme {
 /// Observatorio.dc.html: cards, the sessions table, the activity chart and the system curves.
 public struct ObservatoryTokens: Equatable, Sendable {
     public let stripTitleSize: Double
+    /// "Observatorio" is semibold (600), the period pill medium (500), as the board's CSS weights.
+    public let stripTitleWeight: Int
+    public let pillWeight: Int
     public let stripSubtitleSize: Double
     public let stripGap: Double
     public let stripPaddingLeading: Double

@@ -63,4 +63,11 @@ struct StatusFiguresTests {
 
         #expect(detail == PaneAgentDetail(family: nil, context: .unavailable))
     }
+
+    @Test func todayTokensWaitUntilTodayIsRead() {
+        let session = F.session("s", [F.turn("1", at: F.date("2026-11-18 09:00"))])
+        let snapshot = F.snapshot(sessions: [session], now: now, indexedSince: F.date("2026-11-18 08:00"))
+
+        #expect(StatusFigures.make(snapshot, calendar: F.calendar()).todayTokens == "hoy …")
+    }
 }

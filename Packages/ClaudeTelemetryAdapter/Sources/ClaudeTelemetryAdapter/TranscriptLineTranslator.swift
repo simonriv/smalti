@@ -16,6 +16,8 @@ struct TranscriptLineTranslator {
     private static let markers = ["\"assistant\"", "\"tool_result\"", "\"compact_boundary\"", "\"derived-from\""]
         .map { Data($0.utf8) }
     private static let exitCodePrefix = "Exit code "
+    /// Characters kept of each tool argument: enough for a one-line summary, never a Write's whole file in the index.
+    static let inputLimit = 200
 
     private let fractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -81,7 +83,9 @@ struct TranscriptLineTranslator {
         guard block["type"] as? String == "tool_use", let id = block["id"] as? String,
             let name = block["name"] as? String
         else { return nil }
-        let input = (block["input"] as? [String: Any] ?? [:]).compactMapValues { $0 as? String }
+        let input = (block["input"] as? [String: Any] ?? [:]).compactMapValues { value in
+            (value as? String).map { String($0.prefix(Self.inputLimit)) }
+        }
         return .toolStarted(ToolStart(id: id, name: name, input: input, at: at, isSubagent: isSubagent))
     }
 

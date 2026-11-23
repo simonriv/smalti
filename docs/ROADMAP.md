@@ -66,6 +66,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Objetivo:** ver de un vistazo el consumo y el estado de todos los agentes y modelos locales.
 - **Entregables:** lector de transcripts JSONL con índice incremental (todas las sesiones de Claude de la máquina, periodos hoy / 7 días / 30 días); sesiones vivas desde `~/.claude/sessions`; resumen (sesiones, tokens de entrada con % de caché, tokens de salida, equivalente estimado en USD con tabla de precios editable); tabla por sesión; detalle con últimas herramientas, tokens por minuto y compactaciones; modelos de Ollama; CPU, GPU y memoria unificada sin sudo; lado derecho de la barra de estado y modelo + `ctx %` en la cabecera (`Observatorio.dc.html`, pie de `Main.dc.html`). Spec: `docs/specs/F3-observatory.md`. Sin OTLP (pasa a F7) ni filtros por harness (F6), decidido por Simón (2026-11-22).
 - **Criterio de cierre:** para 3 sesiones reales, los tokens de entrada y salida del observatorio coinciden exactamente con la suma de los transcripts JSONL. Una prueba sobre fixtures compara ambos. Lo que no se pueda medir sin privilegios aparece marcado como "no disponible", nunca como 0.
+- **Cerrada (2026-11-23):** ver `docs/specs/F3-checklist.md`. C1 con 4 sesiones reales (incluidos un subagente y un fork) contra un oráculo independiente.
 - **Dependencias:** F2 (plugin de hooks, IPC, modelo `AgentSession`). Técnicamente es independiente de F4.
 
 ## F4 · Input inteligente

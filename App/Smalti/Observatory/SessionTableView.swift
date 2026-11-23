@@ -126,12 +126,12 @@ private final class TableRowView: NSView {
         let primary = stopped ? theme.text.secondary : theme.text.title
         let muted = stopped ? theme.text.secondary : theme.header.directory
         let number = { (text: String, color: RGBAColor) in
-            ObservatoryText.number(text, size: tokens.rowFontSize, color: color, theme: self.theme)
+            ObservatoryText.number(text, .init(size: tokens.rowFontSize, color: color), theme: self.theme)
         }
         replace([
             stateCell(row.state),
-            ObservatoryText.label(row.label, size: tokens.rowFontSize, color: primary, theme: theme),
-            ObservatoryText.label(row.agentModel, size: tokens.rowFontSize, color: muted, theme: theme),
+            ObservatoryText.label(row.label, .init(size: tokens.rowFontSize, color: primary), theme: theme),
+            ObservatoryText.label(row.agentModel, .init(size: tokens.rowFontSize, color: muted), theme: theme),
             number(row.lifetime, theme.text.primary), number(row.input, theme.text.primary),
             number(row.output, theme.text.primary), contextCell(row.context),
             number(
@@ -150,7 +150,7 @@ private final class TableRowView: NSView {
         let color = state == .stopped ? theme.text.secondary : theme.color(for: state)
         let dot = StatusDot(diameter: theme.observatory.tableDot, style: theme.statusDot(for: state))
         let text = ObservatoryText.label(
-            ObservatoryTexts.state(state), size: theme.observatory.rowFontSize, color: color, theme: theme)
+            ObservatoryTexts.state(state), .init(size: theme.observatory.rowFontSize, color: color), theme: theme)
         let stack = NSStackView(views: [dot, text])
         stack.spacing = theme.observatory.spacing.stateDot
         return stack
@@ -159,7 +159,7 @@ private final class TableRowView: NSView {
     private func contextCell(_ load: ContextLoad) -> NSView {
         guard case .percent(let value) = load else {
             return ObservatoryText.label(
-                "—", size: theme.observatory.rowFontSize, color: theme.text.secondary, theme: theme)
+                "—", .init(size: theme.observatory.rowFontSize, color: theme.text.secondary), theme: theme)
         }
         let color = load.isHigh ? theme.agent.waiting : theme.accent
         let bar = ContextBar()
@@ -170,8 +170,9 @@ private final class TableRowView: NSView {
             bar.heightAnchor.constraint(equalToConstant: theme.header.contextBarHeight),
         ])
         let text = ObservatoryText.number(
-            ObservatoryFormat.percent(value), size: theme.observatory.rowFontSize,
-            color: load.isHigh ? theme.agent.waiting : theme.text.primary, theme: theme)
+            ObservatoryFormat.percent(value),
+            .init(size: theme.observatory.rowFontSize, color: load.isHigh ? theme.agent.waiting : theme.text.primary),
+            theme: theme)
         let stack = NSStackView(views: [bar, text])
         stack.spacing = theme.observatory.spacing.contextBar
         return stack

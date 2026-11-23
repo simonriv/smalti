@@ -46,6 +46,22 @@ struct TranscriptLineTranslatorTests {
         #expect(tool.input == ["command": "ls"])
     }
 
+    /// A Write's whole file must not end up in the index: tool inputs are kept short.
+    @Test func longToolInputsAreTruncated() throws {
+        let content = String(repeating: "x", count: 5_000)
+        let line =
+            #"{"type":"assistant","timestamp":"2026-11-18T15:00:00Z","sessionId":"s","message":{"id":"m1","model":"claude-haiku-5-5","content":[{"type":"tool_use","id":"t1","name":"Write","input":{"file_path":"/a.txt","content":"\#(content)"}}],"usage":{"output_tokens":1}}}"#
+
+        let records = try translate(line).records
+
+        guard case .toolStarted(let tool) = records.last else {
+            Issue.record("expected a tool start")
+            return
+        }
+        #expect(tool.input["content"]?.count == TranscriptLineTranslator.inputLimit)
+        #expect(tool.input["file_path"] == "/a.txt")
+    }
+
     @Test func subagentReplyIsMarkedAndGivesNoSessionInfo() throws {
         let line =
             #"{"type":"assistant","timestamp":"2026-11-18T15:00:00Z","sessionId":"s","cwd":"/w","message":{"id":"m1","model":"claude-haiku-5-5","content":[],"usage":{"output_tokens":1}}}"#
