@@ -1,0 +1,172 @@
+import Foundation
+
+public struct OutputPeak: Equatable, Sendable {
+    public let output: Int
+    public let at: Date
+}
+
+/// What the observatory screen shows for one period and one selected session.
+public struct ObservatoryReport: Equatable, Sendable {
+    public struct Summary: Equatable, Sendable {
+        public let active: Int
+        public let working: Int
+        public let waiting: Int
+        public let failed: Int
+        public let input: Int
+        /// Percent of the input read from the cache; nil without input.
+        public let cacheShare: Int?
+        public let output: Int
+        public let peak: OutputPeak?
+        public let cost: CostEstimate
+        /// False while the index still reads files older than the period's start ("leyendo transcripts…").
+        public let isComplete: Bool
+    }
+
+    public struct Row: Equatable, Sendable {
+        public let id: String
+        public let state: AgentStateKind
+        public let label: String
+        public let agentModel: String
+        public let lifetime: String
+        public let input: String
+        public let output: String
+        public let context: ContextLoad
+        public let errorRate: Int
+        public let isErrorRateHigh: Bool
+        public let pid: String
+        public let pane: PaneID?
+    }
+
+    public struct Detail: Equatable, Sendable {
+        public let sessionID: String
+        public let title: String
+        public let tools: [RecentTool]
+        /// Output per minute for the last hour, oldest first, ending with the current minute.
+        public let outputPerMinute: [Int]
+        public let peak: OutputPeak?
+        public let compaction: String
+    }
+
+    public let summary: Summary
+    public let rows: [Row]
+    public let detail: Detail?
+
+    /// From 5 % of failed tools the rate turns red (the board shows 2 % plain and 9 % red).
+    public static let highErrorRate = 5
+
+    public static func make(
+        _ snapshot: ObservatorySnapshot, period: ObservatoryPeriod, selection: String?, calendar: Calendar
+    ) -> ObservatoryReport {
+        let window = PeriodWindow(start: period.start(now: snapshot.now, calendar: calendar), end: snapshot.now)
+        let sessions = ordered(ObservedSession.merge(snapshot), in: window)
+        let rows = sessions.map { row(for: $0, in: window, snapshot: snapshot) }
+        let selected = sessions.first { $0.id == selection } ?? sessions.first
+        return ObservatoryReport(
+            summary: summary(sessions, in: window, snapshot: snapshot),
+            rows: rows,
+            detail: selected.map { detail(for: $0, snapshot: snapshot) })
+    }
+
+    private static func ordered(_ sessions: [ObservedSession], in window: PeriodWindow) -> [ObservedSession] {
+        let live = sessions.filter(\.isLive).sorted { ($0.startedAt ?? .distantPast) > ($1.startedAt ?? .distantPast) }
+        let stopped = sessions.filter { !$0.isLive && window.hasActivity($0.activity) }
+            .sorted { ($0.activity.lastActivity ?? .distantPast) > ($1.activity.lastActivity ?? .distantPast) }
+        return live + stopped
+    }
+
+    private static func summary(_ sessions: [ObservedSession], in window: PeriodWindow, snapshot: ObservatorySnapshot)
+        -> Summary
+    {
+        let live = sessions.filter(\.isLive)
+        let usage = sessions.map { window.usage(of: $0.activity) }.reduce(into: [ModelID: TokenUsage]()) {
+            total, next in
+            total.merge(next, uniquingKeysWith: +)
+        }
+        let tokens = usage.values.reduce(.zero, +)
+        return Summary(
+            active: live.count, working: live.filter { $0.state == .working }.count,
+            waiting: live.filter { $0.state == .waiting }.count, failed: live.filter { $0.state == .failed }.count,
+            input: tokens.inputTotal, cacheShare: tokens.cacheShare.map { Int(($0 * 100).rounded()) },
+            output: tokens.output,
+            peak: sessions.compactMap { window.peak(of: $0.activity) }.max { $0.output < $1.output },
+            cost: CostEstimate.of(usage, catalog: snapshot.catalog),
+            isComplete: snapshot.activity.indexedSince <= window.start)
+    }
+
+    private static func row(for session: ObservedSession, in window: PeriodWindow, snapshot: ObservatorySnapshot) -> Row
+    {
+        let tokens = window.usage(of: session.activity).values.reduce(.zero, +)
+        let tools = window.tools(of: session.activity)
+        let errorRate = tools.calls == 0 ? 0 : Int((Double(tools.errors) * 100 / Double(tools.calls)).rounded())
+        let model = session.activity.model.map { "Claude Code · \($0.family)" } ?? "Claude Code"
+        return Row(
+            id: session.id, state: session.state, label: session.label, agentModel: model,
+            lifetime: lifetime(of: session, now: snapshot.now),
+            input: ObservatoryFormat.count(tokens.inputTotal), output: ObservatoryFormat.count(tokens.output),
+            context: session.isLive
+                ? ContextLoad.of(
+                    contextTokens: session.activity.contextTokens, model: session.activity.model,
+                    catalog: snapshot.catalog) : .unavailable,
+            errorRate: errorRate, isErrorRateHigh: errorRate >= highErrorRate,
+            pid: session.pid.map(String.init) ?? "—", pane: session.pane)
+    }
+
+    private static func lifetime(of session: ObservedSession, now: Date) -> String {
+        if session.isLive { return ObservatoryFormat.lifetime(now.timeIntervalSince(session.startedAt ?? now)) }
+        return ObservatoryFormat.ago(now.timeIntervalSince(session.activity.lastActivity ?? now))
+    }
+
+    private static let minute: TimeInterval = 60
+    private static let chartMinutes = 60
+
+    private static func detail(for session: ObservedSession, snapshot: ObservatorySnapshot) -> Detail {
+        let nowMinute = (snapshot.now.timeIntervalSince1970 / minute).rounded(.down) * minute
+        let minutes = (0..<chartMinutes).map {
+            Date(timeIntervalSince1970: nowMinute - Double(chartMinutes - 1 - $0) * minute)
+        }
+        let series = minutes.map { session.activity.outputByMinute[$0] ?? 0 }
+        let peak = zip(series, minutes).max { $0.0 < $1.0 }.flatMap {
+            $0.0 > 0 ? OutputPeak(output: $0.0, at: $0.1) : nil
+        }
+        return Detail(
+            sessionID: session.id, title: "Actividad · \(session.label)", tools: session.activity.recentTools,
+            outputPerMinute: series, peak: peak, compaction: compactionText(session.activity, snapshot: snapshot))
+    }
+
+    private static func compactionText(_ activity: SessionActivity, snapshot: ObservatorySnapshot) -> String {
+        guard let compaction = activity.lastCompaction else { return "Sin compactaciones" }
+        let ago = ObservatoryFormat.ago(snapshot.now.timeIntervalSince(compaction.at))
+        guard let model = activity.model, let window = snapshot.catalog.pricing(for: model)?.contextWindow, window > 0
+        else { return "Compactación \(ago)" }
+        let freed = Int((Double(compaction.preTokens - compaction.postTokens) * 100 / Double(window)).rounded())
+        return "Compactación \(ago) · liberó \(freed)% del contexto"
+    }
+}
+
+/// The quarter hours from a period's start until now.
+struct PeriodWindow {
+    let start: Date
+    let end: Date
+
+    private func buckets(of activity: SessionActivity) -> [ActivityBucket] {
+        activity.buckets.filter { $0.key.start >= start && $0.key.start <= end }.map(\.value)
+    }
+
+    func hasActivity(_ activity: SessionActivity) -> Bool { !buckets(of: activity).isEmpty }
+
+    func usage(of activity: SessionActivity) -> [ModelID: TokenUsage] {
+        buckets(of: activity).reduce(into: [:]) { total, bucket in total.merge(bucket.usageByModel, uniquingKeysWith: +)
+        }
+    }
+
+    func tools(of activity: SessionActivity) -> (calls: Int, errors: Int) {
+        buckets(of: activity).reduce((0, 0)) { ($0.0 + $1.toolCalls, $0.1 + $1.toolErrors) }
+    }
+
+    func peak(of activity: SessionActivity) -> OutputPeak? {
+        buckets(of: activity).compactMap { bucket in
+            bucket.peakMinute.map { OutputPeak(output: bucket.peakOutput, at: $0) }
+        }
+        .max { $0.output < $1.output }
+    }
+}
