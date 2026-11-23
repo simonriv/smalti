@@ -11,6 +11,8 @@ public struct LaunchSettings: Equatable, Sendable {
     /// Not a launch argument: the composition root copies this environment variable into the same map.
     public static let claudeConfigDirKey = "CLAUDE_CONFIG_DIR"
     public static let ollamaURLKey = "SmaltiOllamaURL"
+    /// F4: the user ZDOTDIR the panes' zsh restores after Ghostty's integration; tests point it at an empty folder.
+    public static let userZdotdirKey = "SmaltiUserZdotdir"
     public static let defaultOllamaURL = "http://127.0.0.1:11434"
     /// Relative to the home directory.
     public static let userConfigPath = ".config/smalti/config.toml"
@@ -23,6 +25,8 @@ public struct LaunchSettings: Equatable, Sendable {
     public let claudeHome: URL
     /// Ollama's local API.
     public let ollamaURL: URL
+    /// Overrides the app's own `ZDOTDIR` for the panes (tests only).
+    public let userZdotdir: String?
 
     public init(arguments: [String: String], home: URL, defaultStateDirectory: URL) {
         let value = { (key: String) in arguments[key].flatMap { $0.isEmpty ? nil : $0 } }
@@ -33,6 +37,7 @@ public struct LaunchSettings: Equatable, Sendable {
             (value(Self.claudeHomeKey) ?? value(Self.claudeConfigDirKey)).map { URL(filePath: $0) }
             ?? home.appending(path: ".claude")
         ollamaURL = value(Self.ollamaURLKey).flatMap { URL(string: $0) } ?? Self.ollamaFallback
+        userZdotdir = value(Self.userZdotdirKey)
     }
 
     // A literal that always parses; the fallback only exists to keep the type non-optional.

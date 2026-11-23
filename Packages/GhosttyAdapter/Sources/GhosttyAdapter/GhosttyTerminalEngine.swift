@@ -64,12 +64,14 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             restoration: restoration, initialInput: spec.initialInput)
     }
 
-    /// Variables that put Smalti's zsh file in libghostty's chain, for panes with a history file. `ZDOTDIR` itself is
-    /// left to libghostty (a pane variable would replace its integration directory).
+    /// Variables that put Smalti's zsh file in libghostty's chain, for panes with a history file or an input socket
+    /// (F4). `ZDOTDIR` itself is left to libghostty (a pane variable would replace its integration directory).
     nonisolated static func zshChain(for spec: TerminalSessionSpec, zshDirectory: URL?, userZdotdir: String?)
         -> [String: String]
     {
-        guard let zshDirectory, spec.environment["SMALTI_HISTORY_FILE"] != nil else { return [:] }
+        guard let zshDirectory,
+            spec.environment["SMALTI_HISTORY_FILE"] != nil || spec.environment["SMALTI_INPUT_SOCKET"] != nil
+        else { return [:] }
         var chain = ["GHOSTTY_ZSH_ZDOTDIR": zshDirectory.path(percentEncoded: false)]
         if let userZdotdir { chain["SMALTI_USER_ZDOTDIR"] = userZdotdir }
         return chain
@@ -123,6 +125,16 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     /// The AppKit view that renders `pane`; the app embeds it. Not part of the domain port.
     public func view(for pane: PaneID) -> NSView? {
         views[pane]
+    }
+
+    /// Whether the pane's shell is at its prompt (OSC 133), not running a command or a full-screen program.
+    public func isAtPrompt(_ pane: PaneID) -> Bool {
+        views[pane]?.isAtPrompt ?? false
+    }
+
+    /// The cursor's cell in the pane's view, in points from its top-left corner.
+    public func cursorCell(_ pane: PaneID) -> Rect? {
+        views[pane]?.cursorCell
     }
 }
 

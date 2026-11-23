@@ -141,6 +141,16 @@ struct PaneHistoryTests {
         #expect(GhosttyTerminalEngine.zshChain(for: spec, zshDirectory: work, userZdotdir: nil).isEmpty)
     }
 
+    /// F4: the input script lives in the same file, so a pane with an input socket chains it too.
+    @Test func inputSocketAloneChainsSmaltisFile() {
+        let spec = TerminalSessionSpec(
+            workingDirectory: .root, command: .loginShell, environment: ["SMALTI_INPUT_SOCKET": "/tmp/i.sock"])
+
+        let chain = GhosttyTerminalEngine.zshChain(for: spec, zshDirectory: work, userZdotdir: nil)
+
+        #expect(chain["GHOSTTY_ZSH_ZDOTDIR"] == work.path(percentEncoded: false))
+    }
+
     @Test func chainPointsGhosttyAtSmaltiAndKeepsTheUserDirectory() {
         let spec = TerminalSessionSpec(
             workingDirectory: .root, command: .loginShell, environment: ["SMALTI_HISTORY_FILE": "/h"])

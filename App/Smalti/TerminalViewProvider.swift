@@ -7,6 +7,9 @@ import SmaltiCore
 @MainActor
 protocol TerminalViewProvider {
     func view(for pane: PaneID) -> NSView?
+    /// F4: menus open only at the shell prompt and close when it is left.
+    func isAtPrompt(_ pane: PaneID) -> Bool
+    func cursorCell(_ pane: PaneID) -> Rect?
 }
 
 extension GhosttyTerminalEngine: TerminalViewProvider {}

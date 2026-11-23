@@ -103,7 +103,7 @@ final class AppComposition {
         let state = startup.settings.stateDirectory
         let engine = GhosttyTerminalEngine(
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
-            userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
+            userZdotdir: startup.settings.userZdotdir ?? ProcessInfo.processInfo.environment["ZDOTDIR"])
         let archive = FileSessionArchive(directory: state)
         let socket = SocketLocation.socketFile(
             stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)

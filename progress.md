@@ -154,7 +154,7 @@
 - [x] T6 · `FileCommandHistory` (JSONL)
 - [x] T7 · `ProjectContextAdapter`
 - [x] T8 · `FigCompletionAdapter` y vendoring
-- [ ] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
+- [x] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
 #### Bloque 3 · Canal con zsh
 - [ ] T10 · `InputSocketServer`
 - [ ] T11 · Script de zsh: canal, fantasma y aceptar
