@@ -7,9 +7,15 @@ import SmaltiCore
 public final class GhosttyTerminalEngine: TerminalEngine {
     private let runtime: GhosttyRuntime
     private var views: [PaneID: GhosttySurfaceView] = [:]
+    /// Where Smalti's zsh startup file lives (per-pane history); nil disables it.
+    private let zshDirectory: URL?
+    /// The `ZDOTDIR` the app itself was started with, handed back to the user's shell.
+    private let userZdotdir: String?
 
-    public init(runtime: GhosttyRuntime) {
+    public init(runtime: GhosttyRuntime, zshDirectory: URL? = nil, userZdotdir: String? = nil) {
         self.runtime = runtime
+        self.zshDirectory = zshDirectory.flatMap { try? SmaltiZshEnv.install(in: $0) }
+        self.userZdotdir = userZdotdir
     }
 
     /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
@@ -31,8 +37,14 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     /// The spec as libghostty receives it: a pane with saved scrollback starts through `RestoreLauncher`, and a
     /// pane that restores its history says so to the shell (`SMALTI_RESTORE_HISTORY`, read by Smalti's zsh hook).
     func prepared(_ spec: TerminalSessionSpec, for pane: PaneID) -> TerminalSessionSpec {
-        guard let restoration = spec.restoration else { return spec }
-        var environment = spec.environment
+        var environment = spec.environment.merging(
+            Self.zshChain(for: spec, zshDirectory: zshDirectory, userZdotdir: userZdotdir)
+        ) { own, _ in own }
+        guard let restoration = spec.restoration else {
+            return TerminalSessionSpec(
+                workingDirectory: spec.workingDirectory, command: spec.command, environment: environment,
+                initialInput: spec.initialInput)
+        }
         if restoration.restoresHistory { environment["SMALTI_RESTORE_HISTORY"] = "1" }
         var command = spec.command
         if let scrollback = restoration.scrollback, writeRestoreFile(scrollback, for: pane) {
@@ -42,6 +54,17 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         return TerminalSessionSpec(
             workingDirectory: spec.workingDirectory, command: command, environment: environment,
             restoration: restoration, initialInput: spec.initialInput)
+    }
+
+    /// Variables that put Smalti's zsh file in libghostty's chain, for panes with a history file. `ZDOTDIR` itself is
+    /// left to libghostty (a pane variable would replace its integration directory).
+    nonisolated static func zshChain(for spec: TerminalSessionSpec, zshDirectory: URL?, userZdotdir: String?)
+        -> [String: String]
+    {
+        guard let zshDirectory, spec.environment["SMALTI_HISTORY_FILE"] != nil else { return [:] }
+        var chain = ["GHOSTTY_ZSH_ZDOTDIR": zshDirectory.path(percentEncoded: false)]
+        if let userZdotdir { chain["SMALTI_USER_ZDOTDIR"] = userZdotdir }
+        return chain
     }
 
     /// False when the file cannot be written: the pane then starts without its scrollback.
