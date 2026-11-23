@@ -44,6 +44,34 @@ private func score(_ needle: [Character], for command: Command) -> Int? {
     return alignment + (title.hasPrefix(String(needle)) ? titlePrefixBonus : 0)
 }
 
+/// The score of `query` as a subsequence of `text` with the same rules as `fuzzyMatch` (consecutive, word start
+/// and skip), without the title bonus; nil when it does not match. An empty query scores 0.
+public func fuzzyScore(_ query: String, in text: String) -> Int? {
+    let needle = Array(folded(query.trimmingCharacters(in: .whitespacesAndNewlines)))
+    guard !needle.isEmpty else { return 0 }
+    return bestAlignmentScore(of: needle, in: Array(folded(text)))
+}
+
+/// Where `query` matches in `text`, leftmost first, as ranges of characters; empty when it does not match.
+public func fuzzyMatchedRanges(_ query: String, in text: String) -> [Range<Int>] {
+    let needle = Array(folded(query.trimmingCharacters(in: .whitespacesAndNewlines)))
+    let haystack = Array(folded(text))
+    var positions: [Int] = []
+    var cursor = 0
+    for character in needle {
+        guard let found = haystack[cursor...].firstIndex(of: character) else { return [] }
+        positions.append(found)
+        cursor = found + 1
+    }
+    return positions.reduce(into: []) { ranges, position in
+        if let last = ranges.last, last.upperBound == position {
+            ranges[ranges.count - 1] = last.lowerBound..<(position + 1)
+        } else {
+            ranges.append(position..<(position + 1))
+        }
+    }
+}
+
 /// Best score over every way of matching `needle` as a subsequence of `haystack`, or `nil` when there is none.
 ///
 /// Dynamic program in O(needle × haystack): `previous[i]` is the best score with the prior needle character

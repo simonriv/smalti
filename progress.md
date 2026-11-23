@@ -145,8 +145,8 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · Línea de comando y protocolo del canal
-- [ ] T2 · Historial, filtro de secretos y búsqueda ⌃R
+- [x] T1 · Línea de comando y protocolo del canal
+- [x] T2 · Historial, filtro de secretos y búsqueda ⌃R
 - [ ] T3 · Predicción heurística
 - [ ] T4 · Specs, motor de completions y menú
 - [ ] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
