@@ -5,19 +5,21 @@ import SmaltiCore
 /// Completion specs in Fig's format, run with JavaScriptCore: the bundled ones (`Specs/`, vendored by
 /// `scripts/fig/vendor_specs.py`) and the user's own in `~/.config/smalti/completions/*.js`, which win.
 ///
-/// Each spec loads once into its own `JSContext` on one virtual machine; this actor serializes every use of them.
-/// A generator's result is cached for `cacheLifetime` per generator and directory.
+/// Each spec loads once into its own `JSContext` on one virtual machine; this actor serializes every use of them. A
+/// user spec reloads when its file changes, and a broken one falls back to the bundled spec. A script generator's
+/// output is cached for `cacheLifetime` per evaluated script and directory; a custom one per tokens and directory.
 public actor FigSpecs: CompletionProvider {
     public static let cacheLifetime: TimeInterval = 30
 
     private struct Loaded {
         let spec: CompletionSpec
-        let context: JSContext
+        /// The user file's modification date when it was loaded; nil for a bundled spec.
+        let userVersion: Date?
     }
 
-    private struct CachedResult {
+    private struct Cached<Value> {
         let date: Date
-        let items: [Suggestion]
+        let value: Value
     }
 
     private let bundled: URL?
@@ -28,9 +30,11 @@ public actor FigSpecs: CompletionProvider {
     private let clock: @Sendable () -> Date
     private let machine = JSVirtualMachine()
     private var loaded: [String: Loaded] = [:]
-    private var failed: Set<String> = []
+    /// Names that failed to load, with the user file version that failed (nil: no user file).
+    private var failed: [String: Date?] = [:]
     private var generators: [GeneratorID: JSValue] = [:]
-    private var cache: [String: CachedResult] = [:]
+    private var outputs: [String: Cached<String>] = [:]
+    private var results: [String: Cached<[Suggestion]>] = [:]
     /// The last spec that failed to load or generator that failed to run.
     public private(set) var lastError: CompletionError?
 
@@ -52,28 +56,31 @@ public actor FigSpecs: CompletionProvider {
     }
 
     public func spec(for command: String) async -> CompletionSpec? {
-        if let spec = loaded[command]?.spec { return spec }
-        guard !failed.contains(command), let object = module(command) else { return nil }
+        guard Self.isValidName(command) else { return nil }
+        let version = userVersion(of: command)
+        if let loaded = loaded[command], loaded.userVersion == version { return loaded.spec }
+        if let failedVersion = failed[command], failedVersion == version { return nil }
+        guard let object = module(command, userVersion: version) else {
+            failed[command] = version
+            return nil
+        }
         // Each `loadSpec` gets a context of its own: minified modules share short global names.
-        var translator = FigSpecTranslator(specName: command) { name in self.module(name) }
+        var translator = FigSpecTranslator(specName: command) { name in self.module(name, userVersion: nil) }
         let spec = translator.spec(from: object)
         generators.merge(translator.generators) { _, new in new }
-        loaded[command] = Loaded(spec: spec, context: object.context)
+        loaded[command] = Loaded(spec: spec, userVersion: version)
+        failed[command] = nil
         return spec
     }
 
     public func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
         -> [Suggestion]
     {
-        let key = "\(generator.spec)|\(generator.path.joined(separator: " "))|\(generator.ordinal)|\(directory)"
-        if let cached = cache[key], clock().timeIntervalSince(cached.date) < Self.cacheLifetime { return cached.items }
         guard let value = generators[generator] else {
             throw CompletionError(command: generator.spec, cause: "unknown generator \(generator.ordinal)")
         }
         do {
-            let items = try await run(value, tokens: tokens, in: directory, command: generator.spec)
-            cache[key] = CachedResult(date: clock(), items: items)
-            return items
+            return try await run(value, request: GeneratorRequest(tokens: tokens, directory: directory, id: generator))
         } catch {
             lastError = error
             throw error
@@ -86,68 +93,140 @@ public actor FigSpecs: CompletionProvider {
 
     private var userPath: String { user.path(percentEncoded: false) }
 
-    /// Evaluates a spec module in a fresh context and returns its default export, or nil (remembering why).
-    private func module(_ name: String) -> JSValue? {
-        guard let source = source(of: name), let context = JSContext(virtualMachine: machine) else {
-            failed.insert(name)
-            return nil
+    /// Evaluates a spec module in a fresh context and returns its default export, or nil (remembering why). A
+    /// user spec that fails falls back to the bundled one of the same name.
+    private func module(_ name: String, userVersion: Date?) -> JSValue? {
+        if userVersion != nil, let own = try? String(contentsOf: userFile(name), encoding: .utf8) {
+            if let object = evaluate(own, named: name) { return object }
         }
-        var exception: String?
-        context.exceptionHandler = { _, value in exception = value?.toString() }
+        guard let bundled, let file = bundledNames[name],
+            let text = try? String(contentsOf: bundled.appending(path: file), encoding: .utf8)
+        else { return nil }
+        return evaluate(text, named: name)
+    }
+
+    private func evaluate(_ source: String, named name: String) -> JSValue? {
+        guard let context = JSContext(virtualMachine: machine) else { return nil }
+        // Keep JavaScript's own behavior: an exception stays in `context.exception` until read.
+        context.exceptionHandler = { context, exception in context?.exception = exception }
         context.evaluateScript("globalThis.console = { log() {}, error() {}, warn() {} };")
         context.evaluateScript(ModuleSource.script(from: source))
-        let object = context.objectForKeyedSubscript("__smaltiSpec")
-        guard exception == nil, let object, object.isObject else {
-            failed.insert(name)
-            lastError = CompletionError(command: name, cause: exception ?? "the spec has no default export")
+        if let exception = context.exception {
+            context.exception = nil
+            lastError = CompletionError(command: name, cause: exception.toString())
+            return nil
+        }
+        guard let object = context.objectForKeyedSubscript("__smaltiSpec"), object.isObject else {
+            lastError = CompletionError(command: name, cause: "the spec has no default export")
             return nil
         }
         return object
+    }
+
+    private func userFile(_ name: String) -> URL { user.appending(path: "\(name).js") }
+
+    private func userVersion(of name: String) -> Date? {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: userFile(name).path(percentEncoded: false))
+        return attributes?[.modificationDate] as? Date
+    }
+
+    /// A command name names a file in the completions folder: no paths, no hidden files.
+    private static func isValidName(_ name: String) -> Bool {
+        !name.isEmpty && !name.contains("/") && !name.hasPrefix(".")
     }
 
     // MARK: Generators
 
     /// Runs a Fig generator: `custom(tokens, executeCommand, context)` when present, otherwise its `script`
     /// (argument list, shell string, or a function of the tokens returning either), whose output goes through
-    /// `postProcess(output, tokens)` or is split on `splitOn` (a newline by default).
-    private func run(_ generator: JSValue, tokens: [String], in directory: String, command: String)
-        async throws(CompletionError) -> [Suggestion]
+    /// `postProcess(output, tokens)` or is split on `splitOn` (a newline by default). Path generators answer
+    /// relative to the folder being typed (`getQueryTerm`): that folder is put back in front of each name.
+    private func run(_ generator: JSValue, request: GeneratorRequest) async throws(CompletionError) -> [Suggestion] {
+        let items: [Suggestion]
+        if Self.function(generator, "custom") != nil {
+            items = try await runCustom(generator, request: request)
+        } else {
+            items = try await runScripted(generator, request: request)
+        }
+        let folder = try typedFolder(generator, request: request)
+        guard !folder.isEmpty else { return items }
+        return items.map {
+            Suggestion(name: folder + $0.name, description: $0.description, insertValue: $0.insertValue)
+        }
+    }
+
+    private func runCustom(_ generator: JSValue, request: GeneratorRequest) async throws(CompletionError)
+        -> [Suggestion]
+    {
+        let key =
+            "custom|\(request.id.spec)|\(request.id.path)|\(request.id.ordinal)|\(request.directory)|\(request.tokens)"
+        if let cached = results[key], isFresh(cached.date) { return cached.value }
+        guard let custom = Self.function(generator, "custom") else { return [] }
+        let context = generator.context
+        // Fig's generator context: its own generators (`filepaths`) read the search term and the environment.
+        let fields: [String: Any] = [
+            "currentWorkingDirectory": request.directory, "searchTerm": request.searchTerm, "isDangerous": false,
+            "currentProcess": "zsh", "sshPrefix": "", "environmentVariables": ["HOME": NSHomeDirectory()],
+        ]
+        let promise = custom.call(withArguments: [
+            JSValue(object: request.tokens, in: context) as Any, executor(in: request.directory, context: context),
+            JSValue(object: fields, in: context) as Any,
+        ])
+        try Self.check(context, command: request.id.spec)
+        let items = try await suggestions(settling: promise, command: request.id.spec)
+        results[key] = Cached(date: clock(), value: items)
+        return items
+    }
+
+    private func runScripted(_ generator: JSValue, request: GeneratorRequest) async throws(CompletionError)
+        -> [Suggestion]
     {
         let context = generator.context
-        let tokenList = JSValue(object: tokens, in: context)
-        if let custom = Self.function(generator, "custom") {
-            // Fig's generator context: its own generators (`filepaths`) read the search term and the environment.
-            let request = JSValue(
-                object: [
-                    "currentWorkingDirectory": directory, "searchTerm": tokens.last ?? "", "isDangerous": false,
-                    "currentProcess": "zsh", "sshPrefix": "", "environmentVariables": ["HOME": NSHomeDirectory()],
-                ] as [String: Any], in: context)
-            let promise = custom.call(withArguments: [
-                tokenList as Any, executor(in: directory, context: context), request as Any,
-            ])
-            try Self.check(context, command: command)
-            return try await suggestions(settling: promise, command: command)
-        }
-        let output = try await runScript(generator.forProperty("script"), tokens: tokenList, in: directory)
+        let tokenList = JSValue(object: request.tokens, in: context)
+        let output = try await output(of: generator.forProperty("script"), tokens: tokenList, request: request)
         if let postProcess = Self.function(generator, "postProcess") {
             let shaped = postProcess.call(withArguments: [output, tokenList as Any])
-            try Self.check(context, command: command)
+            try Self.check(context, command: request.id.spec)
             return Self.suggestions(from: shaped)
         }
         let separator = FigSpecTranslator.text(generator.forProperty("splitOn")) ?? "\n"
         return output.components(separatedBy: separator).filter { !$0.isEmpty }.map { Suggestion(name: $0) }
     }
 
-    private func runScript(_ script: JSValue?, tokens: JSValue?, in directory: String) async throws(CompletionError)
+    /// The script's output, cached per evaluated script and directory.
+    private func output(of script: JSValue?, tokens: JSValue?, request: GeneratorRequest) async throws(CompletionError)
         -> String
     {
         guard var script, !script.isUndefined, !script.isNull else { return "" }
-        if Self.isFunction(script) { script = script.call(withArguments: [tokens as Any]) }
-        if script.isString { return try await runner.run(shell: script.toString(), in: directory).stdout }
-        let arguments = FigSpecTranslator.names(of: script)
+        if Self.isFunction(script) {
+            script = script.call(withArguments: [tokens as Any])
+            try Self.check(script.context, command: request.id.spec)
+        }
+        let isShell = script.isString
+        let arguments = isShell ? [script.toString() ?? ""] : FigSpecTranslator.names(of: script)
         guard !arguments.isEmpty else { return "" }
-        return try await runner.run(arguments: arguments, in: directory).stdout
+        let key = "script|\(isShell)|\(arguments)|\(request.directory)"
+        if let cached = outputs[key], isFresh(cached.date) { return cached.value }
+        let output =
+            isShell
+            ? try await runner.run(shell: arguments[0], in: request.directory).stdout
+            : try await runner.run(arguments: arguments, in: request.directory).stdout
+        outputs[key] = Cached(date: clock(), value: output)
+        return output
     }
+
+    /// The part of the search term before the generator's query term (`Projects/` of `Projects/sm`).
+    private func typedFolder(_ generator: JSValue, request: GeneratorRequest) throws(CompletionError) -> String {
+        guard let queryTerm = Self.function(generator, "getQueryTerm") else { return "" }
+        let query = queryTerm.call(withArguments: [request.searchTerm])
+        try Self.check(generator.context, command: request.id.spec)
+        guard let query, query.isString, let text = query.toString(), request.searchTerm.hasSuffix(text) else {
+            return ""
+        }
+        return String(request.searchTerm.dropLast(text.count))
+    }
+
+    private func isFresh(_ date: Date) -> Bool { clock().timeIntervalSince(date) < Self.cacheLifetime }
 
     /// `executeCommand({ command, args, cwd })` for custom generators: a promise of `{ stdout, stderr, status }`.
     private func executor(in directory: String, context: JSContext?) -> Any {
@@ -175,18 +254,20 @@ public actor FigSpecs: CompletionProvider {
         return JSValue(object: execute, in: context) as Any
     }
 
-    /// Waits for a promise (or takes a plain value) and reads its suggestions.
+    /// Waits for a promise (or takes a plain value) and reads its suggestions, for at most the runner's timeout.
+    /// The wait ends once: a thenable that calls back twice, or calls back and throws, cannot resume it again.
     private func suggestions(settling value: JSValue?, command: String) async throws(CompletionError)
         -> [Suggestion]
     {
         guard let value, Self.function(value, "then") != nil else { return Self.suggestions(from: value) }
+        let timeout = runner.timeout
         let outcome: Result<[Suggestion], CompletionError> = await withCheckedContinuation { continuation in
+            let once = SettleOnce(continuation)
             let fulfilled: @convention(block) (JSValue?) -> Void = { result in
-                continuation.resume(returning: .success(Self.suggestions(from: result)))
+                once.resume(.success(Self.suggestions(from: result)))
             }
             let rejected: @convention(block) (JSValue?) -> Void = { reason in
-                continuation.resume(
-                    returning: .failure(CompletionError(command: command, cause: reason?.toString() ?? "rejected")))
+                once.resume(.failure(CompletionError(command: command, cause: reason?.toString() ?? "rejected")))
             }
             // `invokeMethod`, not `call`: `then` needs the promise as `this`.
             value.invokeMethod(
@@ -197,7 +278,11 @@ public actor FigSpecs: CompletionProvider {
                 ])
             if let exception = value.context.exception {
                 value.context.exception = nil
-                continuation.resume(returning: .failure(CompletionError(command: command, cause: exception.toString())))
+                once.resume(.failure(CompletionError(command: command, cause: exception.toString())))
+            }
+            Task {
+                try? await Task.sleep(for: timeout)
+                once.resume(.failure(CompletionError(command: command, cause: "timed out after \(timeout)")))
             }
         }
         return try outcome.get()
@@ -220,13 +305,6 @@ public actor FigSpecs: CompletionProvider {
         guard let exception = context?.exception else { return }
         context?.exception = nil
         throw CompletionError(command: command, cause: exception.toString())
-    }
-
-    private func source(of name: String) -> String? {
-        let own = user.appending(path: "\(name).js")
-        if let text = try? String(contentsOf: own, encoding: .utf8) { return text }
-        guard let bundled, let file = bundledNames[name] else { return nil }
-        return try? String(contentsOf: bundled.appending(path: file), encoding: .utf8)
     }
 
     private struct Manifest: Decodable {
@@ -254,5 +332,33 @@ enum ModuleSource {
         }
         return text.replacingOccurrences(
             of: #"export\s+default\s+"#, with: "globalThis.__smaltiSpec = ", options: .regularExpression)
+    }
+}
+
+/// What a generator runs for: the words typed, the pane's directory and which generator it is.
+struct GeneratorRequest {
+    let tokens: [String]
+    let directory: String
+    let id: GeneratorID
+
+    var searchTerm: String { tokens.last ?? "" }
+}
+
+/// Resumes a continuation exactly once, whoever calls first (JavaScript callbacks, an exception or the deadline).
+/// The flag is guarded by `lock`, so it is safe from JavaScriptCore's and the deadline's threads.
+private final class SettleOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Result<[Suggestion], CompletionError>, Never>?
+
+    init(_ continuation: CheckedContinuation<Result<[Suggestion], CompletionError>, Never>) {
+        self.continuation = continuation
+    }
+
+    func resume(_ result: Result<[Suggestion], CompletionError>) {
+        let pending = lock.withLock { () -> CheckedContinuation<Result<[Suggestion], CompletionError>, Never>? in
+            defer { continuation = nil }
+            return continuation
+        }
+        pending?.resume(returning: result)
     }
 }

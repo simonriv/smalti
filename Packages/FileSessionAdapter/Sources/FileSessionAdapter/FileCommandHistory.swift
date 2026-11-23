@@ -33,18 +33,35 @@ public actor FileCommandHistory: CommandHistory {
         return Array(entries.suffix(limit))
     }
 
+    /// Appends with `O_APPEND`, so the line lands at the end even if another writer moved it; when the file ends
+    /// in a line cut by a crash, the entry starts on a new line instead of joining it.
     public func append(_ entry: HistoryEntry) async throws(HistoryError) {
         do {
             var line = try JSONEncoder().encode(entry)
             line.append(UInt8(ascii: "\n"))
             try prepareFile()
-            let handle = try FileHandle(forWritingTo: file)
-            defer { try? handle.close() }
-            try handle.seekToEnd()
-            try handle.write(contentsOf: line)
+            if try !endsWithNewline() { line.insert(UInt8(ascii: "\n"), at: 0) }
+            try Self.appendBytes(line, to: path)
         } catch {
             throw failure("append", error)
         }
+    }
+
+    private func endsWithNewline() throws -> Bool {
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        let size = try handle.seekToEnd()
+        guard size > 0 else { return true }
+        try handle.seek(toOffset: size - 1)
+        return try handle.read(upToCount: 1) == Data([UInt8(ascii: "\n")])
+    }
+
+    private static func appendBytes(_ data: Data, to path: String) throws {
+        let descriptor = open(path, O_WRONLY | O_APPEND)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        defer { close(descriptor) }
+        let written = data.withUnsafeBytes { write(descriptor, $0.baseAddress, $0.count) }
+        guard written == data.count else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
 
     private var path: String { file.path(percentEncoded: false) }

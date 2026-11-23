@@ -232,4 +232,166 @@ struct FigSpecsTests {
 
         #expect(names == ["src/main/"])
     }
+
+    // Block 2 review I1: JS errors after loading reach CompletionError.
+    @Test func postProcessThrowIsReported() async throws {
+        try writeUserSpec(
+            "pthrow",
+            "export default { name: \"pthrow\", args: { generators: { script: [\"true\"], postProcess: () => { throw new Error(\"boom\") } } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "pthrow")?.args.first?.generators.first)
+
+        await #expect(throws: CompletionError.self) {
+            try await specs.generate(generator, tokens: ["pthrow", ""], in: "/tmp")
+        }
+        #expect(await specs.lastError?.cause.contains("boom") == true)
+    }
+
+    @Test func customSyncThrowIsReported() async throws {
+        try writeUserSpec(
+            "cthrow",
+            "export default { name: \"cthrow\", args: { generators: { custom: () => { throw new Error(\"bad\") } } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "cthrow")?.args.first?.generators.first)
+
+        await #expect(throws: CompletionError.self) {
+            try await specs.generate(generator, tokens: ["cthrow", ""], in: "/tmp")
+        }
+    }
+
+    @Test func thenableCallingBackTwiceResumesOnce() async throws {
+        try writeUserSpec(
+            "twice",
+            "export default { name: \"twice\", args: { generators: { custom: () => ({ then(ok) { ok([{ name: \"a\" }]); ok([{ name: \"b\" }]); } }) } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "twice")?.args.first?.generators.first)
+
+        #expect(try await specs.generate(generator, tokens: ["twice", ""], in: "/tmp").map(\.name) == ["a"])
+    }
+
+    // Block 2 review I2: a script built from the tokens is cached per script, not per generator.
+    @Test func scriptFromTokensIsCachedPerScript() async throws {
+        try writeUserSpec(
+            "echoer",
+            "export default { name: \"echoer\", args: { generators: { script: (tokens) => [\"echo\", tokens[tokens.length - 1]] } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "echoer")?.args.first?.generators.first)
+
+        let first = try await specs.generate(generator, tokens: ["echoer", "nginx"], in: "/tmp")
+        let second = try await specs.generate(generator, tokens: ["echoer", "redis"], in: "/tmp")
+
+        #expect(first.map(\.name) == ["nginx"])
+        #expect(second.map(\.name) == ["redis"])
+    }
+
+    @Test func customGeneratorIsCachedPerTokens() async throws {
+        try writeUserSpec(
+            "ctok",
+            "export default { name: \"ctok\", args: { generators: { custom: async (t) => [{ name: t[t.length - 1] }] } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "ctok")?.args.first?.generators.first)
+
+        _ = try await specs.generate(generator, tokens: ["ctok", "a"], in: "/tmp")
+
+        #expect(try await specs.generate(generator, tokens: ["ctok", "b"], in: "/tmp").map(\.name) == ["b"])
+    }
+
+    // Block 2 review I3: Fig path generators answer relative to the typed folder (getQueryTerm).
+    @Test func cdDescendsIntoTypedFolder() async throws {
+        let folder = temp.appending(path: "descend")
+        try FileManager.default.createDirectory(
+            at: folder.appending(path: "Projects/smalti"), withIntermediateDirectories: true)
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "cd")?.args.first?.generators.first)
+        let path = folder.path(percentEncoded: false)
+
+        _ = try await specs.generate(generator, tokens: ["cd", ""], in: path)
+        let inside = try await specs.generate(generator, tokens: ["cd", "Projects/"], in: path).map(\.name)
+        let partial = try await specs.generate(generator, tokens: ["cd", "Projects/sm"], in: path).map(\.name)
+
+        #expect(inside.contains("Projects/smalti/"))
+        #expect(partial.contains("Projects/smalti/"))
+    }
+
+    // Block 2 review m2: a generator that never settles fails within the timeout.
+    @Test func neverSettlingGeneratorTimesOut() async throws {
+        try writeUserSpec(
+            "pending",
+            "export default { name: \"pending\", args: { generators: { custom: () => new Promise(() => {}) } } };")
+        let specs = specs(timeout: .milliseconds(200))
+        let generator = try #require(await specs.spec(for: "pending")?.args.first?.generators.first)
+        let started = Date()
+
+        await #expect(throws: CompletionError.self) {
+            try await specs.generate(generator, tokens: ["pending", ""], in: "/tmp")
+        }
+        #expect(Date().timeIntervalSince(started) < 2)
+    }
+
+    // Block 2 review m3: output is kept when a background child holds the pipe open.
+    @Test func outputSurvivesABackgroundChild() async throws {
+        let runner = GeneratorRunner(timeout: .seconds(2))
+
+        let output = try await runner.run(shell: "echo hi; sleep 5 &", in: "/tmp")
+
+        #expect(output.stdout == "hi\n")
+    }
+
+    // Block 2 review m5: a bare `~` lists the home folder; results are capped.
+    @Test func bareTildeListsHome() async throws {
+        let names = await specs().paths(matching: "~", in: "/tmp", foldersOnly: true).map(\.name)
+
+        #expect(!names.isEmpty)
+        #expect(names.allSatisfy { $0.hasPrefix("~/") })
+    }
+
+    @Test func pathListingIsCapped() async throws {
+        let folder = temp.appending(path: "many")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for index in 0..<(PathListingLimits.maximum + 20) {
+            FileManager.default.createFile(
+                atPath: folder.appending(path: "f\(index)").path(percentEncoded: false), contents: nil)
+        }
+
+        #expect(
+            await specs().paths(matching: "", in: folder.path(percentEncoded: false), foldersOnly: false).count
+                == PathListingLimits.maximum)
+    }
+
+    // Block 2 review m6: editing a user spec takes effect; a broken one falls back to the bundled spec.
+    @Test func editedUserSpecIsReloaded() async throws {
+        try writeUserSpec("mine", "export default { name: \"mine\", subcommands: [{ name: \"one\" }] };")
+        let specs = specs()
+        _ = await specs.spec(for: "mine")
+        try writeUserSpec("mine", "export default { name: \"mine\", subcommands: [{ name: \"two\" }] };")
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(5)],
+            ofItemAtPath: userSpecs.appending(path: "mine.js").path(percentEncoded: false))
+
+        #expect(await specs.spec(for: "mine")?.subcommands.map(\.name) == [["two"]])
+    }
+
+    @Test func brokenUserSpecFallsBackToBundled() async throws {
+        try writeUserSpec("git", "export default { name: ")
+
+        let git = await specs().spec(for: "git")
+
+        #expect(git?.subcommands.contains { $0.name.contains("checkout") } == true)
+    }
+
+    // Block 2 review m7: the command name never escapes the completions folder.
+    @Test func commandNamesWithPathsAreRejected() async throws {
+        try FileManager.default.createDirectory(at: userSpecs, withIntermediateDirectories: true)
+        try "export default { name: \"evil\" };".write(
+            to: temp.appending(path: "evil.js"), atomically: true, encoding: .utf8)
+        let specs = specs()
+
+        #expect(await specs.spec(for: "../evil") == nil)
+        #expect(await specs.spec(for: ".hidden") == nil)
+    }
 }

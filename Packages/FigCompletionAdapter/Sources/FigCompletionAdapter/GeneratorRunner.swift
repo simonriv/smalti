@@ -3,9 +3,12 @@ import SmaltiCore
 
 /// Runs the commands of Fig generators: argument lists directly, strings through `zsh -f -c`, in the pane's
 /// directory with a minimal environment. A run past `timeout` is killed and fails without waiting for the rest
-/// of its output (a shell's children may keep the pipe open).
+/// of its output. When the process exits but a background child keeps the pipe open, what arrived within a short
+/// grace period is the output. Output beyond `maximumOutput` bytes is dropped.
 public struct GeneratorRunner: Sendable {
     static let path = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    static let maximumOutput = 1 << 20
+    static let exitGrace: Duration = .milliseconds(50)
 
     public let timeout: Duration
 
@@ -45,7 +48,13 @@ public struct GeneratorRunner: Sendable {
             if data.isEmpty { handle.readabilityHandler = nil }
             collector.receive(data)
         }
-        process.terminationHandler = { finished in collector.exited(status: finished.terminationStatus) }
+        process.terminationHandler = { finished in
+            collector.exited(status: finished.terminationStatus)
+            Task {
+                try? await Task.sleep(for: Self.exitGrace)
+                collector.giveUpOnOutput()
+            }
+        }
         do {
             try process.run()
         } catch {
@@ -81,13 +90,24 @@ private final class RunCollector: @unchecked Sendable {
 
     func receive(_ chunk: Data) {
         lock.withLock {
-            if chunk.isEmpty { isOutputClosed = true } else { data.append(chunk) }
+            if chunk.isEmpty {
+                isOutputClosed = true
+            } else if data.count < GeneratorRunner.maximumOutput {
+                data.append(chunk.prefix(GeneratorRunner.maximumOutput - data.count))
+            }
         }
         finishIfComplete()
     }
 
     func exited(status code: Int32) {
         lock.withLock { status = code }
+        finishIfComplete()
+    }
+
+    /// The process exited a moment ago and the pipe is still open (a background child holds it): what arrived is
+    /// the output.
+    func giveUpOnOutput() {
+        lock.withLock { isOutputClosed = true }
         finishIfComplete()
     }
 

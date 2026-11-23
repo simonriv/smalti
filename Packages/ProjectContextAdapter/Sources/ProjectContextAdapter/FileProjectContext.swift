@@ -2,25 +2,50 @@ import Foundation
 import SmaltiCore
 
 /// The project around a directory, read from files only: the nearest `package.json` (its scripts), `Makefile` (its
-/// targets) and git directory (current branch, local branches, whether the branch has an upstream). Snapshots
-/// are cached per directory and recomputed when any file they came from changes its modification date.
+/// targets) and git directory (current branch, local branches, whether the branch has an upstream).
+///
+/// It is asked on every keystroke, so a snapshot younger than `recheckInterval` is answered from memory; an older
+/// one is recomputed only when a file it came from changed its modification date. At most `capacity`
+/// directories are remembered, the least recently asked dropped first.
 public actor FileProjectContext: ProjectContext {
+    public static let recheckInterval: TimeInterval = 1
+    public static let capacity = 64
+
     private struct Cached {
         let signature: [String: Date]
         let snapshot: ProjectSnapshot
+        var checkedAt: Date
     }
 
+    private let clock: @Sendable () -> Date
     private var cache: [String: Cached] = [:]
 
-    public init() {}
+    public init(clock: @escaping @Sendable () -> Date = { Date() }) {
+        self.clock = clock
+    }
 
     public func snapshot(of directory: String) async -> ProjectSnapshot {
+        let now = clock()
+        if var cached = cache[directory] {
+            if now.timeIntervalSince(cached.checkedAt) < Self.recheckInterval { return cached.snapshot }
+            cached.checkedAt = now
+            let sources = ProjectSources(directory: URL(filePath: directory))
+            if sources.signature() == cached.signature {
+                cache[directory] = cached
+                return cached.snapshot
+            }
+        }
         let sources = ProjectSources(directory: URL(filePath: directory))
-        let signature = sources.signature()
-        if let cached = cache[directory], cached.signature == signature { return cached.snapshot }
         let snapshot = sources.read()
-        cache[directory] = Cached(signature: signature, snapshot: snapshot)
+        remember(Cached(signature: sources.signature(), snapshot: snapshot, checkedAt: now), for: directory)
         return snapshot
+    }
+
+    private func remember(_ entry: Cached, for directory: String) {
+        cache[directory] = entry
+        guard cache.count > Self.capacity, let oldest = cache.min(by: { $0.value.checkedAt < $1.value.checkedAt })
+        else { return }
+        cache[oldest.key] = nil
     }
 }
 
@@ -123,11 +148,21 @@ struct GitDirectory {
                 atPath: refs.appending(path: name).path(percentEncoded: false), isDirectory: &isFolder)
             return !isFolder.boolValue
         }
-        let packedText = (try? String(contentsOf: common.appending(path: "packed-refs"), encoding: .utf8)) ?? ""
-        let packed = packedText.split(separator: "\n").compactMap { line in
-            line.firstMatch(of: /^[0-9a-f]+ refs\/heads\/(.+)$/).map { String($0.output.1) }
-        }
+        let packed = Self.packedBranches(in: common.appending(path: "packed-refs"))
         return Array(Set(loose + packed)).sorted()
+    }
+
+    /// Branch names in `packed-refs`, scanning bytes: after a fetch it can hold hundreds of thousands of tags, and a
+    /// regex per line takes seconds there.
+    private static func packedBranches(in file: URL) -> [String] {
+        guard let data = try? Data(contentsOf: file) else { return [] }
+        let marker = Array(" refs/heads/".utf8)
+        return data.split(separator: UInt8(ascii: "\n")).compactMap { line -> String? in
+            guard let first = line.first, first != UInt8(ascii: "#"), first != UInt8(ascii: "^"),
+                let start = line.firstRange(of: marker)
+            else { return nil }
+            return String(decoding: line[start.upperBound...], as: UTF8.self)
+        }
     }
 
     /// `[branch "<current>"]` with a `remote` key in the repository's config.

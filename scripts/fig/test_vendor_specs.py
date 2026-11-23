@@ -53,6 +53,21 @@ class VendorSpecsTests(unittest.TestCase):
 
         self.assertTrue((self.out / "aws/s3.js").exists())
 
+    def test_refuses_to_replace_a_folder_it_did_not_create(self) -> None:
+        self.out.mkdir(parents=True)
+        (self.out / "precious.txt").write_text("keep")
+
+        with self.assertRaises(vendor_specs.VendorError):
+            vendor_specs.vendor(self.build, self.out, ["cd"])
+        self.assertTrue((self.out / "precious.txt").exists())
+
+    def test_replaces_its_own_output(self) -> None:
+        vendor_specs.vendor(self.build, self.out, ["cd"])
+
+        vendor_specs.vendor(self.build, self.out, ["git"])
+
+        self.assertFalse((self.out / "cd.js").exists())
+
     def test_missing_command_fails(self) -> None:
         with self.assertRaises(vendor_specs.VendorError):
             vendor_specs.vendor(self.build, self.out, ["claude"])

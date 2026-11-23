@@ -4,6 +4,11 @@ import SmaltiCore
 import SmaltiCoreTestSupport
 import Testing
 
+/// A clock the tests move by hand; only touched from the test's own task.
+final class ContextClock: @unchecked Sendable {
+    var now = Date(timeIntervalSince1970: 1_800_000_000)
+}
+
 @Suite("FileProjectContext")
 struct FileProjectContextTests {
     private let root = FileManager.default.temporaryDirectory.appending(path: "smalti-project-\(UUID())")
@@ -97,13 +102,48 @@ struct FileProjectContextTests {
 
     @Test func cacheRefreshesOnMtimeChange() async throws {
         try write(#"{"scripts":{"dev":"x"}}"#, to: "package.json")
-        let context = FileProjectContext()
+        let clock = ContextClock()
+        let context = FileProjectContext(clock: { clock.now })
         _ = await context.snapshot(of: rootPath)
+        clock.now += FileProjectContext.recheckInterval + 0.1
 
         try write(#"{"scripts":{"dev":"x","lint":"y"}}"#, to: "package.json")
         try FileManager.default.setAttributes(
             [.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: rootPath + "/package.json")
 
         #expect(Set(await context.snapshot(of: rootPath).scripts) == ["dev", "lint"])
+    }
+
+    // Block 2 review I4: a big packed-refs (tags after a fetch) parses fast.
+    @Test func largePackedRefsParseQuickly() async throws {
+        try makeRepository()
+        var lines = ["# pack-refs with: peeled"]
+        lines.reserveCapacity(200_002)
+        for index in 0..<200_000 { lines.append("0123456789abcdef0123456789abcdef01234567 refs/tags/v\(index)") }
+        lines.append("0123456789abcdef0123456789abcdef01234567 refs/heads/packed-branch")
+        try write(lines.joined(separator: "\n") + "\n", to: ".git/packed-refs")
+        let started = Date()
+
+        let snapshot = await FileProjectContext().snapshot(of: rootPath)
+
+        #expect(snapshot.branches.contains("packed-branch"))
+        #expect(Date().timeIntervalSince(started) < 1.0)
+    }
+
+    // Block 2 review m4: within a second, a directory is answered from memory without touching the disk.
+    @Test func recentSnapshotIsReusedWithoutRechecking() async throws {
+        try write(#"{"scripts":{"dev":"x"}}"#, to: "package.json")
+        let clock = ContextClock()
+        let context = FileProjectContext(clock: { clock.now })
+        _ = await context.snapshot(of: rootPath)
+
+        try FileManager.default.removeItem(at: root.appending(path: "package.json"))
+        clock.now += 0.5
+        let reused = await context.snapshot(of: rootPath)
+        clock.now += 1
+        let rechecked = await context.snapshot(of: rootPath)
+
+        #expect(reused.scripts == ["dev"])
+        #expect(rechecked.scripts.isEmpty)
     }
 }

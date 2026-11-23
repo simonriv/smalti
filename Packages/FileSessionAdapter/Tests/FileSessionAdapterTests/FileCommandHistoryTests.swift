@@ -103,4 +103,19 @@ struct FileCommandHistoryTests {
                 ?? false
         }
     }
+
+    // Block 2 review m1: an append after a crash mid-line starts on a line of its own.
+    @Test func appendAfterACutLineKeepsTheNewEntry() async throws {
+        let history = FileCommandHistory(file: file, limit: 10)
+        try await history.append(entry("before"))
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("{\"comm".utf8))
+        try handle.close()
+
+        try await FileCommandHistory(file: file, limit: 10).append(entry("after crash"))
+        let loaded = try await FileCommandHistory(file: file, limit: 10).load()
+
+        #expect(loaded.map(\.command) == ["before", "after crash"])
+    }
 }

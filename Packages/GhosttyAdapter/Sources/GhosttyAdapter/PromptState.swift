@@ -10,20 +10,36 @@ extension GhosttySurfaceView {
         return !ghostty_surface_process_exited(surface) && !ghostty_surface_needs_confirm_quit(surface)
     }
 
-    /// The cursor's cell in points, origin at the view's top-left. `ime_point` gives the cell's horizontal center
-    /// and bottom edge.
+    /// The cursor's cell in points, origin at the view's top-left.
     var cursorCell: Rect? {
         guard let surface else { return nil }
         let size = ghostty_surface_size(surface)
-        let scale = window?.backingScaleFactor ?? 2
-        let width = Double(size.cell_width_px) / scale
-        let height = Double(size.cell_height_px) / scale
-        guard width > 0, height > 0 else { return nil }
-        var x = 0.0
-        var y = 0.0
-        var imeWidth = 0.0
-        var imeHeight = 0.0
-        ghostty_surface_ime_point(surface, &x, &y, &imeWidth, &imeHeight)
-        return Rect(x: x - width / 2, y: y - height, width: width, height: height)
+        var point = CursorCell.ImePoint(x: 0, y: 0, height: 0)
+        var width = 0.0
+        ghostty_surface_ime_point(surface, &point.x, &point.y, &width, &point.height)
+        return CursorCell.rect(
+            ime: point,
+            cellPixels: CursorCell.Pixels(width: Double(size.cell_width_px), height: Double(size.cell_height_px)))
+    }
+}
+
+/// `ime_point` gives the cursor cell's horizontal center, its bottom edge and its height, in points. The width
+/// follows from the cell's pixel ratio, so no screen scale is assumed (a 1x display, a view without a window).
+enum CursorCell {
+    struct ImePoint {
+        var x: Double
+        var y: Double
+        var height: Double
+    }
+
+    struct Pixels {
+        let width: Double
+        let height: Double
+    }
+
+    static func rect(ime: ImePoint, cellPixels: Pixels) -> Rect? {
+        guard ime.height > 0, cellPixels.width > 0, cellPixels.height > 0 else { return nil }
+        let width = ime.height * cellPixels.width / cellPixels.height
+        return Rect(x: ime.x - width / 2, y: ime.y - ime.height, width: width, height: ime.height)
     }
 }

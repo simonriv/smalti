@@ -55,6 +55,8 @@ def vendor(build: Path, out: Path, commands: list[str]) -> None:
         specs[name] = rewrite(source, name)
         pending.extend(dependency for dependency in LOAD_SPEC.findall(source) if dependency not in specs)
     if out.exists():
+        if any(out.iterdir()) and not (out / "manifest.json").exists():
+            raise VendorError(f"{out} is not empty and has no manifest.json: refusing to replace it")
         shutil.rmtree(out)
     for name, text in specs.items():
         target = out / f"{name}.js"
