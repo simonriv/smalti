@@ -34,6 +34,7 @@ final class WindowComposition {
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
     private var help: HelpController?
+    private var search: SearchBarController?
     private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -122,7 +123,7 @@ final class WindowComposition {
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || services.historyPalette()?.isOpen == true
-            || help?.isOpen == true
+            || help?.isOpen == true || search?.isOpen == true
     }
 
     func dismissObservatory() {
@@ -183,6 +184,7 @@ final class WindowComposition {
             window.statusBar.render(state)
             // The Window menu's list of windows names each by its active workspace.
             window.title = state.set.active.name
+            search?.follow(state.set)
             focusKeyboard(on: state.set.active.focusedPane)
             services.changed()
         }
@@ -236,6 +238,10 @@ final class WindowComposition {
             if isOpen { services.completionMenu()?.close() }
         }
         self.help = help
+        let search = SearchBarController(window: window, engine: services.engine)
+        search.onClose = { [weak self] pane in self?.focusKeyboard(on: pane) }
+        self.search = search
+        controller.onViewEvent = { [weak search] event, pane in search?.progress(event, from: pane) }
         let screen = makeObservatoryScreen()
         observatoryScreen = screen
         controller.onViewCommand = { [weak self, weak palette, weak screen] command in
@@ -250,6 +256,12 @@ final class WindowComposition {
             case .helpShow:
                 palette.close()
                 self.help?.toggle(theme: theme)
+            case .searchOpen:
+                if let pane = controller.set.active.focusedPane { self.search?.open(on: pane, theme: theme) }
+            case .searchNext, .searchPrevious:
+                guard let search = self.search, let pane = controller.set.active.focusedPane else { return }
+                if !search.isOpen { search.open(on: pane, theme: theme) }
+                search.navigate(command == .searchNext ? .next : .previous)
             default: palette.toggle(theme: theme)
             }
         }
@@ -294,6 +306,9 @@ final class WindowComposition {
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        if search?.isOpen == true {
+            return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
+        }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
         if services.historyPalette()?.isOpen == true { return .overlay(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }

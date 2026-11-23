@@ -188,6 +188,20 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "f45-help.png")
     }
 
+    /// F4.5: ⌘F over a pane with matches (mockup-search.png).
+    func testCaptureSearch() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        app.run("printf 'warn  - Using edge runtime\\nok\\nwarn  - Unused export\\nok\\nwarn  - Image without alt\\n'")
+        app.typeKey("f", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.search").waitForExistence(timeout: 5))
+        app.typeText("warn")
+        let counted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value CONTAINS ' de '"), object: app.element("smalti.searchCount"))
+        wait(for: [counted], timeout: 5)
+        try save(app.windows.firstMatch.screenshot(), as: "f45-search.png")
+    }
+
     /// F4.5: each menu of the bar open, captured alone (mockup-menu.png).
     func testCaptureMenus() throws {
         launch(.isolatedSmalti())

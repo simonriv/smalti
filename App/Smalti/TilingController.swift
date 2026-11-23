@@ -62,6 +62,8 @@ final class TilingController {
     var onViewCommand: ((CommandID) -> Void)?
     /// F4.5: commands about the app's windows (⌘N, ⇧⌘W, ⌘J across windows…) go to the app.
     var onAppCommand: ((CommandID) -> Void)?
+    /// F4.5: terminal events only the views use (search progress, link hover, secure input), with their pane.
+    var onViewEvent: ((TerminalEvent, PaneID) -> Void)?
     /// F4.5: asks the user before closing a running program; `proceed` runs only if they confirm.
     var onConfirmClose: ((CloseQuestion, _ proceed: @escaping () -> Void) -> Void)?
 
@@ -239,6 +241,7 @@ final class TilingController {
 
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
+        .searchOpen, .searchNext, .searchPrevious,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
@@ -438,6 +441,9 @@ final class TilingController {
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
+        case .searchTotal, .searchSelected, .linkHovered, .secureInputRequested:
+            onViewEvent?(event, pane)
+            return
         default:
             guard let owner = set.workspace(containing: pane) else { return }
             set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }

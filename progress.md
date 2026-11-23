@@ -195,7 +195,7 @@
 #### Bloque 4 · Descubrimiento y terminal en la app
 - [x] T13 · Menú de macOS, contextual y comandos de la app (MenuTests 8/8; capturas f45-menu-*)
 - [x] T14 · Ayuda (HelpTests 6/6; captura f45-help.png)
-- [ ] T15 · Buscar en el scrollback
+- [x] T15 · Buscar en el scrollback (SearchTests 8/8; captura f45-search.png)
 - [ ] T16 · Feedback, registros y funciones básicas del terminal
 #### Bloque 5 · Cierre
 - [ ] T17 · Checklist, revisión final, mutación, PR y despliegue
