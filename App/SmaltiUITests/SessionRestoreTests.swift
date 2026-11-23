@@ -97,6 +97,19 @@ final class SessionRestoreTests: SmaltiUITestCase {
         XCTAssertFalse(text.contains("--resume"))
     }
 
+    /// Only the bare keys act: ⌃↵ is not "Restaurar".
+    func testModifiedReturnDoesNotRestore() {
+        let app = XCUIApplication.isolatedSmalti()
+        SessionState.seed(
+            [.init(name: "solen", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")])],
+            alwaysRestore: false, in: app)
+        launchToResumeScreen(app)
+
+        app.typeKey(.return, modifierFlags: .option)
+
+        XCTAssertTrue(app.element("smalti.restore").exists)
+    }
+
     func testStartCleanKeepsSnapshotUntilNextSave() throws {
         let app = XCUIApplication.isolatedSmalti()
         SessionState.seed(

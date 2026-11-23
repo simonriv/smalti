@@ -69,7 +69,7 @@ public enum ResumeListing {
             (try? WorkingDirectory(path: pane.workingDirectory))?.abbreviated(home: home)
             ?? pane.workingDirectory
         if let agent = pane.agent { return row(for: agent, pane: pane, directory: directory, harnesses: harnesses) }
-        let tag = ResumeTag(text: pane.processName ?? "zsh", kind: .program)
+        let tag = ResumeTag(text: pane.processName ?? "shell", kind: .program)
         if let relaunch = pane.relaunch {
             return ResumeRow(
                 id: pane.id, tag: tag, title: directory, detail: nil, code: relaunch.displayText, isFinished: false)

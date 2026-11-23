@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SmaltiCore
 
 /// What the user chose on "Retomar donde quedaste".
@@ -73,7 +74,13 @@ final class RestoreController {
         case .startClean: onChoice(.startClean)
         case .toggleAlways:
             let next: RestorePreference = preferences.current() == .always ? .ask : .always
-            try? preferences.set(next)
+            do {
+                try preferences.set(next)
+            } catch {
+                // The checkbox keeps showing the stored value, so the screen stays truthful.
+                Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
+                    .error("could not save the restore preference: \(error.summary, privacy: .public)")
+            }
             render()
         }
     }
@@ -96,9 +103,12 @@ enum RestoreKey {
         126: .up, 125: .down, 49: .toggle, 36: .restore, 76: .restore, 53: .startClean,
     ]
 
+    /// Arrow and keypad keys carry these flags by themselves.
+    private static let inherentFlags: NSEvent.ModifierFlags = [.function, .numericPad]
+
     init?(_ event: NSEvent) {
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if modifiers.contains(.command) {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(Self.inherentFlags)
+        if modifiers == .command {
             switch event.charactersIgnoringModifiers {
             case "l": self = .layoutsOnly
             case ",": self = .toggleAlways
@@ -106,7 +116,14 @@ enum RestoreKey {
             }
             return
         }
-        guard let key = Self.keyCodes[event.keyCode] else { return nil }
+        guard let key = Self.keyCodes[event.keyCode], modifiers.isEmpty || Self.isSynthesizedSpace(event, modifiers)
+        else { return nil }
         self = key
+    }
+
+    /// XCUITest types a space as ⌃Space on the Latin American layout (KB gotcha); a real ⌃Space never reaches the
+    /// app because macOS keeps it for switching input sources.
+    private static func isSynthesizedSpace(_ event: NSEvent, _ modifiers: NSEvent.ModifierFlags) -> Bool {
+        event.keyCode == 49 && modifiers == .control
     }
 }

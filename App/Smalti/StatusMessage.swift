@@ -35,6 +35,14 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }
 
+    static func layoutSaveFailed(_ name: String, reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo guardar el layout “\(name)”: \(reason)", isTransient: true)
+    }
+
+    static func layoutRestoreFailed(_ name: String, reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo restaurar el layout “\(name)”: \(reason)", isTransient: true)
+    }
+
     static func layoutSaved(_ name: String) -> StatusMessage {
         StatusMessage(text: "Layout “\(name)” guardado", isTransient: true)
     }

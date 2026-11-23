@@ -26,12 +26,13 @@ public struct AgentStatusTokens: Equatable, Sendable {
     public let waiting: RGBAColor
     public let failed: RGBAColor
     public let stopped: RGBAColor
+    public let stoppedRingWidth: Double
 }
 
 /// How a status dot is drawn.
 public enum StatusDotStyle: Equatable, Sendable {
     case filled(RGBAColor)
-    case hollow(RGBAColor)
+    case hollow(RGBAColor, width: Double)
 }
 
 extension Theme {
@@ -41,7 +42,7 @@ extension Theme {
         case .working: .filled(agent.working)
         case .waiting: .filled(agent.waiting)
         case .failed: .filled(agent.failed)
-        case .stopped: .hollow(agent.stopped)
+        case .stopped: .hollow(agent.stopped, width: agent.stoppedRingWidth)
         case nil: .filled(strip.dot)
         }
     }
@@ -267,6 +268,23 @@ public struct ResumeTokens: Equatable, Sendable {
     public let secondaryButtonBorder: RGBAColor
     public let tertiaryButtonText: RGBAColor
     public let hintFontSize: Double
+    /// Workspace heading inside its section: `padding: 4px 12px 8px`.
+    public let headerPadding: Insets
+    /// Between the "Siempre restaurar" checkbox, its text and its `kbd`.
+    public let hintGap: Double
+    public let buttonBorderWidth: Double
+
+    public struct Insets: Equatable, Sendable {
+        public let top: Double
+        public let horizontal: Double
+        public let bottom: Double
+
+        public init(top: Double, horizontal: Double, bottom: Double) {
+            self.top = top
+            self.horizontal = horizontal
+            self.bottom = bottom
+        }
+    }
 }
 
 public struct MotionTokens: Equatable, Sendable {

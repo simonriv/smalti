@@ -91,6 +91,25 @@ struct ScrollbackExportTests {
         #expect(view.accessibilityRole() == .textArea)
     }
 
+    /// Accessibility reads what is on screen, not the whole scrollback.
+    @Test func accessibilityReadsOnlyTheViewport() async throws {
+        let pane = PaneID()
+        try engine.open(
+            TerminalSessionSpec(
+                workingDirectory: try WorkingDirectory(path: "/tmp"),
+                command: .custom(#"/bin/zsh -f -c 'for i in {1..400}; do echo linea-$i; done; sleep 30'"#)), as: pane)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        for _ in 0..<60 where (view.accessibilityValue() as? String)?.contains("linea-400") != true {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+
+        let text = view.accessibilityValue() as? String ?? ""
+
+        #expect(text.contains("linea-400"))
+        #expect(!text.contains("linea-1\n"))
+    }
+
     @Test func unknownPaneIsUnavailable() {
         #expect(throws: ScrollbackError.self) { try engine.scrollback(of: PaneID(), lastLines: 10) }
     }

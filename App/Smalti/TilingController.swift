@@ -102,7 +102,7 @@ final class TilingController {
                 try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
                 show(.layoutSaved(name.rawValue))
             } catch {
-                show(.sessionSaveFailed(error.summary))
+                show(.layoutSaveFailed(name.rawValue, reason: error.summary))
             }
         case .restore(let name): restoreLayout(name)
         }
@@ -114,8 +114,9 @@ final class TilingController {
                 name, into: &set, home: deps.home)
             set.active.panes.forEach { observe($0.id) }
             if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
+            reportRestoreFailures(outcome.failures)
         } catch {
-            show(.sessionSaveFailed(error.summary))
+            show(.layoutRestoreFailed(name.rawValue, reason: error.summary))
         }
     }
 
@@ -134,12 +135,13 @@ final class TilingController {
         guard let restored = result.set else {
             signposter.endInterval("restore", interval)
             start()
+            reportRestoreFailures(result.failures)
             return
         }
         set = restored
         pendingRestore = (interval, Set(set.workspaces.flatMap(\.panes).map(\.id)))
         set.workspaces.flatMap(\.panes).forEach { observe($0.id) }
-        if let failure = result.failures.first { show(.restoreFailures(first: failure, count: result.failures.count)) }
+        reportRestoreFailures(result.failures)
         publish()
     }
 
@@ -329,6 +331,11 @@ final class TilingController {
         publish()
     }
 
+    private func reportRestoreFailures(_ failures: [String]) {
+        guard let first = failures.first else { return }
+        report(.restoreFailures(first: first, count: failures.count))
+    }
+
     private func restoredPaneIsInteractive(_ pane: PaneID) {
         guard var pending = pendingRestore, pending.panes.remove(pane) != nil else { return }
         if pending.panes.isEmpty {
@@ -340,6 +347,8 @@ final class TilingController {
     }
 
     private func paneExited(_ pane: PaneID, code: Int?) {
+        // A pane that ends before reporting its directory no longer holds the restore signpost open.
+        restoredPaneIsInteractive(pane)
         let lifetime = openedAt[pane].map { ContinuousClock.now - $0 } ?? .zero
         openedAt[pane] = nil
         let outcome = HandlePaneExit(engine: deps.engine).execute(

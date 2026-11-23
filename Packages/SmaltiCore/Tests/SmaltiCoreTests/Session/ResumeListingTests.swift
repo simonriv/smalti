@@ -88,6 +88,10 @@ struct ResumeListingTests {
         #expect(row?.code == "pnpm dev")
     }
 
+    @Test func paneWithoutAKnownProcessIsTaggedShell() {
+        #expect(rows([pane(process: nil)])?.rows.first?.tag == ResumeTag(text: "shell", kind: .program))
+    }
+
     @Test func workspaceStatusIsTheMostUrgentAgent() {
         let waiting = AgentSnapshot(harness: .claude, sessionID: "a", title: nil, lastState: .waiting)
         let working = AgentSnapshot(harness: .claude, sessionID: "b", title: nil, lastState: .working)

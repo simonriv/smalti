@@ -52,8 +52,9 @@ final class RestoreView: NSView {
         guard let key = RestoreKey(event), onKey?(key) == true else { return super.keyDown(with: event) }
     }
 
+    /// ⌘L and ⌘, act wherever the focus is inside the screen (a button, with full keyboard access).
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard window?.firstResponder === self, let key = RestoreKey(event) else { return false }
+        guard !isHidden, window != nil, let key = RestoreKey(event) else { return false }
         return onKey?(key) == true
     }
 
@@ -119,7 +120,9 @@ final class RestoreView: NSView {
             label(workspace.summary, size: tokens.summaryFontSize, color: theme.text.secondary),
         ])
         heading.spacing = tokens.headerGap
-        heading.edgeInsets = NSEdgeInsets(top: 4, left: 12, bottom: 8, right: 12)
+        let padding = tokens.headerPadding
+        heading.edgeInsets = NSEdgeInsets(
+            top: padding.top, left: padding.horizontal, bottom: padding.bottom, right: padding.horizontal)
         let rowViews = workspace.rows.map { row in
             let view = RestoreRowView(row, theme: theme)
             view.onToggle = { [weak self] in self?.onToggleRow?(row.id) }
@@ -152,8 +155,8 @@ final class RestoreView: NSView {
             primary, layoutsOnly, startClean, spacer, always, hint, KbdView("⌘,", theme: theme),
         ])
         stack.spacing = tokens.buttonGap
-        stack.setCustomSpacing(6, after: always)
-        stack.setCustomSpacing(6, after: hint)
+        stack.setCustomSpacing(tokens.hintGap, after: always)
+        stack.setCustomSpacing(tokens.hintGap, after: hint)
         return stack
     }
 
@@ -214,7 +217,7 @@ final class ResumeButton: NSButton {
         switch style {
         case .primary: layer?.backgroundColor = theme.accent.nsColor.cgColor
         case .secondary:
-            layer?.borderWidth = 1
+            layer?.borderWidth = theme.resume.buttonBorderWidth
             layer?.borderColor = theme.resume.secondaryButtonBorder.nsColor.cgColor
         case .tertiary: break
         }

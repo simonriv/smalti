@@ -214,6 +214,10 @@ struct ObsidianThemeTests {
         #expect(resume.rowSelected == RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.03))
         #expect(resume.buttonHeight == 36)
         #expect(resume.buttonCornerRadius == 8)
+        #expect(resume.headerPadding == ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8))
+        #expect(resume.hintGap == 6)
+        #expect(resume.buttonBorderWidth == 1)
+        #expect(theme.agent.stoppedRingWidth == 1)
     }
 
     @Test func restoreTagColorsMatchBoard() {
@@ -229,7 +233,9 @@ struct ObsidianThemeTests {
         #expect(theme.statusDot(for: .working) == .filled(RGBAColor(red: 0x9e, green: 0xce, blue: 0x6a, alpha: 1)))
         #expect(theme.statusDot(for: .waiting) == .filled(RGBAColor(red: 0xe0, green: 0xaf, blue: 0x68, alpha: 1)))
         #expect(theme.statusDot(for: .failed) == .filled(RGBAColor(red: 0xf7, green: 0x76, blue: 0x8e, alpha: 1)))
-        #expect(theme.statusDot(for: .stopped) == .hollow(RGBAColor(red: 0x6b, green: 0x71, blue: 0x7c, alpha: 1)))
+        #expect(
+            theme.statusDot(for: .stopped) == .hollow(RGBAColor(red: 0x6b, green: 0x71, blue: 0x7c, alpha: 1), width: 1)
+        )
         #expect(theme.statusDot(for: nil) == .filled(theme.strip.dot))
     }
 }

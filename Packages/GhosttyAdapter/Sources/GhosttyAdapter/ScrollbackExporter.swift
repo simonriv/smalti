@@ -34,12 +34,20 @@ enum ScrollbackExporter {
         return try? String(contentsOfFile: path, encoding: .utf8)
     }
 
-    /// Plain text of the whole screen through the official read API.
+    /// Plain text of the whole screen, scrollback included, through the official read API.
     static func exportPlain(_ surface: ghostty_surface_t) -> String? {
+        readText(surface, area: GHOSTTY_POINT_SCREEN)
+    }
+
+    /// Plain text of what is visible now (accessibility reads this often; it never copies the scrollback).
+    static func visibleText(_ surface: ghostty_surface_t) -> String? {
+        readText(surface, area: GHOSTTY_POINT_VIEWPORT)
+    }
+
+    private static func readText(_ surface: ghostty_surface_t, area: ghostty_point_tag_e) -> String? {
         let selection = ghostty_selection_s(
-            top_left: ghostty_point_s(tag: GHOSTTY_POINT_SCREEN, coord: GHOSTTY_POINT_COORD_TOP_LEFT, x: 0, y: 0),
-            bottom_right: ghostty_point_s(
-                tag: GHOSTTY_POINT_SCREEN, coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT, x: 0, y: 0),
+            top_left: ghostty_point_s(tag: area, coord: GHOSTTY_POINT_COORD_TOP_LEFT, x: 0, y: 0),
+            bottom_right: ghostty_point_s(tag: area, coord: GHOSTTY_POINT_COORD_BOTTOM_RIGHT, x: 0, y: 0),
             rectangle: false)
         var text = ghostty_text_s()
         guard ghostty_surface_read_text(surface, selection, &text) else { return nil }

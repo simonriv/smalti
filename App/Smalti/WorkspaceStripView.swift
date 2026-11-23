@@ -200,9 +200,9 @@ final class StatusDot: NSView {
         case .filled(let color):
             layer?.backgroundColor = color.nsColor.cgColor
             layer?.borderWidth = 0
-        case .hollow(let color):
+        case .hollow(let color, let width):
             layer?.backgroundColor = nil
-            layer?.borderWidth = 1
+            layer?.borderWidth = width
             layer?.borderColor = color.nsColor.cgColor
         }
     }

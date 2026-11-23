@@ -214,9 +214,9 @@ final class GhosttySurfaceView: NSView {
 
     // MARK: - Accessibility
 
-    /// The screen as plain text, read on demand (VoiceOver, UI tests).
+    /// What is visible as plain text, read on demand (VoiceOver, UI tests).
     override func accessibilityValue() -> Any? {
-        surface.flatMap(ScrollbackExporter.exportPlain)
+        surface.flatMap(ScrollbackExporter.visibleText)
     }
 
     // MARK: - Size, scale and focus

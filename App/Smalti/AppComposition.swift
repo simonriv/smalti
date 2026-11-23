@@ -17,6 +17,7 @@ final class AppComposition {
     private var palette: CommandPaletteController?
     private var sessionKeeper: SessionKeeper?
     private var restoreScreen: RestoreController?
+    private let harnesses = HarnessRegistry([ClaudeHarness()])
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
 
@@ -92,7 +93,7 @@ final class AppComposition {
             .init(
                 engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
                 namedLayouts: archive,
-                harnesses: HarnessRegistry([ClaudeHarness()]), home: try homeDirectory(),
+                harnesses: harnesses, home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
                     try runtime?.apply(appearance)
@@ -116,11 +117,16 @@ final class AppComposition {
 
     /// "Retomar donde quedaste": shown instead of the strip and the panes until the user chooses.
     private func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore, in window: SmaltiWindow) {
-        guard let controller, let content = window.contentView else { return }
+        guard let controller else { return }
+        guard let content = window.contentView else {
+            // Without a place to ask, restore what the defaults would: never start empty over a saved session.
+            controller.restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+            return
+        }
         let listing = RestoreController.Content(
             snapshot: snapshot,
             workspaces: ResumeListing.workspaces(
-                in: snapshot, home: controller.home, harnesses: HarnessRegistry([ClaudeHarness()])),
+                in: snapshot, home: controller.home, harnesses: harnesses),
             closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
         let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
             [weak self] choice in self?.finishAsking(choice, snapshot: snapshot, in: window)
@@ -202,12 +208,12 @@ final class AppComposition {
     private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
         let router = KeyRouter(
             keymap: { [weak controller] in controller?.config.keys ?? .standard },
-            allowing: { [weak self] in
-                if self?.restoreScreen != nil { return [] }
-                return self?.palette?.isOpen == true ? [.paletteOpen] : nil
-            },
+            allowing: { [weak self] in self?.palette?.isOpen == true ? [.paletteOpen] : nil },
             perform: { [weak controller] command in controller?.perform(command) })
-        window.routeKey = { router.route($0, composing: $1) }
+        // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
+        window.routeKey = { [weak self] event, composing in
+            self?.restoreScreen == nil && router.route(event, composing: composing)
+        }
     }
 
     /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.
