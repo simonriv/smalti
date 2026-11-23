@@ -149,7 +149,7 @@
 - [x] T2 · Historial, filtro de secretos y búsqueda ⌃R
 - [x] T3 · Predicción heurística
 - [x] T4 · Specs, motor de completions y menú
-- [ ] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
+- [x] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
 #### Bloque 2 · Adaptadores
 - [ ] T6 · `FileCommandHistory` (JSONL)
 - [ ] T7 · `ProjectContextAdapter`

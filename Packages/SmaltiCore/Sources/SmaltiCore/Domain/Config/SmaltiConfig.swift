@@ -52,6 +52,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var keys: Keymap
     /// Not in the initializer: every other table predates it, and the defaults are what nearly everyone wants.
     public var observatory = ObservatorySettings.standard
+    /// `[input]` (F4); like `observatory`, outside the initializer.
+    public var input = InputSettings.standard
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

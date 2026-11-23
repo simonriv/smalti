@@ -13,12 +13,13 @@ enum TOMLConfigParser {
         static let shell = "shell"
         static let keys = "keys"
         static let observatory = "observatory"
+        static let input = "input"
     }
 
     static func parse(_ text: String, file: String) throws(ConfigError) -> SmaltiConfig {
         let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
         try root.rejectUnknownKeys(allowed: [
-            Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory,
+            Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input,
         ])
         var config = SmaltiConfig.defaults
         if let section = try root.section(Table.appearance) {
@@ -35,6 +36,9 @@ enum TOMLConfigParser {
         }
         if let section = try root.section(Table.observatory) {
             config.observatory = try ObservatoryReader.read(section)
+        }
+        if let section = try root.section(Table.input) {
+            config.input = try InputReader.read(section)
         }
         return config
     }
