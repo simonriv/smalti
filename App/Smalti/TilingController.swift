@@ -40,7 +40,7 @@ final class TilingController {
     private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "tiling")
     private(set) var set: WorkspaceSet
     private(set) var config: SmaltiConfig
-    private var message: StatusMessage?
+    private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
 
@@ -50,7 +50,7 @@ final class TilingController {
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
         let layout = LayoutCatalog.standard.strategyOrDefault(for: config.defaultLayout)
         set = WorkspaceSet(first: .empty(name: deps.home.lastComponent, rootDirectory: deps.home, layout: layout))
-        message = reload.error.map(StatusMessage.invalidConfig)
+        status = status.withPersistent(reload.error.map(StatusMessage.invalidConfig))
     }
 
     var theme: Theme { Theme.obsidian.applying(config.appearance) }
@@ -99,7 +99,9 @@ final class TilingController {
         return workspaceGoAction(command)
     }
 
-    private var fixedActions: [CommandID: () -> Void] {
+    /// Built once: the closures read the controller's state when they run, not when they are built.
+    /// `unowned` is safe because the controller owns them.
+    private lazy var fixedActions: [CommandID: () -> Void] = {
         var actions: [CommandID: () -> Void] = [
             .paneNew: { [unowned self] in openPane() },
             .paneClose: { [unowned self] in closeFocusedPane() },
@@ -108,7 +110,7 @@ final class TilingController {
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
             .configReload: { [unowned self] in reloadConfig() },
         ]
-        for number in 1...9 {
+        for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
                 FocusPane().execute(.index(number), geometry: geometry, in: &set)
             }
@@ -118,7 +120,7 @@ final class TilingController {
         }
         for direction in Direction.allCases { actions.merge(directionActions(direction)) { $1 } }
         return actions
-    }
+    }()
 
     private func directionActions(_ direction: Direction) -> [CommandID: () -> Void] {
         [
@@ -185,7 +187,8 @@ final class TilingController {
     /// everything as it was (the palette does not offer the command then).
     private func closeActiveWorkspace() {
         do {
-            try CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+            let closed = try CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+            closed.forEach { openedAt[$0] = nil }
         } catch {
             switch error {
             case .cannotCloseLastWorkspace: logger.debug("refused to close the last workspace")
@@ -200,7 +203,7 @@ final class TilingController {
             show(.invalidConfig(error))
             return
         }
-        message = nil
+        status = status.withPersistent(nil)
         do {
             try deps.applyAppearance(theme.terminal)
         } catch {
@@ -250,19 +253,23 @@ final class TilingController {
 
     // MARK: - Publishing
 
+    /// A transient message shows over a persistent one and then gives the line back (`StatusSlot`).
     private func show(_ newMessage: StatusMessage) {
-        message = newMessage
+        guard newMessage.isTransient else {
+            status = status.withPersistent(newMessage)
+            return
+        }
+        status = status.withTransient(newMessage)
         messageClearing?.cancel()
-        guard newMessage.isTransient else { return }
         messageClearing = Task { [weak self] in
             try? await Task.sleep(for: StatusMessage.transientDuration)
-            guard !Task.isCancelled, let self, self.message == newMessage else { return }
-            self.message = nil
+            guard !Task.isCancelled, let self else { return }
+            self.status = self.status.clearingTransient(newMessage)
             self.publish()
         }
     }
 
     private func publish() {
-        onChange?(TilingState(set: set, config: config, theme: theme, message: message, home: deps.home))
+        onChange?(TilingState(set: set, config: config, theme: theme, message: status.showing, home: deps.home))
     }
 }

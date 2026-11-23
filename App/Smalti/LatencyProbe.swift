@@ -27,7 +27,7 @@ final class LatencyProbe {
 
     func start() {
         expected = .now + Self.interval
-        let timer = Timer(timeInterval: 0.005, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: Self.seconds(Self.interval), repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -57,6 +57,10 @@ final class LatencyProbe {
     }
 
     private static func milliseconds(_ duration: Duration) -> Double {
-        Double(duration.components.seconds) * 1000 + Double(duration.components.attoseconds) / 1e15
+        seconds(duration) * 1000
+    }
+
+    private static func seconds(_ duration: Duration) -> TimeInterval {
+        Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
     }
 }
