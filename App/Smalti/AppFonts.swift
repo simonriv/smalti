@@ -4,7 +4,7 @@ import OSLog
 
 /// Inter ships with the app (SIL OFL 1.1, Fonts/LICENSE-Inter.txt) so the interface looks the same on any Mac.
 enum AppFonts {
-    private static let logger = Logger(subsystem: "dev.simonriv.smalti", category: "fonts")
+    private static let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "fonts")
 
     /// Registers every bundled TrueType font for this process only. A failure leaves the system fallback.
     static func registerBundled() {

@@ -291,13 +291,14 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Smalti;
+				INFOPLIST_KEY_CFBundleDisplayName = "Smalti Dev";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.dev;
+				PRODUCT_MODULE_NAME = Smalti;
+				PRODUCT_NAME = "Smalti Dev";
 			};
 			name = Debug;
 		};
@@ -316,6 +317,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
+				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

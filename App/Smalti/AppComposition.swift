@@ -7,7 +7,7 @@ import TOMLConfigAdapter
 /// Composition root: the only place that builds infrastructure and wires it to the UI.
 @MainActor
 final class AppComposition {
-    private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "engine")
+    private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "engine")
     private var window: SmaltiWindow?
     private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
@@ -30,6 +30,10 @@ final class AppComposition {
         let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
         self.window = window
+        // Development builds state their state directory so UI tests can check they never use the user's.
+        if AppIdentity.current.isDevelopment {
+            window.setAccessibilityValue(startup.settings.stateDirectory.path(percentEncoded: false))
+        }
         applyGlass(startup.theme, to: window)
         do {
             try start(startup, in: window)
@@ -39,8 +43,11 @@ final class AppComposition {
     }
 
     private static func readStartup() -> Startup {
+        let home = FileManager.default.homeDirectoryForCurrentUser
         let settings = LaunchSettings(
-            arguments: launchArguments(), home: FileManager.default.homeDirectoryForCurrentUser)
+            arguments: launchArguments(), home: home,
+            defaultStateDirectory: AppIdentity.current.defaultStateDirectory(home: home))
+        createStateDirectory(settings.stateDirectory)
         let store = TOMLConfigStore(file: settings.configFile)
         let initial = ReloadConfig(store: store).execute()
         return Startup(
@@ -50,12 +57,27 @@ final class AppComposition {
 
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     private static func launchArguments() -> [String: String] {
-        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey]
+        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey]
         return keys.reduce(into: [:]) { arguments, key in arguments[key] = UserDefaults.standard.string(forKey: key) }
     }
 
+    /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
+    /// saving reports it later.
+    private static func createStateDirectory(_ directory: URL) {
+        let ownerOnly: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
+        do {
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: true, attributes: ownerOnly)
+            try FileManager.default.setAttributes(ownerOnly, ofItemAtPath: directory.path(percentEncoded: false))
+        } catch {
+            Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
+                .error("could not create the state directory \(directory.path(percentEncoded: false)): \(error)")
+        }
+    }
+
     private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
-        let runtime = try makeRuntime(startup.theme.terminal)
+        let runtime = try makeRuntime(
+            startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let controller = TilingController(
             .init(
@@ -138,10 +160,13 @@ final class AppComposition {
         window.makeFirstResponder(view)
     }
 
-    private func makeRuntime(_ appearance: TerminalAppearance) throws(TerminalEngineError) -> GhosttyRuntime {
+    /// `configFile` lives in this build's state directory, so a development build never rewrites the daily one's.
+    private func makeRuntime(
+        _ appearance: TerminalAppearance, configFile: URL
+    ) throws(TerminalEngineError) -> GhosttyRuntime {
         try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
         let config = try GhosttyConfig.load(
-            text: GhosttyConfigText.render(appearance), writingTo: Self.engineConfigFile)
+            text: GhosttyConfigText.render(appearance), writingTo: configFile)
         return try GhosttyRuntime(config: config)
     }
 
@@ -165,9 +190,5 @@ final class AppComposition {
 
     private static var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-    }
-
-    private static var engineConfigFile: URL {
-        URL.applicationSupportDirectory.appending(path: "Smalti/ghostty.conf")
     }
 }
