@@ -80,11 +80,11 @@
 - [x] T6 · Frases de fecha y nombres de layout
 - [x] T7 · Puertos y casos de uso de persistencia (revisión del bloque 2: 2 importantes y 6 menores corregidos)
 #### Bloque 3 · Adaptadores de persistencia
-- [ ] T8 · `FileSessionAdapter`
-- [ ] T9 · Exportar scrollback y leer la línea de comandos
-- [ ] T10 · Reinyectar scrollback y comando inicial
-- [ ] T11 · Historial por panel
-- [ ] T12 · `ClaudeHarnessAdapter` y cableado del guardado
+- [x] T8 · `FileSessionAdapter`
+- [x] T9 · Exportar scrollback y leer la línea de comandos
+- [x] T10 · Reinyectar scrollback y comando inicial
+- [x] T11 · Historial por panel
+- [x] T12 · `ClaudeHarnessAdapter` y cableado del guardado (revisión del bloque 3: 2 importantes y 7 menores corregidos)
 #### Bloque 4 · Restaurar en la app
 - [ ] T13 · Arranque con instantánea
 - [ ] T14 · Pantalla "Retomar donde quedaste"
