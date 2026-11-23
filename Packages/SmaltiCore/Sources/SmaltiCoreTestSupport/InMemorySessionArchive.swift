@@ -7,6 +7,8 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
     public var transcripts: [PaneID: Scrollback] = [:]
     public var writeFailure: SessionArchiveError?
     public var unreadableReason: String?
+    /// Panes whose scrollback was asked for.
+    public private(set) var scrollbackLookups: [PaneID] = []
     private var preference = RestorePreference.ask
 
     public init() {}
@@ -26,7 +28,10 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
         transcripts[pane] = scrollback
     }
 
-    public func scrollback(of pane: PaneID) -> Scrollback? { transcripts[pane] }
+    public func scrollback(of pane: PaneID) -> Scrollback? {
+        scrollbackLookups.append(pane)
+        return transcripts[pane]
+    }
 
     public func forget(allExcept panes: Set<PaneID>) {
         transcripts = transcripts.filter { panes.contains($0.key) }
