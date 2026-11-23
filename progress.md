@@ -67,7 +67,7 @@
 - [x] Aprobada (`docs/specs/F2-persistence.md`, 2026-11-22), con el issue #6 como Parte A
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F2-persistence.md`), pendiente de revisión de Simón
+- [x] Plan de implementación (`docs/plans/F2-persistence.md`), aprobado (2026-11-22)
 
 ### Tareas
 #### Bloque 1 · Builds `.dev` (PR propio, `feature/f2-dev-builds`)
