@@ -38,6 +38,28 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     /// Go to the nth workspace, `number` in `NumberedShortcuts.range`.
     public static func workspace(_ number: Int) -> CommandID { CommandID(rawValue: "workspace.\(number)") }
 
+    private static let layoutSavePrefix = "layout.save:"
+    private static let layoutRestorePrefix = "layout.restore:"
+
+    public static func layoutSave(_ name: LayoutName) -> CommandID {
+        CommandID(rawValue: layoutSavePrefix + name.rawValue)
+    }
+
+    public static func layoutRestore(_ name: LayoutName) -> CommandID {
+        CommandID(rawValue: layoutRestorePrefix + name.rawValue)
+    }
+
+    /// The saved-layout action this command stands for, if any.
+    public var namedLayout: NamedLayoutCommand? {
+        if rawValue.hasPrefix(Self.layoutSavePrefix) {
+            return (try? LayoutName(String(rawValue.dropFirst(Self.layoutSavePrefix.count)))).map { .save($0) }
+        }
+        if rawValue.hasPrefix(Self.layoutRestorePrefix) {
+            return (try? LayoutName(String(rawValue.dropFirst(Self.layoutRestorePrefix.count)))).map { .restore($0) }
+        }
+        return nil
+    }
+
     /// Every command the app ships, bound or not.
     public static let allStandard: [CommandID] =
         [
@@ -58,4 +80,9 @@ extension Direction {
         case .down: "down"
         }
     }
+}
+
+public enum NamedLayoutCommand: Equatable, Sendable {
+    case save(LayoutName)
+    case restore(LayoutName)
 }

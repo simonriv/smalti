@@ -81,6 +81,16 @@ struct ScrollbackExportTests {
         #expect(FileManager.default.fileExists(atPath: neighbour.path(percentEncoded: false)))
     }
 
+    /// VoiceOver and UI tests read the screen as the surface's accessibility value.
+    @Test func surfaceExposesItsScreenText() async throws {
+        let pane = try await openPrinting()
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+
+        #expect((view.accessibilityValue() as? String)?.contains("rojo-smalti") == true)
+        #expect(view.accessibilityRole() == .textArea)
+    }
+
     @Test func unknownPaneIsUnavailable() {
         #expect(throws: ScrollbackError.self) { try engine.scrollback(of: PaneID(), lastLines: 10) }
     }

@@ -35,6 +35,15 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }
 
+    static func layoutSaved(_ name: String) -> StatusMessage {
+        StatusMessage(text: "Layout “\(name)” guardado", isTransient: true)
+    }
+
+    /// A saved layout's agent session already runs in another pane, so that pane opened a plain shell.
+    static func sessionAlreadyOpen(_ session: String) -> StatusMessage {
+        StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)
+    }
+
     static func unreadableSession(_ reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
     }

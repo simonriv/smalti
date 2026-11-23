@@ -28,6 +28,8 @@ final class RestoreView: NSView {
         layoutsOnly = ResumeButton(style: .secondary, theme: theme, identifier: "restore.layoutsOnly")
         startClean = ResumeButton(style: .tertiary, theme: theme, identifier: "restore.startClean")
         super.init(frame: .zero)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.restore")
         layoutsOnly.title = "Solo layouts"
         startClean.title = "Empezar limpio"

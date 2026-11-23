@@ -91,6 +91,7 @@ final class AppComposition {
         let controller = TilingController(
             .init(
                 engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
+                namedLayouts: archive,
                 harnesses: HarnessRegistry([ClaudeHarness()]), home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
@@ -180,7 +181,8 @@ final class AppComposition {
                 search: { [weak controller] query in
                     guard let controller else { return [] }
                     return SearchCommands(layouts: .standard).execute(
-                        query, set: controller.set, keymap: controller.config.keys)
+                        query, set: controller.set, keymap: controller.config.keys,
+                        savedLayouts: controller.savedLayouts())
                 },
                 perform: { [weak controller] command in controller?.perform(command) },
                 rename: { [weak controller] name in controller?.rename(to: name) },

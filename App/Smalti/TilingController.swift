@@ -24,6 +24,7 @@ final class TilingController {
         let configStore: any ConfigStore
         let paneEnvironment: PaneEnvironment
         let transcripts: any PaneTranscripts
+        let namedLayouts: any NamedLayouts
         let harnesses: HarnessRegistry
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
@@ -87,15 +88,49 @@ final class TilingController {
         }
     }
 
+    /// The saved layouts as the palette lists them.
+    func savedLayouts() -> [NamedLayoutSummary] {
+        deps.namedLayouts.names().compactMap { name in
+            (try? deps.namedLayouts.layout(named: name)).map { NamedLayoutSummary(name: name, layout: $0) }
+        }
+    }
+
+    private func perform(_ command: NamedLayoutCommand) {
+        switch command {
+        case .save(let name):
+            do {
+                try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
+                show(.layoutSaved(name.rawValue))
+            } catch {
+                show(.sessionSaveFailed(error.summary))
+            }
+        case .restore(let name): restoreLayout(name)
+        }
+    }
+
+    private func restoreLayout(_ name: LayoutName) {
+        do {
+            let outcome = try RestoreNamedLayout(layouts: deps.namedLayouts, restore: restoreSession).execute(
+                name, into: &set, home: deps.home)
+            set.active.panes.forEach { observe($0.id) }
+            if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
+        } catch {
+            show(.sessionSaveFailed(error.summary))
+        }
+    }
+
+    private var restoreSession: RestoreSession {
+        RestoreSession(
+            .init(
+                engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
+    }
+
     /// Rebuilds the saved workspaces; if none could open, starts as usual.
     func restore(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
         let interval = signposter.beginInterval("restore", id: signposter.makeSignpostID())
         let plan = RestorePlan.make(from: snapshot, mode: mode, selection: selection)
-        let result = RestoreSession(
-            .init(
-                engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now })
-        ).execute(plan, savedAt: snapshot.savedAt, home: deps.home)
+        let result = restoreSession.execute(plan, savedAt: snapshot.savedAt, home: deps.home)
         guard let restored = result.set else {
             signposter.endInterval("restore", interval)
             start()
@@ -144,6 +179,7 @@ final class TilingController {
 
     private func action(for command: CommandID) -> (() -> Void)? {
         if let action = fixedActions[command] { return action }
+        if let named = command.namedLayout { return { [unowned self] in perform(named) } }
         if let action = layoutActions[command] { return action }
         return workspaceGoAction(command)
     }
