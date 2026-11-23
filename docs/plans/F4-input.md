@@ -329,6 +329,7 @@
   - `Makefile` → objetivos `^[A-Za-z0-9_.-]+:`, sin `.PHONY` ni los que empiezan por `.`;
   - `.git/HEAD` → rama (`ref: refs/heads/<x>`) y `.git/refs/heads/**` más `.git/packed-refs` → ramas. Si `.git` es un archivo (worktree), se sigue el `gitdir:`.
   - Caché por directorio, invalidada por el `mtime` de esos archivos.
+  - **Revisión del bloque 1 (m11):** `ProjectSnapshot` gana `hasUpstream: Bool` (la rama actual tiene `branch.<rama>.remote` en `.git/config`); `ExitRecovery` solo sugiere `git push -u origin <rama>` cuando no lo tiene. Pruebas: `upstreamReadFromGitConfig`, `recoveryGitPushSkippedWithUpstream`.
 
 - [ ] **Step 1: Pruebas que fallan:** el contrato; `readsScriptsFromNearestPackageJSON`, `readsMakeTargetsSkippingSpecial`, `readsBranchAndBranchesIncludingPacked`, `followsWorktreeGitdir`, `invalidJSONYieldsNoScripts`, `cacheRefreshesOnMtimeChange`; guarda: `onlyFoundationIsImported`, `noProcessIsUsed`.
 - [ ] **Step 2–4:** Rojo → implementar → verde.
