@@ -9,8 +9,8 @@ struct WindowServices {
     let harnesses: HarnessRegistry
     /// The window's workspaces, frame or full screen changed: the session keeper and the input coordinator follow.
     let changed: () -> Void
-    /// The user chose on the resume screen; the app restores every window.
-    let restoreChosen: (RestoreChoice, SessionSnapshot) -> Void
+    /// The user chose on the resume screen of the window passed; the app restores every window from it.
+    let restoreChosen: (RestoreChoice, SessionSnapshot, WindowComposition) -> Void
     /// ⌘N, ⇧⌘W, ⌘J… (`TilingController.appCommands`), from this window.
     let appCommand: (CommandID, WindowComposition) -> Void
     /// The window became key: it is the front one now.
@@ -19,7 +19,8 @@ struct WindowServices {
     let completionMenu: () -> CompletionMenuController?
     let historyPalette: () -> HistoryPaletteController?
     let openHistory: (PaneID) -> Void
-    let observatoryOpenChanged: (Bool) -> Void
+    /// A window opened or closed its observatory; the app counts them all.
+    let observatoryOpenChanged: () -> Void
 }
 
 /// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
@@ -36,11 +37,15 @@ final class WindowComposition {
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
     private var observers: [NSObjectProtocol] = []
+    /// The frame outside full screen: what the session saves while the window is full screen, and what ⌘N cascades
+    /// from, so leaving full screen after a restore gives the window its own size back.
+    private(set) var windowedFrame: Rect
 
     init(window: SmaltiWindow, controller: TilingController, services: WindowServices) {
         self.window = window
         self.controller = controller
         self.services = services
+        windowedFrame = Rect(window.frame)
         applyGlass(controller.theme)
         connect()
         observeWindow()
@@ -52,35 +57,41 @@ final class WindowComposition {
 
     /// What the session saves of this window. Frames are AppKit screen coordinates (`WindowFrame`).
     var state: WindowState {
-        let frame = window.frame
-        return WindowState(
-            id: id, workspaces: controller.set,
-            frame: Rect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height),
+        WindowState(
+            id: id, workspaces: controller.set, frame: windowedFrame,
             isFullScreen: window.styleMask.contains(.fullScreen))
     }
 
-    /// Moves the window to a saved frame, refitted to the screens there are now.
+    /// Moves the window to a saved frame, refitted to the visible part of the screens there are now (below the menu
+    /// bar, beside the Dock), and lays it out so panes restored next get the right area.
     func place(at saved: Rect) {
-        let screens = NSScreen.screens.map(\.frame).map {
-            Rect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height)
-        }
-        let main = screens.first ?? saved
-        let fitted = WindowFrame.fitted(saved, screens: screens, main: main)
-        window.setFrame(
-            NSRect(x: fitted.minX, y: fitted.minY, width: fitted.size.width, height: fitted.size.height), display: true)
+        let screens = NSScreen.screens.map { Rect($0.visibleFrame) }
+        let fitted = WindowFrame.fitted(saved, screens: screens, main: screens.first ?? saved)
+        window.setFrame(NSRect(fitted), display: true)
+        windowedFrame = fitted
+        window.contentView?.layoutSubtreeIfNeeded()
     }
 
     /// Tells the app when the user moves, resizes, focuses or takes the window full screen.
     private func observeWindow() {
         let center = NotificationCenter.default
         let changes: [Notification.Name] = [
-            NSWindow.didMoveNotification, NSWindow.didEndLiveResizeNotification,
+            NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
             NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification,
         ]
         observers = changes.map { name in
             center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.windowChanged() }
             }
+        }
+        for (name, isChanging) in [
+            (NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, true),
+            (NSWindow.didEnterFullScreenNotification, false), (NSWindow.didExitFullScreenNotification, false),
+        ] {
+            observers.append(
+                center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.isChangingFullScreen = isChanging }
+                })
         }
         observers.append(
             center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) {
@@ -93,11 +104,19 @@ final class WindowComposition {
     }
 
     private func windowChanged() {
-        window.showsFullScreenChrome(window.styleMask.contains(.fullScreen))
+        let isFullScreen = window.styleMask.contains(.fullScreen)
+        window.showsFullScreenChrome(isFullScreen)
+        // Entering and leaving full screen also move and resize the window: only frames outside it are kept.
+        if !isFullScreen, !isChangingFullScreen { windowedFrame = Rect(window.frame) }
         services.changed()
     }
 
+    /// Between `willEnter`/`willExit` and `didEnter`/`didExit` full screen, the frame is the animation's.
+    private var isChangingFullScreen = false
+
     var isAskingToRestore: Bool { restoreScreen != nil }
+
+    var isObservatoryOpen: Bool { observatoryScreen?.isOpen == true }
 
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
@@ -119,7 +138,7 @@ final class WindowComposition {
     func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore) {
         guard let content = window.contentView else {
             // Without a place to ask, restore what the defaults would: never start empty over a saved session.
-            services.restoreChosen(.restore(.defaults(for: snapshot)), snapshot)
+            services.restoreChosen(.restore(.defaults(for: snapshot)), snapshot, self)
             return
         }
         let listing = RestoreController.Content(
@@ -141,7 +160,7 @@ final class WindowComposition {
         restoreScreen?.view.removeFromSuperview()
         restoreScreen = nil
         setTilingHidden(false)
-        services.restoreChosen(choice, snapshot)
+        services.restoreChosen(choice, snapshot, self)
     }
 
     private func setTilingHidden(_ hidden: Bool) {
@@ -236,7 +255,7 @@ final class WindowComposition {
                     }
                 },
                 openChanged: { [weak self] isOpen in
-                    self?.services.observatoryOpenChanged(isOpen)
+                    self?.services.observatoryOpenChanged()
                     if isOpen { self?.services.completionMenu()?.close() }
                 }))
     }

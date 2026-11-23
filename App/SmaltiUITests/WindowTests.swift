@@ -23,17 +23,21 @@ final class WindowTests: SmaltiUITestCase {
 
     // MARK: - C4
 
-    /// `zsh -f` reports no directory changes (no OSC 7), so the focused pane's directory is the one it opened in.
+    /// The focused pane opened in `/tmp` (restored), not in the home: the new window inherits `/tmp`.
     func testCommandNOpensASecondWindowInTheFocusedDirectory() {
-        let first = app.element("smalti.paneHeader").value as? String
+        app.terminate()
+        let relaunched = XCUIApplication.isolatedSmalti()
+        SessionState.seed(
+            [.init(name: "tmp", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")])],
+            alwaysRestore: true, in: relaunched)
+        launch(relaunched)
 
         app.typeKey("n", modifierFlags: .command)
 
         waitForWindows(2)
         waitForShells(count: 2)
         let headers = app.elements("smalti.paneHeader").allElementsBoundByIndex
-        XCTAssertNotNil(first)
-        XCTAssertEqual(headers.map { $0.value as? String }, [first, first])
+        XCTAssertEqual(headers.map { $0.value as? String }, ["/tmp", "/tmp"])
     }
 
     func testEachWindowHasItsOwnWorkspacesAndPanes() {
@@ -96,6 +100,49 @@ final class WindowTests: SmaltiUITestCase {
         let left = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in window.frame.size == normal }, object: nil)
         XCTAssertEqual(XCTWaiter().wait(for: [left], timeout: 10), .completed, "frame \(window.frame)")
+    }
+
+    /// Block 3 review: a window saved full screen keeps the frame it had outside full screen.
+    func testFullScreenIsSavedWithTheWindowedFrame() throws {
+        let window = windows.element(boundBy: 0)
+        let width = window.frame.width
+        let screen = NSScreen.screens.first?.frame.width ?? 0
+        app.typeKey("f", modifierFlags: [.control, .command])
+        let entered = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in window.frame.width == screen }, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [entered], timeout: 10), .completed)
+
+        app.typeKey("q", modifierFlags: .command)
+
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+        let data = try Data(contentsOf: app.stateDirectory.appending(path: "session.json"))
+        let saved = try XCTUnwrap(
+            (try JSONSerialization.jsonObject(with: data) as? [String: Any])?["windows"] as? [[String: Any]])
+        let size = (saved.first?["frame"] as? [String: Any])?["size"] as? [String: Double]
+        XCTAssertEqual(saved.first?["isFullScreen"] as? Bool, true)
+        XCTAssertEqual(size?["width"] ?? 0, Double(width), accuracy: 2)
+    }
+
+    func testWindowSavedFullScreenIsRestoredFullScreen() {
+        app.terminate()
+        let relaunched = XCUIApplication.isolatedSmalti()
+        SessionState.seed(
+            windows: [
+                .init(
+                    frame: (x: 40, y: 40, width: 900, height: 600),
+                    workspaces: [
+                        .init(name: "solen", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")])
+                    ],
+                    isFullScreen: true)
+            ], alwaysRestore: true, in: relaunched)
+
+        launch(relaunched)
+
+        let window = windows.element(boundBy: 0)
+        let screen = NSScreen.screens.first?.frame.width ?? 0
+        let full = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in window.frame.width == screen }, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [full], timeout: 10), .completed, "frame \(window.frame)")
     }
 
     // MARK: - C5

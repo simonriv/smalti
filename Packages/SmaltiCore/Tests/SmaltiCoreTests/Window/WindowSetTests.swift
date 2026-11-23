@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 import SmaltiCoreTestSupport
 import Testing
@@ -72,17 +73,6 @@ struct WindowSetTests {
         #expect(WindowSet(first: first).bringingToFront(WindowID()).frontID == first.id)
     }
 
-    @Test func windowContainingFindsAcrossWindows() throws {
-        let first = window(panes: 1)
-        let second = window(panes: 2)
-        let pane = try #require(second.workspaces.active.panes.last)
-
-        let set = WindowSet(first: first).opening(second)
-
-        #expect(set.window(containing: pane.id)?.id == second.id)
-        #expect(set.window(containing: PaneID()) == nil)
-    }
-
     @Test(arguments: [0, 1, 9])
     func allPanesSpansEveryWorkspaceOfEveryWindow(_ panes: Int) {
         let set = WindowSet(first: window(panes: panes, workspaces: 2)).opening(window(panes: panes))
@@ -114,5 +104,34 @@ struct WindowSetTests {
         let second = window()
 
         #expect(WindowSet(first: first).opening(second).front.id == second.id)
+    }
+}
+
+/// Block 3 review: ⌘J goes to the agent that has waited longest, in whichever window.
+@MainActor
+@Suite("AttentionQueue · windows")
+struct AttentionAcrossWindowsTests {
+    private func waiting(since seconds: Double) -> Pane {
+        let base = Pane(id: PaneID(), workingDirectory: SessionFixtures.directory("/tmp"))
+        let event = AgentEvent(
+            pane: base.id, hook: .stop, at: Date(timeIntervalSince1970: seconds), sessionID: UUID().uuidString,
+            prompt: "x", toolSummary: "ls", message: "m")
+        return base.applying(event).0
+    }
+
+    private func window(_ panes: [Pane]) throws -> WindowState {
+        let root = try WorkingDirectory(path: "/tmp")
+        let workspace = panes.reduce(Workspace.empty(name: "w", rootDirectory: root, layout: DwindleLayout())) {
+            $0.adding($1)
+        }
+        return WindowState(id: WindowID(), workspaces: WorkspaceSet(first: workspace), frame: nil, isFullScreen: false)
+    }
+
+    @Test func longestWaitingComesFirstAcrossWindows() throws {
+        let recent = waiting(since: 500)
+        let oldest = waiting(since: 100)
+        let set = WindowSet(first: try window([recent])).opening(try window([oldest]))
+
+        #expect(AttentionQueue.panes(in: set).first == oldest.id)
     }
 }

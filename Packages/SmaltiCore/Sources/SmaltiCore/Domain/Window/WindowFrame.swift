@@ -28,8 +28,17 @@ public enum WindowFrame {
         return max(width, 0) * max(height, 0)
     }
 
-    public static func cascaded(from front: Rect, step: Double = cascadeStep) -> Rect {
-        Rect(x: front.minX + step, y: front.minY - step, width: front.size.width, height: front.size.height)
+    /// ⌘N: a window of `size` hanging one step below and right of the front one's top-left corner; past the visible
+    /// screen it starts again at its top-left, and it never exceeds it.
+    public static func cascaded(from front: Rect, size: Size, visible: Rect) -> Rect {
+        let capped = capped(size, to: visible)
+        let next = Rect(
+            x: front.minX + cascadeStep, y: front.maxY - cascadeStep - capped.height, width: capped.width,
+            height: capped.height)
+        guard next.maxX > visible.maxX || next.minY < visible.minY else { return next }
+        return Rect(
+            x: visible.minX + cascadeStep, y: visible.maxY - cascadeStep - capped.height, width: capped.width,
+            height: capped.height)
     }
 
     private static func isVisible(_ frame: Rect, on screen: Rect) -> Bool {

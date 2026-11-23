@@ -56,10 +56,6 @@ public struct WindowSet: Equatable, Sendable {
         return updated
     }
 
-    public func window(containing pane: PaneID) -> WindowState? {
-        windows.first { $0.workspaces.workspace(containing: pane) != nil }
-    }
-
     public func updating(_ id: WindowID, _ transform: (WindowState) -> WindowState) -> WindowSet {
         guard let position = windows.firstIndex(where: { $0.id == id }) else { return self }
         let transformed = transform(windows[position])

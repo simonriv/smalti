@@ -34,6 +34,7 @@ enum SessionState {
     struct Window {
         let frame: (x: Double, y: Double, width: Double, height: Double)?
         let workspaces: [Workspace]
+        var isFullScreen = false
     }
 
     /// A format-2 session with several windows; `frontIndex` is the one in front.
@@ -42,7 +43,7 @@ enum SessionState {
             "version": 2, "savedAt": "2026-11-21T23:48:00Z", "frontIndex": frontIndex,
             "windows": windows.map { window in
                 var json: [String: Any] = [
-                    "isFullScreen": false, "activeIndex": 0, "workspaces": window.workspaces.map(json),
+                    "isFullScreen": window.isFullScreen, "activeIndex": 0, "workspaces": window.workspaces.map(json),
                 ]
                 if let frame = window.frame {
                     json["frame"] = [

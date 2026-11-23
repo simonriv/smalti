@@ -120,20 +120,39 @@ struct SessionSnapshotV2Tests {
         #expect(RestoreSelection.defaults(for: snapshot).checkedCount(in: snapshot) == 2)
     }
 
-    @Test func restorePlanOfASessionUsesTheFrontWindow() {
-        let set = WindowSet(first: window("solen", frame: nil)).opening(window("billi", frame: nil))
-        let snapshot = SessionSnapshot.capture(set, scrollbackLines: [:], at: now)
+    @Test func sessionPlanSkipsAWindowWithNothingChecked() {
+        let first = window("solen", frame: nil)
+        let second = window("billi", frame: nil)
+        let snapshot = SessionSnapshot.capture(WindowSet(first: first).opening(second), scrollbackLines: [:], at: now)
+        let firstPanes = Set(snapshot.windows[0].workspaces.flatMap(\.panes).map(\.id))
 
-        let plan = RestorePlan.make(from: snapshot, mode: .full, selection: RestoreSelection.defaults(for: snapshot))
+        let plans = WindowRestorePlan.make(
+            from: snapshot, mode: .full, selection: RestoreSelection(unchecked: firstPanes))
 
-        #expect(plan.workspaces.map(\.name) == ["billi"])
+        #expect(plans.map { $0.plan.workspaces.map(\.name) } == [["billi"]])
+        #expect(plans.map(\.isFront) == [true])
     }
 
-    @Test func restorePlanOfAnEmptySessionIsEmpty() {
-        let snapshot = SessionSnapshot(version: 2, savedAt: now, windows: [], frontIndex: 0)
+    @Test func sessionPlanKeepsOrderFramesAndFront() {
+        let frame = Rect(x: 1, y: 2, width: 800, height: 600)
+        let first = window("solen", frame: frame)
+        let second = window("billi", frame: nil, fullScreen: true)
+        let set = WindowSet(first: first).opening(second).bringingToFront(first.id)
+        let snapshot = SessionSnapshot.capture(set, scrollbackLines: [:], at: now)
+
+        let plans = WindowRestorePlan.make(from: snapshot, mode: .full, selection: .defaults(for: snapshot))
+
+        #expect(plans.map(\.saved.frame) == [frame, nil])
+        #expect(plans.map(\.saved.isFullScreen) == [false, true])
+        #expect(plans.map(\.isFront) == [true, false])
+    }
+
+    @Test func sessionPlanWithNothingCheckedIsEmpty() {
+        let snapshot = SessionSnapshot.capture(
+            WindowSet(first: window("solen", frame: nil)), scrollbackLines: [:], at: now)
+        let all = Set(snapshot.workspaces.flatMap(\.panes).map(\.id))
 
         #expect(
-            RestorePlan.make(from: snapshot, mode: .full, selection: RestoreSelection(unchecked: [])).workspaces.isEmpty
-        )
+            WindowRestorePlan.make(from: snapshot, mode: .full, selection: RestoreSelection(unchecked: all)).isEmpty)
     }
 }

@@ -62,10 +62,6 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
     /// Every saved workspace, window after window.
     public var workspaces: [WorkspaceSnapshot] { windows.flatMap(\.workspaces) }
 
-    /// The window that was in front, or the first when the index is off.
-    public var front: WindowSnapshot? {
-        windows.indices.contains(frontIndex) ? windows[frontIndex] : windows.first
-    }
 
     /// `scrollbackLines` holds the lines saved for each pane whose scrollback was kept; the rest count 0.
     public static func capture(_ set: WindowSet, scrollbackLines: [PaneID: Int], at date: Date) -> SessionSnapshot {

@@ -6,6 +6,16 @@ import SmaltiCore
 typealias PaneEngine = TerminalEngine & TerminalViewProvider
 
 /// What the views draw after every change.
+extension TilingController.Dependencies {
+    /// The same dependencies with this window's agents (F4.5: what counts as visible is per window).
+    func with(agents: TilingController.AgentDependencies) -> TilingController.Dependencies {
+        TilingController.Dependencies(
+            engine: engine, configStore: configStore, paneEnvironment: paneEnvironment, transcripts: transcripts,
+            namedLayouts: namedLayouts, harnesses: harnesses, agents: agents, home: home, shellOverride: shellOverride,
+            applyAppearance: applyAppearance)
+    }
+}
+
 struct TilingState {
     let set: WorkspaceSet
     let config: SmaltiConfig
@@ -116,13 +126,6 @@ final class TilingController {
     @discardableResult
     func activate(_ pane: PaneID) -> Bool {
         guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return false }
-        publish()
-        return true
-    }
-
-    /// ⌘J in this window; false when nobody waits here (the app then tries the other windows).
-    func jumpToWaitingAgent() -> Bool {
-        guard JumpToWaitingAgent(engine: deps.engine).execute(in: &set) != .nobodyWaiting else { return false }
         publish()
         return true
     }
@@ -379,25 +382,33 @@ final class TilingController {
         }
     }
 
-    /// "Recargar configuración": the app asks every window, so they all follow the file.
+    /// "Recargar configuración" in the window that also reloads the terminal engine (it is the app's).
     func reloadConfig() {
-        applyReloadedConfig()
-        publish()
-    }
-
-    private func applyReloadedConfig() {
-        let reload = ReloadConfig(store: deps.configStore).execute()
-        config = reload.config.withShell(overriddenBy: deps.shellOverride)
-        if let error = reload.error {
-            show(.invalidConfig(error))
-            return
-        }
-        status = status.withPersistent(nil)
+        guard applyReloadedConfig() else { return publish() }
         do {
             try deps.applyAppearance(theme.terminal)
         } catch {
             show(.engineFailure(error))
         }
+        publish()
+    }
+
+    /// "Recargar configuración" in the other windows: they read the file again; the engine is already reloaded.
+    func rereadConfig() {
+        _ = applyReloadedConfig()
+        publish()
+    }
+
+    /// Reads the file; false when it was invalid (the status bar says so and the last good config stays).
+    private func applyReloadedConfig() -> Bool {
+        let reload = ReloadConfig(store: deps.configStore).execute()
+        config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        if let error = reload.error {
+            show(.invalidConfig(error))
+            return false
+        }
+        status = status.withPersistent(nil)
+        return true
     }
 
     private static func message(for error: OpenPaneError) -> StatusMessage {

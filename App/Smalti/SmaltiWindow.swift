@@ -22,7 +22,8 @@ final class SmaltiWindow: NSWindow {
         statusBar = content.statusBar
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            // No `.closable`: windows close only through ⇧⌘W, which asks first and closes their panes (F4.5).
+            styleMask: [.titled, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
         titlebarAppearsTransparent = true

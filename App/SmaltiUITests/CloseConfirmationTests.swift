@@ -85,6 +85,20 @@ final class CloseConfirmationTests: SmaltiUITestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    /// Block 3 review: with the window minimized, ⌘Q brings it back and asks where the user can see it.
+    func testQuitWithTheWindowMinimizedShowsTheQuestion() {
+        startSleeping()
+        let window = app.windows.matching(identifier: "smalti.window").firstMatch
+        app.typeKey("m", modifierFlags: .command)
+        let minimized = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == false"), object: window)
+        wait(for: [minimized], timeout: 10)
+
+        app.typeKey("q", modifierFlags: .command)
+
+        expectQuestion("¿Salir de Smalti?")
+        sheet.buttons["Cancelar"].click()
+    }
+
     /// Review Focus 3: what runs in a hidden workspace counts too.
     func testQuitCountsABusyPaneInAHiddenWorkspace() {
         startSleeping()

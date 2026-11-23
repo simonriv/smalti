@@ -72,9 +72,27 @@ struct WindowFrameTests {
         #expect(WindowFrame.fitted(onLeft, screens: [main, left], main: main) == onLeft)
     }
 
-    @Test func cascadeStepsDownRight() {
-        let front = Rect(x: 100, y: 300, width: 800, height: 600)
+    /// Block 3 review: the new window keeps its own size and hangs from the front one's top-left corner.
+    @Test func cascadeHangsFromTheFrontTopLeftCorner() {
+        let front = Rect(x: 100, y: 200, width: 800, height: 600)
 
-        #expect(WindowFrame.cascaded(from: front) == Rect(x: 124, y: 276, width: 800, height: 600))
+        let next = WindowFrame.cascaded(from: front, size: Size(width: 700, height: 500), visible: main)
+
+        #expect(next == Rect(x: 124, y: 276, width: 700, height: 500))
+    }
+
+    @Test func cascadePastTheScreenStartsAgainAtTheTopLeft() {
+        let low = Rect(x: 900, y: 0, width: 800, height: 600)
+
+        let next = WindowFrame.cascaded(from: low, size: Size(width: 800, height: 600), visible: main)
+
+        #expect(next == Rect(x: main.minX + 24, y: main.maxY - 24 - 600, width: 800, height: 600))
+    }
+
+    @Test func cascadeLargerThanTheScreenIsCapped() {
+        let next = WindowFrame.cascaded(
+            from: Rect(x: 0, y: 0, width: 100, height: 100), size: Size(width: 3000, height: 2000), visible: main)
+
+        #expect(next.size == main.size)
     }
 }

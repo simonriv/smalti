@@ -127,6 +127,7 @@ final class AppComposition {
             harnesses: harnesses,
             agents: .init(
                 notifier: makeNotifier(), integration: Self.claudeIntegration(),
+                // Replaced per window in `makeController`: "visible" is that window's, not the app's.
                 isAppActive: { NSApp.isActive }),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
@@ -136,16 +137,17 @@ final class AppComposition {
         controllerDependencies = dependencies
         configStore = startup.store
         restorePreferences = archive
-        let controller = TilingController(dependencies, initial: startup.initial)
+        let (controller, visibility) = makeController(dependencies, initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
         if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
         startObservatory(startup, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
-        keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
+        // The window in front at the time reports it: the first one may be closed by then.
+        keeper.onFailure = { [weak self] reason in self?.controller?.report(.sessionSaveFailed(reason)) }
         self.runtime = runtime
         self.engine = engine
         sessionKeeper = keeper
-        let composition = makeComposition(controller, engine: engine)
+        let composition = makeComposition(controller, visibility: visibility, engine: engine)
         switch LoadLastSession(archive: archive, preferences: archive).execute() {
         case .startFresh:
             controller.start()
@@ -153,8 +155,11 @@ final class AppComposition {
             controller.start()
             controller.report(.unreadableSession(reason))
         case .restoreAll(let snapshot):
-            restoreWindows(snapshot, mode: .full, selection: .defaults(for: snapshot))
+            let plans = WindowRestorePlan.make(from: snapshot, mode: .full, selection: .defaults(for: snapshot))
+            restoreWindows(snapshot, plans: plans, into: composition)
         case .ask(let snapshot):
+            // Asked where the first window was, so restoring does not move it under the user's eyes.
+            if let frame = snapshot.windows.first?.frame { composition.place(at: frame) }
             composition.ask(snapshot, preferences: archive)
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
@@ -163,14 +168,29 @@ final class AppComposition {
 
     // MARK: - Windows (F4.5)
 
+    /// A controller whose agents count as seen only while its own window is the key one, on screen.
+    private func makeController(_ dependencies: TilingController.Dependencies, initial: ConfigReload)
+        -> (TilingController, WindowVisibility)
+    {
+        let visibility = WindowVisibility()
+        let agents = TilingController.AgentDependencies(
+            notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
+            isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
+        return (TilingController(dependencies.with(agents: agents), initial: initial), visibility)
+    }
+
     /// A window for `controller`, cascaded from the front one, in front. Its controller has not opened panes yet.
     @discardableResult
-    private func makeComposition(_ controller: TilingController, engine: GhosttyTerminalEngine) -> WindowComposition {
+    private func makeComposition(
+        _ controller: TilingController, visibility: WindowVisibility, engine: GhosttyTerminalEngine
+    ) -> WindowComposition {
         let window = SmaltiWindow(theme: controller.theme)
-        if let frame = front?.window.frame {
+        visibility.window = window
+        if let front, let visible = (front.window.screen ?? NSScreen.main)?.visibleFrame {
             let next = WindowFrame.cascaded(
-                from: Rect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height))
-            window.setFrameOrigin(NSPoint(x: next.minX, y: next.minY))
+                from: front.windowedFrame, size: Size(width: window.frame.width, height: window.frame.height),
+                visible: Rect(visible))
+            window.setFrame(NSRect(next), display: false)
         }
         window.makeKeyAndOrderFront(nil)
         if let path = stateDirectoryForTests { window.setAccessibilityValue(path) }
@@ -184,8 +204,8 @@ final class AppComposition {
     /// A new window with a fresh controller; nil before the engine exists.
     private func makeWindow() -> WindowComposition? {
         guard let dependencies = controllerDependencies, let store = configStore, let engine else { return nil }
-        return makeComposition(
-            TilingController(dependencies, initial: ReloadConfig(store: store).execute()), engine: engine)
+        let (controller, visibility) = makeController(dependencies, initial: ReloadConfig(store: store).execute())
+        return makeComposition(controller, visibility: visibility, engine: engine)
     }
 
     /// Every window as the session sees it, the front one marked; nil with no windows.
@@ -212,7 +232,10 @@ final class AppComposition {
         case .windowFullscreen: composition.window.toggleFullScreen(nil)
         case .windowMinimize: composition.window.miniaturize(nil)
         case .agentJump: jumpToWaitingAgent(from: composition)
-        case .configReload: compositions.forEach { $0.controller.reloadConfig() }
+        case .configReload:
+            // The engine's appearance is the app's: one window applies it, the others follow the file.
+            compositions.first?.controller.reloadConfig()
+            compositions.dropFirst().forEach { $0.controller.rereadConfig() }
         default: break
         }
     }
@@ -252,45 +275,55 @@ final class AppComposition {
         }
         compositions.removeAll { $0 === composition }
         composition.window.close()
+        observatoryOpenChanged()
         frontID = set.frontID
         front?.window.makeKeyAndOrderFront(nil)
         windowsChanged()
     }
 
-    /// ⌘J: the window it came from first, then the others; the one with a waiting agent comes to the front.
+    /// ⌘J: the agent that has waited longest, in whichever window; that window comes to the front.
     private func jumpToWaitingAgent(from origin: WindowComposition) {
-        let order = [origin] + compositions.filter { $0 !== origin }
-        guard let found = order.first(where: { $0.controller.jumpToWaitingAgent() }) else {
+        guard let windows = windowSet(), let pane = AttentionQueue.panes(in: windows).first,
+            let owner = composition(containing: pane), owner.controller.activate(pane)
+        else {
             origin.controller.reportNobodyWaiting()
             return
         }
-        found.window.makeKeyAndOrderFront(nil)
+        owner.window.makeKeyAndOrderFront(nil)
     }
 
-    /// Rebuilds every saved window: the first in the window that is already open, the rest in new ones, each at its
-    /// saved frame refitted to the screens there are now. A later window with nothing chosen is not opened.
-    private func restoreWindows(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+    /// Rebuilds the saved windows that have something chosen (`WindowRestorePlan`): the first into `first`, the
+    /// rest into new ones, each at its saved frame refitted to the screens there are now. With nothing chosen,
+    /// `first` starts fresh.
+    private func restoreWindows(
+        _ snapshot: SessionSnapshot, plans: [WindowRestorePlan], into first: WindowComposition
+    ) {
+        guard !plans.isEmpty else {
+            first.controller.start()
+            return
+        }
         var inFront: WindowComposition?
-        for (index, saved) in snapshot.windows.enumerated() {
-            let plan = RestorePlan.make(from: saved, mode: mode, selection: selection)
-            guard index == 0 || !plan.workspaces.isEmpty else { continue }
-            guard let composition = index == 0 ? compositions.first : makeWindow() else { continue }
-            if let frame = saved.frame { composition.place(at: frame) }
-            composition.controller.restore(plan, savedAt: snapshot.savedAt)
-            if saved.isFullScreen { composition.window.toggleFullScreen(nil) }
-            if index == snapshot.frontIndex { inFront = composition }
+        for (index, window) in plans.enumerated() {
+            guard let composition = index == 0 ? first : makeWindow() else { continue }
+            if let frame = window.saved.frame { composition.place(at: frame) }
+            composition.controller.restore(window.plan, savedAt: snapshot.savedAt)
+            if window.saved.isFullScreen { composition.window.toggleFullScreen(nil) }
+            if window.isFront { inFront = composition }
         }
         inFront?.window.makeKeyAndOrderFront(nil)
     }
 
-    private func restoreChosen(_ choice: RestoreChoice, snapshot: SessionSnapshot) {
+    /// What the user chose on "Retomar donde quedaste", in the window that asked.
+    private func restoreChosen(_ choice: RestoreChoice, snapshot: SessionSnapshot, in asking: WindowComposition) {
         switch choice {
         case .restore(let selection):
-            restoreWindows(snapshot, mode: .full, selection: selection)
+            let plans = WindowRestorePlan.make(from: snapshot, mode: .full, selection: selection)
+            restoreWindows(snapshot, plans: plans, into: asking)
         case .layoutsOnly:
-            restoreWindows(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
+            let plans = WindowRestorePlan.make(from: snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
+            restoreWindows(snapshot, plans: plans, into: asking)
         case .startClean:
-            front?.controller.start()
+            asking.controller.start()
             beginSaving(keepingPreviousSession: true)
             return
         }
@@ -311,13 +344,15 @@ final class AppComposition {
         WindowServices(
             engine: engine, harnesses: harnesses,
             changed: { [weak self] in self?.windowsChanged() },
-            restoreChosen: { [weak self] choice, snapshot in self?.restoreChosen(choice, snapshot: snapshot) },
+            restoreChosen: { [weak self] choice, snapshot, asking in
+                self?.restoreChosen(choice, snapshot: snapshot, in: asking)
+            },
             appCommand: { [weak self] command, composition in self?.perform(command, from: composition) },
             becameFront: { [weak self] composition in self?.frontID = composition.id },
             completionMenu: { [weak self] in self?.completionMenu },
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
-            observatoryOpenChanged: { [weak self] isOpen in self?.observatory?.isObservatoryOpen = isOpen })
+            observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() })
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's
@@ -366,7 +401,7 @@ final class AppComposition {
             callbacks: .init(
                 panes: { [weak self] in self?.compositions.flatMap { PaneAgent.all(in: $0.controller.set) } ?? [] },
                 onSnapshot: { [weak self] frame in self?.compositions.forEach { $0.show(frame) } },
-                onError: { [weak controller] in controller?.report(.transcriptsUnreadable($0)) }))
+                onError: { [weak self] in self?.controller?.report(.transcriptsUnreadable($0)) }))
         refresher.start()
         observatory = refresher
     }
@@ -422,7 +457,7 @@ final class AppComposition {
                 context: (
                     theme: { [weak self] in self?.controller?.theme ?? startup.theme },
                     onOpen: { [weak self] in self?.completionMenu?.close() },
-                    returnFocus: { [weak self] pane in self?.front?.focusKeyboard(on: pane) }
+                    returnFocus: { [weak self] pane in self?.composition(containing: pane)?.focusKeyboard(on: pane) }
                 ))
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
@@ -448,11 +483,23 @@ final class AppComposition {
             runner: ShellCommandRunner(shell: ["/bin/zsh", "-lic"], environment: environment))
     }
 
+    /// The observatory refreshes fast while any window shows it.
+    private func observatoryOpenChanged() {
+        observatory?.isObservatoryOpen = compositions.contains(where: \.isObservatoryOpen)
+    }
+
+    private var isConfirmingQuit = false
+
     /// ⌘Q: asks in the front window when something runs in any window or workspace; `answer` gets the choice (true
-    /// at once when nothing runs).
+    /// at once when nothing runs). The app comes forward first (hidden, minimized, or quitting from the Dock or a
+    /// logout) so the question is never asked out of sight; a repeated ⌘Q while it asks adds no second question.
     func confirmQuit(_ answer: @escaping (Bool) -> Void) {
         guard let windows = windowSet(), let front, let settings = controller?.config.window else {
             answer(true)
+            return
+        }
+        guard !isConfirmingQuit else {
+            answer(false)
             return
         }
         let busy = CloseGuard.busyPanes(in: windows)
@@ -461,7 +508,15 @@ final class AppComposition {
             answer(true)
             return
         }
-        CloseConfirmation.ask(question, in: front.window, then: answer)
+        isConfirmingQuit = true
+        NSApp.unhide(nil)
+        NSApp.activate()
+        if front.window.isMiniaturized { front.window.deminiaturize(nil) }
+        front.window.makeKeyAndOrderFront(nil)
+        CloseConfirmation.ask(question, in: front.window) { [weak self] confirmed in
+            self?.isConfirmingQuit = false
+            answer(confirmed)
+        }
     }
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
