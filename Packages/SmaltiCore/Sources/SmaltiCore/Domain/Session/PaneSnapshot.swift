@@ -45,6 +45,20 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
     public let relaunch: RelaunchCommand?
     public let agent: AgentSnapshot?
 
+    public init(
+        id: UUID, workingDirectory: String, title: String?, processName: String?, scrollbackLines: Int,
+        commandCount: Int, relaunch: RelaunchCommand?, agent: AgentSnapshot?
+    ) {
+        self.id = id
+        self.workingDirectory = workingDirectory
+        self.title = title
+        self.processName = processName
+        self.scrollbackLines = scrollbackLines
+        self.commandCount = commandCount
+        self.relaunch = relaunch
+        self.agent = agent
+    }
+
     init(_ pane: Pane, scrollbackLines: Int) {
         id = pane.id.rawValue
         workingDirectory = pane.workingDirectory.path

@@ -9,6 +9,18 @@ public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
     public let focusedIndex: Int?
     public let panes: [PaneSnapshot]
 
+    public init(
+        name: String, rootDirectory: String, layout: String, tree: SnapshotTree?, focusedIndex: Int?,
+        panes: [PaneSnapshot]
+    ) {
+        self.name = name
+        self.rootDirectory = rootDirectory
+        self.layout = layout
+        self.tree = tree
+        self.focusedIndex = focusedIndex
+        self.panes = panes
+    }
+
     init(_ workspace: Workspace, scrollbackLines: [PaneID: Int]) {
         let order = workspace.panes.map(\.id)
         name = workspace.name
@@ -28,6 +40,13 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
     public let savedAt: Date
     public let workspaces: [WorkspaceSnapshot]
     public let activeIndex: Int
+
+    public init(version: Int, savedAt: Date, workspaces: [WorkspaceSnapshot], activeIndex: Int) {
+        self.version = version
+        self.savedAt = savedAt
+        self.workspaces = workspaces
+        self.activeIndex = activeIndex
+    }
 
     /// `scrollbackLines` holds the lines saved for each pane whose scrollback was kept; the rest count 0.
     public static func capture(_ set: WorkspaceSet, scrollbackLines: [PaneID: Int], at date: Date) -> SessionSnapshot {
