@@ -16,7 +16,7 @@ public struct ExitRecovery: PredictionRule {
     }
 
     private func knownFixes(for command: String, project: ProjectSnapshot) -> [Candidate] {
-        guard command == "git push", let branch = project.branch else { return [] }
+        guard command == "git push", let branch = project.branch, !project.hasUpstream else { return [] }
         return [Candidate(command: "git push -u origin \(branch)", score: Self.ruleWeight)]
     }
 }

@@ -152,7 +152,7 @@
 - [x] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
 #### Bloque 2 · Adaptadores
 - [x] T6 · `FileCommandHistory` (JSONL)
-- [ ] T7 · `ProjectContextAdapter`
+- [x] T7 · `ProjectContextAdapter`
 - [ ] T8 · `FigCompletionAdapter` y vendoring
 - [ ] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
 #### Bloque 3 · Canal con zsh

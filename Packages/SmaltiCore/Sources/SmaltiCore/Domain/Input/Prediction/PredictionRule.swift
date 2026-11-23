@@ -6,12 +6,17 @@ public struct ProjectSnapshot: Equatable, Sendable {
     public let makeTargets: [String]
     public let branch: String?
     public let branches: [String]
+    /// Whether the current branch tracks a remote branch (`branch.<name>.remote` in the git config).
+    public let hasUpstream: Bool
 
-    public init(scripts: [String], makeTargets: [String], branch: String?, branches: [String]) {
+    public init(
+        scripts: [String], makeTargets: [String], branch: String?, branches: [String], hasUpstream: Bool = false
+    ) {
         self.scripts = scripts
         self.makeTargets = makeTargets
         self.branch = branch
         self.branches = branches
+        self.hasUpstream = hasUpstream
     }
 
     public static let empty = ProjectSnapshot(scripts: [], makeTargets: [], branch: nil, branches: [])

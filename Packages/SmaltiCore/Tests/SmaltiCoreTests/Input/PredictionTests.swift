@@ -110,6 +110,14 @@ struct ExitRecoveryTests {
         #expect(candidates.map(\.command) == ["git push -u origin feature/x"])
     }
 
+    // Review m11: a push that failed for another reason (rejected) with an upstream gets no `-u` suggestion.
+    @Test func recoveryGitPushSkippedWithUpstream() {
+        let failed = historyEntry("git push", exit: 1)
+        let project = ProjectSnapshot(scripts: [], makeTargets: [], branch: "main", branches: [], hasUpstream: true)
+
+        #expect(ExitRecovery().candidates(context("", previous: failed, project: project)).isEmpty)
+    }
+
     @Test func recoveryIgnoredAfterSuccess() {
         let entries = [historyEntry("swift tset", exit: 1, at: 1), historyEntry("swift test", at: 2)]
 
