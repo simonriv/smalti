@@ -64,6 +64,11 @@ public struct WorkspaceSet: Sendable, Equatable {
         return updated
     }
 
+    /// What a user changes on purpose (workspaces, panes, layouts), without titles, directories or agent states.
+    public var structure: [[String]] {
+        workspaces.map { [$0.id.description, $0.layout.id.rawValue] + $0.panes.map(\.id.description) }
+    }
+
     public func workspace(containing pane: PaneID) -> WorkspaceID? {
         workspaces.first { $0.contains(pane) }?.id
     }

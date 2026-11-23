@@ -16,9 +16,13 @@ public struct CreateWorkspace {
     private let engine: any TerminalEngine
     private let openPane: OpenPane
 
-    public init(engine: any TerminalEngine, version: String, environment: [String: String] = [:]) {
+    public init(engine: any TerminalEngine, environment: PaneEnvironment) {
         self.engine = engine
-        openPane = OpenPane(engine: engine, version: version, environment: environment)
+        openPane = OpenPane(engine: engine, environment: environment)
+    }
+
+    public init(engine: any TerminalEngine, version: String, environment: [String: String] = [:]) {
+        self.init(engine: engine, environment: PaneEnvironment(version: version, extra: environment))
     }
 
     public func execute(_ request: CreateWorkspaceRequest, in set: inout WorkspaceSet) throws(OpenPaneError)

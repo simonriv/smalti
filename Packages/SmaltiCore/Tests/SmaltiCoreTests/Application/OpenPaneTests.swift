@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 import SmaltiCoreTestSupport
 import Testing
@@ -25,7 +26,9 @@ struct OpenPaneTests {
 
         _ = try open.execute(request(roomy), in: &set)
 
-        #expect(engine.openedSpecs.first?.environment == ["SMALTI": "1", "SMALTI_VERSION": "1.2"])
+        let environment = engine.openedSpecs.first?.environment
+        #expect(environment?["SMALTI"] == "1")
+        #expect(environment?["SMALTI_VERSION"] == "1.2")
     }
 
     @Test mutating func openKeepsSpecEnvironmentAndAddsSmalti() throws {
@@ -40,7 +43,7 @@ struct OpenPaneTests {
         #expect(environment?["SMALTI_VERSION"] == "1")
     }
 
-    @Test mutating func openAddsThePaneWithTheEngineId() throws {
+    @Test mutating func openAddsThePaneItOpened() throws {
         let open = OpenPane(engine: engine, version: "1")
 
         let id = try open.execute(request(roomy), in: &set)
@@ -48,7 +51,7 @@ struct OpenPaneTests {
         #expect(set.active.panes.map(\.id) == [id])
         #expect(set.active.focusedPane == id)
         let spec = TerminalSessionSpec(
-            workingDirectory: tmp, command: .loginShell, environment: ChildEnvironment.smalti(version: "1"))
+            workingDirectory: tmp, command: .loginShell, environment: PaneEnvironment(version: "1").variables(for: id))
         #expect(engine.openedSpecs == [spec])
     }
 
@@ -83,5 +86,51 @@ struct OpenPaneTests {
             try OpenPane(engine: engine, version: "1").execute(request(roomy), in: &set)
         }
         #expect(set == before)
+    }
+
+    @Test mutating func openGivesTheEngineTheNewPaneID() throws {
+        let id = try OpenPane(engine: engine, version: "1").execute(request(roomy), in: &set)
+
+        #expect(engine.openedIDs == [id])
+        #expect(engine.openedSpecs.first?.environment["SMALTI_PANE_ID"] == id.description)
+    }
+
+    @Test mutating func openPassesHistoryFileWhenFilesAreKnown() throws {
+        let files = PaneFileLocator(stateDirectory: URL(filePath: "/state"))
+        let open = OpenPane(engine: engine, environment: PaneEnvironment(version: "1", files: files))
+
+        let id = try open.execute(request(roomy), in: &set)
+
+        #expect(engine.openedSpecs.first?.environment["SMALTI_HISTORY_FILE"] == "/state/history/\(id).zsh_history")
+    }
+
+    @Test func environmentCarriesSocketCliAndPath() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/state/smalti.sock"), cli: URL(filePath: "/App.app/Contents/Resources/bin/smalti"),
+            inheritedPath: "/usr/bin:/bin")
+        let environment = PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())
+
+        #expect(environment["SMALTI_SOCKET"] == "/state/smalti.sock")
+        #expect(environment["SMALTI_CLI"] == "/App.app/Contents/Resources/bin/smalti")
+        #expect(environment["PATH"] == "/App.app/Contents/Resources/bin:/usr/bin:/bin")
+    }
+
+    @Test func withoutIPCThereIsNoSocketOrCli() {
+        let environment = PaneEnvironment(version: "1").variables(for: PaneID())
+
+        #expect(environment["SMALTI_SOCKET"] == nil)
+        #expect(environment["SMALTI_CLI"] == nil)
+        #expect(environment["PATH"] == nil)
+    }
+
+    @Test mutating func aDeletedCurrentDirectoryFallsBackToHome() throws {
+        engine.failingDirectories = ["/tmp"]
+        let home = try WorkingDirectory(path: "/Users/s")
+        let request = OpenPaneRequest(shell: .loginShell, geometry: roomy, home: home)
+
+        let id = try OpenPane(engine: engine, version: "1").execute(request, in: &set)
+
+        #expect(engine.openedSpecs.map(\.workingDirectory) == [home])
+        #expect(set.active.panes.first { $0.id == id }?.workingDirectory == home)
     }
 }

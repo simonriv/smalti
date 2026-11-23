@@ -86,12 +86,13 @@ final class PaneGridView: NSView {
             container.removeFromSuperview()
         }
         let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
+        let context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now)
         for pane in workspace.panes.map(\.id) {
             let container = containers[pane] ?? newContainer(for: pane, at: frames[pane])
             if let view = views(pane) { container.embed(view) }
             if container.superview !== self { addSubview(container) }
             let header = workspace.panes.first { $0.id == pane }.map {
-                PaneHeaderContent($0, index: state.set.paneIndex(of: pane), keymap: state.config.keys, home: state.home)
+                PaneHeaderContent($0, index: state.set.paneIndex(of: pane), context: context)
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
             container.setAccessibilityLabel(workspace.index(of: pane).map { "Panel \($0)" })

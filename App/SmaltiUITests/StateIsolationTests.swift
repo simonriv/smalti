@@ -25,4 +25,27 @@ final class StateIsolationTests: SmaltiUITestCase {
             atPath: app.stateDirectory.path(percentEncoded: false))
         XCTAssertEqual(attributes[.posixPermissions] as? Int, 0o700)
     }
+
+    /// A session that cannot be saved is reported once in the status bar, not only in the log.
+    func testFailedSaveIsShownInTheStatusBar() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        let blocker = app.stateDirectory.appending(path: "session.json")
+        try FileManager.default.createDirectory(at: blocker, withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: blocker.appending(path: "blocks-the-file"))
+        // Read-only, so the save can neither replace it nor empty it.
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o500], ofItemAtPath: blocker.path(percentEncoded: false))
+        addTeardownBlock {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o700], ofItemAtPath: blocker.path(percentEncoded: false))
+        }
+        launch(app)
+
+        app.typeKey("d", modifierFlags: .command)
+
+        let reported = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value BEGINSWITH %@", "No se pudo guardar la sesión"),
+            object: app.element("smalti.statusBar"))
+        wait(for: [reported], timeout: 6)
+    }
 }

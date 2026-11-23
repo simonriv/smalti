@@ -201,4 +201,51 @@ struct ObsidianThemeTests {
     @Test func motionTokens() {
         #expect(theme.motion.rearrangeDuration == 0.15)
     }
+
+    /// Reanudar.dc.html, left column.
+    @Test func resumeTokensMatchBoard() {
+        let resume = theme.resume
+        #expect(resume.contentWidth == 908)
+        #expect(resume.paddingVertical == 28)
+        #expect(resume.paddingHorizontal == 32)
+        #expect(resume.titleFontSize == 20)
+        #expect(resume.subtitleFontSize == 12.5)
+        #expect(resume.rowCornerRadius == 9)
+        #expect(resume.rowSelected == RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.03))
+        #expect(resume.buttonHeight == 36)
+        #expect(resume.buttonCornerRadius == 8)
+        #expect(resume.headerPadding == ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8))
+        #expect(resume.hintGap == 6)
+        #expect(resume.buttonBorderWidth == 1)
+        #expect(resume.titleWeight == 600)
+        #expect(resume.workspaceWeight == 600)
+        #expect(resume.tagWeight == 500)
+        #expect(resume.primaryButtonWeight == 600)
+        #expect(resume.buttonWeight == 500)
+        #expect(theme.agent.stoppedRingWidth == 1)
+    }
+
+    @Test func restoreTagColorsMatchBoard() {
+        #expect(theme.resume.agentTag == RGBAColor(red: 217, green: 119, blue: 87, alpha: 0.16))
+        #expect(theme.resume.agentTagText == RGBAColor(red: 0xf0, green: 0xa9, blue: 0x8f, alpha: 1))
+        #expect(theme.resume.programTag == RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.07))
+        #expect(theme.resume.programTagText == RGBAColor(red: 0xc3, green: 0xc7, blue: 0xcf, alpha: 1))
+        #expect(theme.resume.primaryButtonText == RGBAColor(red: 0x0d, green: 0x0f, blue: 0x15, alpha: 1))
+    }
+
+    /// docs/design/README.md: verde trabajando, ámbar te espera, rojo error, círculo hueco detenido.
+    @Test func agentStatusColorsMatchTheDesign() {
+        #expect(theme.statusDot(for: .working) == .filled(RGBAColor(red: 0x9e, green: 0xce, blue: 0x6a, alpha: 1)))
+        #expect(theme.statusDot(for: .waiting) == .filled(RGBAColor(red: 0xe0, green: 0xaf, blue: 0x68, alpha: 1)))
+        #expect(theme.statusDot(for: .failed) == .filled(RGBAColor(red: 0xf7, green: 0x76, blue: 0x8e, alpha: 1)))
+        #expect(
+            theme.statusDot(for: .stopped) == .hollow(RGBAColor(red: 0x6b, green: 0x71, blue: 0x7c, alpha: 1), width: 1)
+        )
+        #expect(theme.statusDot(for: nil) == .filled(theme.strip.dot))
+        #expect(theme.agent.waitingBorder == RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35))
+        #expect(theme.agent.counterGap == 14)
+        #expect(theme.agent.counterItemGap == 6)
+        #expect(theme.agent.counterFontSize == 11.5)
+        #expect(theme.agent.counterText == RGBAColor(red: 0x9a, green: 0xa0, blue: 0xab, alpha: 1))
+    }
 }

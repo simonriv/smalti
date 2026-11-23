@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 94B308E204A0832409E16986 /* UserNotificationsAdapter */; };
+		26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2F7A6887BBCCFE90DCDF359C /* IPCAdapter */; };
+		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
+		0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 6432A366F755335850ECF0B4 /* FileSessionAdapter */; };
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
 		C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */; };
 		81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */; };
@@ -40,6 +44,10 @@
 				CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */,
 				C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */,
 				81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */,
+				FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */,
+				26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */,
+				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
+				0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +91,7 @@
 				0248D6DB510EB0F7E9C05175 /* Frameworks */,
 				82A968CB662751220D4DFE2D /* Resources */,
 				C25A501B472CEDF18639FE6A /* Copy Ghostty resources */,
+				E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */,
 			);
 			buildRules = (
 			);
@@ -96,6 +105,10 @@
 				45270719A545F7E15F22D287 /* SmaltiCore */,
 				2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */,
 				1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */,
+				94B308E204A0832409E16986 /* UserNotificationsAdapter */,
+				2F7A6887BBCCFE90DCDF359C /* IPCAdapter */,
+				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
+				6432A366F755335850ECF0B4 /* FileSessionAdapter */,
 			);
 			productName = Smalti;
 			productReference = 81918909E83595C8F4212CCC /* Smalti.app */;
@@ -154,6 +167,10 @@
 				4A2381B11E94060630713172 /* XCLocalSwiftPackageReference "../Packages/SmaltiCore" */,
 				1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */,
 				B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */,
+				B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */,
+				14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */,
+				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
+				595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
@@ -213,6 +230,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "set -euo pipefail\nsrc=\"$SRCROOT/../Packages/GhosttyAdapter/Frameworks/ghostty-resources\"\ndst=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nrsync -a --delete \"$src/ghostty\" \"$src/terminfo\" \"$dst/\"\n";
+		};
+		E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Embed smalti CLI and Claude plugin";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/embed-cli-and-plugin.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -379,6 +411,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/UserNotificationsAdapter;
+		};
+		14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/IPCAdapter;
+		};
+		BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/ClaudeHarnessAdapter;
+		};
+		595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/FileSessionAdapter;
+		};
 		4A2381B11E94060630713172 /* XCLocalSwiftPackageReference "../Packages/SmaltiCore" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/SmaltiCore;
@@ -394,6 +442,22 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		94B308E204A0832409E16986 /* UserNotificationsAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = UserNotificationsAdapter;
+		};
+		2F7A6887BBCCFE90DCDF359C /* IPCAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = IPCAdapter;
+		};
+		D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ClaudeHarnessAdapter;
+		};
+		6432A366F755335850ECF0B4 /* FileSessionAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FileSessionAdapter;
+		};
 		45270719A545F7E15F22D287 /* SmaltiCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SmaltiCore;

@@ -10,11 +10,26 @@ extension RGBAColor {
 }
 
 extension Theme {
+    func color(for tone: HeaderTone) -> RGBAColor {
+        switch tone {
+        case .waiting: agent.waiting
+        case .failed: agent.failed
+        case .secondary: text.secondary
+        }
+    }
+
     /// Inter at `size` and `weight` (CSS 400/500/600). Falls back to the system font while Inter is not installed.
     @MainActor
     func interfaceFont(size: Double, weight: Int = 400) -> NSFont {
         Self.font(family: text.interfaceFontFamily, size: size, weight: weight)
             ?? .systemFont(ofSize: size, weight: Self.systemWeight(weight))
+    }
+
+    /// The monospaced family of the boards (`.code`), at `size`.
+    @MainActor
+    func monospacedFont(size: Double) -> NSFont {
+        Self.font(family: kbd.fontFamily, size: size, weight: 400)
+            ?? .monospacedSystemFont(ofSize: size, weight: .regular)
     }
 
     @MainActor

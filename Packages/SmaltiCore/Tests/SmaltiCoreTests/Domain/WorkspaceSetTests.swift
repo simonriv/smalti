@@ -168,4 +168,19 @@ struct WorkspaceSetTests {
 
         #expect(set.adding(set.workspaces[0]) == set)
     }
+
+    @Test func structureIgnoresTitlesAndDirectories() throws {
+        let pane = makePane()
+        let set = WorkspaceSet(first: makeWorkspace().adding(pane))
+        let titled = set.updating(set.activeID) { $0.applying(.titleChanged("vim"), to: pane.id) }
+
+        #expect(titled.structure == set.structure)
+    }
+
+    @Test func structureChangesWithPanesAndWorkspaces() {
+        let set = WorkspaceSet(first: makeWorkspace())
+
+        #expect(set.updating(set.activeID) { $0.adding(makePane()) }.structure != set.structure)
+        #expect(set.adding(makeWorkspace("otro")).structure != set.structure)
+    }
 }

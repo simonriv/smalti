@@ -7,18 +7,24 @@ public final class FakeTerminalEngine: TerminalEngine {
     public private(set) var closedPanes: [PaneID] = []
     public private(set) var shownPanes: [PaneID] = []
     public private(set) var hiddenPanes: [PaneID] = []
+    public private(set) var openedIDs: [PaneID] = []
     public var failure: TerminalEngineError?
+    /// Opening in one of these paths fails as if the directory were gone.
+    public var failingDirectories: Set<String> = []
     private var streams:
         [PaneID: (stream: AsyncStream<TerminalEvent>, continuation: AsyncStream<TerminalEvent>.Continuation)] = [:]
 
     public init() {}
 
-    public func open(_ spec: TerminalSessionSpec) throws(TerminalEngineError) -> PaneID {
+    public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
         if let failure { throw failure }
+        let path = spec.workingDirectory.path
+        if failingDirectories.contains(path) {
+            throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
+        }
         openedSpecs.append(spec)
-        let id = PaneID()
-        streams[id] = AsyncStream.makeStream()
-        return id
+        openedIDs.append(pane)
+        streams[pane] = AsyncStream.makeStream()
     }
 
     public func close(_ pane: PaneID) {

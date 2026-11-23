@@ -5,6 +5,10 @@ import Testing
 struct KeymapTests {
     private func chord(_ text: String) throws -> KeyChord { try KeyChord.parse(text) }
 
+    @Test func cmdJIsBoundToAgentJump() throws {
+        #expect(Keymap.standard.command(for: try chord("cmd+j")) == .agentJump)
+    }
+
     @Test func standardKeymapHasNoOptionOnlyChord() {
         let offenders = Keymap.standard.bindings.keys.filter(\.usesOptionAlone)
 

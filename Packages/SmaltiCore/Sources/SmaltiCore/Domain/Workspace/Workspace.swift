@@ -1,3 +1,5 @@
+import Foundation
+
 /// A named set of panes, the layout that arranges them and which one has focus.
 ///
 /// Invariant: `tree` holds exactly the panes of `panes`, in order (`nil` when
@@ -100,6 +102,41 @@ public struct Workspace: Sendable, Equatable {
         guard let position = panes.firstIndex(where: { $0.id == pane }) else { return self }
         var updated = self
         updated.panes[position] = panes[position].applying(event)
+        return updated
+    }
+
+    /// Puts back a saved split tree, ratios included, when it holds exactly these panes in this order; otherwise
+    /// keeps the tree the layout built.
+    public func withSavedTree(_ saved: LayoutTree) -> Workspace {
+        guard saved.panes == panes.map(\.id) else { return self }
+        var updated = self
+        updated.tree = saved
+        return updated
+    }
+
+    public func applying(_ event: TerminalEvent, to pane: PaneID, at date: Date) -> Workspace {
+        replacing(pane) { $0.applying(event, at: date) }
+    }
+
+    public func applying(_ event: AgentEvent) -> (Workspace, AttentionReason?) {
+        var attention: AttentionReason?
+        let updated = replacing(event.pane) { pane in
+            let result = pane.applying(event)
+            attention = result.1
+            return result.0
+        }
+        return (updated, attention)
+    }
+
+    /// Its most urgent agent (error > te espera > trabajando > detenido); nil without agents.
+    public var agentStatus: AgentStateKind? {
+        AgentStateKind.mostUrgent(panes.compactMap(\.agent?.state.kind))
+    }
+
+    private func replacing(_ pane: PaneID, _ transform: (Pane) -> Pane) -> Workspace {
+        guard let position = panes.firstIndex(where: { $0.id == pane }) else { return self }
+        var updated = self
+        updated.panes[position] = transform(panes[position])
         return updated
     }
 

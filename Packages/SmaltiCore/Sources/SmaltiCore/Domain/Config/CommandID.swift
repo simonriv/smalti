@@ -17,6 +17,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let workspaceRename = CommandID(rawValue: "workspace.rename")
     public static let workspaceClose = CommandID(rawValue: "workspace.close")
     public static let configReload = CommandID(rawValue: "config.reload")
+    public static let agentJump = CommandID(rawValue: "agent.jump")
+    public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
+    public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
 
     /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
@@ -38,11 +41,33 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     /// Go to the nth workspace, `number` in `NumberedShortcuts.range`.
     public static func workspace(_ number: Int) -> CommandID { CommandID(rawValue: "workspace.\(number)") }
 
+    private static let layoutSavePrefix = "layout.save:"
+    private static let layoutRestorePrefix = "layout.restore:"
+
+    public static func layoutSave(_ name: LayoutName) -> CommandID {
+        CommandID(rawValue: layoutSavePrefix + name.rawValue)
+    }
+
+    public static func layoutRestore(_ name: LayoutName) -> CommandID {
+        CommandID(rawValue: layoutRestorePrefix + name.rawValue)
+    }
+
+    /// The saved-layout action this command stands for, if any.
+    public var namedLayout: NamedLayoutCommand? {
+        if rawValue.hasPrefix(Self.layoutSavePrefix) {
+            return (try? LayoutName(String(rawValue.dropFirst(Self.layoutSavePrefix.count)))).map { .save($0) }
+        }
+        if rawValue.hasPrefix(Self.layoutRestorePrefix) {
+            return (try? LayoutName(String(rawValue.dropFirst(Self.layoutRestorePrefix.count)))).map { .restore($0) }
+        }
+        return nil
+    }
+
     /// Every command the app ships, bound or not.
     public static let allStandard: [CommandID] =
         [
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
-            workspaceNew, workspaceRename, workspaceClose, configReload,
+            workspaceNew, workspaceRename, workspaceClose, configReload, agentJump,
         ]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
@@ -58,4 +83,9 @@ extension Direction {
         case .down: "down"
         }
     }
+}
+
+public enum NamedLayoutCommand: Equatable, Sendable {
+    case save(LayoutName)
+    case restore(LayoutName)
 }

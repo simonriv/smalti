@@ -10,7 +10,7 @@ struct GhosttyConfigLoaderTests {
     private let file = FileManager.default.temporaryDirectory.appending(path: "smalti-ghostty-\(UUID()).conf")
 
     init() throws {
-        try GhosttyProcess.ensureInitialized(resourcesDirectory: nil)
+        try TestGhostty.initialize()
     }
 
     @Test func loadsGeneratedConfigWithoutDiagnostics() throws {

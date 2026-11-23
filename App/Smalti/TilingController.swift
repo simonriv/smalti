@@ -22,11 +22,22 @@ final class TilingController {
     struct Dependencies {
         let engine: any PaneEngine
         let configStore: any ConfigStore
-        let version: String
+        let paneEnvironment: PaneEnvironment
+        let transcripts: any PaneTranscripts
+        let namedLayouts: any NamedLayouts
+        let harnesses: HarnessRegistry
+        let agents: AgentDependencies
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
         /// Reloads the terminal engine's appearance ("Recargar configuración").
         let applyAppearance: (TerminalAppearance) throws(TerminalEngineError) -> Void
+    }
+
+    /// What agent events need from outside the tiling.
+    struct AgentDependencies {
+        let notifier: any Notifier
+        let integration: any HarnessIntegration
+        let isAppActive: () -> Bool
     }
 
     var onChange: ((TilingState) -> Void)?
@@ -43,6 +54,10 @@ final class TilingController {
     private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
+    /// `restore` signpost: ends when every restored pane's shell showed its first prompt (it is interactive).
+    private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
+    private var pendingRestore: (interval: OSSignpostIntervalState, panes: Set<PaneID>)?
+    private var minuteTicker: Task<Void, Never>?
 
     /// `initial` is the startup load, done before the engine exists because the engine needs its appearance.
     init(_ deps: Dependencies, initial reload: ConfigReload) {
@@ -55,6 +70,8 @@ final class TilingController {
 
     var theme: Theme { Theme.obsidian.applying(config.appearance) }
 
+    var home: WorkingDirectory { deps.home }
+
     var geometry: LayoutGeometry {
         LayoutGeometry(area: area(), gap: theme.panel.gap, minimumPaneSize: LayoutGeometry.standardMinimumPaneSize)
     }
@@ -62,6 +79,103 @@ final class TilingController {
     /// Opens the first pane of the first workspace.
     func start() {
         openPane()
+        publish()
+    }
+
+    /// Starts from what the last run left: a fresh window, or the restored workspaces.
+    func start(from choice: StartupChoice, onAsk: (SessionSnapshot) -> Void) {
+        switch choice {
+        case .startFresh:
+            start()
+        case .startFreshAfterUnreadable(let reason):
+            start()
+            report(.unreadableSession(reason))
+        case .restoreAll(let snapshot):
+            restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+        case .ask(let snapshot):
+            onAsk(snapshot)
+        }
+    }
+
+    /// An agent's hook event, from the IPC socket.
+    func handle(_ event: AgentEvent) {
+        _ = HandleAgentEvent(notifier: deps.agents.notifier).execute(
+            event, in: &set, isAppActive: deps.agents.isAppActive())
+        publish()
+    }
+
+    /// A click on a notification: show its pane (switching workspace); if it is gone, only the app comes forward.
+    func activate(_ pane: PaneID) {
+        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return }
+        publish()
+    }
+
+    private func jumpToWaitingAgent() {
+        if JumpToWaitingAgent(engine: deps.engine).execute(in: &set) == .nobodyWaiting { show(.nobodyWaiting) }
+    }
+
+    private func runIntegration(_ command: IntegrationCommand.Type) {
+        let integration = deps.agents.integration
+        Task { [weak self] in
+            let line = await command.init(integration: integration).execute()
+            self?.report(.integration(line))
+        }
+    }
+
+    /// The saved layouts as the palette lists them.
+    func savedLayouts() -> [NamedLayoutSummary] {
+        deps.namedLayouts.names().compactMap { name in
+            (try? deps.namedLayouts.layout(named: name)).map { NamedLayoutSummary(name: name, layout: $0) }
+        }
+    }
+
+    private func perform(_ command: NamedLayoutCommand) {
+        switch command {
+        case .save(let name):
+            do {
+                try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
+                show(.layoutSaved(name.rawValue))
+            } catch {
+                show(.layoutSaveFailed(name.rawValue, reason: error.summary))
+            }
+        case .restore(let name): restoreLayout(name)
+        }
+    }
+
+    private func restoreLayout(_ name: LayoutName) {
+        do {
+            let outcome = try RestoreNamedLayout(layouts: deps.namedLayouts, restore: restoreSession).execute(
+                name, into: &set, home: deps.home)
+            set.active.panes.forEach { observe($0.id) }
+            if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
+            reportRestoreFailures(outcome.failures)
+        } catch {
+            show(.layoutRestoreFailed(name.rawValue, reason: error.summary))
+        }
+    }
+
+    private var restoreSession: RestoreSession {
+        RestoreSession(
+            .init(
+                engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
+    }
+
+    /// Rebuilds the saved workspaces; if none could open, starts as usual.
+    func restore(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+        let interval = signposter.beginInterval("restore", id: signposter.makeSignpostID())
+        let plan = RestorePlan.make(from: snapshot, mode: mode, selection: selection)
+        let result = restoreSession.execute(plan, savedAt: snapshot.savedAt, home: deps.home)
+        guard let restored = result.set else {
+            signposter.endInterval("restore", interval)
+            start()
+            reportRestoreFailures(result.failures)
+            return
+        }
+        set = restored
+        pendingRestore = (interval, Set(set.workspaces.flatMap(\.panes).map(\.id)))
+        set.workspaces.flatMap(\.panes).forEach { observe($0.id) }
+        reportRestoreFailures(result.failures)
         publish()
     }
 
@@ -84,6 +198,12 @@ final class TilingController {
         publish()
     }
 
+    /// A message from outside the tiling use cases (e.g. a failed session save).
+    func report(_ message: StatusMessage) {
+        show(message)
+        publish()
+    }
+
     func rename(to name: String) {
         RenameWorkspace().execute(name, in: &set)
         publish()
@@ -95,6 +215,7 @@ final class TilingController {
 
     private func action(for command: CommandID) -> (() -> Void)? {
         if let action = fixedActions[command] { return action }
+        if let named = command.namedLayout { return { [unowned self] in perform(named) } }
         if let action = layoutActions[command] { return action }
         return workspaceGoAction(command)
     }
@@ -109,6 +230,9 @@ final class TilingController {
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
             .configReload: { [unowned self] in reloadConfig() },
+            .agentJump: { [unowned self] in jumpToWaitingAgent() },
+            .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
+            .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
         ]
         for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
@@ -152,9 +276,9 @@ final class TilingController {
     // MARK: - Use cases with outcomes
 
     private func openPane() {
-        let request = OpenPaneRequest(shell: config.shell, geometry: geometry)
+        let request = OpenPaneRequest(shell: config.shell, geometry: geometry, home: deps.home)
         do {
-            let pane = try OpenPane(engine: deps.engine, version: deps.version).execute(request, in: &set)
+            let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             observe(pane)
         } catch {
             show(Self.message(for: error))
@@ -164,9 +288,9 @@ final class TilingController {
     private func createWorkspace() {
         let layout = layouts.strategyOrDefault(for: config.defaultLayout)
         let request = CreateWorkspaceRequest(
-            pane: OpenPaneRequest(shell: config.shell, geometry: geometry), layout: layout)
+            pane: OpenPaneRequest(shell: config.shell, geometry: geometry, home: deps.home), layout: layout)
         do {
-            _ = try CreateWorkspace(engine: deps.engine, version: deps.version).execute(request, in: &set)
+            _ = try CreateWorkspace(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             set.active.panes.forEach { observe($0.id) }
         } catch {
             show(Self.message(for: error))
@@ -233,17 +357,43 @@ final class TilingController {
     }
 
     private func handle(_ event: TerminalEvent, from pane: PaneID) {
+        if Self.showsAPrompt(event) { restoredPaneIsInteractive(pane) }
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
         default:
             guard let owner = set.workspace(containing: pane) else { return }
-            set = set.updating(owner) { $0.applying(event, to: pane) }
+            set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
         }
         publish()
     }
 
+    /// The shell integration reports title and directory at every prompt: the first one means the pane is ready.
+    private static func showsAPrompt(_ event: TerminalEvent) -> Bool {
+        switch event {
+        case .titleChanged, .workingDirectoryChanged: true
+        default: false
+        }
+    }
+
+    private func reportRestoreFailures(_ failures: [String]) {
+        guard let first = failures.first else { return }
+        report(.restoreFailures(first: first, count: failures.count))
+    }
+
+    private func restoredPaneIsInteractive(_ pane: PaneID) {
+        guard var pending = pendingRestore, pending.panes.remove(pane) != nil else { return }
+        if pending.panes.isEmpty {
+            signposter.endInterval("restore", pending.interval)
+            pendingRestore = nil
+        } else {
+            pendingRestore = pending
+        }
+    }
+
     private func paneExited(_ pane: PaneID, code: Int?) {
+        // A pane that ends before reporting its directory no longer holds the restore signpost open.
+        restoredPaneIsInteractive(pane)
         let lifetime = openedAt[pane].map { ContinuousClock.now - $0 } ?? .zero
         openedAt[pane] = nil
         let outcome = HandlePaneExit(engine: deps.engine).execute(
@@ -271,5 +421,40 @@ final class TilingController {
 
     private func publish() {
         onChange?(TilingState(set: set, config: config, theme: theme, message: status.showing, home: deps.home))
+        keepMinutesFresh()
     }
+
+    /// "te espera · 2m" and a working agent's lifetime count minutes: while any agent runs, waits or failed, the
+    /// headers are redrawn once a minute (a minute may show up to a minute late).
+    private func keepMinutesFresh() {
+        let needed = set.workspaces.flatMap(\.panes).contains { pane in
+            pane.agent.map { $0.state.kind != .stopped } ?? false
+        }
+        guard needed != (minuteTicker != nil) else { return }
+        minuteTicker?.cancel()
+        minuteTicker =
+            needed
+            ? Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.minute)
+                    guard !Task.isCancelled, let self else { return }
+                    self.onChange?(
+                        TilingState(
+                            set: self.set, config: self.config, theme: self.theme, message: self.status.showing,
+                            home: self.deps.home))
+                }
+            } : nil
+    }
+
+    private static let minute: Duration = .seconds(60)
 }
+
+/// Install and uninstall share one shape, so the palette runs either the same way.
+@MainActor
+protocol IntegrationCommand {
+    init(integration: any HarnessIntegration)
+    func execute() async -> String
+}
+
+extension InstallClaudeIntegration: IntegrationCommand {}
+extension UninstallClaudeIntegration: IntegrationCommand {}

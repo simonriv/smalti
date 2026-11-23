@@ -42,7 +42,7 @@ struct PaneTests {
     }
 
     @Test func paneRecordsForegroundProcess() {
-        #expect(pane.applying(.foregroundProcessChanged("claude")).processName == "claude")
+        #expect(pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "claude"))).processName == "claude")
     }
 
     @Test func closeRequestedLeavesPaneUnchanged() {
@@ -54,6 +54,27 @@ struct PaneTests {
 
         #expect(pane.headerName == "")
         #expect(titled.headerName == "~/dev")
-        #expect(titled.applying(.foregroundProcessChanged("vim")).headerName == "vim")
+        #expect(titled.applying(.foregroundProcessChanged(ForegroundProcess(name: "vim"))).headerName == "vim")
+    }
+
+    @Test func commandFinishedCountsCommands() {
+        let finished = TerminalEvent.commandFinished(exitCode: 0, duration: .seconds(1))
+
+        #expect(pane.applying(finished).applying(finished).commandCount == 2)
+    }
+
+    @Test func foregroundProcessKeepsItsCommandLine() {
+        let event = TerminalEvent.foregroundProcessChanged(
+            ForegroundProcess(name: "node", commandLine: ["pnpm", "dev"]))
+
+        #expect(pane.applying(event).foregroundCommandLine == ["pnpm", "dev"])
+    }
+
+    @Test func newPaneIsAtShell() {
+        #expect(pane.isAtShell)
+    }
+
+    @Test func paneRunningAProgramIsNotAtShell() {
+        #expect(!pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "nvim"))).isAtShell)
     }
 }

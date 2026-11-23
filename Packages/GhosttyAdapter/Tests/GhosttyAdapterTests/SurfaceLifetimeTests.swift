@@ -16,7 +16,7 @@ struct SurfaceLifetimeTests {
     private let spec: TerminalSessionSpec
 
     init() throws {
-        try GhosttyProcess.ensureInitialized(resourcesDirectory: nil)
+        try TestGhostty.initialize()
         config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-lifetime-\(UUID()).conf"))
@@ -42,6 +42,27 @@ struct SurfaceLifetimeTests {
         }
 
         #expect(GhosttyRuntime.currentApp == nil)
+    }
+
+    /// A restored pane whose directory was deleted must fail to open, so the core falls back to the root or home.
+    @Test func openingInAMissingDirectoryThrows() throws {
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let missing = TerminalSessionSpec(
+            workingDirectory: try WorkingDirectory(path: "/tmp/smalti-missing-\(UUID())"),
+            command: .custom("/bin/zsh -f"))
+
+        #expect(throws: TerminalEngineError.self) { try engine.open(missing, as: PaneID()) }
+    }
+
+    @Test func openingAFileInsteadOfADirectoryThrows() throws {
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let file = FileManager.default.temporaryDirectory.appending(path: "smalti-file-\(UUID())")
+        FileManager.default.createFile(atPath: file.path(percentEncoded: false), contents: Data())
+        let spec = TerminalSessionSpec(
+            workingDirectory: try WorkingDirectory(path: file.path(percentEncoded: false)),
+            command: .custom("/bin/zsh -f"))
+
+        #expect(throws: TerminalEngineError.self) { try engine.open(spec, as: PaneID()) }
     }
 
     @Test func closeSurfaceWithLiveProcessRequestsClose() async throws {
@@ -133,7 +154,12 @@ struct SurfaceLifetimeTests {
             if case .foregroundProcessChanged = $0 { true } else { false }
         }
 
-        #expect(event == .foregroundProcessChanged("zsh"))
+        guard case .foregroundProcessChanged(let process) = event else {
+            Issue.record("expected a foreground process event, got \(String(describing: event))")
+            return
+        }
+        #expect(process.name == "zsh")
+        #expect(process.commandLine?.first?.hasSuffix("zsh") == true)
     }
 
     @Test func eventForAReplacedSurfaceIsNotDelivered() throws {
