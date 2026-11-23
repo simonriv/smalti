@@ -44,8 +44,8 @@ enum ObservatoryFixtures {
     }
 
     static let system = SystemSample(
-        cpu: .value(31), gpu: .value(38), memoryUsed: .value(11_200_000_000), memoryTotal: 17_179_869_184,
-        agentsMemory: .value(3_500_000_000), pressure: .value(.media), machineName: "MacBook Air M4")
+        cpu: .value(31), gpu: .value(38), memoryUsed: .value(12_025_908_428), memoryTotal: 17_179_869_184,
+        agentsMemory: .value(3_758_096_384), pressure: .value(.media), machineName: "MacBook Air M4")
 
     static func snapshot(
         sessions: [SessionActivity], running: [RunningAgent] = [], panes: [PaneAgent] = [],

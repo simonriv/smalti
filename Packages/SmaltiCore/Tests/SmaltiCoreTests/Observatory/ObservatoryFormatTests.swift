@@ -32,12 +32,12 @@ struct ObservatoryFormatTests {
     }
 
     @Test func gigabytesAndMegabytes() {
-        #expect(ObservatoryFormat.gigabytes(6_100_000_000) == "6.1 GB")
-        #expect(ObservatoryFormat.gigabytes(274_000_000) == "274 MB")
+        #expect(ObservatoryFormat.gigabytes(6_549_825_126) == "6.1 GB")
+        #expect(ObservatoryFormat.gigabytes(287_309_824) == "274 MB")
     }
 
     @Test func memoryRoundsTotal() {
-        #expect(ObservatoryFormat.memory(used: 11_200_000_000, total: 17_179_869_184) == "11.2 / 16 GB")
+        #expect(ObservatoryFormat.memory(used: 12_025_908_428, total: 17_179_869_184) == "11.2 / 16 GB")
     }
 
     @Test func usdTwoDecimals() {
@@ -56,5 +56,9 @@ struct ObservatoryFormatTests {
 
         #expect(ObservatoryFormat.clock(instant, timeZone: .gmt) == "11:06")
         #expect(ObservatoryFormat.clock(instant, timeZone: bogota) == "06:06")
+    }
+
+    @Test func fullMemoryNeverExceedsTotal() {
+        #expect(ObservatoryFormat.memory(used: 17_179_869_184, total: 17_179_869_184) == "16.0 / 16 GB")
     }
 }

@@ -40,21 +40,25 @@ public enum ObservatoryFormat {
         return "hace \(days) \(days == 1 ? "día" : "días")"
     }
 
-    private static let bytesPerGigabyte = 1_000_000_000.0
-    private static let bytesPerMegabyte = 1_000_000.0
+    /// Memory is counted in binary units, as Activity Monitor does, and written "GB" as macOS writes it.
     private static let bytesPerGibibyte = 1_073_741_824.0
+    private static let bytesPerMebibyte = 1_048_576.0
 
     /// `6.1 GB`, or `274 MB` under a gigabyte.
     public static func gigabytes(_ bytes: UInt64) -> String {
         let value = Double(bytes)
-        if value < bytesPerGigabyte { return "\(Int((value / bytesPerMegabyte).rounded())) MB" }
-        return decimal(rounded(value / bytesPerGigabyte, places: 1), places: 1, keepZero: true) + " GB"
+        if value < bytesPerGibibyte { return "\(Int((value / bytesPerMebibyte).rounded())) MB" }
+        return gigabyteNumber(bytes) + " GB"
     }
 
-    /// `11.2 / 16 GB`: the installed memory is a whole number of gibibytes.
+    /// `6.1`: gigabytes with one decimal, no unit.
+    public static func gigabyteNumber(_ bytes: UInt64) -> String {
+        decimal(rounded(Double(bytes) / bytesPerGibibyte, places: 1), places: 1, keepZero: true)
+    }
+
+    /// `11.2 / 16 GB`: the installed memory is a whole number of gigabytes.
     public static func memory(used: UInt64, total: UInt64) -> String {
-        let usedText = decimal(rounded(Double(used) / bytesPerGigabyte, places: 1), places: 1, keepZero: true)
-        return "\(usedText) / \(Int((Double(total) / bytesPerGibibyte).rounded())) GB"
+        "\(gigabyteNumber(used)) / \(Int((Double(total) / bytesPerGibibyte).rounded())) GB"
     }
 
     /// `$18.40`.

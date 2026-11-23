@@ -2,12 +2,17 @@ import Foundation
 import SmaltiCore
 import Testing
 
-/// Every `AgentTranscripts` returns the sessions active since the date, is complete for it after a full read,
-/// and returns the same thing when nothing changed on disk.
+/// Every `AgentTranscripts` returns the sessions active since the date, becomes complete for it (an adapter may
+/// index in steps: it gets `settlingCalls` reads to get there), and returns the same thing when nothing changed.
 public enum AgentTranscriptsContract {
+    public static let settlingCalls = 50
+
     public static func verify(_ transcripts: any AgentTranscripts, since: Date) async {
         do {
-            let first = try await transcripts.activity(since: since)
+            var first = try await transcripts.activity(since: since)
+            for _ in 1..<settlingCalls where first.indexedSince > since {
+                first = try await transcripts.activity(since: since)
+            }
             let second = try await transcripts.activity(since: since)
             #expect(first.indexedSince <= since, "a full read covers the asked period")
             #expect(first.sessions.allSatisfy { ($0.lastActivity ?? .distantPast) >= since }, "only active sessions")
@@ -19,11 +24,11 @@ public enum AgentTranscriptsContract {
     }
 }
 
-/// Every `LiveAgents` names real processes and sessions.
+/// Every `LiveAgents` names processes that are alive and the sessions they run.
 public enum LiveAgentsContract {
-    public static func verify(_ live: any LiveAgents) async {
+    public static func verify(_ live: any LiveAgents, isAlive: (Int32) -> Bool) async {
         let running = await live.running()
-        #expect(running.allSatisfy { $0.pid > 0 }, "PIDs are positive")
+        #expect(running.allSatisfy { $0.pid > 0 && isAlive($0.pid) }, "every PID is a live process")
         #expect(running.allSatisfy { !$0.sessionID.isEmpty }, "every agent names its session")
     }
 }

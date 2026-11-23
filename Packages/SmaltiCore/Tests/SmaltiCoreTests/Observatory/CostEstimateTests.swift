@@ -56,4 +56,11 @@ struct CostEstimateTests {
         #expect(!ContextLoad.percent(74).isHigh)
         #expect(!ContextLoad.unavailable.isHigh)
     }
+
+    @Test func costIgnoresUnpricedModelWithoutTokens() {
+        let cost = CostEstimate.of([.synthetic: .zero], catalog: .standard)
+
+        #expect(cost.unpricedModels.isEmpty)
+        #expect(cost.usd == 0)
+    }
 }

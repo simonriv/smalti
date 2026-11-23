@@ -68,10 +68,17 @@ public struct ObservatoryReport: Equatable, Sendable {
     }
 
     private static func ordered(_ sessions: [ObservedSession], in window: PeriodWindow) -> [ObservedSession] {
-        let live = sessions.filter(\.isLive).sorted { ($0.startedAt ?? .distantPast) > ($1.startedAt ?? .distantPast) }
+        let live = sessions.filter(\.isLive).sorted { newerFirst($0.startedAt, $1.startedAt, $0.id, $1.id) }
         let stopped = sessions.filter { !$0.isLive && window.hasActivity($0.activity) }
-            .sorted { ($0.activity.lastActivity ?? .distantPast) > ($1.activity.lastActivity ?? .distantPast) }
+            .sorted { newerFirst($0.activity.lastActivity, $1.activity.lastActivity, $0.id, $1.id) }
         return live + stopped
+    }
+
+    /// Newest first; ties by id, so rows never swap places between refreshes.
+    private static func newerFirst(_ lhs: Date?, _ rhs: Date?, _ lhsID: String, _ rhsID: String) -> Bool {
+        let left = lhs ?? .distantPast
+        let right = rhs ?? .distantPast
+        return left == right ? lhsID < rhsID : left > right
     }
 
     private static func summary(_ sessions: [ObservedSession], in window: PeriodWindow, snapshot: ObservatorySnapshot)

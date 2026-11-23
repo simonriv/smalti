@@ -192,4 +192,38 @@ struct SessionActivityTests {
         #expect(decoded == activity)
         #expect(decoded.folding([turn("a", 0)]) == activity.folding([turn("a", 0)]))
     }
+
+    @Test func syntheticTurnLeavesNoBucketUsage() {
+        let activity = fold([turn("s", 0, output: 0, model: .synthetic, input: 0)])
+
+        #expect(activity.buckets.isEmpty)
+    }
+
+    @Test func syntheticTurnNeverAddsTokens() {
+        let activity = fold([turn("a", 0), turn("s", 1, output: 50, model: .synthetic)])
+
+        #expect(total(activity).output == 100)
+    }
+
+    @Test func outputAt59MinutesBeforeLatestStaysInChart() {
+        let activity = fold([turn("a", 0, output: 3), turn("b", 59 * 60, output: 7)])
+
+        #expect(activity.outputByMinute.count == 2)
+    }
+
+    @Test func outputAt60MinutesBeforeLatestLeavesChart() {
+        let activity = fold([turn("a", 0, output: 3), turn("b", 60 * 60, output: 7)])
+
+        #expect(activity.outputByMinute.count == 1)
+    }
+
+    @Test func subagentToolsAreNotCounted() {
+        let activity = fold([
+            .toolStarted(ToolStart(id: "t1", name: "Bash", input: ["command": "ls"], at: at(0), isSubagent: true)),
+            .toolFinished(ToolFinish(id: "t1", isError: true, exitCode: 1, diff: nil, at: at(1), isSubagent: true)),
+        ])
+
+        #expect(activity.buckets.isEmpty)
+        #expect(activity.recentTools.isEmpty)
+    }
 }

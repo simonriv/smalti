@@ -8,7 +8,7 @@ struct StatusFiguresTests {
     private let now = F.date("2026-11-18 10:42")
 
     private let qwen = LocalModel(
-        name: "qwen3.5:9b", quantization: "Q4_K_M", bytes: 6_100_000_000, vramBytes: 6_100_000_000,
+        name: "qwen3.5:9b", quantization: "Q4_K_M", bytes: 6_549_825_126, vramBytes: 6_549_825_126,
         contextLength: 65_536, downloadedAt: nil)
 
     @Test func statusShowsLoadedModelOnly() {

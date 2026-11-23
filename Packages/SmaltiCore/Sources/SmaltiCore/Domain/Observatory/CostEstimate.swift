@@ -9,7 +9,7 @@ public struct CostEstimate: Equatable, Sendable {
     public static func of(_ usage: [ModelID: TokenUsage], catalog: ModelCatalog) -> CostEstimate {
         var usd = 0.0
         var unpriced: Set<ModelID> = []
-        for (model, tokens) in usage {
+        for (model, tokens) in usage where tokens != .zero {
             guard let pricing = catalog.pricing(for: model) else {
                 unpriced.insert(model)
                 continue

@@ -85,12 +85,14 @@ public struct SessionActivity: Codable, Equatable, Sendable {
     }
 
     private mutating func count(_ turn: AssistantTurn) {
-        guard countedMessages.insert(turn.messageID).inserted else { return }
+        // Claude Code makes up `<synthetic>` replies itself (interruptions, API errors): they are not usage.
+        guard turn.model != .synthetic, countedMessages.insert(turn.messageID).inserted else { return }
         touch(turn.at)
+        guard turn.usage != .zero else { return }
         let quarter = QuarterHour(containing: turn.at)
         buckets[quarter, default: ActivityBucket()].usageByModel[turn.model, default: .zero] =
             (buckets[quarter]?.usageByModel[turn.model] ?? .zero) + turn.usage
-        guard !turn.isSubagent, turn.model != .synthetic, turn.usage != .zero else { return }
+        guard !turn.isSubagent else { return }
         model = turn.model
         contextTokens = turn.usage.inputTotal
         chart(turn, in: quarter)
@@ -110,12 +112,14 @@ public struct SessionActivity: Codable, Equatable, Sendable {
     }
 
     private mutating func begin(_ start: ToolStart) {
+        // The detail shows what the session the user sees did; a subagent's tools are its own business.
+        guard !start.isSubagent else { return }
         touch(start.at)
         pendingTools[start.id] = start
     }
 
     private mutating func end(_ finish: ToolFinish) {
-        guard let start = pendingTools.removeValue(forKey: finish.id) else { return }
+        guard !finish.isSubagent, let start = pendingTools.removeValue(forKey: finish.id) else { return }
         touch(finish.at)
         let quarter = QuarterHour(containing: finish.at)
         buckets[quarter, default: ActivityBucket()].toolCalls += 1

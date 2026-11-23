@@ -103,4 +103,14 @@ struct ObservatoryReaderTests {
     @Test func unknownKeyInObservatoryFails() {
         #expect(error(parsing: "[observatory]\nperiod = \"hoy\"")?.reason == "clave desconocida")
     }
+
+    @Test func contextAtTheIntegerLimitFailsInsteadOfCrashing() {
+        let error = error(
+            parsing: """
+                [observatory.models."claude-opus-5-5"]
+                context = 9223372036854775807
+                """)
+
+        #expect(error?.reason == "se esperaba un número entero mayor que 0")
+    }
 }

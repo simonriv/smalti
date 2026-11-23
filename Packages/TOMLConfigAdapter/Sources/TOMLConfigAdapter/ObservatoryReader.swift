@@ -45,7 +45,7 @@ enum ObservatoryReader {
 
     private static func context(in table: TOMLSection) throws(ConfigError) -> Int? {
         guard let value = try table.number(contextKey) else { return nil }
-        guard value.isFinite, value > 0, value.rounded() == value, value <= Double(Int.max) else {
+        guard value.isFinite, value > 0, value.rounded() == value, value < Double(Int.max) else {
             throw table.error(at: contextKey, contextReason)
         }
         return Int(value)

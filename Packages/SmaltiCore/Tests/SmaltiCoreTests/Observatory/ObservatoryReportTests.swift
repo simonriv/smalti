@@ -225,4 +225,49 @@ struct ObservatoryReportTests {
         #expect(summary.waiting == 1)
         #expect(summary.failed == 0)
     }
+
+    @Test func tiesKeepAStableOrderById() {
+        let start = F.date("2026-11-18 10:00")
+        let running = ["c", "a", "b"].enumerated().map { F.running($1, pid: Int32($0 + 1), startedAt: start) }
+
+        let ids = report(F.snapshot(sessions: [], running: running, now: now)).rows.map(\.id)
+
+        #expect(ids == ["a", "b", "c"])
+    }
+
+    @Test func summaryDependsOnTheTimeZoneOfEachRefresh() {
+        let session = F.session("s", [F.turn("1", at: F.date("2026-11-18 02:00"), output: 9)])
+        let snapshot = F.snapshot(sessions: [session], now: F.date("2026-11-18 10:00"))
+        let tokyo = F.calendar("Asia/Tokyo")
+
+        let inBogota = ObservatoryReport.make(snapshot, period: .today, selection: nil, calendar: calendar)
+        let inTokyo = ObservatoryReport.make(snapshot, period: .today, selection: nil, calendar: tokyo)
+
+        #expect(inBogota.summary.output == 9)
+        #expect(inTokyo.summary.output == 0)
+    }
+
+    @Test func liveSessionWithoutTurnsRowShowsZeros() {
+        let row = report(F.snapshot(sessions: [], running: [F.running("fresh", startedAt: now)], now: now)).rows.first
+
+        #expect(row?.input == "0")
+        #expect(row?.output == "0")
+        #expect(row?.agentModel == "Claude Code")
+        #expect(row?.context == .unavailable)
+        #expect(row?.errorRate == 0)
+    }
+
+    @Test func rowInputAddsEveryModel() {
+        let session = F.session(
+            "s",
+            [
+                F.turn("1", at: F.date("2026-11-18 09:00"), input: 1_000),
+                F.turn("2", at: F.date("2026-11-18 09:01"), input: 500, model: F.haiku, subagent: true),
+            ])
+
+        let result = report(F.snapshot(sessions: [session], now: now))
+
+        #expect(result.rows.first?.input == "1.5k")
+        #expect(result.summary.input == 1_500)
+    }
 }

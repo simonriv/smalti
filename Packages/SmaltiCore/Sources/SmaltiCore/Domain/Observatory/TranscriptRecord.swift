@@ -25,12 +25,14 @@ public struct ToolStart: Codable, Equatable, Sendable {
     /// The tool's text arguments (`command`, `file_path`, `pattern`…); others are left out.
     public let input: [String: String]
     public let at: Date
+    public let isSubagent: Bool
 
-    public init(id: String, name: String, input: [String: String], at: Date) {
+    public init(id: String, name: String, input: [String: String], at: Date, isSubagent: Bool = false) {
         self.id = id
         self.name = name
         self.input = input
         self.at = at
+        self.isSubagent = isSubagent
     }
 }
 
@@ -51,13 +53,15 @@ public struct ToolFinish: Equatable, Sendable {
     public let exitCode: Int?
     public let diff: DiffStat?
     public let at: Date
+    public let isSubagent: Bool
 
-    public init(id: String, isError: Bool, exitCode: Int?, diff: DiffStat?, at: Date) {
+    public init(id: String, isError: Bool, exitCode: Int?, diff: DiffStat?, at: Date, isSubagent: Bool = false) {
         self.id = id
         self.isError = isError
         self.exitCode = exitCode
         self.diff = diff
         self.at = at
+        self.isSubagent = isSubagent
     }
 }
 

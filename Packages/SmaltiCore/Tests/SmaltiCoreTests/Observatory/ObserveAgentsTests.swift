@@ -43,7 +43,7 @@ struct ObserveAgentsTests {
         #expect(snapshot.lastError == nil)
     }
 
-    @Test func snapshotKeepsSixtySystemSamples() async {
+    @Test func systemSamplingKeepsSixtySamples() async {
         let system = FakeSystemMetrics()
         let observe = make(system: system)
 
@@ -52,7 +52,7 @@ struct ObserveAgentsTests {
                 cpu: .value(Double(index)), gpu: index.isMultiple(of: 2) ? .value(1) : .unavailable,
                 memoryUsed: .unavailable, memoryTotal: 1, agentsMemory: .unavailable, pressure: .unavailable,
                 machineName: "Mac")
-            _ = await observe.snapshot(panes: [], now: now)
+            observe.sampleSystem()
         }
         let snapshot = await observe.snapshot(panes: [], now: now)
 
@@ -61,13 +61,33 @@ struct ObserveAgentsTests {
         #expect(snapshot.gpuHistory.allSatisfy { $0 == 1 })
     }
 
-    @Test func snapshotPassesAgentProcessesToSystemMetrics() async {
+    @Test func systemSamplesAreIndependentOfTranscriptRefresh() async {
+        let system = FakeSystemMetrics()
+        let observe = make(system: system)
+        observe.sampleSystem()
+
+        _ = await observe.snapshot(panes: [], now: now)
+        _ = await observe.snapshot(panes: [], now: now)
+
+        #expect(system.requestedProcesses.count == 1)
+    }
+
+    @Test func firstSnapshotSamplesWhenNothingWasSampled() async {
         let system = FakeSystemMetrics()
 
-        _ = await make(live: FakeLiveAgents(running: [F.running("s", pid: 777, startedAt: now)]), system: system)
-            .snapshot(panes: [], now: now)
+        _ = await make(system: system).snapshot(panes: [], now: now)
 
-        #expect(system.requestedProcesses == [[777]])
+        #expect(system.requestedProcesses.count == 1)
+    }
+
+    @Test func systemSamplingUsesTheLatestAgentProcesses() async {
+        let system = FakeSystemMetrics()
+        let observe = make(live: FakeLiveAgents(running: [F.running("s", pid: 777, startedAt: now)]), system: system)
+        _ = await observe.snapshot(panes: [], now: now)
+
+        observe.sampleSystem()
+
+        #expect(system.requestedProcesses.last == [777])
     }
 
     @Test func transcriptErrorKeepsPreviousSessionsAndReports() async {
@@ -106,7 +126,9 @@ struct ObservatoryContractTests {
     }
 
     @Test func fakeLiveAgentsHonourTheContract() async {
-        await LiveAgentsContract.verify(FakeLiveAgents(running: [F.running("s", startedAt: .now)]))
+        await LiveAgentsContract.verify(FakeLiveAgents(running: [F.running("s", pid: 41, startedAt: .now)])) {
+            $0 == 41
+        }
     }
 
     @Test func fakeLocalModelsHonourTheContract() async {
@@ -119,5 +141,22 @@ struct ObservatoryContractTests {
                             name: "qwen3.5:9b", quantization: nil, bytes: 6_100_000_000, vramBytes: nil,
                             contextLength: nil, downloadedAt: nil)
                     ], onDisk: [])))
+    }
+}
+
+/// Indexes in two steps, like the real adapter's first read (today first, the rest later).
+private actor SteppedTranscripts: AgentTranscripts {
+    private var calls = 0
+
+    func activity(since: Date) async throws(TranscriptError) -> TranscriptActivity {
+        calls += 1
+        return TranscriptActivity(sessions: [], indexedSince: calls < 3 ? since.addingTimeInterval(86_400) : since)
+    }
+}
+
+@Suite("Observatory contract settling")
+struct ObservatoryContractSettlingTests {
+    @Test func contractWaitsForAnAdapterThatIndexesInSteps() async {
+        await AgentTranscriptsContract.verify(SteppedTranscripts(), since: Date(timeIntervalSince1970: 1_795_000_000))
     }
 }

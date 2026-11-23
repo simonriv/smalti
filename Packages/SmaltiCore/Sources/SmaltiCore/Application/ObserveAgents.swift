@@ -23,11 +23,14 @@ public struct ObservatorySources {
 }
 
 /// Gathers one refresh's worth of facts. It always asks for 30 days: with the index up to date that costs the same
-/// as today, and the status bar needs today while the screen shows another period.
+/// as today, and the status bar needs today while the screen shows another period. The machine is sampled apart,
+/// every 2 s, so its curves keep a steady rhythm whatever the refreshes do.
 @MainActor
 public final class ObserveAgents {
     private let sources: ObservatorySources
     private var lastActivity = TranscriptActivity(sessions: [], indexedSince: .distantFuture)
+    private var lastRunning: [RunningAgent] = []
+    private var lastSample: SystemSample?
     private var cpuHistory: [Double] = []
     private var gpuHistory: [Double] = []
     /// `status` values the session registry wrote that Smalti does not know; the app logs each once.
@@ -48,13 +51,22 @@ public final class ObserveAgents {
             lastError = error.message
         }
         let running = await sources.live.running()
+        lastRunning = running
         unknownStatuses.formUnion(ObservedSession.unknownStatuses(in: running))
-        let system = sources.system.sample(agentProcesses: running.map(\.pid))
-        record(system)
+        let system = lastSample ?? sampleSystem()
         return ObservatorySnapshot(
             activity: lastActivity, running: running, panes: panes, localModels: await sources.localModels.current(),
             system: system, cpuHistory: cpuHistory, gpuHistory: gpuHistory, catalog: sources.catalog, now: now,
             home: sources.home, lastError: lastError)
+    }
+
+    /// One reading of the machine, on its own 2 s rhythm; refreshes reuse the latest one.
+    @discardableResult
+    public func sampleSystem() -> SystemSample {
+        let sample = sources.system.sample(agentProcesses: lastRunning.map(\.pid))
+        lastSample = sample
+        record(sample)
+        return sample
     }
 
     private func record(_ sample: SystemSample) {
