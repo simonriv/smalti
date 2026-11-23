@@ -62,7 +62,6 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
     /// Every saved workspace, window after window.
     public var workspaces: [WorkspaceSnapshot] { windows.flatMap(\.workspaces) }
 
-
     /// `scrollbackLines` holds the lines saved for each pane whose scrollback was kept; the rest count 0.
     public static func capture(_ set: WindowSet, scrollbackLines: [PaneID: Int], at date: Date) -> SessionSnapshot {
         SessionSnapshot(
