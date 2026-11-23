@@ -20,6 +20,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let agentJump = CommandID(rawValue: "agent.jump")
     public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
     public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
+    public static let observatoryToggle = CommandID(rawValue: "observatory.toggle")
+    /// Cycles the observatory's period; acts only while the observatory is open, the terminal gets the key otherwise.
+    public static let observatoryPeriod = CommandID(rawValue: "observatory.period")
 
     /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
@@ -67,7 +70,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let allStandard: [CommandID] =
         [
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
-            workspaceNew, workspaceRename, workspaceClose, configReload, agentJump,
+            workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
+            observatoryPeriod,
         ]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }

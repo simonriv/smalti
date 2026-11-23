@@ -5,6 +5,21 @@ import Testing
 struct KeymapTests {
     private func chord(_ text: String) throws -> KeyChord { try KeyChord.parse(text) }
 
+    @Test func observatoryToggleIsCommandShiftA() throws {
+        #expect(Keymap.standard.command(for: try chord("cmd+shift+a")) == .observatoryToggle)
+    }
+
+    @Test func observatoryPeriodIsCommandP() throws {
+        #expect(Keymap.standard.command(for: try chord("cmd+p")) == .observatoryPeriod)
+    }
+
+    @Test func observatoryCommandsAreStandard() {
+        #expect(CommandID.allStandard.contains(.observatoryToggle))
+        #expect(CommandID.allStandard.contains(.observatoryPeriod))
+        #expect(CommandID.observatoryToggle.rawValue == "observatory.toggle")
+        #expect(CommandID.observatoryPeriod.rawValue == "observatory.period")
+    }
+
     @Test func cmdJIsBoundToAgentJump() throws {
         #expect(Keymap.standard.command(for: try chord("cmd+j")) == .agentJump)
     }
