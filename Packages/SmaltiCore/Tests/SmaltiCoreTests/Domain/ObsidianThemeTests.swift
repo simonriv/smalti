@@ -217,6 +217,11 @@ struct ObsidianThemeTests {
         #expect(resume.headerPadding == ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8))
         #expect(resume.hintGap == 6)
         #expect(resume.buttonBorderWidth == 1)
+        #expect(resume.titleWeight == 600)
+        #expect(resume.workspaceWeight == 600)
+        #expect(resume.tagWeight == 500)
+        #expect(resume.primaryButtonWeight == 600)
+        #expect(resume.buttonWeight == 500)
         #expect(theme.agent.stoppedRingWidth == 1)
     }
 

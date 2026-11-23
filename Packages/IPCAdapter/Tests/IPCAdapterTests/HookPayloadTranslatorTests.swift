@@ -17,7 +17,8 @@ struct HookPayloadTranslatorTests {
     @Test func bashPermissionSummarizesCommand() throws {
         let event = try translate(
             "PermissionRequest",
-            #"{"session_id":"s1","tool_name":"Bash","tool_input":{"command":"pnpm db:migrate --name add_user_prefs"}}"#)
+            #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","tool_name":"Bash","tool_input":{"command":"pnpm db:migrate --name add_user_prefs"}}"#
+        )
 
         #expect(event.toolSummary == "pnpm db:migrate --name add_user_prefs")
         #expect(event.hook == .permissionRequest)
@@ -25,7 +26,9 @@ struct HookPayloadTranslatorTests {
 
     @Test func editPermissionSummarizesFile() throws {
         let event = try translate(
-            "PermissionRequest", #"{"session_id":"s1","tool_name":"Edit","tool_input":{"file_path":"/a/b.ts"}}"#)
+            "PermissionRequest",
+            #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","tool_name":"Edit","tool_input":{"file_path":"/a/b.ts"}}"#
+        )
 
         #expect(event.toolSummary == "Edit /a/b.ts")
     }
@@ -35,7 +38,9 @@ struct HookPayloadTranslatorTests {
     }
 
     @Test func promptAndMessageAreKept() throws {
-        #expect(try translate("UserPromptSubmit", #"{"session_id":"s1","prompt":"hola"}"#).prompt == "hola")
+        #expect(
+            try translate("UserPromptSubmit", #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","prompt":"hola"}"#)
+                .prompt == "hola")
         #expect(try translate("Notification", #"{"message":"Claude needs you"}"#).message == "Claude needs you")
     }
 
@@ -44,7 +49,9 @@ struct HookPayloadTranslatorTests {
     }
 
     @Test func sessionStartSourceIsKept() throws {
-        #expect(try translate("SessionStart", #"{"session_id":"s1","source":"compact"}"#).source == "compact")
+        #expect(
+            try translate("SessionStart", #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","source":"compact"}"#)
+                .source == "compact")
     }
 
     /// Payloads captured from Claude Code 2.1.330 (`claude -p` with a hook that dumps stdin), paths anonymised.
@@ -70,9 +77,12 @@ struct HookPayloadTranslatorTests {
     }
 
     @Test func unknownFieldsAreIgnored() throws {
-        let event = try translate("Stop", #"{"session_id":"s1","nuevo_campo":{"x":1},"transcript_path":"/t"}"#)
+        let event = try translate(
+            "Stop",
+            #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a","nuevo_campo":{"x":1},"transcript_path":"/t"}"#)
 
-        #expect(event == AgentEvent(pane: pane, hook: .stop, at: now, sessionID: "s1"))
+        #expect(
+            event == AgentEvent(pane: pane, hook: .stop, at: now, sessionID: "8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a"))
     }
 
     @Test func invalidPaneOrHookThrows() {
@@ -80,5 +90,9 @@ struct HookPayloadTranslatorTests {
             try HookPayloadTranslator.event(IPCRequest(pane: "x", hook: "Stop", payload: Data()), at: now)
         }
         #expect(throws: IPCError.self) { try translate("Nope", "{}") }
+    }
+
+    @Test func aSessionIDThatIsNotAUUIDIsDropped() throws {
+        #expect(try translate("Stop", "{\"session_id\":\"abc\\u0015rm\"}").sessionID == nil)
     }
 }

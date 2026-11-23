@@ -1,10 +1,13 @@
 public struct OpenPaneRequest: Sendable {
     public let shell: TerminalCommand
     public let geometry: LayoutGeometry
+    /// Last resort when the current directory and the workspace root are gone.
+    public let home: WorkingDirectory?
 
-    public init(shell: TerminalCommand, geometry: LayoutGeometry) {
+    public init(shell: TerminalCommand, geometry: LayoutGeometry, home: WorkingDirectory? = nil) {
         self.shell = shell
         self.geometry = geometry
+        self.home = home
     }
 }
 
@@ -35,16 +38,31 @@ public struct OpenPane {
         let directory = set.active.directoryForNewPane
         try ensureFits(request.geometry, adding: directory, to: set.active)
         let id = PaneID()
-        let spec = TerminalSessionSpec(
-            workingDirectory: directory, command: request.shell, environment: environment.variables(for: id))
-        do {
-            try engine.open(spec, as: id)
-        } catch {
-            throw .engine(error)
-        }
-        let pane = Pane(id: id, workingDirectory: directory)
+        let opened = try open(
+            id, request, candidates: [directory, set.active.rootDirectory] + [request.home].compactMap { $0 })
+        let pane = Pane(id: id, workingDirectory: opened)
         set = set.updating(set.activeID) { $0.adding(pane) }
         return id
+    }
+
+    /// Opens in the first directory that still exists (the focused pane's may have been deleted).
+    private func open(_ id: PaneID, _ request: OpenPaneRequest, candidates: [WorkingDirectory])
+        throws(OpenPaneError) -> WorkingDirectory
+    {
+        var lastError = TerminalEngineError.surfaceCreationFailed(workingDirectory: "", reason: "no directory")
+        var tried: Set<WorkingDirectory> = []
+        for directory in candidates where tried.insert(directory).inserted {
+            let spec = TerminalSessionSpec(
+                workingDirectory: directory, command: request.shell, environment: environment.variables(for: id))
+            do {
+                try engine.open(spec, as: id)
+                return directory
+            } catch {
+                lastError = error
+                guard case .surfaceCreationFailed = error else { break }
+            }
+        }
+        throw .engine(lastError)
     }
 
     /// Checks with a provisional id, so the engine is never asked to open a pane that cannot fit.

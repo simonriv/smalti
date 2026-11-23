@@ -169,6 +169,17 @@ struct ClaudePluginInstallerTests {
         #expect(ContinuousClock.now - started < .seconds(5))
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func aBackgroundChildHoldingTheOutputDoesNotHang() async {
+        let runner = ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: ["PATH": "/usr/bin:/bin"])
+        let started = ContinuousClock.now
+
+        let result = await runner.runScript("(sleep 30 &); echo hola")
+
+        #expect(result.output == "hola")
+        #expect(ContinuousClock.now - started < .seconds(5))
+    }
+
     @Test func failureReportsTheLastLineOfOutput() async {
         await #expect(
             throws: IntegrationError.commandFailed(

@@ -46,7 +46,14 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
     }
 
     public func lastSession() -> LastSession {
-        guard let data = try? Data(contentsOf: sessionFile) else { return .none }
+        guard FileManager.default.fileExists(atPath: sessionFile.path(percentEncoded: false)) else { return .none }
+        let data: Data
+        do {
+            data = try Data(contentsOf: sessionFile)
+        } catch {
+            // Present but unreadable (permissions): reported, never mistaken for "no session".
+            return .unreadable(reason: "session.json: \(error.localizedDescription)")
+        }
         do {
             let snapshot = try decoder.decode(SessionSnapshot.self, from: data)
             guard snapshot.version == SessionSnapshot.formatVersion else {
@@ -105,7 +112,10 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
         guard let text = try? String(contentsOf: file, encoding: .utf8) else { return }
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).dropLast()
         guard lines.count > Self.historyLineLimit else { return }
-        let kept = lines.suffix(Self.historyLineLimit).joined(separator: "\n") + "\n"
+        var start = lines.count - Self.historyLineLimit
+        // A line after one ending in `\` continues a multi-line entry: start at the next whole entry.
+        while start < lines.count, lines[lines.startIndex + start - 1].hasSuffix("\\") { start += 1 }
+        let kept = lines.dropFirst(start).joined(separator: "\n") + "\n"
         try? AtomicFile.write(Data(kept.utf8), to: file)
     }
 

@@ -91,7 +91,8 @@ final class AppComposition {
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
             userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
         let archive = FileSessionArchive(directory: state)
-        let socket = SocketLocation.socketFile(stateDirectory: state)
+        let socket = SocketLocation.socketFile(
+            stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
         let environment = PaneEnvironment(
             version: Self.version, files: PaneFileLocator(stateDirectory: state), ipc: Self.ipcEndpoints(socket: socket)
         )
@@ -123,7 +124,14 @@ final class AppComposition {
             self?.ask(snapshot, preferences: archive, in: window)
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
-        if restoreScreen == nil { keeper.start(with: controller.set) }
+        if restoreScreen == nil { beginSaving(controller.set, keepingPreviousSession: false) }
+    }
+
+    /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's
+    /// session and prune its scrollback.
+    private func beginSaving(_ set: WorkspaceSet, keepingPreviousSession: Bool) {
+        guard telemetry != nil, let keeper = sessionKeeper else { return }
+        keepingPreviousSession ? keeper.startKeepingPreviousSession(with: set) : keeper.start(with: set)
     }
 
     /// "Retomar donde quedaste": shown instead of the strip and the panes until the user chooses.
@@ -158,9 +166,12 @@ final class AppComposition {
         switch choice {
         case .restore(let selection): controller.restore(snapshot, mode: .full, selection: selection)
         case .layoutsOnly: controller.restore(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
-        case .startClean: controller.start()
+        case .startClean:
+            controller.start()
+            beginSaving(controller.set, keepingPreviousSession: true)
+            return
         }
-        sessionKeeper?.start(with: controller.set)
+        beginSaving(controller.set, keepingPreviousSession: false)
     }
 
     private func setTilingHidden(_ hidden: Bool, in window: SmaltiWindow) {

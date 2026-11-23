@@ -142,6 +142,39 @@ struct FileSessionArchiveTests {
         #expect(kept.last == "echo 10005")
     }
 
+    @Test func trimmingNeverStartsInsideAMultiLineEntry() throws {
+        let archive = FileSessionArchive(directory: directory)
+        let pane = PaneID()
+        let files = PaneFileLocator(stateDirectory: directory)
+        try FileManager.default.createDirectory(at: files.historyDirectory, withIntermediateDirectories: true)
+        let head = (1...4).map { "echo \($0)" }.joined(separator: "\n")
+        let multi = "for i in 1 2; do\\\necho $i\\\ndone"
+        let tail = (1...(FileSessionArchive.historyLineLimit - 2)).map { "ls \($0)" }.joined(separator: "\n")
+        try Data((head + "\n" + multi + "\n" + tail + "\n").utf8).write(to: files.historyFile(for: pane))
+
+        archive.forget(allExcept: [pane])
+
+        let kept = try String(contentsOf: files.historyFile(for: pane), encoding: .utf8)
+        #expect(!kept.hasPrefix("echo $i") && !kept.hasPrefix("done"))
+    }
+
+    @Test func anUnreadableSnapshotIsReportedNotIgnored() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: file("session.json"))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: file("session.json").path(percentEncoded: false))
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o600], ofItemAtPath: file("session.json").path(percentEncoded: false))
+        }
+
+        guard case .unreadable = FileSessionArchive(directory: directory).lastSession() else {
+            Issue.record("a session.json that cannot be read must not look like no session")
+            return
+        }
+        #expect(FileManager.default.fileExists(atPath: file("session.json").path(percentEncoded: false)))
+    }
+
     @Test func preferenceIsStoredInPreferencesJSON() throws {
         let archive = FileSessionArchive(directory: directory)
 

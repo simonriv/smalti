@@ -276,7 +276,7 @@ final class TilingController {
     // MARK: - Use cases with outcomes
 
     private func openPane() {
-        let request = OpenPaneRequest(shell: config.shell, geometry: geometry)
+        let request = OpenPaneRequest(shell: config.shell, geometry: geometry, home: deps.home)
         do {
             let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             observe(pane)
@@ -288,7 +288,7 @@ final class TilingController {
     private func createWorkspace() {
         let layout = layouts.strategyOrDefault(for: config.defaultLayout)
         let request = CreateWorkspaceRequest(
-            pane: OpenPaneRequest(shell: config.shell, geometry: geometry), layout: layout)
+            pane: OpenPaneRequest(shell: config.shell, geometry: geometry, home: deps.home), layout: layout)
         do {
             _ = try CreateWorkspace(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
             set.active.panes.forEach { observe($0.id) }

@@ -87,7 +87,7 @@ final class TagView: NSView {
         let isAgent = tag.kind == .agent
         layer?.backgroundColor = (isAgent ? tokens.agentTag : tokens.programTag).nsColor.cgColor
         label.stringValue = tag.text
-        label.font = theme.interfaceFont(size: tokens.tagFontSize, weight: 500)
+        label.font = theme.interfaceFont(size: tokens.tagFontSize, weight: tokens.tagWeight)
         label.textColor = (isAgent ? tokens.agentTagText : tokens.programTagText).nsColor
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)

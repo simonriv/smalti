@@ -12,7 +12,7 @@ public final class UserNotificationsNotifier: NSObject, Notifier {
     private let center: UNUserNotificationCenter
     private let onActivate: @MainActor (PaneID) -> Void
     private var gate: AuthorizationGate?
-    private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "notifications")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "smalti", category: "notifications")
 
     public init(onActivate: @escaping @MainActor (PaneID) -> Void, onDenied: @escaping @MainActor () -> Void) {
         let center = UNUserNotificationCenter.current()

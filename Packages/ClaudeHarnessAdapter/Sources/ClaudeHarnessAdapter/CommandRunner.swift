@@ -65,18 +65,44 @@ public struct ShellCommandRunner: CommandRunner {
         DispatchQueue.global().asyncAfter(
             deadline: .now() + .seconds(Int(parts.seconds)) + .nanoseconds(Int(parts.attoseconds / 1_000_000_000)),
             execute: watchdog)
-        // Stops waiting on output a terminated command's descendants may keep open.
-        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let collected = OutputCollector(output.fileHandleForReading)
         process.waitUntilExit()
         watchdog.cancel()
+        // A descendant (a daemon an rc file started) may keep the pipe open: take what arrived and stop reading.
+        let data = collected.finish(within: Self.drainTime)
         let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         return CommandResult(status: process.terminationStatus, output: text)
     }
+
+    private static let drainTime: DispatchTimeInterval = .milliseconds(500)
 
     private static let safeCharacters = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./=:@%+,")
 
     private static func quoted(_ argument: String) -> String {
         guard argument.isEmpty || !argument.allSatisfy(safeCharacters.contains) else { return argument }
         return "'" + argument.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
+    }
+}
+
+/// Reads a pipe on its own thread until EOF, or until `finish` gives up on it.
+private final class OutputCollector: @unchecked Sendable {
+    private let handle: FileHandle
+    private let done = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var data = Data()
+
+    init(_ handle: FileHandle) {
+        self.handle = handle
+        Thread.detachNewThread { [self] in
+            while case let chunk = handle.availableData, !chunk.isEmpty {
+                lock.withLock { data.append(chunk) }
+            }
+            done.signal()
+        }
+    }
+
+    func finish(within wait: DispatchTimeInterval) -> Data {
+        _ = done.wait(timeout: .now() + wait)
+        return lock.withLock { data }
     }
 }

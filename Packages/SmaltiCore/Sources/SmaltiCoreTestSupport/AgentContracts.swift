@@ -11,7 +11,9 @@ public enum TelemetrySourceContract {
         let (source, send) = make()
         let pane = PaneID()
         let sent = [AgentHook.sessionStart, .stop].map {
-            AgentEvent(pane: pane, hook: $0, at: Date(timeIntervalSince1970: 1_800_000_000), sessionID: "s1")
+            AgentEvent(
+                pane: pane, hook: $0, at: Date(timeIntervalSince1970: 1_800_000_000),
+                sessionID: "8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a")
         }
         var iterator = source.events().makeAsyncIterator()
         for event in sent { await send(event) }

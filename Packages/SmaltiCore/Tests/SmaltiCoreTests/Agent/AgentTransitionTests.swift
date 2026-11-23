@@ -196,6 +196,7 @@ struct AgentTransitionTests {
 
     @Test func leavingClaudeForTheShellStopsAgent() {
         let running = Pane(id: pane, workingDirectory: SessionFixtures.directory("/tmp"))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "claude")))
             .applying(event(.userPromptSubmit, prompt: "x")).0
 
         let back = running.applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh")), at: t0)
@@ -219,5 +220,16 @@ struct AgentTransitionTests {
         #expect(
             running.applying(.foregroundProcessChanged(ForegroundProcess(name: "node")), at: t0).agent?.state
                 == .working)
+    }
+
+    @Test func aRestoredAgentIsNotStoppedByTheShellStartingBeforeClaude() {
+        let restored = Pane(id: pane, workingDirectory: SessionFixtures.directory("/tmp")).attaching(
+            AgentSession(
+                harness: .claude, sessionID: "s1", title: nil, state: .waiting(since: t0, reason: .turnFinished),
+                startedAt: t0))
+
+        let shellUp = restored.applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh")), at: t0)
+
+        #expect(shellUp.agent?.state == .waiting(since: t0, reason: .turnFinished))
     }
 }

@@ -29,7 +29,7 @@ enum SmaltiZshEnv {
                 [[ -o histignorespace && "$line" == ' '* ]] && 'builtin' 'return' 0
                 [[ -n "$HISTORY_IGNORE" && "$line" == ${~HISTORY_IGNORE} ]] && 'builtin' 'return' 0
                 [[ -d "${SMALTI_HISTORY_FILE:h}" ]] || 'command' 'mkdir' -p -m 700 "${SMALTI_HISTORY_FILE:h}"
-                'builtin' 'print' -r -- "${line//$nl/\\$nl}" >> "$SMALTI_HISTORY_FILE"
+                'builtin' 'print' -r -- "${line//$nl/\\$nl}" >>| "$SMALTI_HISTORY_FILE"
                 'builtin' 'return' 0
             }
             # Restoring waits for the first prompt, after the user's files have loaded their own history.

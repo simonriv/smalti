@@ -77,12 +77,16 @@ struct EventCommandTests {
         #expect(elapsed < .seconds(2))
     }
 
-    @Test func oversizedInputIsDroppedQuietly() {
+    @Test func inputThatIsNotJSONTravelsAsAnEmptyPayload() throws {
         let transport = RecordingTransport()
-        let huge = String(repeating: "a", count: IPCLimits.maxMessageBytes + 1)
 
-        #expect(run(["event", "Stop"], input: huge, transport: transport) == 0)
-        #expect(transport.sent.isEmpty)
+        #expect(
+            run(
+                ["event", "Stop"], input: String(repeating: "a", count: IPCLimits.maxMessageBytes + 1),
+                transport: transport) == 0)
+
+        let (line, _) = try #require(transport.sent.first)
+        #expect(String(decoding: try IPCCodec.decodeRequest(line).payload, as: UTF8.self) == "{}")
     }
 
     /// Only `event` reads stdin: `--version` from a terminal or a pipe left open must return at once.
@@ -120,6 +124,20 @@ struct EventCommandTests {
         #expect(run(["otra-cosa"]) == 64)
         #expect(run(["event"]) == 64)
     }
+
+    @Test func aHugePromptIsTrimmedNotDropped() throws {
+        let transport = RecordingTransport()
+        let huge = String(repeating: "a", count: IPCLimits.maxMessageBytes)
+        let input = "{\"session_id\":\"s1\",\"prompt\":\"\(huge)\",\"tool_input\":{\"content\":\"\(huge)\"}}"
+
+        #expect(run(["event", "UserPromptSubmit"], input: input, transport: transport) == 0)
+
+        let (line, _) = try #require(transport.sent.first)
+        let payload = try JSONSerialization.jsonObject(with: try IPCCodec.decodeRequest(line).payload) as? [String: Any]
+        #expect(payload?["session_id"] as? String == "s1")
+        #expect((payload?["prompt"] as? String)?.count == EventCommand.maxFieldLength)
+        #expect(payload?["tool_input"] == nil)
+    }
 }
 
 /// Listens and accepts nothing: connections queue in the backlog and never get an answer.
@@ -149,4 +167,5 @@ final class SilentListener {
         Darwin.close(fd)
         unlink(path)
     }
+
 }

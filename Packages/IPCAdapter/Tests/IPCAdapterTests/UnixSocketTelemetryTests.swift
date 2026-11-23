@@ -35,11 +35,14 @@ struct UnixSocketTelemetryTests {
         var events = telemetry.events().makeAsyncIterator()
 
         let answer = await response(
-            SocketClient.request(pane: pane.description, hook: "Stop", payload: #"{"session_id":"s1"}"#))
+            SocketClient.request(
+                pane: pane.description, hook: "Stop", payload: #"{"session_id":"8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a"}"#
+            ))
         let event = await events.next()
 
         #expect(answer == IPCResponse(ok: true, error: nil))
-        #expect(event == AgentEvent(pane: pane, hook: .stop, at: now, sessionID: "s1"))
+        #expect(
+            event == AgentEvent(pane: pane, hook: .stop, at: now, sessionID: "8f2c1a90-4d3e-4b7a-9c11-2f6e5d4c3b2a"))
     }
 
     @Test func serverRejectsUnknownVersion() async throws {

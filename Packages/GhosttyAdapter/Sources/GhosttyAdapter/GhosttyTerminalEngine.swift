@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import GhosttyKit
 import SmaltiCore
 
@@ -14,7 +15,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
 
     public init(runtime: GhosttyRuntime, zshDirectory: URL? = nil, userZdotdir: String? = nil) {
         self.runtime = runtime
-        self.zshDirectory = zshDirectory.flatMap { try? SmaltiZshEnv.install(in: $0) }
+        self.zshDirectory = zshDirectory.flatMap(Self.installZshEnv)
         self.userZdotdir = userZdotdir
     }
 
@@ -85,6 +86,17 @@ public final class GhosttyTerminalEngine: TerminalEngine {
 
     private func banner(_ savedAt: Date) -> String {
         RestoreBanner.text(savedAt: savedAt, calendar: .current)
+    }
+
+    /// Without the file, panes still work but keep only the shared history; the failure is logged.
+    private static func installZshEnv(_ directory: URL) -> URL? {
+        do {
+            return try SmaltiZshEnv.install(in: directory)
+        } catch {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "smalti", category: "engine")
+                .error("could not write the per-pane history file: \(String(describing: error), privacy: .public)")
+            return nil
+        }
     }
 
     /// Off only in tests, to exercise the plain-text fallback.

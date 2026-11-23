@@ -114,4 +114,31 @@ struct SessionSnapshotTests {
 
         #expect(SessionSnapshot.capture(set, scrollbackLines: [:], at: now).workspaces[0].panes[0].relaunch == nil)
     }
+
+    @Test func aPaneBackAtItsShellAfterClaudeIsSavedAsAShell() throws {
+        let start = AgentEvent(pane: PaneID(), hook: .sessionStart, at: now, sessionID: "s1")
+        var pane = try self.pane().applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh")))
+        pane = Pane(id: start.pane, workingDirectory: pane.workingDirectory)
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "claude", commandLine: ["claude"])))
+            .applying(start).0
+            .applying(AgentEvent(pane: start.pane, hook: .sessionEnd, at: now, sessionID: "s1")).0
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh")))
+        let set = WorkspaceSet(first: workspace("solen", panes: [pane]))
+
+        let saved = SessionSnapshot.capture(set, scrollbackLines: [pane.id: 40], at: now).workspaces[0].panes[0]
+
+        #expect(saved.agent == nil)
+        #expect(saved.scrollbackLines == 40)
+    }
+
+    @Test func aRunningAgentIsSavedEvenBeforeItsProcessShows() throws {
+        let restored = try pane().attaching(
+            AgentSession(
+                harness: .claude, sessionID: "s1", title: nil, state: .waiting(since: now, reason: .turnFinished),
+                startedAt: now))
+        let set = WorkspaceSet(first: workspace("solen", panes: [restored]))
+
+        #expect(
+            SessionSnapshot.capture(set, scrollbackLines: [:], at: now).workspaces[0].panes[0].agent?.sessionID == "s1")
+    }
 }

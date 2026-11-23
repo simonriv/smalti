@@ -280,6 +280,12 @@ public struct ResumeTokens: Equatable, Sendable {
     /// Between the "Siempre restaurar" checkbox, its text and its `kbd`.
     public let hintGap: Double
     public let buttonBorderWidth: Double
+    /// CSS font weights of the board.
+    public let titleWeight: Int
+    public let workspaceWeight: Int
+    public let tagWeight: Int
+    public let primaryButtonWeight: Int
+    public let buttonWeight: Int
 
     public struct Insets: Equatable, Sendable {
         public let top: Double

@@ -74,8 +74,10 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         processName = pane.processName
         self.scrollbackLines = scrollbackLines
         commandCount = pane.commandCount
-        agent = pane.agent?.snapshot
-        let canRelaunch = !pane.isAtShell && pane.agent == nil
+        // A finished agent whose pane is back at its shell is a shell again: it restores with its scrollback.
+        let agent = pane.agent.flatMap { $0.state.isActive || !pane.isAtShell ? $0 : nil }
+        self.agent = agent?.snapshot
+        let canRelaunch = !pane.isAtShell && agent == nil
         let commandLine = pane.foregroundCommandLine.flatMap { RelaunchCommand.isTypeable($0) ? $0 : nil }
         relaunch = canRelaunch ? commandLine.map(RelaunchCommand.init(arguments:)) : nil
     }

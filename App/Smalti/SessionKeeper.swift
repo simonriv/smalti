@@ -17,6 +17,8 @@ final class SessionKeeper {
     private var periodicScrollback: Task<Void, Never>?
     private var latest: WorkspaceSet?
     private var lastFailure: String?
+    /// After "Empezar limpio", the last session stays on disk until the user changes something on purpose.
+    private var heldStructure: [[String]]?
 
     init(save: SaveSession) {
         self.save = save
@@ -29,13 +31,24 @@ final class SessionKeeper {
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.scrollbackInterval)
                 guard !Task.isCancelled, let self, let set = self.latest else { return }
+                if self.heldStructure != nil { continue }
                 self.report(self.save.saveWithScrollback(of: set, at: .now))
             }
         }
     }
 
+    /// Starts like `start(with:)`, but keeps the previous session (also at quit) until the structure changes.
+    func startKeepingPreviousSession(with set: WorkspaceSet) {
+        heldStructure = set.structure
+        start(with: set)
+    }
+
     func changed(_ set: WorkspaceSet) {
         guard periodicScrollback != nil else { return }
+        if let held = heldStructure {
+            guard set.structure != held else { return }
+            heldStructure = nil
+        }
         latest = set
         pendingStructure?.cancel()
         pendingStructure = Task { [weak self] in
@@ -49,7 +62,7 @@ final class SessionKeeper {
     func saveForQuit() {
         pendingStructure?.cancel()
         periodicScrollback?.cancel()
-        guard let set = latest else { return }
+        guard heldStructure == nil, let set = latest else { return }
         report(save.saveWithScrollback(of: set, at: .now))
     }
 

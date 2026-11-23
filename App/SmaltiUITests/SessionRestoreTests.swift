@@ -120,6 +120,8 @@ final class SessionRestoreTests: SmaltiUITestCase {
 
         app.typeKey(.escape, modifierFlags: [])
         waitForShells(count: 1)
+        // Past the one-second save delay: titles and directories from the new shell do not replace the session.
+        _ = XCTWaiter().wait(for: [XCTestExpectation(description: "save delay")], timeout: 3)
         XCTAssertTrue(try String(contentsOf: session, encoding: .utf8).contains("rizaria"))
 
         app.typeKey("d", modifierFlags: .command)

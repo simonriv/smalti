@@ -75,7 +75,9 @@ final class RestoreView: NSView {
     private func build(workspaces: [ResumeWorkspace], closedAt: String) {
         let tokens = theme.resume
         let header = NSStackView(views: [
-            label("Retomar donde quedaste", size: tokens.titleFontSize, weight: 600, color: theme.text.title),
+            label(
+                "Retomar donde quedaste", size: tokens.titleFontSize, weight: tokens.titleWeight,
+                color: theme.text.title),
             wrapping(
                 "Cerraste \(closedAt). Los shells vuelven con su historial y salida; los agentes se relanzan con su "
                     + "propio comando de reanudación.", size: tokens.subtitleFontSize, color: tokens.subtitleText),
@@ -116,7 +118,9 @@ final class RestoreView: NSView {
         let tokens = theme.resume
         let dot = StatusDot(diameter: theme.header.dotSize, style: theme.statusDot(for: workspace.status))
         let heading = NSStackView(views: [
-            dot, label(workspace.name, size: tokens.workspaceFontSize, weight: 600, color: theme.text.title),
+            dot,
+            label(
+                workspace.name, size: tokens.workspaceFontSize, weight: tokens.workspaceWeight, color: theme.text.title),
             label(workspace.summary, size: tokens.summaryFontSize, color: theme.text.secondary),
         ])
         heading.spacing = tokens.headerGap
@@ -238,7 +242,9 @@ final class ResumeButton: NSButton {
             attributedTitle = NSAttributedString(
                 string: title,
                 attributes: [
-                    .font: theme.interfaceFont(size: tokens.buttonFontSize, weight: style == .primary ? 600 : 500),
+                    .font: theme.interfaceFont(
+                        size: tokens.buttonFontSize,
+                        weight: style == .primary ? tokens.primaryButtonWeight : tokens.buttonWeight),
                     .foregroundColor: color.nsColor,
                 ])
             setAccessibilityLabel(title)

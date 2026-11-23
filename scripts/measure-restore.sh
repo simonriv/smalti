@@ -32,8 +32,9 @@ seed() { # state directory
 worst=0
 for run in $(seq 1 "$runs"); do
   work="$(mktemp -d)"; state="$work/state"; zdot="$work/zdotdir"; mkdir -p "$zdot"
+  [[ -n "${SLOW_SHELL:-}" ]] && printf 'sleep %s\n' "$SLOW_SHELL" > "$zdot/.zshrc"
   seed "$state"
-  log stream --style compact --signpost --predicate 'category == "restore"' > "$work/signposts.txt" 2>&1 &
+  log stream --style compact --signpost --predicate 'category == "restore"' > "$work/signposts.txt" 2> /dev/null &
   logger_pid=$!
   sleep 1
   started="$(python3 -c 'import time; print(time.time())')"
@@ -52,6 +53,7 @@ for run in $(seq 1 "$runs"); do
   if [[ -z "$ended" ]]; then echo "[$run/$runs] FAIL restore did not finish in 15 s"; worst=99; continue; fi
   seconds="$(python3 -c "print(round($ended - $started, 2))")"
   echo "[$run/$runs] ok ${seconds} s"
+  cp "$work/signposts.txt" "$root/build/measure-restore-signposts.txt"
   worst="$(python3 -c "print(max($worst, $seconds))")"
   rm -rf "$work"
 done

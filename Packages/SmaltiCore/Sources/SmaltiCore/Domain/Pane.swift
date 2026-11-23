@@ -37,11 +37,13 @@ public struct Pane: Equatable, Sendable {
 
     /// A terminal event, plus what it means for the agent when the agent did not say so itself.
     public func applying(_ event: TerminalEvent, at date: Date) -> Pane {
+        let wasRunningAProgram = !isAtShell
         let updated = applying(event)
         guard let session = updated.agent, session.state.isActive else { return updated }
         switch event {
         case .commandFinished(let exitCode, _): return updated.attaching(session.ended(exitCode: exitCode, at: date))
-        case .foregroundProcessChanged(let process) where ShellNames.contains(process.name):
+        // Only a return from a program (Claude) to the shell; the shell starting before a resumed Claude is not.
+        case .foregroundProcessChanged(let process) where wasRunningAProgram && ShellNames.contains(process.name):
             return updated.attaching(session.leftForTheShell())
         default: return updated
         }

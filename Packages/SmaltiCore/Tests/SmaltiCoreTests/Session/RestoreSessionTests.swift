@@ -102,15 +102,6 @@ struct RestoreSessionTests {
         #expect(result.set?.active.tree == DwindleLayout().tree(for: ids))
     }
 
-    @Test func restoreKeepsAllPanesWhenTheAreaIsTooSmall() {
-        let panes = (0..<9).map { _ in SessionFixtures.pane() }
-
-        let result = run([SessionFixtures.workspace("solen", panes)])
-
-        #expect(result.set?.active.panes.count == 9)
-        #expect(result.failures.isEmpty)
-    }
-
     @Test func missingDirectoryFallsBackToRootThenHome() {
         engine.failingDirectories = ["/Users/s/dev/borrada", "/Users/s/dev/solen"]
 

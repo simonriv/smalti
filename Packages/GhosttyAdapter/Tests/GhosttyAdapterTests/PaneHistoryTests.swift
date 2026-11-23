@@ -90,6 +90,14 @@ struct PaneHistoryTests {
         #expect(lines(of: paneFile) == ["echo visible"])
     }
 
+    @Test func noClobberStillRecordsThePaneHistory() throws {
+        try Data("setopt NO_CLOBBER\n".utf8).write(to: userDirectory.appending(path: ".zshenv"))
+
+        _ = try runZsh("echo uno\n", restoresHistory: false)
+
+        #expect(lines(of: paneFile) == ["echo uno"])
+    }
+
     @Test func historyIgnorePatternIsRespected() throws {
         try Data("HISTORY_IGNORE='(ls|pwd)'\n".utf8).write(to: userDirectory.appending(path: ".zshenv"))
 

@@ -99,7 +99,8 @@ extension Theme {
             codeFontSize: 11.5, buttonHeight: 36, buttonPaddingHorizontal: 16, buttonCornerRadius: 8,
             buttonFontSize: 13, buttonGap: 10, primaryButtonText: rgb(0x0d0f15), secondaryButtonBorder: white(0.12),
             tertiaryButtonText: obsidianMutedText, hintFontSize: 11.5,
-            headerPadding: ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8), hintGap: 6, buttonBorderWidth: 1),
+            headerPadding: ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8), hintGap: 6, buttonBorderWidth: 1,
+            titleWeight: 600, workspaceWeight: 600, tagWeight: 500, primaryButtonWeight: 600, buttonWeight: 500),
         agent: AgentStatusTokens(
             working: rgb(0x9ece6a), waiting: rgb(0xe0af68), failed: rgb(0xf7768e), stopped: rgb(0x6b717c),
             stoppedRingWidth: 1, waitingBorder: RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35), counterGap: 14,

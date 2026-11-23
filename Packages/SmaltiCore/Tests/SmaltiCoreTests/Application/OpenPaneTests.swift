@@ -122,4 +122,15 @@ struct OpenPaneTests {
         #expect(environment["SMALTI_CLI"] == nil)
         #expect(environment["PATH"] == nil)
     }
+
+    @Test mutating func aDeletedCurrentDirectoryFallsBackToHome() throws {
+        engine.failingDirectories = ["/tmp"]
+        let home = try WorkingDirectory(path: "/Users/s")
+        let request = OpenPaneRequest(shell: .loginShell, geometry: roomy, home: home)
+
+        let id = try OpenPane(engine: engine, version: "1").execute(request, in: &set)
+
+        #expect(engine.openedSpecs.map(\.workingDirectory) == [home])
+        #expect(set.active.panes.first { $0.id == id }?.workingDirectory == home)
+    }
 }

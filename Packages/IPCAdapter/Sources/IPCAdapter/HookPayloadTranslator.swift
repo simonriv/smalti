@@ -18,9 +18,16 @@ public enum HookPayloadTranslator {
         }
         let fields = (try? JSONSerialization.jsonObject(with: request.payload)) as? [String: Any] ?? [:]
         return AgentEvent(
-            pane: PaneID(rawValue: uuid), hook: hook, at: date, sessionID: fields["session_id"] as? String,
+            pane: PaneID(rawValue: uuid), hook: hook, at: date, sessionID: sessionID(fields["session_id"]),
             prompt: fields["prompt"] as? String, toolSummary: toolSummary(fields),
             message: fields["message"] as? String ?? fields["error"] as? String, source: fields["source"] as? String)
+    }
+
+    /// Claude Code session ids are UUIDs; anything else is dropped, because it is later typed into a shell
+    /// (`claude --resume <id>`).
+    private static func sessionID(_ value: Any?) -> String? {
+        guard let text = value as? String, UUID(uuidString: text) != nil else { return nil }
+        return text
     }
 
     /// `pnpm db:migrate` for a shell command; `Edit /a/b.ts` for a file tool; the tool name otherwise.
