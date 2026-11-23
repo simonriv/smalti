@@ -35,7 +35,9 @@ public enum GhosttyConfigText {
             // ⌥ composes characters on the Latin American layout (@, |, #…), so it must not act as Meta.
             "macos-option-as-alt = false",
             "shell-integration = zsh",
-            "confirm-close-surface = false",
+            // F4: makes `ghostty_surface_needs_confirm_quit` report OSC 133's "not at the prompt"; Smalti ignores
+            // the confirm flag of `close_surface_cb`, so closing is unchanged.
+            "confirm-close-surface = true",
         ]
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
         return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"

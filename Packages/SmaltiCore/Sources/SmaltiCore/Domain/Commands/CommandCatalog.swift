@@ -67,6 +67,7 @@ public enum CommandCatalog {
         var commands = [context.command(.paneNew, "Nuevo panel", group: .panes)]
         if context.paneCount >= 1 {
             commands.append(context.command(.paneClose, "Cerrar panel", group: .panes))
+            commands.append(context.command(.historySearch, "Buscar en el historial", group: .panes))
         }
         commands += goToPaneCommands(context)
         if context.paneCount >= 2 {

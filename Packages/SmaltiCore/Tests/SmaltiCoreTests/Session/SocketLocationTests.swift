@@ -36,4 +36,33 @@ struct SocketLocationTests {
     @Test func limitIsTheSizeOfASocketAddressPath() {
         #expect(SocketLocation.maximumPathBytes == 104)
     }
+
+    @Test func inputSocketHasItsOwnName() {
+        let state = URL(filePath: "/Users/s/Library/Application Support/Smalti")
+
+        #expect(
+            SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: URL(filePath: "/tmp"))
+                == state.appending(path: "input.sock"))
+    }
+
+    @Test func deepInputSocketDiffersFromTheMainOne() {
+        let state = URL(filePath: "/" + String(repeating: "deep/", count: 25))
+        let temporary = URL(filePath: "/tmp")
+
+        let input = SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: temporary)
+
+        #expect(input != SocketLocation.socketFile(stateDirectory: state, temporaryDirectory: temporary))
+        #expect(input.path(percentEncoded: false).utf8.count < SocketLocation.maximumPathBytes)
+    }
+
+    // Mutation survivor (F4 close): sockets other than the hooks' one carry their name in the short path.
+    @Test func shortPathsOfNamedSocketsCarryTheName() {
+        let state = URL(filePath: "/Users/s/" + String(repeating: "deep/", count: 20) + "state")
+
+        let input = SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: temporary)
+        let hooks = SocketLocation.socketFile(stateDirectory: state, temporaryDirectory: temporary)
+
+        #expect(input.lastPathComponent.hasSuffix("-input.sock"))
+        #expect(!hooks.lastPathComponent.contains("-smalti"))
+    }
 }

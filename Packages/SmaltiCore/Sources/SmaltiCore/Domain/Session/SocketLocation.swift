@@ -7,11 +7,14 @@ public enum SocketLocation {
     /// Bytes of `sockaddr_un.sun_path` on macOS, terminator included.
     public static let maximumPathBytes = 104
 
-    public static func socketFile(stateDirectory: URL, temporaryDirectory: URL) -> URL {
-        let preferred = stateDirectory.appending(path: "smalti.sock")
+    /// `<state>/<name>.sock`, or a short stable path in the temporary directory when that does not fit. `name`
+    /// tells the sockets of one state directory apart (`smalti` for hooks, `input` for F4's shell channel).
+    public static func socketFile(named name: String = "smalti", stateDirectory: URL, temporaryDirectory: URL) -> URL {
+        let preferred = stateDirectory.appending(path: "\(name).sock")
         guard preferred.path(percentEncoded: false).utf8.count >= maximumPathBytes else { return preferred }
+        let suffix = name == "smalti" ? "" : "-\(name)"
         return temporaryDirectory.appending(
-            path: "smalti-\(stableHash(stateDirectory.path(percentEncoded: false))).sock")
+            path: "smalti-\(stableHash(stateDirectory.path(percentEncoded: false)))\(suffix).sock")
     }
 
     /// FNV-1a, 64 bits, as 16 hex digits: the same for the same directory in every run.

@@ -7,7 +7,7 @@ import Foundation
 /// `ZDOTDIR` (`SMALTI_USER_ZDOTDIR`, else the home directory), so zsh then reads the user's files as always, and
 /// after them (first `precmd`) loads the pane's history when restoring and starts copying each command to
 /// `SMALTI_HISTORY_FILE`. The user's own `HISTFILE` and `SHARE_HISTORY` stay untouched.
-enum SmaltiZshEnv {
+public enum SmaltiZshEnv {
     static let text = #"""
         # Smalti: per-pane history (F2). Sourced by Ghostty's zsh integration through GHOSTTY_ZSH_ZDOTDIR.
         if [[ -n "${SMALTI_USER_ZDOTDIR+X}" ]]; then
@@ -50,10 +50,11 @@ enum SmaltiZshEnv {
         """#
 
     /// Writes `.zshenv` into `directory` (created owner-only) and returns the directory.
-    static func install(in directory: URL) throws -> URL {
+    public static func install(in directory: URL) throws -> URL {
         try FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        try Data(text.utf8).write(to: directory.appending(path: ".zshenv"), options: .atomic)
+        try Data((text + "\n" + SmaltiInputScript.text + "\n").utf8).write(
+            to: directory.appending(path: ".zshenv"), options: .atomic)
         return directory
     }
 }

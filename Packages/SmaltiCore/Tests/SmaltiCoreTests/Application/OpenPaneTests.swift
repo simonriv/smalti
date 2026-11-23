@@ -115,6 +115,41 @@ struct OpenPaneTests {
         #expect(environment["PATH"] == "/App.app/Contents/Resources/bin:/usr/bin:/bin")
     }
 
+    @Test func exportsInputSocket() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/state/smalti.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin",
+            inputSocket: URL(filePath: "/state/input.sock"))
+
+        #expect(
+            PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"]
+                == "/state/input.sock")
+    }
+
+    // Mutation survivor (F4 close): the path is exported as is, never percent-encoded.
+    @Test func inputSocketWithSpacesIsExportedAsIs() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/s.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin",
+            inputSocket: URL(filePath: "/Application Support/input.sock"))
+
+        #expect(
+            PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"]
+                == "/Application Support/input.sock")
+    }
+
+    @Test func withoutInputSocketThereIsNoInputVariable() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/s.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin")
+
+        #expect(PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"] == nil)
+    }
+
+    @Test func ghostColorTravelsWithTheExtraVariables() {
+        let environment = PaneEnvironment(version: "1", extra: ["SMALTI_GHOST_COLOR": "#5f6672"]).variables(
+            for: PaneID())
+
+        #expect(environment["SMALTI_GHOST_COLOR"] == "#5f6672")
+    }
+
     @Test func withoutIPCThereIsNoSocketOrCli() {
         let environment = PaneEnvironment(version: "1").variables(for: PaneID())
 

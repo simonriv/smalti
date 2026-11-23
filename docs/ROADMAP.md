@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2 y F3.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3 y F4.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -72,9 +72,23 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F4 · Input inteligente
 
 - **Objetivo:** escribir comandos con completions, historial y predicción sin romper ningún programa de pantalla completa.
-- **Entregables:** editor de input solo en el prompt del shell (detectado por OSC 133); completions con specs de Fig; historial por directorio; ⌃R difuso; predicción heurística con texto fantasma (frecuencia, recencia, secuencias, contexto del proyecto, recuperación según el código de salida); filtro de secretos listo para F7.
+- **Entregables:** sugerencias sobre el prompt de zsh, que sigue siendo el editor (prompt detectado por OSC 133; canal por socket con un widget de zsh); toma de control de zsh-autosuggestions, ⌃R de fzf y Tab dentro de los paneles de Smalti; historial propio que empieza vacío; completions con specs de Fig; historial por directorio; ⌃R difuso; predicción heurística con texto fantasma (frecuencia, recencia, secuencias, contexto del proyecto, recuperación según el código de salida); filtro de secretos listo para F7.
 - **Criterio de cierre:** p99 de la sugerencia por debajo de 16 ms en un benchmark con un historial de 50.000 entradas. Claude Code, nvim, htop y less siguen pasando la lista de render de F0, porque el editor no intercepta nada fuera del prompt.
 - **Dependencias:** F0 (OSC 133 confirmado) y F1. Es la fase de mayor riesgo técnico (ver riesgos de F0): conviene un mini-spike al inicio.
+
+## F4.5 · Ayuda, ventanas y funciones básicas
+
+- **Objetivo:** que Smalti sea usable por cualquier persona, no solo por quien lo construyó: que todo atajo y función se pueda descubrir sin leer documentación y que estén las funciones básicas que se esperan de una app de macOS y de una terminal, incluidas las que no se ven en pantalla.
+- **Primer paso, antes de la spec: auditoría de usabilidad básica.** Recorrer la app como un usuario nuevo y compararla con lo que se espera de una terminal de macOS (Terminal.app, Ghostty, iTerm2). Sale una lista de huecos, y cada uno se clasifica en: entra en F4.5, ya está en una fase posterior (se queda allí) o queda para después. Se comprueban al menos:
+  - descubrimiento: vista de ayuda con todos los atajos y acciones (⌘? y desde ⌘K) y menú de macOS completo (Smalti, Edición, Ver, Ventana, Ayuda) con cada acción y su atajo;
+  - ventanas: pantalla completa nativa (⌃⌘F); varias ventanas a la vez (⌘N), cada una con sus propios workspaces, que se guardan y se restauran por ventana; cerrar una ventana sin cerrar las demás; confirmar antes de cerrar con procesos en marcha;
+  - feedback: una forma de reportar un fallo o una idea desde la app (⌘K y menú Ayuda) que adjunte la versión y, si el usuario quiere, los registros;
+  - terminal básica: buscar en el scrollback (⌘F), tamaño de letra (⌘+, ⌘−, ⌘0), selección y copiado, abrir enlaces con ⌘clic, arrastrar archivos para pegar su ruta, entrada de teclado segura;
+  - app: "Acerca de Smalti" con la versión, abrir la configuración (⌘,), registros para diagnosticar y accesibilidad básica (VoiceOver y tamaño de texto).
+- **Entregables:** el informe de la auditoría (`docs/specs/F4.5-auditoria.md`) aprobado por Simón; después, la vista de ayuda, la pantalla completa, las varias ventanas con workspaces propios, el canal de feedback y los huecos de la auditoría marcados como "entra en F4.5".
+- **Límites:** no adelanta trabajo de F5 (temas, vidrio, botones de ventana, tipografía, estudio de prompt; la ventana de configuración visual es de F5, en F4.5 ⌘, solo abre el TOML), de F6 (multi-harness, Neovim) ni de F7 (daemon `smaltid`, layouts compartibles). Nada de producto de venta: ni licencias, ni actualizaciones automáticas, ni telemetría de uso.
+- **Criterio de cierre:** se define en su spec, a partir de la auditoría. Como mínimo: cada acción de ⌘K aparece en la ayuda y en el menú con el mismo atajo (prueba automática), y dos ventanas con workspaces distintos se restauran cada una con los suyos (XCUITest).
+- **Dependencias:** F4 (sus atajos aparecen en la ayuda) y F2 (la persistencia pasa de una ventana a varias). Añadida por Simón en el brainstorming de F4 (2026-11-23) y ampliada el mismo día con la auditoría de funciones básicas.
 
 ## F5 · Apariencia y prompt
 

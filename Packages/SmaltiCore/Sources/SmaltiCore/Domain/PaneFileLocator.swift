@@ -21,11 +21,14 @@ public struct IPCEndpoints: Sendable {
     public let cli: URL
     /// The `PATH` the app was started with.
     public let inheritedPath: String
+    /// F4's shell input channel; nil when `[input] enabled = false`.
+    public let inputSocket: URL?
 
-    public init(socket: URL, cli: URL, inheritedPath: String) {
+    public init(socket: URL, cli: URL, inheritedPath: String, inputSocket: URL? = nil) {
         self.socket = socket
         self.cli = cli
         self.inheritedPath = inheritedPath
+        self.inputSocket = inputSocket
     }
 }
 
@@ -52,6 +55,7 @@ public struct PaneEnvironment: Sendable {
         if let ipc {
             variables["SMALTI_SOCKET"] = ipc.socket.path(percentEncoded: false)
             variables["SMALTI_CLI"] = ipc.cli.path(percentEncoded: false)
+            if let input = ipc.inputSocket { variables["SMALTI_INPUT_SOCKET"] = input.path(percentEncoded: false) }
             var binDirectory = ipc.cli.deletingLastPathComponent().path(percentEncoded: false)
             if binDirectory.hasSuffix("/") { binDirectory.removeLast() }
             variables["PATH"] = binDirectory + ":" + ipc.inheritedPath

@@ -18,6 +18,8 @@ public struct Theme: Equatable, Sendable {
     public let resume: ResumeTokens
     public let agent: AgentStatusTokens
     public let observatory: ObservatoryTokens
+    public let inputMenu: InputMenuTokens
+    public let historyPalette: HistoryPaletteTokens
 }
 
 /// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
@@ -84,6 +86,9 @@ public struct TextTokens: Equatable, Sendable {
     public let primary: RGBAColor
     public let title: RGBAColor
     public let secondary: RGBAColor
+    /// F4's prediction after the cursor (`Main.dc.html`). About 3:1 on the glass: an accepted exception to the 4.5:1
+    /// rule until F5's "Proteger legibilidad", because it is a hint nobody has to read to use the terminal.
+    public let ghostText: RGBAColor
 }
 
 public struct TerminalAppearance: Equatable, Sendable {
@@ -307,9 +312,65 @@ public struct ResumeTokens: Equatable, Sendable {
     }
 }
 
+/// F4's Tab menu, from `Main.dc.html` (rows, border, background) plus the help line inside it (approved mockup).
+public struct InputMenuTokens: Equatable, Sendable {
+    public let width: Double
+    public let cornerRadius: Double
+    public let border: RGBAColor
+    public let background: RGBAColor
+    public let shadowRadius: Double
+    public let shadowOffsetY: Double
+    public let shadowOpacity: Double
+    public let padding: Double
+    public let rowFontSize: Double
+    /// Rows are 12 px text with the terminal's 1.62 line height and 5 px vertical padding.
+    public let rowHeight: Double
+    public let rowGap: Double
+    public let rowCornerRadius: Double
+    public let rowPaddingHorizontal: Double
+    public let nameColumnWidth: Double
+    public let columnGap: Double
+    public let footerHeight: Double
+    public let footerFontSize: Double
+    /// Space between the last row and the help line.
+    public let footerTopGap: Double
+    /// Height of a row's text box, as a multiple of `rowFontSize`.
+    public let textLineHeight: Double
+    /// Distance between the cursor's cell and the menu.
+    public let cursorGap: Double
+    /// The menu opens below the cursor when this many rows fit there; above otherwise.
+    public let rowsBelowCursor: Int
+    public let maximumVisibleRows: Int
+}
+
+/// F4's ⌃R palette: the ⌘K box (`PaletteTokens`) centred on the pane, with the approved mockup's chips and rows.
+public struct HistoryPaletteTokens: Equatable, Sendable {
+    /// Share of the pane's width, between `minimumWidth` and `maximumWidth`.
+    public let widthFraction: Double
+    public let minimumWidth: Double
+    public let maximumWidth: Double
+    /// Distance from the top of the pane.
+    public let topOffset: Double
+    public let chipCornerRadius: Double
+    public let chipBorder: RGBAColor
+    /// Opacity of the accent on the selected chip's border.
+    public let chipActiveBorderAlpha: Double
+    public let chipPaddingHorizontal: Double
+    public let chipPaddingVertical: Double
+    public let listInset: Double
+    public let rowHeight: Double
+    public let rowPaddingHorizontal: Double
+    public let rowGap: Double
+    public let commandFontSize: Double
+    public let dotSize: Double
+    public let visibleRows: Int
+}
+
 public struct MotionTokens: Equatable, Sendable {
     /// Seconds a pane takes to move to its new place; disabled by "Reducir movimiento".
     public let rearrangeDuration: Double
+    /// Seconds F4's menu and ⌃R palette take to fade in (spec: 120 ms); none with "Reducir movimiento".
+    public let overlayAppearDuration: Double
 }
 
 extension Theme {
@@ -331,7 +392,8 @@ extension Theme {
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
-            motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory)
+            motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
+            inputMenu: inputMenu, historyPalette: historyPalette)
     }
 }
 

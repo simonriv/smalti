@@ -59,10 +59,8 @@ private final class SocketListener: @unchecked Sendable {
     private let stopped = Mutex(false)
 
     init(path: String, handle: @escaping @Sendable (Data) -> IPCResponse) throws(IPCError) {
-        guard path.utf8.count < MemoryLayout.size(ofValue: sockaddr_un().sun_path) else {
-            throw .socketFailed(operation: "path longer than a socket address", path: path, code: ENAMETOOLONG)
-        }
-        try Self.claim(path)
+        try UnixSocketFile.checkLength(path)
+        try UnixSocketFile.claim(path)
         self.path = path
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw .socketFailed(operation: "socket", path: path, code: errno) }
@@ -70,7 +68,7 @@ private final class SocketListener: @unchecked Sendable {
         var on: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
         do {
-            try Self.bind(fd, to: path)
+            try UnixSocketFile.bind(fd, to: path)
         } catch {
             close(fd)
             unlink(path)
@@ -100,50 +98,6 @@ private final class SocketListener: @unchecked Sendable {
         guard !wasStopped else { return }
         source.cancel()
         unlink(path)
-    }
-
-    /// Fails if a live instance answers on `path`; removes a stale file otherwise.
-    private static func claim(_ path: String) throws(IPCError) {
-        guard FileManager.default.fileExists(atPath: path) else { return }
-        let probe = socket(AF_UNIX, SOCK_STREAM, 0)
-        defer { close(probe) }
-        var on: Int32 = 1
-        setsockopt(probe, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
-        if connectTo(probe, path: path) == 0 { throw .socketInUse(path: path) }
-        unlink(path)
-    }
-
-    private static func bind(_ fd: Int32, to path: String) throws(IPCError) {
-        var address = socketAddress(path)
-        let bound = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
-            }
-        }
-        guard bound == 0 else { throw .socketFailed(operation: "bind", path: path, code: errno) }
-        guard chmod(path, 0o600) == 0 else { throw .socketFailed(operation: "chmod", path: path, code: errno) }
-        guard listen(fd, 16) == 0 else { throw .socketFailed(operation: "listen", path: path, code: errno) }
-    }
-
-    static func connectTo(_ fd: Int32, path: String) -> Int32 {
-        var address = socketAddress(path)
-        return withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
-            }
-        }
-    }
-
-    private static func socketAddress(_ path: String) -> sockaddr_un {
-        var address = sockaddr_un()
-        address.sun_family = sa_family_t(AF_UNIX)
-        withUnsafeMutableBytes(of: &address.sun_path) { buffer in
-            // Paths longer than sun_path are cut; Smalti's state paths are far shorter.
-            _ = path.utf8CString.withUnsafeBytes {
-                buffer.copyMemory(from: UnsafeRawBufferPointer(rebasing: $0.prefix(buffer.count - 1)))
-            }
-        }
-        return address
     }
 
     private static func serve(_ client: Int32, handle: (Data) -> IPCResponse) {

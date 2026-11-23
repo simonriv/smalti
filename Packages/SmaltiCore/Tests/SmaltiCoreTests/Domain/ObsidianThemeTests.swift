@@ -30,6 +30,8 @@ struct ObsidianThemeTests {
         #expect(theme.text.primary == (try RGBAColor(hex: "#d7dae0")))
         #expect(theme.text.title == (try RGBAColor(hex: "#e6e9ef")))
         #expect(theme.text.secondary == (try RGBAColor(hex: "#8b919c")))
+        #expect(theme.text.ghostText == (try RGBAColor(hex: "#5f6672")))
+        #expect(theme.text.ghostText.hexString == "#5f6672")
         #expect(theme.accent == (try RGBAColor(hex: "#7aa2f7")))
     }
 

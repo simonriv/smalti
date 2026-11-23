@@ -46,6 +46,32 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "c18-restore.png")
     }
 
+    /// F4 C11: the Tab menu at the cursor and the ⌃R palette, to lay over Main.dc.html and the approved mockups.
+    func testCaptureInput() throws {
+        let app = XCUIApplication.isolatedSmaltiWithIntegration()
+        launch(app)
+        Thread.sleep(forTimeInterval: 2)
+        app.typeText("<<<one>\"$SMALTI_UITEST_OUT\"\n")
+        app.typeText("<<<two>\"$SMALTI_UITEST_OUT\"\n")
+        Thread.sleep(forTimeInterval: 1)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("git ch", forType: .string)
+        app.typeKey("v", modifierFlags: .command)
+        app.typeKey(.tab, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        try save(app.windows.firstMatch.screenshot(), as: "f4-completion-menu.png")
+        try save(app.element("smalti.completionMenu").screenshot(), as: "f4-completion-menu-only.png")
+
+        app.typeKey(.escape, modifierFlags: [])
+        app.typeKey("u", modifierFlags: .control)
+        app.typeKey("r", modifierFlags: .control)
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 0.5)
+        try save(app.windows.firstMatch.screenshot(), as: "f4-history-palette.png")
+        try save(app.element("smalti.historyPalette").screenshot(), as: "f4-history-palette-only.png")
+    }
+
     /// F3 C12: the observatory over the bundled fixture, to lay over Observatorio.dc.html.
     func testCaptureObservatory() throws {
         let app = XCUIApplication.isolatedSmalti()

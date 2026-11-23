@@ -133,3 +133,36 @@
 - [x] T14 · UI tests de datos, aislamiento y capturas (revisión del bloque 3: 1 crítico, 6 importantes y 8 menores corregidos)
 #### Bloque 4 · Cierre
 - [x] T15 · Mediciones (C10 1,3 s / 11 ms / 53 MB; C11 ⚠️ 1 tick de 17,3 ms, igual que en reposo), checklist (`docs/specs/F3-checklist.md`), revisión final (5 importantes y 9 menores corregidos), mutación 100 %, XCUITest 71/71 con el diario intacto
+
+## F4 · Input inteligente
+
+### Spec
+- [x] Mini-spike (`spike/f4-prompt-overlay`, desechable): prompt por `needs_confirm_quit` (OSC 133) y fantasma sobre libghostty
+- [x] Aprobada (`docs/specs/F4-input.md`, 2026-11-23): zsh edita y Smalti sugiere, input en línea, ⌃R en paleta, historial desde cero, toma de control de plugins
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F4-input.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [x] T1 · Línea de comando y protocolo del canal
+- [x] T2 · Historial, filtro de secretos y búsqueda ⌃R
+- [x] T3 · Predicción heurística
+- [x] T4 · Specs, motor de completions y menú
+- [x] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
+#### Bloque 2 · Adaptadores
+- [x] T6 · `FileCommandHistory` (JSONL)
+- [x] T7 · `ProjectContextAdapter`
+- [x] T8 · `FigCompletionAdapter` y vendoring
+- [x] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
+#### Bloque 3 · Canal con zsh
+- [x] T10 · `InputSocketServer`
+- [x] T11 · Script de zsh: canal, fantasma y aceptar
+- [x] T12 · ⌃R, Tab y enlaces (enmienda 1: sin toma de control de plugins)
+#### Bloque 4 · App
+- [x] T13 · `InputCoordinator` y composición
+- [x] T14 · Menú de completions
+- [x] T15 · Paleta ⌃R y comando de ⌘K
+- [x] T16 · UI tests, aislamiento y capturas
+#### Bloque 5 · Cierre
+- [x] T17 · Mediciones, checklist, revisión final, mutación y PR (checklist `docs/specs/F4-checklist.md`; mutación 98,6 %)

@@ -32,6 +32,20 @@ extension XCUIApplication {
         return app
     }
 
+    /// F4: zsh with Ghostty's integration and Smalti's input script, which `zsh -f` would skip. `-d` skips the
+    /// global rc files and `-SmaltiUserZdotdir` points the user's ZDOTDIR at an empty temporary folder, so neither
+    /// the user's `.zshrc` (tmux, plugins) nor their history is ever read.
+    static let integratedShell = "/bin/zsh -d"
+
+    static func isolatedSmaltiWithIntegration() -> XCUIApplication {
+        let app = isolatedSmalti(shell: integratedShell)
+        let zdotdir = app.configFile.deletingLastPathComponent().appending(path: "zdotdir")
+        try? FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)
+        try? Data("PS1='p%% '\n".utf8).write(to: zdotdir.appending(path: ".zshrc"))
+        app.launchArguments += ["-SmaltiUserZdotdir", zdotdir.path(percentEncoded: false)]
+        return app
+    }
+
     /// The temporary config file this launch reads; tests rewrite it before "Recargar configuración".
     var configFile: URL {
         // isolatedSmalti always passes the argument followed by its value.
