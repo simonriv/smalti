@@ -61,11 +61,14 @@ final class AppComposition {
         return keys.reduce(into: [:]) { arguments, key in arguments[key] = UserDefaults.standard.string(forKey: key) }
     }
 
-    /// Owner-only (0700): it will hold scrollback and the IPC socket. A failure is logged; saving reports it later.
+    /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
+    /// saving reports it later.
     private static func createStateDirectory(_ directory: URL) {
+        let ownerOnly: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
         do {
             try FileManager.default.createDirectory(
-                at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                at: directory, withIntermediateDirectories: true, attributes: ownerOnly)
+            try FileManager.default.setAttributes(ownerOnly, ofItemAtPath: directory.path(percentEncoded: false))
         } catch {
             Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
                 .error("could not create the state directory \(directory.path(percentEncoded: false)): \(error)")
@@ -73,7 +76,8 @@ final class AppComposition {
     }
 
     private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
-        let runtime = try makeRuntime(startup.theme.terminal)
+        let runtime = try makeRuntime(
+            startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let controller = TilingController(
             .init(
@@ -156,10 +160,13 @@ final class AppComposition {
         window.makeFirstResponder(view)
     }
 
-    private func makeRuntime(_ appearance: TerminalAppearance) throws(TerminalEngineError) -> GhosttyRuntime {
+    /// `configFile` lives in this build's state directory, so a development build never rewrites the daily one's.
+    private func makeRuntime(
+        _ appearance: TerminalAppearance, configFile: URL
+    ) throws(TerminalEngineError) -> GhosttyRuntime {
         try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
         let config = try GhosttyConfig.load(
-            text: GhosttyConfigText.render(appearance), writingTo: Self.engineConfigFile)
+            text: GhosttyConfigText.render(appearance), writingTo: configFile)
         return try GhosttyRuntime(config: config)
     }
 
@@ -183,9 +190,5 @@ final class AppComposition {
 
     private static var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-    }
-
-    private static var engineConfigFile: URL {
-        URL.applicationSupportDirectory.appending(path: "Smalti/ghostty.conf")
     }
 }

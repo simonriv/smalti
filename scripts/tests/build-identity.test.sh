@@ -4,7 +4,11 @@
 set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 products="$root/build/Build/Products"
-total=4; n=0; failures=0
+total=6; n=0; failures=0
+mkdir -p "$root/build"
+lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+# The Release copy built here shares the daily bundle ID; keep LaunchServices pointing at /Applications.
+trap '"$lsregister" -u "$products/Release/Smalti.app" 2>/dev/null' EXIT
 
 for configuration in Debug Release; do
   xcodebuild -project "$root/App/Smalti.xcodeproj" -scheme Smalti -configuration "$configuration" \
@@ -21,7 +25,9 @@ expect() { # case plist key expected
 }
 
 expect debug_bundle_id "$products/Debug/Smalti Dev.app/Contents/Info.plist" CFBundleIdentifier dev.simonriv.smalti.dev
+expect debug_bundle_name "$products/Debug/Smalti Dev.app/Contents/Info.plist" CFBundleName "Smalti Dev"
 expect debug_display_name "$products/Debug/Smalti Dev.app/Contents/Info.plist" CFBundleDisplayName "Smalti Dev"
 expect release_bundle_id "$products/Release/Smalti.app/Contents/Info.plist" CFBundleIdentifier dev.simonriv.smalti
+expect release_bundle_name "$products/Release/Smalti.app/Contents/Info.plist" CFBundleName Smalti
 expect release_display_name "$products/Release/Smalti.app/Contents/Info.plist" CFBundleDisplayName Smalti
 exit "$failures"
