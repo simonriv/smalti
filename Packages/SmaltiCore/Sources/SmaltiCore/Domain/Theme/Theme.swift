@@ -20,6 +20,53 @@ public struct Theme: Equatable, Sendable {
     public let observatory: ObservatoryTokens
     public let inputMenu: InputMenuTokens
     public let historyPalette: HistoryPaletteTokens
+    /// F4.5 (mockup-help, mockup-feedback): the ⌘K box with these sizes.
+    public let help: HelpTokens
+    public let feedback: FeedbackTokens
+}
+
+/// The help overlay (mockup-help.png): the palette's box, wider, with two columns of sections.
+public struct HelpTokens: Equatable, Sendable {
+    public let width: Double
+    public let maximumHeight: Double
+    /// Distance from the top of the window.
+    public let topOffset: Double
+    public let columnGap: Double
+    public let rowHeight: Double
+
+    public init(width: Double, maximumHeight: Double, topOffset: Double, columnGap: Double, rowHeight: Double) {
+        self.width = width
+        self.maximumHeight = maximumHeight
+        self.topOffset = topOffset
+        self.columnGap = columnGap
+        self.rowHeight = rowHeight
+    }
+}
+
+/// "Reportar un problema o una idea" (mockup-feedback.png): a small box with two choices and the build line.
+public struct FeedbackTokens: Equatable, Sendable {
+    public let width: Double
+    public let topOffset: Double
+    public let padding: Double
+    public let titleFontSize: Double
+    public let choiceHeight: Double
+    public let choiceGap: Double
+    public let noteFontSize: Double
+    public let summaryFontSize: Double
+
+    public init(
+        width: Double, topOffset: Double, padding: Double, titleFontSize: Double, choiceHeight: Double,
+        choiceGap: Double, noteFontSize: Double, summaryFontSize: Double
+    ) {
+        self.width = width
+        self.topOffset = topOffset
+        self.padding = padding
+        self.titleFontSize = titleFontSize
+        self.choiceHeight = choiceHeight
+        self.choiceGap = choiceGap
+        self.noteFontSize = noteFontSize
+        self.summaryFontSize = summaryFontSize
+    }
 }
 
 /// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
@@ -393,7 +440,7 @@ extension Theme {
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
             motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
-            inputMenu: inputMenu, historyPalette: historyPalette)
+            inputMenu: inputMenu, historyPalette: historyPalette, help: help, feedback: feedback)
     }
 }
 

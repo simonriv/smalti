@@ -138,5 +138,9 @@ extension Theme {
             widthFraction: 0.86, minimumWidth: 480, maximumWidth: 720, topOffset: 26, chipCornerRadius: 6,
             chipBorder: white(0.1), chipActiveBorderAlpha: 0.5, chipPaddingHorizontal: 7, chipPaddingVertical: 2,
             listInset: 6, rowHeight: 32, rowPaddingHorizontal: 10, rowGap: 10, commandFontSize: 12, dotSize: 9,
-            visibleRows: 8))
+            visibleRows: 8),
+        help: HelpTokens(width: 760, maximumHeight: 560, topOffset: 60, columnGap: 8, rowHeight: 27),
+        feedback: FeedbackTokens(
+            width: 520, topOffset: 160, padding: 20, titleFontSize: 15, choiceHeight: 38, choiceGap: 8,
+            noteFontSize: 12, summaryFontSize: 12))
 }

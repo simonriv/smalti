@@ -33,6 +33,7 @@ final class WindowComposition {
     private let services: WindowServices
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
+    private var help: HelpController?
     private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -121,6 +122,7 @@ final class WindowComposition {
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || services.historyPalette()?.isOpen == true
+            || help?.isOpen == true
     }
 
     func dismissObservatory() {
@@ -224,6 +226,16 @@ final class WindowComposition {
             // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
             if isOpen { services.completionMenu()?.close() }
         }
+        let help = HelpController(
+            window: window, keymap: { [weak controller] in controller?.config.keys ?? .standard },
+            perform: { [weak controller] command in controller?.perform(command) })
+        help.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+            if isOpen { services.completionMenu()?.close() }
+        }
+        self.help = help
         let screen = makeObservatoryScreen()
         observatoryScreen = screen
         controller.onViewCommand = { [weak self, weak palette, weak screen] command in
@@ -235,6 +247,9 @@ final class WindowComposition {
             case .observatoryPeriod: screen?.cyclePeriod()
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
+            case .helpShow:
+                palette.close()
+                self.help?.toggle(theme: theme)
             default: palette.toggle(theme: theme)
             }
         }
@@ -277,7 +292,8 @@ final class WindowComposition {
     /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
     /// reaches the terminal while the observatory is closed.
     private var keyContext: KeyContext {
-        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen]) }
+        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
+        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
         if services.historyPalette()?.isOpen == true { return .overlay(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }

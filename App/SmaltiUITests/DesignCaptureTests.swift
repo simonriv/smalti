@@ -179,6 +179,15 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    /// F4.5: the help over the window (mockup-help.png), with a neutral prompt behind it.
+    func testCaptureHelp() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        app.typeKey("?", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.help").waitForExistence(timeout: 5))
+        try save(app.windows.firstMatch.screenshot(), as: "f45-help.png")
+    }
+
     /// F4.5: each menu of the bar open, captured alone (mockup-menu.png).
     func testCaptureMenus() throws {
         launch(.isolatedSmalti())

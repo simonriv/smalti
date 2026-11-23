@@ -194,7 +194,7 @@
 - [x] T12 · Confirmar antes de cerrar (CloseConfirmationTests 8/8; regresión de 8 clases en verde)
 #### Bloque 4 · Descubrimiento y terminal en la app
 - [x] T13 · Menú de macOS, contextual y comandos de la app (MenuTests 8/8; capturas f45-menu-*)
-- [ ] T14 · Ayuda
+- [x] T14 · Ayuda (HelpTests 6/6; captura f45-help.png)
 - [ ] T15 · Buscar en el scrollback
 - [ ] T16 · Feedback, registros y funciones básicas del terminal
 #### Bloque 5 · Cierre

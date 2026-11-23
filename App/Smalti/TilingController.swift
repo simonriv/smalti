@@ -68,7 +68,7 @@ final class TilingController {
     /// What `onAppCommand` receives: they act on several windows or on the window itself.
     static let appCommands: Set<CommandID> = [
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
-        .configOpen, .secureInputToggle, .helpShow, .feedbackReport, .logsShow,
+        .configOpen, .secureInputToggle, .feedbackReport, .logsShow,
     ]
 
     private let deps: Dependencies
@@ -238,7 +238,7 @@ final class TilingController {
     // MARK: - Commands
 
     private static let viewCommands: Set<CommandID> = [
-        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch,
+        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
