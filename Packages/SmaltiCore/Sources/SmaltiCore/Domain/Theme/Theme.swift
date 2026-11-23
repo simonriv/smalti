@@ -53,11 +53,14 @@ public struct FeedbackTokens: Equatable, Sendable {
     public let choiceGap: Double
     public let noteFontSize: Double
     public let summaryFontSize: Double
+    /// The dot of "Idea" (ANSI purple; "Fallo" uses the error red).
+    public let ideaDot: RGBAColor
 
     public init(
         width: Double, topOffset: Double, padding: Double, titleFontSize: Double, choiceHeight: Double,
-        choiceGap: Double, noteFontSize: Double, summaryFontSize: Double
+        choiceGap: Double, noteFontSize: Double, summaryFontSize: Double, ideaDot: RGBAColor
     ) {
+        self.ideaDot = ideaDot
         self.width = width
         self.topOffset = topOffset
         self.padding = padding
@@ -148,6 +151,13 @@ public struct TerminalAppearance: Equatable, Sendable {
     public let palette: [RGBAColor]
     public let paddingX: Double
     public let paddingY: Double
+
+    /// F4.5 ⌘+ ⌘− ⌘0: the same appearance at another size (`FontScale.size`).
+    public func withFontSize(_ size: Double) -> TerminalAppearance {
+        TerminalAppearance(
+            fontFamily: fontFamily, fontSize: size, lineHeight: lineHeight, foreground: foreground, cursor: cursor,
+            palette: palette, paddingX: paddingX, paddingY: paddingY)
+    }
 }
 
 /// Workspace strip: the pills at the top of the window.

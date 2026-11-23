@@ -41,3 +41,15 @@ struct FontScaleTests {
         #expect(FontScale(base: 2).size == 6)
     }
 }
+
+@Suite("TerminalAppearance · font size")
+struct TerminalAppearanceFontSizeTests {
+    @Test func scaledKeepsEverythingButTheSize() {
+        let base = Theme.obsidian.terminal
+
+        let scaled = base.withFontSize(20)
+
+        #expect(scaled.fontSize == 20)
+        #expect(scaled.withFontSize(base.fontSize) == base)
+    }
+}

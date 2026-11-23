@@ -80,6 +80,8 @@ final class GhosttySurfaceView: NSView {
             childExited(code: code)
             return
         }
+        // ⌘ over a link: the pointing hand, as in a browser; back to the I-beam when it leaves.
+        if case .linkHovered(let url) = event { (url == nil ? NSCursor.iBeam : NSCursor.pointingHand).set() }
         continuation.yield(event)
         if Self.mayChangeForegroundProcess(event) { refreshForegroundProcess() }
     }
@@ -243,6 +245,15 @@ final class GhosttySurfaceView: NSView {
     /// What is visible as plain text, read on demand (VoiceOver, UI tests).
     override func accessibilityValue() -> Any? {
         surface.flatMap(ScrollbackExporter.visibleText)
+    }
+
+    /// `-SmaltiExposeCellSize YES` (UI tests, F4.5 C9): the cell size in points as the title, "celda 8 × 21", so a test sees
+    /// ⌘+ and ⌘− take effect. Nothing otherwise.
+    override func accessibilityTitle() -> String? {
+        guard UserDefaults.standard.bool(forKey: "SmaltiExposeCellSize"), let surface else { return nil }
+        let size = ghostty_surface_size(surface)
+        let scale = window?.backingScaleFactor ?? 2
+        return "celda \(Int(Double(size.cell_width_px) / scale)) × \(Int(Double(size.cell_height_px) / scale))"
     }
 
     // MARK: - Size, scale and focus

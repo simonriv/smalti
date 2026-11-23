@@ -25,6 +25,10 @@ struct TilingState {
     let home: WorkingDirectory
     /// The observatory's latest refresh (F3): status-bar figures and the agents' model and context.
     var observatory: ObservatoryFrame?
+    /// F4.5: secure keyboard entry is on (the menu or a password prompt).
+    var isSecureInput = false
+    /// F4.5: the link under the pointer while ⌘ is held.
+    var hoveredLink: String?
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -70,7 +74,7 @@ final class TilingController {
     /// What `onAppCommand` receives: they act on several windows or on the window itself.
     static let appCommands: Set<CommandID> = [
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
-        .configOpen, .secureInputToggle, .feedbackReport, .logsShow,
+        .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
     ]
 
     private let deps: Dependencies
@@ -265,6 +269,13 @@ final class TilingController {
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
             .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
             .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
+            .terminalClear: { [unowned self] in performInFocusedPane(.clear) },
+            .scrollPageUp: { [unowned self] in performInFocusedPane(.scroll(.pageUp)) },
+            .scrollPageDown: { [unowned self] in performInFocusedPane(.scroll(.pageDown)) },
+            .scrollTop: { [unowned self] in performInFocusedPane(.scroll(.top)) },
+            .scrollBottom: { [unowned self] in performInFocusedPane(.scroll(.bottom)) },
+            .promptPrevious: { [unowned self] in performInFocusedPane(.jumpToPrompt(.previous)) },
+            .promptNext: { [unowned self] in performInFocusedPane(.jumpToPrompt(.next)) },
         ]
         for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
@@ -509,7 +520,25 @@ final class TilingController {
 
     private var state: TilingState {
         TilingState(
-            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory)
+            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory,
+            isSecureInput: isSecureInput, hoveredLink: hoveredLink)
+    }
+
+    private var isSecureInput = false
+    private var hoveredLink: String?
+
+    /// F4.5: the status bar says "Entrada segura" while it is on; nothing is saved for it.
+    func showSecureInput(_ isOn: Bool) {
+        guard isOn != isSecureInput else { return }
+        isSecureInput = isOn
+        onObservatoryChange?(state)
+    }
+
+    /// F4.5: the link under the pointer, in the status bar while ⌘ is held over it.
+    func showHoveredLink(_ url: String?) {
+        guard url != hoveredLink else { return }
+        hoveredLink = url
+        onObservatoryChange?(state)
     }
 
     func show(_ frame: ObservatoryFrame) {

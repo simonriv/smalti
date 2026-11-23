@@ -2,6 +2,7 @@ import AppKit
 import ClaudeHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
+import DiagnosticsAdapter
 import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
@@ -32,6 +33,9 @@ final class AppComposition {
     private var configFile: URL?
     private var mainMenu: MainMenu?
     private let secureInput = SecureInput()
+    private let diagnostics: any DiagnosticLog = OSLogDiagnostics(subsystem: AppIdentity.current.bundleIdentifier)
+    /// ⌘+ ⌘− ⌘0 over `font_size`, for every pane of every window (F4.5).
+    private var fontScale = FontScale(base: 13)
     private var stateDirectoryForTests: String?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
@@ -134,9 +138,13 @@ final class AppComposition {
                 isAppActive: { NSApp.isActive }),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
-            applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
-                try runtime?.apply(appearance)
+            // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
+            applyAppearance: { [weak self, weak runtime] appearance throws(TerminalEngineError) in
+                guard let self else { return }
+                fontScale = fontScale.rebased(appearance.fontSize)
+                try runtime?.apply(appearance.withFontSize(fontScale.size))
             })
+        fontScale = FontScale(base: startup.theme.terminal.fontSize)
         controllerDependencies = dependencies
         configStore = startup.store
         configFile = startup.settings.configFile
@@ -244,10 +252,18 @@ final class AppComposition {
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
             mainMenu?.refresh()
         case .appAbout: showAbout()
+        case .feedbackReport:
+            composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
+                self?.report(kind, includingLogs: includesLogs)
+            }
+        case .logsShow: Task { await saveLogs() }
+        case .fontIncrease: scaleFont(fontScale.increased())
+        case .fontDecrease: scaleFont(fontScale.decreased())
+        case .fontReset: scaleFont(fontScale.reset())
         case .configOpen: openConfig()
         case .secureInputToggle:
             secureInput.toggle()
-            mainMenu?.refresh()
+            showSecureInput()
         default: break
         }
     }
@@ -395,6 +411,80 @@ final class AppComposition {
         return menu
     }
 
+    /// Every terminal at the new size; panes opened later get it too (the engine's config carries it).
+    private func scaleFont(_ scale: FontScale) {
+        guard scale != fontScale, let appearance = controller?.theme.terminal else { return }
+        fontScale = scale
+        do {
+            try runtime?.apply(appearance.withFontSize(scale.size))
+        } catch {
+            controller?.report(.engineFailure(error))
+        }
+    }
+
+    /// A password prompt started or ended: secure entry follows, and every status bar says so.
+    private func secureInputRequested(_ isOn: Bool) {
+        secureInput.promptRequested(isOn)
+        showSecureInput()
+    }
+
+    private func showSecureInput() {
+        compositions.forEach { $0.controller.showSecureInput(secureInput.isOn) }
+        mainMenu?.refresh()
+    }
+
+    // MARK: - Feedback and logs (F4.5)
+
+    /// What a report says about this build and this Mac.
+    private static var buildInfo: BuildInfo {
+        let commit = Bundle.main.infoDictionary?["SmaltiGitCommit"] as? String ?? "?"
+        let system = ProcessInfo.processInfo.operatingSystemVersion
+        return BuildInfo(
+            version: version, commit: commit, macOS: "\(system.majorVersion).\(system.minorVersion)", chip: chipName)
+    }
+
+    /// "Apple M4", from the kernel; "Apple silicon" when it cannot be read.
+    private static var chipName: String {
+        var size = 0
+        sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0)
+        guard size > 0 else { return "Apple silicon" }
+        var bytes = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("machdep.cpu.brand_string", &bytes, &size, nil, 0) == 0 else { return "Apple silicon" }
+        return String(decoding: bytes.prefix { $0 != 0 }.map(UInt8.init), as: UTF8.self)
+    }
+
+    /// Saves the logs first when asked, then opens the prefilled issue: the user reads it and submits it.
+    private func report(_ kind: FeedbackKind, includingLogs: Bool) {
+        Task {
+            if includingLogs { await saveLogs() }
+            URLOpener.open(FeedbackReport.issueURL(kind: kind, build: Self.buildInfo))
+        }
+    }
+
+    /// "Mostrar registros…": this run's logs in Downloads (`-SmaltiDownloadsPath` in tests), shown in Finder.
+    private func saveLogs() async {
+        let stamp = Date.now.formatted(
+            .verbatim(
+                "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)",
+                timeZone: .current, calendar: .current))
+        let file = Self.downloads.appending(path: "smalti-registros-\(stamp).log")
+        do {
+            try await diagnostics.export(to: file, heading: Self.buildInfo.summary)
+            URLOpener.reveal(file)
+        } catch {
+            logger.error("could not save the logs: \(String(describing: error), privacy: .public)")
+            controller?.report(.logsFailed(file.path(percentEncoded: false)))
+        }
+    }
+
+    private static var downloads: URL {
+        if let path = UserDefaults.standard.string(forKey: "SmaltiDownloadsPath"), !path.isEmpty {
+            return URL(filePath: path)
+        }
+        return FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: "Downloads")
+    }
+
     /// "Acerca de Smalti": the standard panel with the version, the commit and the credits.
     private func showAbout() {
         let info = Bundle.main.infoDictionary
@@ -451,7 +541,8 @@ final class AppComposition {
             completionMenu: { [weak self] in self?.completionMenu },
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
-            observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() })
+            observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() },
+            secureInputRequested: { [weak self] isOn in self?.secureInputRequested(isOn) })
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's

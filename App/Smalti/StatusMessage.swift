@@ -75,6 +75,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)
     }
 
+    /// F4.5 "Mostrar registros…": the file could not be written.
+    static func logsFailed(_ path: String) -> StatusMessage {
+        StatusMessage(text: "No se pudieron guardar los registros en \(path)", isTransient: true)
+    }
+
     /// F4.5 ⌘,: the template could not be written where the config lives.
     static func configTemplateFailed(_ path: String) -> StatusMessage {
         StatusMessage(text: "No se pudo crear \(path)", isTransient: true)

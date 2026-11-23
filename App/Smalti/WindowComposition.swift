@@ -21,6 +21,8 @@ struct WindowServices {
     let openHistory: (PaneID) -> Void
     /// A window opened or closed its observatory; the app counts them all.
     let observatoryOpenChanged: () -> Void
+    /// A password prompt in one of this window's panes asks for secure keyboard entry, or releases it.
+    let secureInputRequested: (Bool) -> Void
 }
 
 /// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
@@ -35,6 +37,7 @@ final class WindowComposition {
     private var observatoryScreen: ObservatoryController?
     private var help: HelpController?
     private var search: SearchBarController?
+    private var feedback: FeedbackController?
     private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -123,7 +126,14 @@ final class WindowComposition {
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || services.historyPalette()?.isOpen == true
-            || help?.isOpen == true || search?.isOpen == true
+            || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
+    }
+
+    /// "Reportar un problema o una idea" in this window; `submit` gets the kind and whether to save the logs.
+    func showFeedback(summary: String, submit: @escaping (FeedbackKind, Bool) -> Void) {
+        palette?.close()
+        help?.close()
+        feedback?.open(theme: controller.theme, summary: summary, submit: submit)
     }
 
     func dismissObservatory() {
@@ -184,6 +194,7 @@ final class WindowComposition {
             window.statusBar.render(state)
             // The Window menu's list of windows names each by its active workspace.
             window.title = state.set.active.name
+            labelTerminals(state.set.active)
             search?.follow(state.set)
             focusKeyboard(on: state.set.active.focusedPane)
             services.changed()
@@ -241,7 +252,20 @@ final class WindowComposition {
         let search = SearchBarController(window: window, engine: services.engine)
         search.onClose = { [weak self] pane in self?.focusKeyboard(on: pane) }
         self.search = search
-        controller.onViewEvent = { [weak search] event, pane in search?.progress(event, from: pane) }
+        let feedback = FeedbackController(window: window)
+        feedback.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+        }
+        self.feedback = feedback
+        controller.onViewEvent = { [weak self, weak search] event, pane in
+            switch event {
+            case .linkHovered(let url): self?.controller.showHoveredLink(url)
+            case .secureInputRequested(let isOn): self?.services.secureInputRequested(isOn)
+            default: search?.progress(event, from: pane)
+            }
+        }
         let screen = makeObservatoryScreen()
         observatoryScreen = screen
         controller.onViewCommand = { [weak self, weak palette, weak screen] command in
@@ -306,6 +330,7 @@ final class WindowComposition {
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        if feedback?.isOpen == true { return .overlay(allowing: []) }
         if search?.isOpen == true {
             return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
         }
@@ -313,6 +338,14 @@ final class WindowComposition {
         if services.historyPalette()?.isOpen == true { return .overlay(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
         return KeyContext(passingThrough: [.observatoryPeriod])
+    }
+
+    /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).
+    private func labelTerminals(_ workspace: Workspace) {
+        for (index, pane) in workspace.panes.enumerated() {
+            services.engine.view(for: pane.id)?.setAccessibilityLabel(
+                "Terminal, panel \(index + 1), \(pane.headerName.isEmpty ? "shell" : pane.headerName)")
+        }
     }
 
     /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.

@@ -202,6 +202,18 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "f45-search.png")
     }
 
+    /// F4.5: "Reportar un problema o una idea" over the window (mockup-feedback.png).
+    func testCaptureFeedback() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        openPalette()
+        app.typeText("reportar")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.feedback").waitForExistence(timeout: 5))
+        app.typeKey(.space, modifierFlags: [])
+        try save(app.windows.firstMatch.screenshot(), as: "f45-feedback.png")
+    }
+
     /// F4.5: each menu of the bar open, captured alone (mockup-menu.png).
     func testCaptureMenus() throws {
         launch(.isolatedSmalti())
