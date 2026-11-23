@@ -52,8 +52,11 @@
 - [x] T11 · `ReloadConfig` y `SearchCommands`
 - [x] T12 · `TOMLConfigAdapter`
 - [x] T13 · `GhosttyAdapter` para F1
-- [ ] T14 · Composition root y rejilla
-- [ ] T15 · `KeyRouter`, franja, cabecera y barra de estado
-- [ ] T16 · Paleta ⌘K
-- [ ] T17 · UI tests de F1
-- [ ] T18 · Mediciones, capturas y cierre
+- [x] T14 · Composition root y rejilla
+- [x] T15 · `KeyRouter`, franja, cabecera y barra de estado
+- [x] T16 · Paleta ⌘K
+- [x] T17 · UI tests de F1
+- [x] T18 · Mediciones y capturas (`docs/specs/F1-checklist.md`); paleta virtualizada (B7 21–32 ms); issue #5 GPU en reposo (heredado de F0, a F5)
+- [ ] Revisión final de la rama
+- [ ] Mutación ≥ 80 % en SmaltiCore y suites en verde
+- [ ] PR a `develop` y PR `develop` → `main` (merge de Simón)
