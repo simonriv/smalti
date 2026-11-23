@@ -21,20 +21,33 @@ public struct SaveSession {
         self.scrollback = scrollback
     }
 
-    /// Layout, directories and agents; line counts carry over from the last scrollback save.
-    public func saveStructure(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
-        save(SessionSnapshot.capture(set, scrollbackLines: previousLineCounts(), at: date))
+    /// Layout, directories, agents and window frames; line counts carry over from the last scrollback save.
+    public func saveStructure(of windows: WindowSet, at date: Date) -> SaveOutcome {
+        save(SessionSnapshot.capture(windows, scrollbackLines: previousLineCounts(), at: date))
     }
 
-    /// Also exports the scrollback of every pane that is at its shell.
-    public func saveWithScrollback(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
-        let panes = set.workspaces.flatMap(\.panes)
+    /// Also exports the scrollback of every pane that is at its shell, in every window.
+    public func saveWithScrollback(of windows: WindowSet, at date: Date) -> SaveOutcome {
+        let panes = windows.allPanes
         var lineCounts: [PaneID: Int] = [:]
         for pane in panes where pane.isAtShell {
             lineCounts[pane.id] = keepScrollback(of: pane.id)
         }
         transcripts.forget(allExcept: Set(panes.map(\.id)))
-        return save(SessionSnapshot.capture(set, scrollbackLines: lineCounts.compactMapValues { $0 }, at: date))
+        return save(SessionSnapshot.capture(windows, scrollbackLines: lineCounts.compactMapValues { $0 }, at: date))
+    }
+
+    /// A single window's workspaces, without a frame.
+    public func saveStructure(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
+        saveStructure(of: Self.window(set), at: date)
+    }
+
+    public func saveWithScrollback(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
+        saveWithScrollback(of: Self.window(set), at: date)
+    }
+
+    private static func window(_ set: WorkspaceSet) -> WindowSet {
+        WindowSet(first: WindowState(id: WindowID(), workspaces: set, frame: nil, isFullScreen: false))
     }
 
     /// Lines kept, or `nil` when the pane's scrollback could not be read or kept.

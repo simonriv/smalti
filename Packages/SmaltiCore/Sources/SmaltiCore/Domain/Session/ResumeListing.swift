@@ -38,14 +38,38 @@ public struct ResumeWorkspace: Equatable, Sendable {
     public let rows: [ResumeRow]
 }
 
+/// The workspaces of one saved window; `title` ("Ventana 1 · 2 workspaces") only when the session had two or more.
+public struct ResumeWindow: Equatable, Sendable {
+    public let title: String?
+    public let workspaces: [ResumeWorkspace]
+}
+
 public enum ResumeListing {
     /// Characters of a session id shown before "…".
     static let shortIDLength = 4
 
+    public static func windows(in snapshot: SessionSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry)
+        -> [ResumeWindow]
+    {
+        let isGrouped = snapshot.windows.count >= 2
+        return snapshot.windows.enumerated().map { index, window in
+            let count = window.workspaces.count
+            return ResumeWindow(
+                title: isGrouped ? "Ventana \(index + 1) · \(count) \(count == 1 ? "workspace" : "workspaces")" : nil,
+                workspaces: workspaces(window.workspaces, home: home, harnesses: harnesses))
+        }
+    }
+
     public static func workspaces(in snapshot: SessionSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry)
         -> [ResumeWorkspace]
     {
-        snapshot.workspaces.map { workspace in
+        workspaces(snapshot.workspaces, home: home, harnesses: harnesses)
+    }
+
+    private static func workspaces(
+        _ saved: [WorkspaceSnapshot], home: WorkingDirectory, harnesses: HarnessRegistry
+    ) -> [ResumeWorkspace] {
+        saved.map { workspace in
             let layout = LayoutCatalog.standard.strategyOrDefault(for: LayoutID(rawValue: workspace.layout))
             let count = workspace.panes.count
             return ResumeWorkspace(

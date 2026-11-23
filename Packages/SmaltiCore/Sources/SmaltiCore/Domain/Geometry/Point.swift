@@ -1,5 +1,5 @@
 /// A position in points, origin at the top left, y growing downward.
-public struct Point: Hashable, Sendable {
+public struct Point: Hashable, Codable, Sendable {
     public let x: Double
     public let y: Double
 

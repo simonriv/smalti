@@ -62,14 +62,23 @@ public struct RestorePlan: Equatable, Sendable {
         self.activeIndex = activeIndex
     }
 
+    /// The plan of one saved window.
+    public static func make(from window: WindowSnapshot, mode: RestoreMode, selection: RestoreSelection)
+        -> RestorePlan
+    {
+        let planned = window.workspaces.enumerated().compactMap { index, workspace in
+            plan(workspace, mode: mode, selection: selection).map { (savedIndex: index, workspace: $0) }
+        }
+        let active = planned.firstIndex { $0.savedIndex == window.activeIndex } ?? 0
+        return RestorePlan(workspaces: planned.map(\.workspace), activeIndex: active)
+    }
+
+    /// The plan of the window that was in front; an empty plan for a session without windows.
     public static func make(from snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection)
         -> RestorePlan
     {
-        let planned = snapshot.workspaces.enumerated().compactMap { index, workspace in
-            plan(workspace, mode: mode, selection: selection).map { (savedIndex: index, workspace: $0) }
-        }
-        let active = planned.firstIndex { $0.savedIndex == snapshot.activeIndex } ?? 0
-        return RestorePlan(workspaces: planned.map(\.workspace), activeIndex: active)
+        guard let front = snapshot.front else { return RestorePlan(workspaces: [], activeIndex: 0) }
+        return make(from: front, mode: mode, selection: selection)
     }
 
     private static func plan(_ workspace: WorkspaceSnapshot, mode: RestoreMode, selection: RestoreSelection)

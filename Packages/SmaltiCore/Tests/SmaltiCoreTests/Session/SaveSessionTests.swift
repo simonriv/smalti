@@ -49,6 +49,38 @@ struct SaveSessionTests {
         #expect(archive.saved?.workspaces[0].panes.map(\.scrollbackLines) == [2, 0])
     }
 
+    /// F4.5: every window is saved, and a pane of a back window keeps its scrollback.
+    @Test func saveWithScrollbackCoversEveryWindow() {
+        let other = Pane(id: PaneID(), workingDirectory: SessionFixtures.directory("/Users/s/dev/billi"))
+        let back = WindowState(
+            id: WindowID(),
+            workspaces: WorkspaceSet(
+                first: Workspace.empty(
+                    name: "billi", rootDirectory: SessionFixtures.directory("/Users/s/dev/billi"),
+                    layout: DwindleLayout()
+                ).adding(other)),
+            frame: nil, isFullScreen: false)
+        let windows = WindowSet(first: back).opening(
+            WindowState(id: WindowID(), workspaces: set, frame: nil, isFullScreen: false))
+        scrollback.contents[other.id] = Scrollback(text: "x", format: .plain)
+
+        _ = save.saveWithScrollback(of: windows, at: SessionFixtures.savedAt)
+
+        #expect(archive.saved?.windows.count == 2)
+        #expect(archive.saved?.frontIndex == 1)
+        #expect(archive.scrollback(of: other.id) == Scrollback(text: "x", format: .plain))
+    }
+
+    @Test func saveStructureOfWindowsKeepsTheirFrames() {
+        let frame = Rect(x: 1, y: 2, width: 800, height: 600)
+        let windows = WindowSet(first: WindowState(id: WindowID(), workspaces: set, frame: frame, isFullScreen: true))
+
+        _ = save.saveStructure(of: windows, at: SessionFixtures.savedAt)
+
+        #expect(archive.saved?.windows.first?.frame == frame)
+        #expect(archive.saved?.windows.first?.isFullScreen == true)
+    }
+
     @Test func exportAsksForTheLastTenThousandLines() {
         _ = save.saveWithScrollback(of: set, at: SessionFixtures.savedAt)
 
