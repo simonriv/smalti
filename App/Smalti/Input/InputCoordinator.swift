@@ -17,12 +17,15 @@ final class InputCoordinator {
     var onMenu: ((Request, InputLine, CompletionResult) -> Void)?
     var onGenerated: ((Request, InputLine, [Suggestion]) -> Void)?
     var onHistory: ((Request, String) -> Void)?
+    /// Every new line of a pane, for an open menu to refilter or close.
+    var onLine: ((PaneID, InputLine) -> Void)?
 
     private let session: InputSession
     private let provider: any TerminalViewProvider
     private let directory: (PaneID) -> String?
     private var server: InputSocketServer?
     private var panes: [UUID: PaneID] = [:]
+    private var latestSeq: [PaneID: Int] = [:]
     private var events: AsyncStream<(InputConnection, ShellMessage)>.Continuation?
 
     init(session: InputSession, provider: any TerminalViewProvider, directory: @escaping (PaneID) -> String?) {
@@ -61,13 +64,28 @@ final class InputCoordinator {
         }
     }
 
+    /// Sends to the pane's zsh with the last `seq` it sent: zsh drops any other. False when it did not go out whole.
+    @discardableResult
+    func send(_ message: (Int) -> SmaltiMessage, to request: Request) -> Bool {
+        request.connection.send(message(latestSeq[request.pane] ?? request.seq))
+    }
+
     private func handle(_ message: ShellMessage, from connection: InputConnection) async {
         if case .hello(let pane) = message { panes[connection.id] = pane }
         guard let pane = panes[connection.id] else { return }
         if message == .bye { panes[connection.id] = nil }
+        if let seq = Self.seq(of: message) { latestSeq[pane] = seq }
+        if case .line(_, let line) = message { onLine?(pane, line) }
         let path = directory(pane) ?? "/"
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection)
+    }
+
+    private static func seq(of message: ShellMessage) -> Int? {
+        switch message {
+        case .line(let seq, _), .exec(let seq, _), .done(let seq, _), .complete(let seq, _), .history(let seq, _): seq
+        case .hello, .bye: nil
+        }
     }
 
     private func act(on reply: InputReply, pane: PaneID, connection: InputConnection) {

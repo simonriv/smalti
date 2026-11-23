@@ -18,6 +18,7 @@ public struct Theme: Equatable, Sendable {
     public let resume: ResumeTokens
     public let agent: AgentStatusTokens
     public let observatory: ObservatoryTokens
+    public let inputMenu: InputMenuTokens
 }
 
 /// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
@@ -310,6 +311,33 @@ public struct ResumeTokens: Equatable, Sendable {
     }
 }
 
+/// F4's Tab menu, from `Main.dc.html` (rows, border, background) plus the help line inside it (approved mockup).
+public struct InputMenuTokens: Equatable, Sendable {
+    public let width: Double
+    public let cornerRadius: Double
+    public let border: RGBAColor
+    public let background: RGBAColor
+    public let shadowRadius: Double
+    public let shadowOffsetY: Double
+    public let shadowOpacity: Double
+    public let padding: Double
+    public let rowFontSize: Double
+    /// Rows are 12 px text with the terminal's 1.62 line height and 5 px vertical padding.
+    public let rowHeight: Double
+    public let rowGap: Double
+    public let rowCornerRadius: Double
+    public let rowPaddingHorizontal: Double
+    public let nameColumnWidth: Double
+    public let columnGap: Double
+    public let footerHeight: Double
+    public let footerFontSize: Double
+    /// Distance between the cursor's cell and the menu.
+    public let cursorGap: Double
+    /// The menu opens below the cursor when this many rows fit there; above otherwise.
+    public let rowsBelowCursor: Int
+    public let maximumVisibleRows: Int
+}
+
 public struct MotionTokens: Equatable, Sendable {
     /// Seconds a pane takes to move to its new place; disabled by "Reducir movimiento".
     public let rearrangeDuration: Double
@@ -334,7 +362,8 @@ extension Theme {
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
-            motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory)
+            motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
+            inputMenu: inputMenu)
     }
 }
 

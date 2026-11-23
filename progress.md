@@ -161,7 +161,7 @@
 - [x] T12 · ⌃R, Tab y enlaces (enmienda 1: sin toma de control de plugins)
 #### Bloque 4 · App
 - [x] T13 · `InputCoordinator` y composición
-- [ ] T14 · Menú de completions
+- [x] T14 · Menú de completions
 - [ ] T15 · Paleta ⌃R y comando de ⌘K
 - [ ] T16 · UI tests, aislamiento y capturas
 #### Bloque 5 · Cierre

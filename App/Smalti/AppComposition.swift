@@ -27,6 +27,7 @@ final class AppComposition {
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
     private var input: InputCoordinator?
+    private var completionMenu: CompletionMenuController?
     private var transcripts: ClaudeTranscripts?
     private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
@@ -291,6 +292,12 @@ final class AppComposition {
         do {
             try coordinator.start(socketFile: socket)
             input = coordinator
+            completionMenu = CompletionMenuController(
+                coordinator: coordinator, provider: engine,
+                context: (
+                    theme: { [weak self] in self?.controller?.theme ?? startup.theme },
+                    focusedPane: { [weak self] in self?.controller?.set.active.focusedPane }
+                ))
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
         }
@@ -415,7 +422,9 @@ final class AppComposition {
             perform: { [weak controller] command in controller?.perform(command) })
         // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
         window.routeKey = { [weak self] event, composing in
-            self?.restoreScreen == nil && router.route(event, composing: composing)
+            guard self?.restoreScreen == nil else { return false }
+            if !composing, self?.completionMenu?.handle(event) == true { return true }
+            return router.route(event, composing: composing)
         }
     }
 

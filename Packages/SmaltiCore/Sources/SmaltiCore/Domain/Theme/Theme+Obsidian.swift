@@ -126,5 +126,11 @@ extension Theme {
             spacing: ObservatorySpacing(
                 cardStack: 6, stateDot: 7, contextBar: 8, selectionBar: 2, detailColumns: 18, detailStack: 8,
                 detailRatio: 1.2, activityColumns: 10, chartLabelSize: 10, localModels: 10, modelLines: 4, system: 14,
-                systemGroup: 6)))
+                systemGroup: 6)),
+        inputMenu: InputMenuTokens(
+            width: 360, cornerRadius: 10, border: white(0.1),
+            background: RGBAColor(red: 18, green: 20, blue: 27, alpha: 0.94),
+            shadowRadius: 40, shadowOffsetY: 18, shadowOpacity: 0.45, padding: 5, rowFontSize: 12, rowHeight: 29.4,
+            rowGap: 1, rowCornerRadius: 6, rowPaddingHorizontal: 8, nameColumnWidth: 92, columnGap: 10,
+            footerHeight: 24, footerFontSize: 10.5, cursorGap: 4, rowsBelowCursor: 6, maximumVisibleRows: 8))
 }
