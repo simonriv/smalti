@@ -167,4 +167,20 @@ struct ZshBindingsTests {
 
         #expect(zsh.printed.contains("redo"))
     }
+
+    /// Block 4 review m1: Return right after a dropped ⌘↩ edit never runs the old line.
+    @Test func returnAfterAStaleRunningEditIsRefused() throws {
+        let server = try FakeInputServer { fields in
+            fields.first == "history" ? ["editrun\t\((Int(fields[1]) ?? 1) - 1)\t2\tls"] : []
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("print -r -- OLD\u{12}", settle: 0.5)
+        zsh.type("\r", settle: 0.6)
+
+        #expect(!server.received.contains { $0.hasPrefix("exec\t") })
+        zsh.type("\r", settle: 0.6)
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("exec\t") && $0.hasSuffix("print -r -- OLD") } })
+    }
 }

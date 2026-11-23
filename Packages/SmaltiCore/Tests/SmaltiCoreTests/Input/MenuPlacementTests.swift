@@ -55,4 +55,33 @@ struct MenuPlacementTests {
         #expect(tokens.rowsBelowCursor == 6)
         #expect(tokens.maximumVisibleRows == 8)
     }
+
+    // Block 4 review I3: eight rows near the bottom never leave the pane; neither does a narrow pane.
+    @Test func menuWithEightRowsNeverLeavesThePane() {
+        let cursor = Rect(x: 100, y: 340, width: 8, height: 21)
+
+        let frame = MenuPlacement.frame(cursor: cursor, pane: Size(width: 800, height: 600), rows: 8, tokens: tokens)
+
+        #expect(frame.origin.y + frame.size.height <= 600)
+        #expect(frame.origin.y >= 0)
+    }
+
+    @Test func menuIsNeverWiderThanThePane() {
+        let frame = MenuPlacement.frame(cursor: cell, pane: Size(width: 300, height: 600), rows: 3, tokens: tokens)
+
+        #expect(frame.size.width == 300)
+        #expect(frame.origin.x == 0)
+    }
+
+    // Block 4 review m4: the ⌃R palette's measures live in the theme (approved mockup over Paleta.dc.html).
+    @Test func historyPaletteValues() {
+        let palette = Theme.obsidian.historyPalette
+
+        #expect(palette.widthFraction == 0.86)
+        #expect(palette.minimumWidth == 480)
+        #expect(palette.maximumWidth == 720)
+        #expect(palette.rowHeight == 32)
+        #expect(palette.visibleRows == 8)
+        #expect(Theme.obsidian.motion.overlayAppearDuration == 0.12)
+    }
 }

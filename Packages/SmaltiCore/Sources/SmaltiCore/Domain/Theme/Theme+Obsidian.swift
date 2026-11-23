@@ -89,7 +89,7 @@ extension Theme {
             iconSize: 16, searchIconStroke: 1.5, commandIconStroke: 1.4, listPaddingTop: 4, listPaddingHorizontal: 6,
             listPaddingBottom: 8, rowPadding: 12, shadowOffsetY: 40, shadowBlur: 100, shadowOpacity: 0.55,
             markerFontSize: 11.5, footerGap: 16),
-        motion: MotionTokens(rearrangeDuration: 0.15),
+        motion: MotionTokens(rearrangeDuration: 0.15, overlayAppearDuration: 0.12),
         emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText),
         resume: ResumeTokens(
             contentWidth: 908, paddingVertical: 28, paddingHorizontal: 32, blockGap: 18, titleFontSize: 20,
@@ -132,5 +132,11 @@ extension Theme {
             background: RGBAColor(red: 18, green: 20, blue: 27, alpha: 0.94),
             shadowRadius: 40, shadowOffsetY: 18, shadowOpacity: 0.45, padding: 5, rowFontSize: 12, rowHeight: 29.4,
             rowGap: 1, rowCornerRadius: 6, rowPaddingHorizontal: 8, nameColumnWidth: 92, columnGap: 10,
-            footerHeight: 24, footerFontSize: 10.5, cursorGap: 4, rowsBelowCursor: 6, maximumVisibleRows: 8))
+            footerHeight: 24, footerFontSize: 10.5, footerTopGap: 4, textLineHeight: 1.4, cursorGap: 4,
+            rowsBelowCursor: 6, maximumVisibleRows: 8),
+        historyPalette: HistoryPaletteTokens(
+            widthFraction: 0.86, minimumWidth: 480, maximumWidth: 720, topOffset: 26, chipCornerRadius: 6,
+            chipBorder: white(0.1), chipActiveBorderAlpha: 0.5, chipPaddingHorizontal: 7, chipPaddingVertical: 2,
+            listInset: 6, rowHeight: 32, rowPaddingHorizontal: 10, rowGap: 10, commandFontSize: 12, dotSize: 9,
+            visibleRows: 8))
 }

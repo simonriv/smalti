@@ -269,6 +269,19 @@ struct InputSessionTests {
 
         #expect(await session.suggest(line(""), pane: pane, directory: "/repo") == "")
     }
+
+    // Block 4 review m6: "Historial vacío" only when there is no history at all, not when a scope has none.
+    @Test func historyIsEmptyUntilACommandIsRecorded() async {
+        let session = session()
+        await session.start()
+        #expect(await session.isHistoryEmpty)
+
+        await session.began("make", pane: pane, directory: "/a")
+        await session.finished(pane: pane, exit: 0)
+
+        #expect(await !session.isHistoryEmpty)
+        #expect(await session.search("", scope: .directory("/b")).isEmpty)
+    }
 }
 
 @Suite("InputSettings")

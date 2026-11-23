@@ -11,11 +11,24 @@ public enum ShellMessage: Equatable, Sendable {
     case bye
 }
 
-/// What Smalti answers. zsh drops any answer whose `seq` is not the last one it sent.
+/// One message from zsh with the directory it was sent from (`$PWD`), when the message carries one: `line`,
+/// `exec`, `complete` and `history` do, so a `cd` just before never races the terminal's OSC 7.
+public struct ShellPacket: Equatable, Sendable {
+    public let message: ShellMessage
+    public let directory: String?
+
+    public init(_ message: ShellMessage, directory: String? = nil) {
+        self.message = message
+        self.directory = directory
+    }
+}
+
+/// What Smalti answers. zsh drops any answer whose `seq` is not the last one it sent. `edit` with `thenEnter` is
+/// the edit of ⌘↩: Smalti types Return right after it, and zsh refuses that Return if it dropped the edit.
 public enum SmaltiMessage: Equatable, Sendable {
     case specs([String])
     case suggest(seq: Int, String)
-    case edit(seq: Int, InputLine)
+    case edit(seq: Int, InputLine, thenEnter: Bool = false)
     case fallback(seq: Int)
 }
 
@@ -36,17 +49,27 @@ public enum InputProtocol {
     /// write never blocks the shell.
     public static let maxLineBytes = 1999
 
-    public static func decode(_ line: String) throws(InputProtocolError) -> ShellMessage {
+    /// `line <seq> <pwd> <cursor> <buffer>`, `exec <seq> <pwd> <command>`, `complete <seq> <pwd> <cursor> <buffer>`,
+    /// `history <seq> <pwd> <query>`, `done <seq> <exit>`, `hello <pane>`, `bye`.
+    public static func decode(_ line: String) throws(InputProtocolError) -> ShellPacket {
         var fields = Fields(line: line)
         let verb = try fields.next()
         switch verb {
-        case "hello": return .hello(try fields.pane())
-        case "line": return .line(seq: try fields.int(), try fields.inputLine())
-        case "exec": return .exec(seq: try fields.int(), command: try fields.next())
-        case "done": return .done(seq: try fields.int(), exit: try fields.int())
-        case "complete": return .complete(seq: try fields.int(), try fields.inputLine())
-        case "history": return .history(seq: try fields.int(), query: try fields.next())
-        case "bye": return .bye
+        case "hello": return ShellPacket(.hello(try fields.pane()))
+        case "line":
+            let (seq, directory) = (try fields.int(), try fields.next())
+            return ShellPacket(.line(seq: seq, try fields.inputLine()), directory: directory)
+        case "exec":
+            let (seq, directory) = (try fields.int(), try fields.next())
+            return ShellPacket(.exec(seq: seq, command: try fields.next()), directory: directory)
+        case "done": return ShellPacket(.done(seq: try fields.int(), exit: try fields.int()))
+        case "complete":
+            let (seq, directory) = (try fields.int(), try fields.next())
+            return ShellPacket(.complete(seq: seq, try fields.inputLine()), directory: directory)
+        case "history":
+            let (seq, directory) = (try fields.int(), try fields.next())
+            return ShellPacket(.history(seq: seq, query: try fields.next()), directory: directory)
+        case "bye": return ShellPacket(.bye)
         default: throw InputProtocolError(line: line, cause: "unknown message \"\(verb)\"")
         }
     }
@@ -55,25 +78,26 @@ public enum InputProtocol {
         switch message {
         case .specs(let commands): join("specs", commands.joined(separator: " "))
         case .suggest(let seq, let text): join("suggest", String(seq), text)
-        case .edit(let seq, let line): join("edit", String(seq), String(line.cursor), line.text)
+        case .edit(let seq, let line, let thenEnter):
+            join(thenEnter ? "editrun" : "edit", String(seq), String(line.cursor), line.text)
         case .fallback(let seq): join("fallback", String(seq))
         }
     }
 
     /// The shell side's encoding, for tests and the benchmark; nil when the line exceeds `maxLineBytes`.
-    public static func encode(_ message: ShellMessage) -> String? {
-        let encoded = fields(of: message)
+    public static func encode(_ packet: ShellPacket) -> String? {
+        let encoded = fields(of: packet.message, directory: packet.directory ?? "/")
         return encoded.utf8.count > maxLineBytes ? nil : encoded
     }
 
-    private static func fields(of message: ShellMessage) -> String {
+    private static func fields(of message: ShellMessage, directory: String) -> String {
         switch message {
         case .hello(let pane): join("hello", pane.description)
-        case .line(let seq, let line): join("line", String(seq), String(line.cursor), line.text)
-        case .exec(let seq, let command): join("exec", String(seq), command)
+        case .line(let seq, let line): join("line", String(seq), directory, String(line.cursor), line.text)
+        case .exec(let seq, let command): join("exec", String(seq), directory, command)
         case .done(let seq, let exit): join("done", String(seq), String(exit))
-        case .complete(let seq, let line): join("complete", String(seq), String(line.cursor), line.text)
-        case .history(let seq, let query): join("history", String(seq), query)
+        case .complete(let seq, let line): join("complete", String(seq), directory, String(line.cursor), line.text)
+        case .history(let seq, let query): join("history", String(seq), directory, query)
         case .bye: "bye"
         }
     }

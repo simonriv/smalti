@@ -31,7 +31,7 @@ public struct InputConnection: Hashable, Sendable {
 }
 
 /// F4's shell input channel (`<state>/input.sock`, 0600): every zsh of every pane keeps one connection open and
-/// sends one `ShellMessage` per line. Each connection is read on its own thread, never the main one, so the socket
+/// sends one `ShellPacket` (a message and its directory) per line. Each connection is read on its own thread, never the main one, so the socket
 /// always drains and a shell is never left blocked writing. Unreadable lines are dropped; a line over
 /// `maximumLineBytes` is skipped up to its newline.
 public final class InputSocketServer: Sendable {
@@ -46,8 +46,7 @@ public final class InputSocketServer: Sendable {
         set { closeHandler.value = newValue }
     }
 
-    public init(socketFile: URL, handler: @escaping @Sendable (InputConnection, ShellMessage) -> Void) throws(IPCError)
-    {
+    public init(socketFile: URL, handler: @escaping @Sendable (InputConnection, ShellPacket) -> Void) throws(IPCError) {
         let closeHandler = closeHandler
         listener = try InputListener(path: socketFile.path(percentEncoded: false)) { event in
             switch event {
@@ -66,7 +65,7 @@ public final class InputSocketServer: Sendable {
 }
 
 enum InputEvent {
-    case message(InputConnection, ShellMessage)
+    case message(InputConnection, ShellPacket)
     case closed(InputConnection)
 }
 
@@ -227,7 +226,7 @@ private struct LineReader {
                 } else if let message = try? InputProtocol.decode(String(decoding: line, as: UTF8.self)) {
                     deliver(.message(connection, message))
                     // The shell is leaving; a background child may still hold its socket open.
-                    if message == .bye {
+                    if message.message == .bye {
                         deliver(.closed(connection))
                         return
                     }

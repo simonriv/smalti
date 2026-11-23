@@ -125,6 +125,9 @@ public actor InputSession {
         return CompletionEngine.rank(items, prefix: line.wordBeforeCursor, history: index)
     }
 
+    /// True while no command was ever recorded: ⌃R then says "Historial vacío", not "Sin coincidencias".
+    public var isHistoryEmpty: Bool { index.count == 0 }
+
     /// SearchHistory (⌃R).
     public func search(_ query: String, scope: HistoryScope) -> [HistoryHit] {
         HistorySearch.search(query, scope: scope, in: index)

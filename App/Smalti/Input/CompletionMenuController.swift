@@ -1,36 +1,35 @@
 import AppKit
 import SmaltiCore
 
-/// Shows the Tab menu over the pane, at the cursor, and turns its effects into answers to zsh. While it is open it
-/// takes ↑ ↓ ⇥ ↩ esc from the keyboard (only in its own pane); everything else reaches zsh, whose new line
-/// refilters or closes it. It closes as soon as the shell is no longer at its prompt.
+/// Shows the Tab menu over the pane, at the cursor, and turns its effects into answers to zsh.
+///
+/// It only takes keys while the pane's terminal has the keyboard (not under ⌘K, ⌃R or the observatory): ↑ ↓ ⇥ ↩
+/// and esc are the menu's; any other key closes it and reaches zsh, except letters and ⌫, which reach zsh and
+/// refilter it through the new line. It closes as soon as the shell leaves its prompt, and follows the pane's
+/// size.
 @MainActor
 final class CompletionMenuController {
     private let coordinator: InputCoordinator
     private let provider: any TerminalViewProvider
     private let theme: () -> Theme
-    private let focusedPane: () -> PaneID?
     private var menu = CompletionMenu()
     private var request: InputCoordinator.Request?
     private var view: CompletionMenuView?
     private var promptWatch: Timer?
+    private var resizes: NSObjectProtocol?
 
-    init(
-        coordinator: InputCoordinator, provider: any TerminalViewProvider,
-        context: (theme: () -> Theme, focusedPane: () -> PaneID?)
-    ) {
+    init(coordinator: InputCoordinator, provider: any TerminalViewProvider, theme: @escaping () -> Theme) {
         self.coordinator = coordinator
         self.provider = provider
-        theme = context.theme
-        focusedPane = context.focusedPane
+        self.theme = theme
         coordinator.onMenu = { [weak self] request, line, result in self?.open(request, line: line, result: result) }
         coordinator.onGenerated = { [weak self] request, line, items in
-            guard request.pane == self?.request?.pane else { return }
-            self?.apply(self?.menu.addGenerated(items, for: line) ?? .none)
+            guard let self, request == self.request else { return }
+            self.apply(self.menu.addGenerated(items, for: line))
         }
         coordinator.onLine = { [weak self] pane, line in
-            guard pane == self?.request?.pane else { return }
-            self?.apply(self?.menu.lineChanged(line) ?? .none)
+            guard let self, pane == self.request?.pane else { return }
+            self.apply(self.menu.lineChanged(line))
         }
     }
 
@@ -38,10 +37,14 @@ final class CompletionMenuController {
 
     /// True when the menu used the key.
     func handle(_ event: NSEvent) -> Bool {
-        guard isOpen, event.type == .keyDown, let pane = request?.pane, focusedPane() == pane else { return false }
-        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
-            let key = Self.menuKey(event.keyCode)
+        guard isOpen, event.type == .keyDown, let pane = request?.pane, let terminal = provider.view(for: pane),
+            terminal.window?.firstResponder === terminal
         else { return false }
+        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        guard modifiers.isEmpty, let key = Self.menuKey(event.keyCode) else {
+            if !Self.edits(event, modifiers: modifiers) { apply(menu.press(.other)) }
+            return false
+        }
         apply(menu.press(key))
         return true
     }
@@ -81,6 +84,7 @@ final class CompletionMenuController {
         guard let request, provider.isAtPrompt(request.pane), let host = provider.view(for: request.pane),
             let cell = provider.cursorCell(request.pane), !menu.visible.isEmpty
         else { return close() }
+        let isNew = view == nil
         let menuView = view ?? CompletionMenuView(theme: theme())
         let frame = MenuPlacement.frame(
             cursor: cell, pane: Size(width: host.bounds.width, height: host.bounds.height), rows: menu.visible.count,
@@ -91,7 +95,10 @@ final class CompletionMenuController {
         menuView.show(menu.visible, selected: menu.selected)
         if menuView.superview !== host { host.addSubview(menuView) }
         view = menuView
-        watchPrompt()
+        if isNew {
+            Appearing.fadeIn(menuView, duration: theme().motion.overlayAppearDuration)
+            watch(host)
+        }
     }
 
     private func hide() {
@@ -99,16 +106,24 @@ final class CompletionMenuController {
         view = nil
         promptWatch?.invalidate()
         promptWatch = nil
+        resizes.map(NotificationCenter.default.removeObserver)
+        resizes = nil
     }
 
-    /// A command that starts (or a full-screen program) closes the menu even without a key press.
-    private func watchPrompt() {
-        guard promptWatch == nil else { return }
+    /// A command that starts (or a full-screen program) closes the menu even without a key press; a resize or a
+    /// font change places it again.
+    private func watch(_ host: NSView) {
         promptWatch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let pane = self.request?.pane else { return }
                 if !self.provider.isAtPrompt(pane) { self.close() }
             }
+        }
+        host.postsFrameChangedNotifications = true
+        resizes = NotificationCenter.default.addObserver(
+            forName: NSView.frameDidChangeNotification, object: host, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.render() }
         }
     }
 
@@ -120,6 +135,29 @@ final class CompletionMenuController {
         case 36, 76: .enter
         case 53: .escape
         default: nil
+        }
+    }
+
+    /// Typing (characters without ⌘ or ⌃) and ⌫ change the line: zsh's next `line` refilters the menu.
+    private static func edits(_ event: NSEvent, modifiers: NSEvent.ModifierFlags) -> Bool {
+        if event.keyCode == 51 { return modifiers.isEmpty }
+        guard modifiers.isDisjoint(with: [.command, .control]), let text = event.characters, !text.isEmpty else {
+            return false
+        }
+        return text.unicodeScalars.allSatisfy { !CharacterSet.controlCharacters.contains($0) }
+            && Self.menuKey(event.keyCode) == nil
+    }
+}
+
+/// The overlays' appearance: a fade of at most 150 ms, none with "Reducir movimiento".
+@MainActor
+enum Appearing {
+    static func fadeIn(_ view: NSView, duration: Double) {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, duration > 0 else { return }
+        view.alphaValue = 0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            view.animator().alphaValue = 1
         }
     }
 }

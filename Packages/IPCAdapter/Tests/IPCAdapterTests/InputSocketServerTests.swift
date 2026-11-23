@@ -57,16 +57,16 @@ final class LineClient {
 /// Collects what the server hands to the app, across its reader threads.
 final class Received: @unchecked Sendable {
     private let lock = NSLock()
-    private var messages: [(InputConnection, ShellMessage)] = []
+    private var messages: [(InputConnection, ShellPacket)] = []
     private var closed: [InputConnection] = []
 
-    func add(_ connection: InputConnection, _ message: ShellMessage) {
+    func add(_ connection: InputConnection, _ message: ShellPacket) {
         lock.withLock { messages.append((connection, message)) }
     }
 
     func close(_ connection: InputConnection) { lock.withLock { closed.append(connection) } }
 
-    var all: [(InputConnection, ShellMessage)] { lock.withLock { messages } }
+    var all: [(InputConnection, ShellPacket)] { lock.withLock { messages } }
     var closedCount: Int { lock.withLock { closed.count } }
 
     func wait(for count: Int, timeout: TimeInterval = 2) -> Bool {
@@ -98,10 +98,10 @@ struct InputSocketServerTests {
         defer { server.stop() }
         let client = try #require(LineClient(path: path))
 
-        client.send("line\t1\t3\tgit")
+        client.send("line\t1\t/repo\t3\tgit")
 
         #expect(received.wait(for: 1))
-        #expect(received.all.first?.1 == .line(seq: 1, InputLine(text: "git", cursor: 3)))
+        #expect(received.all.first?.1.message == .line(seq: 1, InputLine(text: "git", cursor: 3)))
     }
 
     @Test func responsesGoToTheirOwnConnection() throws {
@@ -109,13 +109,13 @@ struct InputSocketServerTests {
         defer { server.stop() }
         let first = try #require(LineClient(path: path))
         let second = try #require(LineClient(path: path))
-        first.send("line\t1\t1\ta")
+        first.send("line\t1\t/\t1\ta")
         #expect(received.wait(for: 1))
-        second.send("line\t1\t1\tb")
+        second.send("line\t1\t/\t1\tb")
         #expect(received.wait(for: 2))
 
         for (connection, message) in received.all {
-            if case .line(_, let line) = message { connection.send(.suggest(seq: 1, line.text + "!")) }
+            if case .line(_, let line) = message.message { connection.send(.suggest(seq: 1, line.text + "!")) }
         }
 
         #expect(first.readLine() == "suggest\t1\ta!")
@@ -147,7 +147,7 @@ struct InputSocketServerTests {
         client.send("done\t2\t0")
 
         #expect(received.wait(for: 1))
-        #expect(received.all.map(\.1) == [.done(seq: 2, exit: 0)])
+        #expect(received.all.map(\.1.message) == [.done(seq: 2, exit: 0)])
     }
 
     @Test func clientThatNeverReadsDoesNotBlockServer() throws {
@@ -169,11 +169,11 @@ struct InputSocketServerTests {
         defer { server.stop() }
         let client = try #require(LineClient(path: path))
 
-        client.send("line\t1\t0\t" + String(repeating: "a", count: InputSocketServer.maximumLineBytes + 10))
+        client.send("line\t1\t/\t0\t" + String(repeating: "a", count: InputSocketServer.maximumLineBytes + 10))
         client.send("done\t3\t1")
 
         #expect(received.wait(for: 1))
-        #expect(received.all.map(\.1) == [.done(seq: 3, exit: 1)])
+        #expect(received.all.map(\.1.message) == [.done(seq: 3, exit: 1)])
     }
 
     @Test func longPathThrowsWithPath() {

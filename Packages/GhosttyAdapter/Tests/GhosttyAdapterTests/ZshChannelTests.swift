@@ -7,7 +7,7 @@ struct ZshChannelTests {
     /// A server that suggests `tatus` after `git s` and `ommit -m` after `git c`, echoing the line's seq.
     private static func suggesting(_ fields: [String]) -> [String] {
         guard fields.first == "line", fields.count >= 4 else { return [] }
-        switch fields[3] {
+        switch fields.last ?? "" {
         case "git s": return ["suggest\t\(fields[1])\ttatus"]
         case "git c": return ["suggest\t\(fields[1])\tommit -m"]
         default: return []
@@ -21,7 +21,7 @@ struct ZshChannelTests {
 
         zsh.type("ls")
 
-        #expect(server.waitFor { $0.contains("line\t2\t2\tls") })
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("line\t2\t") && $0.hasSuffix("\t2\tls") } })
         #expect(server.received.first?.hasPrefix("hello\t6F2B4E1C") == true)
     }
 
@@ -241,7 +241,7 @@ struct ZshChannelTests {
     /// C2: an answer without its newline never freezes the line editor.
     @Test func partialAnswerNeverFreezesTyping() throws {
         let server = try FakeInputServer { fields in
-            fields.first == "line" && fields.count > 3 && fields[3] == "ec" ? ["RAW:suggest\t\(fields[1])\tho hi"] : []
+            fields.first == "line" && fields.last == "ec" ? ["RAW:suggest\t\(fields[1])\tho hi"] : []
         }
         let zsh = try ZshHarness(socket: server.path)
         defer { zsh.close() }
@@ -298,7 +298,7 @@ struct ZshChannelTests {
     /// I5: a line too long to send still makes earlier answers stale.
     @Test func overLongLineDiscardsTheLateSuggestion() throws {
         let server = try FakeInputServer(mode: .slow) { fields in
-            fields.first == "line" && fields.count > 3 && fields[3] == "git st" ? ["suggest\t\(fields[1])\tatus"] : []
+            fields.first == "line" && fields.last == "git st" ? ["suggest\t\(fields[1])\tatus"] : []
         }
         let zsh = try ZshHarness(socket: server.path)
         defer { zsh.close() }
@@ -334,5 +334,18 @@ struct ZshChannelTests {
         zsh.type("hunter2", settle: 0.4)
 
         #expect(!server.received.contains { $0.contains("hunter2") }, "\(server.received.prefix(24).suffix(8))")
+    }
+
+    /// Block 4 review I4: every line names the shell's directory, so a `cd` never races the terminal's OSC 7.
+    @Test func linesCarryTheShellsDirectory() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("cd /tmp\r", settle: 0.5)
+        zsh.type("ls")
+
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("line\t") && $0.hasSuffix("\t/tmp\t2\tls") } })
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("exec\t") && $0.hasSuffix("\tcd /tmp") } })
     }
 }

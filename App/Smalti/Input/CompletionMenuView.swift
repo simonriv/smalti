@@ -19,7 +19,7 @@ final class CompletionMenuView: NSView {
         wantsLayer = true
         layer?.backgroundColor = tokens.background.nsColor.cgColor
         layer?.cornerRadius = tokens.cornerRadius
-        layer?.borderWidth = 1
+        layer?.borderWidth = theme.chrome.hairlineWidth
         layer?.borderColor = tokens.border.nsColor.cgColor
         layer?.shadowColor = NSColor.black.cgColor
         layer?.shadowOpacity = Float(tokens.shadowOpacity)
@@ -49,14 +49,15 @@ final class CompletionMenuView: NSView {
             let row = row(for: items[index], isSelected: index == selected)
             row.frame = NSRect(
                 x: tokens.padding, y: tokens.padding + Double(offset) * (tokens.rowHeight + tokens.rowGap),
-                width: tokens.width - 2 * tokens.padding, height: tokens.rowHeight)
+                width: bounds.width - 2 * tokens.padding, height: tokens.rowHeight)
             addSubview(row)
             return row
         }
         let rowsHeight = Double(visible) * tokens.rowHeight + Double(max(visible - 1, 0)) * tokens.rowGap
         footer.frame = NSRect(
-            x: tokens.padding + tokens.rowPaddingHorizontal, y: tokens.padding + rowsHeight + 4,
-            width: tokens.width - 2 * (tokens.padding + tokens.rowPaddingHorizontal), height: tokens.footerHeight - 4)
+            x: tokens.padding + tokens.rowPaddingHorizontal, y: tokens.padding + rowsHeight + tokens.footerTopGap,
+            width: bounds.width - 2 * (tokens.padding + tokens.rowPaddingHorizontal),
+            height: tokens.footerHeight - tokens.footerTopGap)
     }
 
     private func row(for item: Suggestion, isSelected: Bool) -> NSView {
@@ -64,7 +65,8 @@ final class CompletionMenuView: NSView {
         let row = NSView()
         row.wantsLayer = true
         row.layer?.cornerRadius = tokens.rowCornerRadius
-        row.layer?.backgroundColor = isSelected ? theme.palette.selection.nsColor.cgColor : nil
+        // Main.dc.html's `{{glow}}`: the accent at 13 %.
+        row.layer?.backgroundColor = isSelected ? theme.focus.glow.nsColor.cgColor : nil
         row.setAccessibilityElement(true)
         row.setAccessibilityRole(.row)
         row.setAccessibilityIdentifier("smalti.completionRow")
@@ -78,12 +80,12 @@ final class CompletionMenuView: NSView {
         detail.font = theme.interfaceFont(size: tokens.rowFontSize)
         detail.textColor = theme.text.secondary.nsColor
         detail.lineBreakMode = .byTruncatingTail
-        let textHeight = tokens.rowFontSize * 1.4
+        let textHeight = tokens.rowFontSize * tokens.textLineHeight
         let top = (tokens.rowHeight - textHeight) / 2
         name.frame = NSRect(x: tokens.rowPaddingHorizontal, y: top, width: tokens.nameColumnWidth, height: textHeight)
         let detailX = tokens.rowPaddingHorizontal + tokens.nameColumnWidth + tokens.columnGap
         detail.frame = NSRect(
-            x: detailX, y: top, width: tokens.width - 2 * tokens.padding - detailX - tokens.rowPaddingHorizontal,
+            x: detailX, y: top, width: bounds.width - 2 * tokens.padding - detailX - tokens.rowPaddingHorizontal,
             height: textHeight)
         row.addSubview(name)
         row.addSubview(detail)

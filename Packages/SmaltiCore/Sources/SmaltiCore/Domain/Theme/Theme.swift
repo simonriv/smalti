@@ -19,6 +19,7 @@ public struct Theme: Equatable, Sendable {
     public let agent: AgentStatusTokens
     public let observatory: ObservatoryTokens
     public let inputMenu: InputMenuTokens
+    public let historyPalette: HistoryPaletteTokens
 }
 
 /// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
@@ -331,6 +332,10 @@ public struct InputMenuTokens: Equatable, Sendable {
     public let columnGap: Double
     public let footerHeight: Double
     public let footerFontSize: Double
+    /// Space between the last row and the help line.
+    public let footerTopGap: Double
+    /// Height of a row's text box, as a multiple of `rowFontSize`.
+    public let textLineHeight: Double
     /// Distance between the cursor's cell and the menu.
     public let cursorGap: Double
     /// The menu opens below the cursor when this many rows fit there; above otherwise.
@@ -338,9 +343,34 @@ public struct InputMenuTokens: Equatable, Sendable {
     public let maximumVisibleRows: Int
 }
 
+/// F4's ⌃R palette: the ⌘K box (`PaletteTokens`) centred on the pane, with the approved mockup's chips and rows.
+public struct HistoryPaletteTokens: Equatable, Sendable {
+    /// Share of the pane's width, between `minimumWidth` and `maximumWidth`.
+    public let widthFraction: Double
+    public let minimumWidth: Double
+    public let maximumWidth: Double
+    /// Distance from the top of the pane.
+    public let topOffset: Double
+    public let chipCornerRadius: Double
+    public let chipBorder: RGBAColor
+    /// Opacity of the accent on the selected chip's border.
+    public let chipActiveBorderAlpha: Double
+    public let chipPaddingHorizontal: Double
+    public let chipPaddingVertical: Double
+    public let listInset: Double
+    public let rowHeight: Double
+    public let rowPaddingHorizontal: Double
+    public let rowGap: Double
+    public let commandFontSize: Double
+    public let dotSize: Double
+    public let visibleRows: Int
+}
+
 public struct MotionTokens: Equatable, Sendable {
     /// Seconds a pane takes to move to its new place; disabled by "Reducir movimiento".
     public let rearrangeDuration: Double
+    /// Seconds F4's menu and ⌃R palette take to fade in (spec: 120 ms); none with "Reducir movimiento".
+    public let overlayAppearDuration: Double
 }
 
 extension Theme {
@@ -363,7 +393,7 @@ extension Theme {
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
             motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
-            inputMenu: inputMenu)
+            inputMenu: inputMenu, historyPalette: historyPalette)
     }
 }
 

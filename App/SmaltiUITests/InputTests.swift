@@ -175,4 +175,55 @@ final class InputTests: SmaltiUITestCase {
 
         waitForOutput("back\n")
     }
+
+    // MARK: Block 4 review
+
+    /// C1: another pane redrawing (here, its title changing all the time) never takes the keyboard from ⌃R.
+    func testPaletteKeepsTheKeyboardWhileAnotherPaneRedraws() {
+        app.typeKey("d", modifierFlags: .command)
+        XCTAssertTrue(app.elements("smalti.terminal").element(boundBy: 1).waitForExistence(timeout: 10))
+        sleep(2)
+        app.run("while :; do print -n '\\e]0;t'$RANDOM'\\a'; sleep 0.1; done")
+        app.typeKey("1", modifierFlags: .command)
+        sleep(1)
+
+        app.typeKey("r", modifierFlags: .control)
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForExistence(timeout: 5))
+        sleep(1)
+        app.typeText("abc")
+        sleep(1)
+
+        XCTAssertEqual(app.element("smalti.historyField").value as? String, "abc")
+    }
+
+    /// I1: with the Tab menu open, ⌃R opens the palette, and its keys choose from the palette, not the menu.
+    func testCtrlRWithTheMenuOpenUsesThePalette() {
+        app.typeText("<<<hist>\"$SMALTI_UITEST_OUT\"\n")
+        waitForOutput("hist\n")
+        paste("git ch")
+        app.typeKey(.tab, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForExistence(timeout: 5))
+
+        app.typeKey("r", modifierFlags: .control)
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForNonExistence(timeout: 5))
+        app.typeText("hist")
+        XCTAssertTrue(app.elements("smalti.historyRow").firstMatch.waitForExistence(timeout: 5))
+        app.typeKey(.return, modifierFlags: [])
+
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForNonExistence(timeout: 5))
+        XCTAssertTrue(waitForTerminal(containing: "p% <<<hist>\"$SMALTI_UITEST_OUT\"\np% <<<hist>"))
+        XCTAssertFalse(terminalText.contains("git checkout"))
+    }
+
+    /// I2: a click outside closes the palette, and Smalti's shortcuts work again.
+    func testClickingOutsideClosesThePalette() {
+        app.typeKey("r", modifierFlags: .control)
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForExistence(timeout: 5))
+
+        app.element("smalti.terminal").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)).click()
+
+        XCTAssertTrue(app.element("smalti.historyPalette").waitForNonExistence(timeout: 5))
+        openPalette()
+    }
 }

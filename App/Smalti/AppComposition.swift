@@ -295,14 +295,12 @@ final class AppComposition {
             input = coordinator
             completionMenu = CompletionMenuController(
                 coordinator: coordinator, provider: engine,
-                context: (
-                    theme: { [weak self] in self?.controller?.theme ?? startup.theme },
-                    focusedPane: { [weak self] in self?.controller?.set.active.focusedPane }
-                ))
+                theme: { [weak self] in self?.controller?.theme ?? startup.theme })
             historyPalette = HistoryPaletteController(
                 coordinator: coordinator, provider: engine,
                 context: (
                     theme: { [weak self] in self?.controller?.theme ?? startup.theme },
+                    onOpen: { [weak self] in self?.completionMenu?.close() },
                     returnFocus: { [weak self] pane in self?.focusKeyboard(on: pane) }
                 ))
         } catch {
@@ -334,6 +332,7 @@ final class AppComposition {
         sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()
+        input?.stop()
     }
 
     /// Writes the transcripts index's pending changes, giving up after a second so quitting never hangs.
@@ -388,6 +387,8 @@ final class AppComposition {
             guard let window, let controller else { return }
             window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
             if !isOpen { self?.focusKeyboard(on: controller.set.active.focusedPane) }
+            // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
+            if isOpen { self?.completionMenu?.close() }
         }
         let screen = observatoryScreen(controller, in: window)
         observatoryScreen = screen
@@ -421,7 +422,10 @@ final class AppComposition {
                         self?.focusKeyboard(on: controller.set.active.focusedPane)
                     }
                 },
-                openChanged: { [weak self] isOpen in self?.observatory?.isObservatoryOpen = isOpen }))
+                openChanged: { [weak self] isOpen in
+                    self?.observatory?.isObservatoryOpen = isOpen
+                    if isOpen { self?.completionMenu?.close() }
+                }))
     }
 
     private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
@@ -459,7 +463,8 @@ final class AppComposition {
     /// The palette and the observatory own the keyboard while open: a publish (a hook, the minute tick) must not
     /// hand it back to a terminal they cover.
     private func focusKeyboard(on pane: PaneID?) {
-        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, let window, let pane,
+        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, historyPalette?.isOpen != true,
+            let window, let pane,
             let view = engine?.view(for: pane),
             window.firstResponder !== view
         else { return }

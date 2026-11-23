@@ -15,7 +15,7 @@ enum SmaltiInputScript {
         if [[ -o interactive && -n "$SMALTI_INPUT_SOCKET" ]]; then
             typeset -g _smalti_input_fd= _smalti_input_seq=0 _smalti_input_state= _smalti_input_ghost=
             typeset -g _smalti_input_exec=0 _smalti_input_have_specs=0 _smalti_input_inbox= _smalti_input_text=
-            typeset -g _smalti_input_prompt=0
+            typeset -g _smalti_input_prompt=0 _smalti_input_refuse_enter=0 _smalti_input_pwd=
             typeset -ga _smalti_input_specs
             typeset -gA _smalti_input_previous
 
@@ -32,6 +32,13 @@ enum SmaltiInputScript {
                 text=${text//\\t/$'\t'}
                 text=${text//\\n/$'\n'}
                 _smalti_input_text=${text//$'\0'/\\}
+            }
+
+            # The shell's own directory, escaped, for every message that depends on it: OSC 7 may arrive later.
+            _smalti_input_where() {
+                emulate -L zsh
+                _smalti_input_escape "$PWD"
+                _smalti_input_pwd=$_smalti_input_text
             }
 
             _smalti_input_fits() {
@@ -100,8 +107,9 @@ enum SmaltiInputScript {
                     _smalti_input_paint ""
                 fi
                 (( _smalti_input_seq++ ))
+                _smalti_input_where
                 _smalti_input_escape "$BUFFER"
-                local message="line"$'\t'$_smalti_input_seq$'\t'$CURSOR$'\t'$_smalti_input_text
+                local message="line"$'\t'$_smalti_input_seq$'\t'$_smalti_input_pwd$'\t'$CURSOR$'\t'$_smalti_input_text
                 _smalti_input_send "$message" || _smalti_input_paint ""
                 return 0
             }
@@ -109,6 +117,7 @@ enum SmaltiInputScript {
             _smalti_input_line_init() {
                 _smalti_input_state=
                 _smalti_input_ghost=
+                _smalti_input_refuse_enter=0
             }
 
             # An accepted line keeps no ghost on screen.
@@ -136,8 +145,12 @@ enum SmaltiInputScript {
                         _smalti_input_unescape "$fields[3]"
                         (( CURSOR == ${#BUFFER} )) && _smalti_input_paint "$_smalti_input_text"
                         ;;
-                    edit)
-                        _smalti_input_is_current "$fields[2]" && [[ $fields[3] == <-> ]] || return 0
+                    edit|editrun)
+                        # ⌘↩'s edit comes with Return right behind it: if the edit is dropped, so is that Return.
+                        if ! _smalti_input_is_current "$fields[2]" || [[ $fields[3] != <-> ]]; then
+                            [[ $fields[1] == editrun ]] && _smalti_input_refuse_enter=1
+                            return 0
+                        fi
                         _smalti_input_unescape "${(pj:\t:)fields[4,-1]}"
                         BUFFER=$_smalti_input_text
                         CURSOR=$fields[3]
@@ -242,8 +255,9 @@ enum SmaltiInputScript {
                     _smalti_input_widget '^I' expand-or-complete
                     return
                 fi
+                _smalti_input_where
                 _smalti_input_escape "$BUFFER"
-                _smalti_input_send "complete"$'\t'$(( ++_smalti_input_seq ))$'\t'$CURSOR$'\t'"$_smalti_input_text"
+                _smalti_input_send "complete"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'$CURSOR$'\t'"$_smalti_input_text"
                 return 0
             }
 
@@ -254,8 +268,9 @@ enum SmaltiInputScript {
                     _smalti_input_widget '^R' history-incremental-search-backward
                     return
                 fi
+                _smalti_input_where
                 _smalti_input_escape "$BUFFER"
-                _smalti_input_send "history"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_text"
+                _smalti_input_send "history"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'"$_smalti_input_text"
                 return 0
             }
 
@@ -264,6 +279,10 @@ enum SmaltiInputScript {
             smalti-accept-line() {
                 emulate -L zsh
                 _smalti_input_at_prompt && _smalti_input_drain
+                if (( _smalti_input_refuse_enter )); then
+                    _smalti_input_refuse_enter=0
+                    return 0
+                fi
                 _smalti_input_widget '^M' accept-line
             }
 
@@ -274,8 +293,9 @@ enum SmaltiInputScript {
                 [[ -n $_smalti_input_fd ]] || return 0
                 [[ -o histignorespace && $1 == ' '* ]] && return 0
                 [[ -n ${HISTORY_IGNORE-} && $1 == ${~HISTORY_IGNORE} ]] && return 0
+                _smalti_input_where
                 _smalti_input_escape "${1%$'\n'}"
-                _smalti_input_send "exec"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_text" \
+                _smalti_input_send "exec"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'"$_smalti_input_text" \
                     && _smalti_input_exec=1
                 return 0
             }

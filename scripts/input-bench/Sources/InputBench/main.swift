@@ -106,8 +106,8 @@ let socket = "/tmp/smalti-bench-\(UUID().uuidString.prefix(8)).sock"
 let server = try InputSocketServer(socketFile: URL(filePath: socket)) { connection, message in
     Task {
         let start = ContinuousClock.now
-        let reply = await InputRouting.respond(to: message, pane: pane, directory: directory, session: session)
-        if case .line = message {
+        let reply = await InputRouting.respond(to: message.message, pane: pane, directory: directory, session: session)
+        if case .line = message.message {
             let elapsed = ContinuousClock.now - start
             timings.add(Double(elapsed.components.attoseconds) / 1e15 + Double(elapsed.components.seconds) * 1000)
         }
