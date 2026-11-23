@@ -122,9 +122,12 @@ public final class GhosttyRuntime {
     /// Called from the main thread (inside `ghostty_app_tick`) and from the renderer thread, so the event is
     /// mapped here and delivered on the main thread.
     nonisolated private static func handle(_ action: ghostty_action_s, target: ghostty_target_s) -> Bool {
-        guard target.tag == GHOSTTY_TARGET_SURFACE, let surface = target.target.surface,
-            let event = GhosttyActionMapper.event(for: action)
-        else { return false }
+        guard target.tag == GHOSTTY_TARGET_SURFACE, let surface = target.target.surface else { return false }
+        if action.tag == GHOSTTY_ACTION_OPEN_URL, let path = GhosttyActionMapper.url(of: action) {
+            // Arrives inside ghostty_surface_binding_action (main thread) for a scrollback export.
+            return ScrollbackExporter.claim(surface: Int(bitPattern: surface), path: path)
+        }
+        guard let event = GhosttyActionMapper.event(for: action) else { return false }
         // Resolve the view now, while libghostty guarantees the surface is alive; deliver only if the same view
         // still owns the same surface when the main thread gets to it.
         guard let userdata = ghostty_surface_userdata(surface) else { return false }

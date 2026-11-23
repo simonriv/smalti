@@ -23,6 +23,9 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         views[pane] = try GhosttySurfaceView(app: runtime.app, spec: spec)
     }
 
+    /// Off only in tests, to exercise the plain-text fallback.
+    var exportsVT = true
+
     public func close(_ pane: PaneID) {
         guard let view = views.removeValue(forKey: pane) else { return }
         view.shutDown()
@@ -44,5 +47,19 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     /// The AppKit view that renders `pane`; the app embeds it. Not part of the domain port.
     public func view(for pane: PaneID) -> NSView? {
         views[pane]
+    }
+}
+
+extension GhosttyTerminalEngine: ScrollbackSource {
+    /// The pane's whole screen, with colours when libghostty can export them, else as plain text.
+    public func scrollback(of pane: PaneID, lastLines: Int) throws(ScrollbackError) -> Scrollback {
+        guard let surface = views[pane]?.surface else { throw .unavailable(pane: pane, reason: "no such pane") }
+        if exportsVT, let text = ScrollbackExporter.exportVT(surface) {
+            return Scrollback(text: ScrollbackTrimmer.lastLines(text, count: lastLines), format: .vt)
+        }
+        guard let text = ScrollbackExporter.exportPlain(surface) else {
+            throw .unavailable(pane: pane, reason: "libghostty could not read the screen")
+        }
+        return Scrollback(text: ScrollbackTrimmer.lastLines(text, count: lastLines), format: .plain)
     }
 }

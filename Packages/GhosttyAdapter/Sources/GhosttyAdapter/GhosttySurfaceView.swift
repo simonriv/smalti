@@ -140,8 +140,11 @@ final class GhosttySurfaceView: NSView {
     private func refreshForegroundProcess() {
         guard let surface else { return }
         // 0 means libghostty has no pid (no PTY yet, or the child is gone).
-        let name = pid_t(exactly: ghostty_surface_foreground_pid(surface)).flatMap(ForegroundProcess.name)
-        if let event = processNames.observe(name) { continuation.yield(event) }
+        let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface))
+        let name = pid.flatMap(ForegroundProcess.name)
+        if let event = processNames.observe(name, commandLine: { pid.flatMap(ProcessArguments.of) }) {
+            continuation.yield(event)
+        }
     }
 
     private static func mayChangeForegroundProcess(_ event: TerminalEvent) -> Bool {

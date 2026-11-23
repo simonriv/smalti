@@ -5,9 +5,10 @@ import SmaltiCore
 struct ProcessNameTracker {
     private var current: String?
 
-    mutating func observe(_ name: String?) -> TerminalEvent? {
+    /// `commandLine` is read only when the name changes (it costs a `sysctl`).
+    mutating func observe(_ name: String?, commandLine: () -> [String]? = { nil }) -> TerminalEvent? {
         guard let name, name != current else { return nil }
         current = name
-        return .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: name))
+        return .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: name, commandLine: commandLine()))
     }
 }

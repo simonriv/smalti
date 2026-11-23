@@ -154,7 +154,12 @@ struct SurfaceLifetimeTests {
             if case .foregroundProcessChanged = $0 { true } else { false }
         }
 
-        #expect(event == .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: "zsh")))
+        guard case .foregroundProcessChanged(let process) = event else {
+            Issue.record("expected a foreground process event, got \(String(describing: event))")
+            return
+        }
+        #expect(process.name == "zsh")
+        #expect(process.commandLine?.first?.hasSuffix("zsh") == true)
     }
 
     @Test func eventForAReplacedSurfaceIsNotDelivered() throws {
