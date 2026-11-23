@@ -32,7 +32,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private var resultWindow = ResultWindow(count: 0, capacity: 1)
     private var rows: [CommandRowView] = []
     private var mode = Mode.searching
-    private let signposter = OSSignposter(subsystem: "dev.simonriv.smalti", category: "palette")
+    private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "palette")
     private var outsideClicks: Any?
     private var resizes: NSObjectProtocol?
 

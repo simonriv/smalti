@@ -37,7 +37,7 @@ final class TilingController {
 
     private let deps: Dependencies
     private let layouts = LayoutCatalog.standard
-    private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "tiling")
+    private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "tiling")
     private(set) var set: WorkspaceSet
     private(set) var config: SmaltiConfig
     private var status = StatusSlot<StatusMessage>()

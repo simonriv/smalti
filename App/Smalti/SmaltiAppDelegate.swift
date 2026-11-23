@@ -10,6 +10,7 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         let composition = AppComposition()
         composition.showMainWindow()
         self.composition = composition
+        if AppIdentity.current.isDevelopment { NSApp.dockTile.badgeLabel = "dev" }
         NSApp.activate()
         latencyProbe?.start()
     }

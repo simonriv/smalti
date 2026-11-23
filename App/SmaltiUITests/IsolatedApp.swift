@@ -22,6 +22,9 @@ extension XCUIApplication {
         let file = isolatedConfigFile
         app.launchArguments += ["-SmaltiConfigPath", file.path(percentEncoded: false)]
         if let shell { app.launchArguments += ["-SmaltiShellCommand", shell] }
+        app.launchArguments += [
+            "-SmaltiStatePath", file.deletingLastPathComponent().appending(path: "state").path(percentEncoded: false),
+        ]
         if let config { app.writeConfig(config) }
         return app
     }
@@ -31,6 +34,14 @@ extension XCUIApplication {
         // isolatedSmalti always passes the argument followed by its value.
         guard let position = launchArguments.firstIndex(of: "-SmaltiConfigPath") else {
             preconditionFailure("not an isolated Smalti: no -SmaltiConfigPath")
+        }
+        return URL(filePath: launchArguments[position + 1])
+    }
+
+    /// The temporary state directory (sessions, layouts, socket) of this launch, next to its config file.
+    var stateDirectory: URL {
+        guard let position = launchArguments.firstIndex(of: "-SmaltiStatePath") else {
+            preconditionFailure("not an isolated Smalti: no -SmaltiStatePath")
         }
         return URL(filePath: launchArguments[position + 1])
     }
