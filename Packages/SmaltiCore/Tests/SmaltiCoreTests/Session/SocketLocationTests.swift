@@ -36,4 +36,22 @@ struct SocketLocationTests {
     @Test func limitIsTheSizeOfASocketAddressPath() {
         #expect(SocketLocation.maximumPathBytes == 104)
     }
+
+    @Test func inputSocketHasItsOwnName() {
+        let state = URL(filePath: "/Users/s/Library/Application Support/Smalti")
+
+        #expect(
+            SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: URL(filePath: "/tmp"))
+                == state.appending(path: "input.sock"))
+    }
+
+    @Test func deepInputSocketDiffersFromTheMainOne() {
+        let state = URL(filePath: "/" + String(repeating: "deep/", count: 25))
+        let temporary = URL(filePath: "/tmp")
+
+        let input = SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: temporary)
+
+        #expect(input != SocketLocation.socketFile(stateDirectory: state, temporaryDirectory: temporary))
+        #expect(input.path(percentEncoded: false).utf8.count < SocketLocation.maximumPathBytes)
+    }
 }

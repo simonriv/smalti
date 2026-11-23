@@ -115,6 +115,23 @@ struct OpenPaneTests {
         #expect(environment["PATH"] == "/App.app/Contents/Resources/bin:/usr/bin:/bin")
     }
 
+    @Test func exportsInputSocket() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/state/smalti.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin",
+            inputSocket: URL(filePath: "/state/input.sock"))
+
+        #expect(
+            PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"]
+                == "/state/input.sock")
+    }
+
+    @Test func withoutInputSocketThereIsNoInputVariable() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/s.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin")
+
+        #expect(PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"] == nil)
+    }
+
     @Test func withoutIPCThereIsNoSocketOrCli() {
         let environment = PaneEnvironment(version: "1").variables(for: PaneID())
 

@@ -156,7 +156,7 @@
 - [x] T8 · `FigCompletionAdapter` y vendoring
 - [x] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
 #### Bloque 3 · Canal con zsh
-- [ ] T10 · `InputSocketServer`
+- [x] T10 · `InputSocketServer`
 - [ ] T11 · Script de zsh: canal, fantasma y aceptar
 - [ ] T12 · ⌃R, Tab y enlaces (enmienda 1: sin toma de control de plugins)
 #### Bloque 4 · App
