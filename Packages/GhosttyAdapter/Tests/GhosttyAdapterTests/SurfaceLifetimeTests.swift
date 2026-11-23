@@ -133,7 +133,7 @@ struct SurfaceLifetimeTests {
             if case .foregroundProcessChanged = $0 { true } else { false }
         }
 
-        #expect(event == .foregroundProcessChanged("zsh"))
+        #expect(event == .foregroundProcessChanged(ForegroundProcess(name: "zsh")))
     }
 
     @Test func eventForAReplacedSurfaceIsNotDelivered() throws {

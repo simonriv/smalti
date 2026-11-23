@@ -29,7 +29,7 @@ struct PresentationTextTests {
 
     @Test func headerShowsProcessDirectoryAndShortcut() throws {
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/simon/dev/xolken"))
-            .applying(.foregroundProcessChanged("claude"))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "claude")))
 
         let header = PaneHeaderContent(pane, index: 3, keymap: .standard, home: home)
 

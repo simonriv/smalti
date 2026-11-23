@@ -160,7 +160,8 @@ struct CommandCatalogTests {
     }
 
     @Test func goToPaneShowsTheProcessAsSubtitle() throws {
-        let pane = Pane(id: PaneID(), workingDirectory: root).applying(.foregroundProcessChanged("claude"))
+        let pane = Pane(id: PaneID(), workingDirectory: root).applying(
+            .foregroundProcessChanged(ForegroundProcess(name: "claude")))
         let set = WorkspaceSet(first: makeWorkspace().adding(pane))
 
         let goTo = try #require(commands(for: set).first { $0.id == .paneFocus(1) })

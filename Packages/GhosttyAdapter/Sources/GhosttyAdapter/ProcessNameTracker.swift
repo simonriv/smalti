@@ -8,6 +8,6 @@ struct ProcessNameTracker {
     mutating func observe(_ name: String?) -> TerminalEvent? {
         guard let name, name != current else { return nil }
         current = name
-        return .foregroundProcessChanged(name)
+        return .foregroundProcessChanged(ForegroundProcess(name: name))
     }
 }
