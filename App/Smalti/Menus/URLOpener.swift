@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 
 /// Opens a file the way the user expects; `-SmaltiOpenLog <file>` writes the path there instead (UI tests).
 @MainActor
@@ -28,8 +29,14 @@ enum URLOpener {
         NSWorkspace.shared.activateFileViewerSelecting([file])
     }
 
+    /// UI tests read this file; a write that fails is logged so a test that sees nothing has a cause to look at.
     private static func appendLine(_ line: String, to file: URL) {
         let existing = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
-        try? (existing + line + "\n").write(to: file, atomically: true, encoding: .utf8)
+        do {
+            try (existing + line + "\n").write(to: file, atomically: true, encoding: .utf8)
+        } catch {
+            Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "open")
+                .error("could not write the open log: \(String(describing: error), privacy: .public)")
+        }
     }
 }

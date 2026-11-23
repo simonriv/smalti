@@ -31,6 +31,11 @@ struct MenuModelTests {
         bar.menus.first { $0.title == menu }?.items.flattened.first { $0.title == title }
     }
 
+    /// Block 4 review: the app finds Edición, Ventana and Ayuda by identity, not by their titles.
+    @Test func menusHaveIdentities() {
+        #expect(bar().menus.map(\.id) == [.app, .file, .edit, .view, .window, .help])
+    }
+
     @Test func menuOrderMatchesSpec() {
         let menus = bar().menus
 

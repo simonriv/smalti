@@ -13,8 +13,7 @@ final class SearchBarController: NSObject, NSTextFieldDelegate {
     private let window: NSWindow
     private let engine: any Engine
     private var view: SearchBarView?
-    private var total: Int?
-    private var selected: Int?
+    private var progress = SearchProgress()
 
     var isOpen: Bool { pane != nil }
 
@@ -36,16 +35,15 @@ final class SearchBarController: NSObject, NSTextFieldDelegate {
         content.addSubview(view, positioned: .above, relativeTo: nil)
         let inset = theme.panel.areaPadding
         NSLayoutConstraint.activate([
-            view.widthAnchor.constraint(equalToConstant: SearchBarView.size.width),
-            view.heightAnchor.constraint(equalToConstant: SearchBarView.size.height),
+            view.widthAnchor.constraint(equalToConstant: theme.searchBar.width),
+            view.heightAnchor.constraint(equalToConstant: theme.searchBar.height),
             view.topAnchor.constraint(equalTo: terminal.topAnchor, constant: inset),
             view.trailingAnchor.constraint(equalTo: terminal.trailingAnchor, constant: -inset),
         ])
         view.field.delegate = self
         self.view = view
         self.pane = pane
-        total = nil
-        selected = nil
+        progress = SearchProgress()
         window.makeFirstResponder(view.field)
     }
 
@@ -54,14 +52,20 @@ final class SearchBarController: NSObject, NSTextFieldDelegate {
         engine.navigateSearch(direction, in: pane)
     }
 
-    /// Ends the search in libghostty (its highlights go) and removes the bar.
+    /// esc: ends the search in libghostty (its highlights go), removes the bar and gives the pane the keyboard back.
     func close() {
+        guard let pane else { return }
+        dismiss()
+        onClose?(pane)
+    }
+
+    /// Ends the search and removes the bar, leaving the keyboard where it is (the focus already moved elsewhere).
+    func dismiss() {
         guard let pane else { return }
         engine.endSearch(in: pane)
         view?.removeFromSuperview()
         view = nil
         self.pane = nil
-        onClose?(pane)
     }
 
     /// A search event from `pane`'s terminal.
@@ -69,32 +73,27 @@ final class SearchBarController: NSObject, NSTextFieldDelegate {
         guard pane == self.pane else { return }
         switch event {
         case .searchTotal(let count):
-            total = count
-            // The first match is selected as soon as there is one, as Terminal.app does.
-            if let count, count > 0, selected == nil { engine.navigateSearch(.next, in: pane) }
-        case .searchSelected(let index): selected = index
+            let update = progress.total(count)
+            progress = update.progress
+            // The first match is selected once per query, as soon as there is one (`SearchProgress`).
+            if update.selectsFirstMatch { engine.navigateSearch(.next, in: pane) }
+        case .searchSelected(let index): progress = progress.selected(index)
         default: return
         }
-        view?.showCount(Self.countText(total: total, selected: selected))
+        view?.showCount(progress.text)
     }
 
     /// Closes when the focused pane changed (a click, a workspace switch) or the pane closed.
     func follow(_ set: WorkspaceSet) {
         guard let pane, set.active.focusedPane != pane else { return }
-        close()
-    }
-
-    private static func countText(total: Int?, selected: Int?) -> String {
-        guard let total else { return "" }
-        guard total > 0 else { return "Sin resultados" }
-        return "\(selected.map { $0 + 1 } ?? 0) de \(total)"
+        dismiss()
     }
 
     // MARK: - NSTextFieldDelegate
 
     func controlTextDidChange(_ notification: Notification) {
         guard let pane, let view else { return }
-        selected = nil
+        progress = progress.newQuery()
         engine.search(view.field.stringValue, in: pane)
     }
 

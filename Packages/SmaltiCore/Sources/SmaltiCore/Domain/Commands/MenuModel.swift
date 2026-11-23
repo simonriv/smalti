@@ -45,7 +45,13 @@ extension [MenuItem] {
     public var flattened: [MenuItem] { flatMap { [$0] + $0.children.flattened } }
 }
 
+/// Which menu of the bar: the app finds Edición, Ventana and Ayuda by this, never by their titles.
+public enum MenuID: Equatable, Sendable {
+    case app, file, edit, view, window, help
+}
+
 public struct Menu: Equatable, Sendable {
+    public let id: MenuID
     public let title: String
     public let items: [MenuItem]
 }
@@ -80,12 +86,12 @@ public enum MenuModel {
             keymap: keymap, available: Set(commands.map(\.id)).union(alwaysAvailable), checked: state.checked)
         let workspaces = state.workspaces
         return MenuBar(menus: [
-            Menu(title: "Smalti", items: builder.app),
-            Menu(title: "Archivo", items: builder.file),
-            Menu(title: "Edición", items: builder.edit),
-            Menu(title: "Ver", items: builder.view),
-            Menu(title: "Ventana", items: builder.window(workspaces)),
-            Menu(title: "Ayuda", items: builder.help),
+            Menu(id: .app, title: "Smalti", items: builder.app),
+            Menu(id: .file, title: "Archivo", items: builder.file),
+            Menu(id: .edit, title: "Edición", items: builder.edit),
+            Menu(id: .view, title: "Ver", items: builder.view),
+            Menu(id: .window, title: "Ventana", items: builder.window(workspaces)),
+            Menu(id: .help, title: "Ayuda", items: builder.help),
         ])
     }
 

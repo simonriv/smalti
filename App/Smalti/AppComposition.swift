@@ -211,6 +211,7 @@ final class AppComposition {
         compositions.append(composition)
         frontID = composition.id
         window.contentView?.layoutSubtreeIfNeeded()
+        composition.controller.showSecureInput(secureInput.entry.isRequested)
         return composition
     }
 
@@ -232,7 +233,12 @@ final class AppComposition {
         mainMenu?.refresh()
         guard let set = windowSet() else { return }
         sessionKeeper?.changed(set)
-        input?.keepOnly(Set(set.allPanes.map(\.id)))
+        let panes = Set(set.allPanes.map(\.id))
+        input?.keepOnly(panes)
+        if secureInput.entry.isRequested {
+            secureInput.keep(panes: panes)
+            compositions.forEach { $0.controller.showSecureInput(secureInput.entry.isRequested) }
+        }
     }
 
     private func composition(containing pane: PaneID) -> WindowComposition? {
@@ -302,6 +308,7 @@ final class AppComposition {
             return
         }
         compositions.removeAll { $0 === composition }
+        composition.closeOverlays()
         composition.window.close()
         observatoryOpenChanged()
         frontID = set.frontID
@@ -367,14 +374,19 @@ final class AppComposition {
         menu.install()
         mainMenu = menu
         engine.contextMenu = { [weak self] pane in self?.contextMenu(for: pane) }
+        // UI tests read the cell size to see ⌘+ and ⌘− take effect (F4.5 C9).
+        engine.exposesCellSize = UserDefaults.standard.bool(forKey: "SmaltiExposeCellSize")
     }
 
     private func menuBar() -> MenuBar {
         guard let controller else { return .empty }
-        let commands = CommandCatalog.commands(
+        let all = CommandCatalog.commands(
             for: controller.set, keymap: controller.config.keys, layouts: .standard,
             savedLayouts: controller.savedLayouts())
-        let checked: Set<CommandID> = secureInput.isOn ? [.secureInputToggle] : []
+        // While an overlay covers the window, the menu must not act on the terminal or the panes behind it.
+        let commands = front?.hasOverlayOpen == true ? all.filter { ![.terminal, .panes].contains($0.group) } : all
+        // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
+        let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
             keymap: controller.config.keys, commands: commands,
             state: MenuState(workspaces: controller.set, checked: checked))
@@ -382,12 +394,23 @@ final class AppComposition {
 
     /// A menu item acts on the window in front; with none (all closed while quitting), only ⌘N makes sense.
     private func performFromMenu(_ command: CommandID) {
+        // Another window is key ("Acerca de"): copy, paste, select all and close are its own.
+        if let key = NSApp.keyWindow, !(key is SmaltiWindow), let standard = Self.standardActions[command] {
+            NSApp.sendAction(standard, to: nil, from: nil)
+            return
+        }
         guard let front else {
             if command == .windowNew { openWindow(from: nil) }
             return
         }
         front.controller.perform(command)
     }
+
+    private static let standardActions: [CommandID: Selector] = [
+        .terminalCopy: #selector(NSText.copy(_:)), .terminalPaste: #selector(NSText.paste(_:)),
+        .terminalSelectAll: #selector(NSResponder.selectAll(_:)), .paneClose: #selector(NSWindow.performClose(_:)),
+        .windowClose: #selector(NSWindow.performClose(_:)),
+    ]
 
     /// Right click on a pane: its window comes forward, the pane takes the focus, then the item runs.
     private func contextMenu(for pane: PaneID) -> NSMenu? {
@@ -414,22 +437,23 @@ final class AppComposition {
     /// Every terminal at the new size; panes opened later get it too (the engine's config carries it).
     private func scaleFont(_ scale: FontScale) {
         guard scale != fontScale, let appearance = controller?.theme.terminal else { return }
-        fontScale = scale
         do {
             try runtime?.apply(appearance.withFontSize(scale.size))
+            // Only a size that took effect becomes the one the next step starts from.
+            fontScale = scale
         } catch {
             controller?.report(.engineFailure(error))
         }
     }
 
-    /// A password prompt started or ended: secure entry follows, and every status bar says so.
-    private func secureInputRequested(_ isOn: Bool) {
-        secureInput.promptRequested(isOn)
+    /// A password prompt started or ended in `pane`: secure entry follows, and every status bar says so.
+    private func secureInputRequested(_ isOn: Bool, in pane: PaneID) {
+        secureInput.prompt(in: pane, isAsking: isOn)
         showSecureInput()
     }
 
     private func showSecureInput() {
-        compositions.forEach { $0.controller.showSecureInput(secureInput.isOn) }
+        compositions.forEach { $0.controller.showSecureInput(secureInput.entry.isRequested) }
         mainMenu?.refresh()
     }
 
@@ -465,7 +489,7 @@ final class AppComposition {
     private func saveLogs() async {
         let stamp = Date.now.formatted(
             .verbatim(
-                "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)",
+                "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)\(second: .twoDigits)",
                 timeZone: .current, calendar: .current))
         let file = Self.downloads.appending(path: "smalti-registros-\(stamp).log")
         do {
@@ -487,13 +511,13 @@ final class AppComposition {
 
     /// "Acerca de Smalti": the standard panel with the version, the commit and the credits.
     private func showAbout() {
-        let info = Bundle.main.infoDictionary
-        let commit = info?["SmaltiGitCommit"] as? String ?? "?"
+        let build = Self.buildInfo
+        let ghostty = Bundle.main.infoDictionary?["SmaltiGhosttyVersion"] as? String ?? "?"
         let credits = NSAttributedString(
-            string: "libghostty v1.4.0 (MIT) · Inter (OFL) · JetBrains Mono (OFL) · specs de Fig (ISC)",
+            string: "libghostty \(ghostty) (MIT) · Inter (OFL) · JetBrains Mono (OFL) · specs de Fig (ISC)",
             attributes: [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)])
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationVersion: "\(Self.version) (\(commit))", .version: "", .credits: credits,
+            .applicationVersion: "\(build.version) (\(build.commit))", .version: "", .credits: credits,
         ])
         NSApp.activate()
     }
@@ -542,7 +566,7 @@ final class AppComposition {
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
             observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() },
-            secureInputRequested: { [weak self] isOn in self?.secureInputRequested(isOn) })
+            secureInputRequested: { [weak self] isOn, pane in self?.secureInputRequested(isOn, in: pane) })
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's

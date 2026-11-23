@@ -23,6 +23,18 @@ public struct Theme: Equatable, Sendable {
     /// F4.5 (mockup-help, mockup-feedback): the ⌘K box with these sizes.
     public let help: HelpTokens
     public let feedback: FeedbackTokens
+    public let searchBar: SearchBarTokens
+}
+
+/// The scrollback search bar (mockup-search.png): the ⌘K glass at this size, top-right of the pane.
+public struct SearchBarTokens: Equatable, Sendable {
+    public let width: Double
+    public let height: Double
+
+    public init(width: Double, height: Double) {
+        self.width = width
+        self.height = height
+    }
 }
 
 /// The help overlay (mockup-help.png): the palette's box, wider, with two columns of sections.
@@ -55,12 +67,17 @@ public struct FeedbackTokens: Equatable, Sendable {
     public let summaryFontSize: Double
     /// The dot of "Idea" (ANSI purple; "Fallo" uses the error red).
     public let ideaDot: RGBAColor
+    /// Between a choice's dot and its word, and between the box's lines.
+    public let dotGap: Double
+    public let lineGap: Double
 
     public init(
         width: Double, topOffset: Double, padding: Double, titleFontSize: Double, choiceHeight: Double,
         choiceGap: Double, noteFontSize: Double, summaryFontSize: Double, ideaDot: RGBAColor
     ) {
         self.ideaDot = ideaDot
+        dotGap = 8
+        lineGap = 12
         self.width = width
         self.topOffset = topOffset
         self.padding = padding
@@ -450,7 +467,8 @@ extension Theme {
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
             motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
-            inputMenu: inputMenu, historyPalette: historyPalette, help: help, feedback: feedback)
+            inputMenu: inputMenu, historyPalette: historyPalette, help: help, feedback: feedback,
+            searchBar: searchBar)
     }
 }
 

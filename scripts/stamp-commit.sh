@@ -7,5 +7,9 @@ plist="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
 commit="$(git -C "$SRCROOT/.." rev-parse --short=7 HEAD 2>/dev/null || echo unknown)"
 # A build with uncommitted changes says so, so a report never passes it off as that commit.
 if [[ "$commit" != unknown ]] && ! git -C "$SRCROOT/.." diff --quiet HEAD -- 2>/dev/null; then commit="$commit-dirty"; fi
-/usr/libexec/PlistBuddy -c "Set :SmaltiGitCommit $commit" "$plist" 2>/dev/null \
-  || /usr/libexec/PlistBuddy -c "Add :SmaltiGitCommit string $commit" "$plist"
+stamp() { # key value
+  /usr/libexec/PlistBuddy -c "Set :$1 $2" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$plist"
+}
+stamp SmaltiGitCommit "$commit"
+# The libghostty version "Acerca de" credits comes from the pinned submodule, its single source.
+stamp SmaltiGhosttyVersion "$(git -C "$SRCROOT/../vendor/ghostty" describe --tags --abbrev=0 2>/dev/null || echo unknown)"

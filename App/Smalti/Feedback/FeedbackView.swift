@@ -47,13 +47,22 @@ final class FeedbackView: NSView {
         logs.state = includesLogs ? .on : .off
     }
 
+    /// Key codes, the same on every layout.
+    private enum Key {
+        static let left: UInt16 = 123
+        static let right: UInt16 = 124
+        static let space: UInt16 = 49
+        static let returns: Set<UInt16> = [36, 76]
+        static let escape: UInt16 = 53
+    }
+
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case 123: onKind?(.bug)
-        case 124: onKind?(.idea)
-        case 49: onToggleLogs?()
-        case 36, 76: onSubmit?()
-        case 53: onCancel?()
+        case Key.left: onKind?(.bug)
+        case Key.right: onKind?(.idea)
+        case Key.space: onToggleLogs?()
+        case let code where Key.returns.contains(code): onSubmit?()
+        case Key.escape: onCancel?()
         default: super.keyDown(with: event)
         }
     }
@@ -86,7 +95,7 @@ final class FeedbackView: NSView {
         let body = NSStackView(views: [title, choices, logs, note, build])
         body.orientation = .vertical
         body.alignment = .leading
-        body.spacing = tokens.choiceGap + 4
+        body.spacing = tokens.lineGap
         body.translatesAutoresizingMaskIntoConstraints = false
         let padded = NSView()
         padded.addSubview(body)
@@ -138,7 +147,7 @@ private final class FeedbackChoice: NSView {
         label.font = theme.interfaceFont(size: theme.palette.rowFontSize)
         label.textColor = theme.text.title.nsColor
         let row = NSStackView(views: [dot, label])
-        row.spacing = 8
+        row.spacing = theme.feedback.dotGap
         row.translatesAutoresizingMaskIntoConstraints = false
         addSubview(row)
         NSLayoutConstraint.activate([

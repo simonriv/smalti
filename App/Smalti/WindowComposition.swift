@@ -22,7 +22,7 @@ struct WindowServices {
     /// A window opened or closed its observatory; the app counts them all.
     let observatoryOpenChanged: () -> Void
     /// A password prompt in one of this window's panes asks for secure keyboard entry, or releases it.
-    let secureInputRequested: (Bool) -> Void
+    let secureInputRequested: (Bool, PaneID) -> Void
 }
 
 /// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
@@ -131,9 +131,21 @@ final class WindowComposition {
 
     /// "Reportar un problema o una idea" in this window; `submit` gets the kind and whether to save the logs.
     func showFeedback(summary: String, submit: @escaping (FeedbackKind, Bool) -> Void) {
-        palette?.close()
-        help?.close()
+        closeOverlays(keeping: .feedback)
         feedback?.open(theme: controller.theme, summary: summary, submit: submit)
+    }
+
+    /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
+    /// single place to go when the top one closes (block 4 review).
+    enum Overlay {
+        case palette, help, search, feedback
+    }
+
+    func closeOverlays(keeping kept: Overlay? = nil) {
+        if kept != .palette { palette?.close() }
+        if kept != .help { help?.close() }
+        if kept != .search { search?.dismiss() }
+        if kept != .feedback { feedback?.close() }
     }
 
     func dismissObservatory() {
@@ -262,7 +274,7 @@ final class WindowComposition {
         controller.onViewEvent = { [weak self, weak search] event, pane in
             switch event {
             case .linkHovered(let url): self?.controller.showHoveredLink(url)
-            case .secureInputRequested(let isOn): self?.services.secureInputRequested(isOn)
+            case .secureInputRequested(let isOn): self?.services.secureInputRequested(isOn, pane)
             default: search?.progress(event, from: pane)
             }
         }
@@ -278,15 +290,19 @@ final class WindowComposition {
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
             case .helpShow:
-                palette.close()
+                closeOverlays(keeping: .help)
                 self.help?.toggle(theme: theme)
             case .searchOpen:
+                closeOverlays(keeping: .search)
                 if let pane = controller.set.active.focusedPane { self.search?.open(on: pane, theme: theme) }
             case .searchNext, .searchPrevious:
                 guard let search = self.search, let pane = controller.set.active.focusedPane else { return }
+                closeOverlays(keeping: .search)
                 if !search.isOpen { search.open(on: pane, theme: theme) }
                 search.navigate(command == .searchNext ? .next : .previous)
-            default: palette.toggle(theme: theme)
+            default:
+                closeOverlays(keeping: .palette)
+                palette.toggle(theme: theme)
             }
         }
         self.palette = palette
@@ -330,7 +346,8 @@ final class WindowComposition {
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
-        if feedback?.isOpen == true { return .overlay(allowing: []) }
+        // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
+        if feedback?.isOpen == true { return KeyContext(allowing: []) }
         if search?.isOpen == true {
             return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
         }

@@ -30,6 +30,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         do {
             let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
             view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
+            view.exposesCellSize = exposesCellSize
             views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.
@@ -148,6 +149,9 @@ public final class GhosttyTerminalEngine: TerminalEngine {
 
     /// The terminal's menu for a right click or ⌃click on `pane`; nil shows none. The app builds it.
     public var contextMenu: ((PaneID) -> NSMenu?)?
+
+    /// UI tests only: each terminal states its cell size as its accessibility title ("celda 8 × 21").
+    public var exposesCellSize = false
 
     public func perform(_ action: TerminalAction, in pane: PaneID) {
         guard let view = views[pane] else { return }

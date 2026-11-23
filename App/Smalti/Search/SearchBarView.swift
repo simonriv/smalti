@@ -4,8 +4,6 @@ import SmaltiCore
 /// The search bar of mockup-search.png: the palette's glass box, 340 × 36, with the field, "n de m" and the keys.
 @MainActor
 final class SearchBarView: NSView {
-    static let size = NSSize(width: 340, height: 36)
-
     let field = PaletteField()
     private let counter = NSTextField(labelWithString: "")
     private let theme: Theme

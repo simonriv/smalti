@@ -1,42 +1,46 @@
+import AppKit
 import Carbon
+import SmaltiCore
 
-/// "Entrada de teclado segura": while on, other apps cannot read Smalti's keystrokes. The menu item toggles it; a
-/// password prompt asks for it too (libghostty's `SECURE_INPUT`, F4.5). Each request is balanced: the system keeps a
-/// count per process.
+/// Applies `SecureEntry` to the system: secure keyboard entry is on while it is requested (the menu item or a
+/// password prompt) and Smalti is the active app, so other apps keep their global shortcuts while the user is
+/// elsewhere. Each change is balanced: the system counts per process.
 @MainActor
 final class SecureInput {
-    private(set) var isOnByUser = false
-    private var promptsAsking = 0
+    private(set) var entry = SecureEntry()
+    private var observers: [NSObjectProtocol] = []
 
-    var isOn: Bool { isOnByUser || promptsAsking > 0 }
-
-    func toggle() {
-        set(user: !isOnByUser)
+    init() {
+        entry = entry.activated(NSApp?.isActive ?? false)
+        let center = NotificationCenter.default
+        for (name, isActive) in [
+            (NSApplication.didBecomeActiveNotification, true), (NSApplication.didResignActiveNotification, false),
+        ] {
+            observers.append(
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.change { $0.activated(isActive) } }
+                })
+        }
     }
 
-    /// A password prompt started or ended in some pane.
-    func promptRequested(_ isOn: Bool) {
-        let was = self.isOn
-        promptsAsking = max(0, promptsAsking + (isOn ? 1 : -1))
-        apply(from: was)
+    isolated deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
     }
 
-    /// Quitting leaves the system's count as it found it.
-    func releaseAll() {
-        let was = isOn
-        isOnByUser = false
-        promptsAsking = 0
-        apply(from: was)
-    }
+    func toggle() { change { $0.toggledByUser() } }
 
-    private func set(user isOn: Bool) {
-        let was = self.isOn
-        isOnByUser = isOn
-        apply(from: was)
-    }
+    func prompt(in pane: PaneID, isAsking: Bool) { change { $0.prompt(in: pane, isAsking: isAsking) } }
 
-    private func apply(from was: Bool) {
-        guard was != isOn else { return }
-        _ = isOn ? EnableSecureEventInput() : DisableSecureEventInput()
+    /// Panes that closed while their prompt asked stop asking.
+    func keep(panes: Set<PaneID>) { change { $0.keeping(panes: panes) } }
+
+    /// Quitting leaves the system as it found it.
+    func releaseAll() { change { $0.activated(false) } }
+
+    private func change(_ transform: (SecureEntry) -> SecureEntry) {
+        let wasApplied = entry.isApplied
+        entry = transform(entry)
+        guard wasApplied != entry.isApplied else { return }
+        _ = entry.isApplied ? EnableSecureEventInput() : DisableSecureEventInput()
     }
 }

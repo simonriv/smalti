@@ -7,7 +7,15 @@ import SmaltiCore
 final class MainMenu: NSObject, NSMenuDelegate {
     private let model: () -> MenuBar
     private let perform: (CommandID) -> Void
-    private var menus: [String: NSMenu] = [:]
+    private var menus: [MenuID: NSMenu] = [:]
+    /// What the menus were last built from: an unchanged model rebuilds nothing.
+    private var built: MenuBar?
+    /// A menu is open: its items are not replaced under the pointer (it refreshed when it opened).
+    private var openMenus = 0
+    /// Built once and kept: AppKit fills it with the Services.
+    private let services = NSMenu(title: "Servicios")
+    /// Marks Smalti's items, so the window list AppKit adds to "Ventana" survives a refresh.
+    private static let ownTag = 0xF45
 
     init(model: @escaping () -> MenuBar, perform: @escaping (CommandID) -> Void) {
         self.model = model
@@ -28,29 +36,47 @@ final class MainMenu: NSObject, NSMenuDelegate {
             submenu.delegate = self
             top.submenu = submenu
             bar.addItem(top)
-            menus[menu.title] = submenu
+            menus[menu.id] = submenu
         }
         NSApp.mainMenu = bar
+        NSApp.servicesMenu = services
         refresh()
-        NSApp.windowsMenu = menus["Ventana"]
-        NSApp.helpMenu = menus["Ayuda"]
+        NSApp.windowsMenu = menus[.window]
+        NSApp.helpMenu = menus[.help]
     }
 
-    /// Rebuilds every menu's items from the current state (chords, enabled items, checkmarks).
+    /// Rebuilds the menus' items when the state changed what they show (chords, enabled items, checkmarks), never
+    /// while one is open.
     func refresh() {
-        for menu in model().menus { fill(menus[menu.title], with: menu.items, title: menu.title) }
+        let bar = model()
+        guard openMenus == 0, bar != built else { return }
+        built = bar
+        for menu in bar.menus { fill(menus[menu.id], with: menu) }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard let current = model().menus.first(where: { $0.title == menu.title }) else { return }
-        fill(menu, with: current.items, title: current.title)
+        guard let current = model().menus.first(where: { menus[$0.id] === menu }) else { return }
+        fill(menu, with: current)
     }
 
-    private func fill(_ menu: NSMenu?, with items: [MenuItem], title: String) {
+    func menuWillOpen(_ menu: NSMenu) { openMenus += 1 }
+
+    func menuDidClose(_ menu: NSMenu) {
+        openMenus = max(0, openMenus - 1)
+        // What changed while it was open is applied at the next refresh.
+        if openMenus == 0 { built = nil }
+    }
+
+    /// Replaces Smalti's own items (tagged), leaving what AppKit added, such as the window list, after them.
+    private func fill(_ menu: NSMenu?, with model: Menu) {
         guard let menu else { return }
-        menu.removeAllItems()
-        items.forEach { menu.addItem(nsItem($0)) }
-        if title == "Edición" { addDictationAndEmoji(to: menu) }
+        menu.items.filter { $0.tag == Self.ownTag }.forEach(menu.removeItem)
+        var items = model.items.map(nsItem)
+        if model.id == .edit { items += dictationAndEmoji() }
+        for (index, item) in items.enumerated() {
+            item.tag = Self.ownTag
+            menu.insertItem(item, at: index)
+        }
     }
 
     private func nsItem(_ item: MenuItem) -> NSMenuItem {
@@ -65,7 +91,7 @@ final class MainMenu: NSObject, NSMenuDelegate {
         }
         switch item.action {
         case .command(let id): return commandItem(item, id)
-        case .system(let action): return SystemMenuItems.item(item, action)
+        case .system(let action): return SystemMenuItems.item(item, action, services: services)
         case nil: return NSMenuItem(title: item.title, action: nil, keyEquivalent: "")
         }
     }
@@ -85,8 +111,7 @@ final class MainMenu: NSObject, NSMenuDelegate {
         return nsItem
     }
 
-    private func addDictationAndEmoji(to menu: NSMenu) {
-        menu.addItem(.separator())
+    private func dictationAndEmoji() -> [NSMenuItem] {
         // `startDictation:` is answered by the text system of the key view; it has no Swift-visible declaration.
         let dictation = NSMenuItem(
             title: "Iniciar dictado…", action: Selector(("startDictation:")), keyEquivalent: "")
@@ -95,22 +120,18 @@ final class MainMenu: NSObject, NSMenuDelegate {
             title: "Emoji y símbolos", action: #selector(NSApplication.orderFrontCharacterPalette(_:)),
             keyEquivalent: "")
         emoji.setAccessibilityIdentifier("smalti.menu.emoji")
-        [dictation, emoji].forEach(menu.addItem)
+        return [.separator(), dictation, emoji]
     }
 }
 
 /// The standard items: AppKit already knows what they do.
 private enum SystemMenuItems {
     @MainActor
-    static func item(_ item: MenuItem, _ action: SystemMenuAction) -> NSMenuItem {
+    static func item(_ item: MenuItem, _ action: SystemMenuAction, services: NSMenu) -> NSMenuItem {
         let shortcut = item.chord.flatMap(KeyEquivalent.init)
         let nsItem = NSMenuItem(title: item.title, action: selector(action), keyEquivalent: shortcut?.key ?? "")
         nsItem.keyEquivalentModifierMask = shortcut?.modifiers ?? []
-        if action == .services {
-            let services = NSMenu(title: item.title)
-            nsItem.submenu = services
-            NSApp.servicesMenu = services
-        }
+        if action == .services { nsItem.submenu = services }
         return nsItem
     }
 

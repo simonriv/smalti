@@ -142,5 +142,6 @@ extension Theme {
         help: HelpTokens(width: 760, maximumHeight: 560, topOffset: 60, columnGap: 8, rowHeight: 27),
         feedback: FeedbackTokens(
             width: 520, topOffset: 160, padding: 20, titleFontSize: 15, choiceHeight: 38, choiceGap: 8,
-            noteFontSize: 12, summaryFontSize: 12, ideaDot: rgb(0xbb9af7)))
+            noteFontSize: 12, summaryFontSize: 12, ideaDot: rgb(0xbb9af7)),
+        searchBar: SearchBarTokens(width: 340, height: 36))
 }

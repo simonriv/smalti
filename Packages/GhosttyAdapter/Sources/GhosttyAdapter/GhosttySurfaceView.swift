@@ -249,8 +249,10 @@ final class GhosttySurfaceView: NSView {
 
     /// `-SmaltiExposeCellSize YES` (UI tests, F4.5 C9): the cell size in points as the title, "celda 8 × 21", so a test sees
     /// ⌘+ and ⌘− take effect. Nothing otherwise.
+    var exposesCellSize = false
+
     override func accessibilityTitle() -> String? {
-        guard UserDefaults.standard.bool(forKey: "SmaltiExposeCellSize"), let surface else { return nil }
+        guard exposesCellSize, let surface else { return nil }
         let size = ghostty_surface_size(surface)
         let scale = window?.backingScaleFactor ?? 2
         return "celda \(Int(Double(size.cell_width_px) / scale)) × \(Int(Double(size.cell_height_px) / scale))"
