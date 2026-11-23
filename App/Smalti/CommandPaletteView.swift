@@ -52,10 +52,6 @@ final class CommandPaletteView: NSView {
         layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
     }
 
-    func scrollToVisible(_ view: NSView) {
-        view.scrollToVisible(view.bounds)
-    }
-
     // MARK: - Layout
 
     /// Shadow outside, blur and tint inside the rounded box, border on top.

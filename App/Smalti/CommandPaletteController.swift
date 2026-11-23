@@ -27,8 +27,10 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private var view: CommandPaletteView?
     /// The theme the open palette was built with.
     private var theme = Theme.obsidian
+    /// All results in screen order (sections flattened); only `window.visible` has rows built.
+    private var results: [RankedCommand] = []
+    private var resultWindow = ResultWindow(count: 0, capacity: 1)
     private var rows: [CommandRowView] = []
-    private var selection = 0
     private var mode = Mode.searching
     private let signposter = OSSignposter(subsystem: "dev.simonriv.smalti", category: "palette")
     private var outsideClicks: Any?
@@ -145,19 +147,27 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     // MARK: - Results
 
-    /// Rows follow the domain's sections, so the selection order is the order on screen.
+    /// Results follow the domain's sections, so the selection order is the order on screen.
     private func refresh() {
         guard let view else { return }
-        let sections = CommandSection.grouping(actions.search(view.field.stringValue))
+        results = CommandSection.grouping(actions.search(view.field.stringValue)).flatMap(\.commands)
+        resultWindow = ResultWindow(count: results.count, capacity: rowCapacity)
+        renderWindow()
+    }
+
+    /// Builds the visible rows only, with a group label wherever the group changes (and at the top of the window).
+    private func renderWindow() {
+        guard let view else { return }
         var views: [NSView] = []
-        rows = []
-        for section in sections {
-            views.append(CommandGroupLabel(section.group, theme: theme))
-            let sectionRows = section.commands.map(makeRow)
-            rows += sectionRows
-            views += sectionRows
+        var previous: CommandGroup?
+        rows = resultWindow.visible.map { index in
+            let ranked = results[index]
+            if ranked.command.group != previous { views.append(CommandGroupLabel(ranked.command.group, theme: theme)) }
+            previous = ranked.command.group
+            let row = makeRow(ranked)
+            views.append(row)
+            return row
         }
-        selection = 0
         view.show(views, maximumListHeight: maximumListHeight)
         highlight()
     }
@@ -169,14 +179,21 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     }
 
     private func moveSelection(by step: Int) {
-        guard !rows.isEmpty, mode == .searching else { return }
-        selection = (selection + step + rows.count) % rows.count
-        highlight()
+        guard !results.isEmpty, mode == .searching else { return }
+        let moved = resultWindow.moving(by: step)
+        let scrolled = moved.visible != resultWindow.visible
+        resultWindow = moved
+        scrolled ? renderWindow() : highlight()
     }
 
     private func highlight() {
-        for (index, row) in rows.enumerated() { row.setSelected(index == selection) }
-        if rows.indices.contains(selection) { view?.scrollToVisible(rows[selection]) }
+        let selected = resultWindow.selection - resultWindow.visible.lowerBound
+        for (index, row) in rows.enumerated() { row.setSelected(index == selected) }
+    }
+
+    /// Rows that fit in the list area; group labels take a little more, and the list scrolls if they overflow.
+    private var rowCapacity: Int {
+        Int(maximumListHeight / theme.palette.rowHeight)
     }
 
     private func commit() {
@@ -186,8 +203,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
             close()
             actions.rename(name)
         case .searching:
-            guard rows.indices.contains(selection) else { return }
-            run(rows[selection].command.id)
+            guard results.indices.contains(resultWindow.selection) else { return }
+            run(results[resultWindow.selection].command.id)
         }
     }
 
