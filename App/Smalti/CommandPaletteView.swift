@@ -53,7 +53,11 @@ final class CommandPaletteView: NSView {
     }
 
     private func revealPending() {
-        guard let row = pendingReveal, let document = scroll.documentView else { return }
+        // The rows may have been replaced (rename mode) before this turn ran; a detached row has no frame to show.
+        guard let row = pendingReveal, let document = scroll.documentView, row.isDescendant(of: document) else {
+            pendingReveal = nil
+            return
+        }
         pendingReveal = nil
         window?.layoutIfNeeded()
         var target = row.convert(row.bounds, to: document)
