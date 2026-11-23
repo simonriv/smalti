@@ -141,4 +141,28 @@
 - [x] Aprobada (`docs/specs/F4-input.md`, 2026-11-23): zsh edita y Smalti sugiere, input en línea, ⌃R en paleta, historial desde cero, toma de control de plugins
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F4-input.md`)
+- [x] Plan de implementación (`docs/plans/F4-input.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · Línea de comando y protocolo del canal
+- [ ] T2 · Historial, filtro de secretos y búsqueda ⌃R
+- [ ] T3 · Predicción heurística
+- [ ] T4 · Specs, motor de completions y menú
+- [ ] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
+#### Bloque 2 · Adaptadores
+- [ ] T6 · `FileCommandHistory` (JSONL)
+- [ ] T7 · `ProjectContextAdapter`
+- [ ] T8 · `FigCompletionAdapter` y vendoring
+- [ ] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
+#### Bloque 3 · Canal con zsh
+- [ ] T10 · `InputSocketServer`
+- [ ] T11 · Script de zsh: canal, fantasma y aceptar
+- [ ] T12 · Toma de control y Tab
+#### Bloque 4 · App
+- [ ] T13 · `InputCoordinator` y composición
+- [ ] T14 · Menú de completions
+- [ ] T15 · Paleta ⌃R y comando de ⌘K
+- [ ] T16 · UI tests, aislamiento y capturas
+#### Bloque 5 · Cierre
+- [ ] T17 · Mediciones, checklist, revisión final, mutación y PR
