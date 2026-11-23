@@ -201,6 +201,7 @@ final class GhosttySurfaceView: NSView {
         }
         config.working_directory = UnsafePointer(cString(spec.workingDirectory.path))
         if case .custom(let command) = spec.command { config.command = UnsafePointer(cString(command)) }
+        if let input = spec.initialInput { config.initial_input = UnsafePointer(cString(input)) }
         var environment = spec.environment.sorted { $0.key < $1.key }.map { key, value in
             ghostty_env_var_s(key: cString(key), value: cString(value))
         }

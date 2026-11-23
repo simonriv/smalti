@@ -14,7 +14,7 @@ struct ScreenChangeTests {
     private let spec: TerminalSessionSpec
 
     init() throws {
-        try GhosttyProcess.ensureInitialized(resourcesDirectory: nil)
+        try TestGhostty.initialize()
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-screen-\(UUID()).conf"))

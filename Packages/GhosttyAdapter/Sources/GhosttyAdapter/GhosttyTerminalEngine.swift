@@ -20,7 +20,41 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
         }
-        views[pane] = try GhosttySurfaceView(app: runtime.app, spec: spec)
+        views[pane] = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+    }
+
+    /// Where a restored pane's saved scrollback waits for its launcher (owner-only, removed once printed).
+    func restoreFile(for pane: PaneID) -> URL {
+        FileManager.default.temporaryDirectory.appending(path: "smalti-restore-\(pane).txt")
+    }
+
+    /// The spec as libghostty receives it: a pane with saved scrollback starts through `RestoreLauncher`, and a
+    /// pane that restores its history says so to the shell (`SMALTI_RESTORE_HISTORY`, read by Smalti's zsh hook).
+    func prepared(_ spec: TerminalSessionSpec, for pane: PaneID) -> TerminalSessionSpec {
+        guard let restoration = spec.restoration else { return spec }
+        var environment = spec.environment
+        if restoration.restoresHistory { environment["SMALTI_RESTORE_HISTORY"] = "1" }
+        var command = spec.command
+        if let scrollback = restoration.scrollback, writeRestoreFile(scrollback, for: pane) {
+            environment[RestoreLauncher.fileVariable] = restoreFile(for: pane).path(percentEncoded: false)
+            command = .custom(RestoreLauncher.command(shell: spec.command, banner: banner(restoration.savedAt)))
+        }
+        return TerminalSessionSpec(
+            workingDirectory: spec.workingDirectory, command: command, environment: environment,
+            restoration: restoration, initialInput: spec.initialInput)
+    }
+
+    /// False when the file cannot be written: the pane then starts without its scrollback.
+    private func writeRestoreFile(_ scrollback: Scrollback, for pane: PaneID) -> Bool {
+        let file = restoreFile(for: pane)
+        let created = FileManager.default.createFile(
+            atPath: file.path(percentEncoded: false), contents: Data(scrollback.text.utf8),
+            attributes: [.posixPermissions: 0o600])
+        return created
+    }
+
+    private func banner(_ savedAt: Date) -> String {
+        RestoreBanner.text(savedAt: savedAt, calendar: .current)
     }
 
     /// Off only in tests, to exercise the plain-text fallback.
