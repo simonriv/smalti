@@ -24,6 +24,45 @@ struct GhosttyConfigTextTests {
         #expect(lines.contains(line))
     }
 
+    @Test func configStartsWithKeybindClear() {
+        let firstLine = GhosttyConfigText.render(Theme.obsidian.terminal).split(separator: "\n").first
+
+        #expect(firstLine == "keybind = clear")
+    }
+
+    @Test func configRebindsOnlyCopyAndPaste() {
+        let keybinds = GhosttyConfigText.render(Theme.obsidian.terminal)
+            .split(separator: "\n")
+            .filter { $0.hasPrefix("keybind = ") }
+
+        #expect(
+            keybinds == [
+                "keybind = clear", "keybind = super+c=copy_to_clipboard", "keybind = super+v=paste_from_clipboard",
+            ])
+    }
+
+    @Test func renderNeverInjectsLinesFromFontFamily() {
+        var settings = AppearanceSettings.obsidian
+        settings.fontFamily = "X\"\ncommand = /bin/sh"
+        let appearance = Theme.obsidian.applying(settings).terminal
+
+        let lines = GhosttyConfigText.render(appearance).split(separator: "\n")
+
+        #expect(!lines.contains { $0.hasPrefix("command") })
+        #expect(lines.filter { $0 == "keybind = clear" }.count == 1)
+    }
+
+    @Test(arguments: ["X\"Y", "X\\Y", "X\nY", "X\rY", "X\u{7}Y", String(repeating: "a", count: 101)])
+    func unsafeFontFamilyLeavesTheEngineDefault(_ family: String) {
+        var settings = AppearanceSettings.obsidian
+        settings.fontFamily = family
+        let appearance = Theme.obsidian.applying(settings).terminal
+
+        let rendered = GhosttyConfigText.render(appearance)
+
+        #expect(!rendered.contains("font-family"))
+    }
+
     @Test func listsTheSixteenPaletteEntriesInOrder() {
         let palette = GhosttyConfigText.render(Theme.obsidian.terminal)
             .split(separator: "\n")

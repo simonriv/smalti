@@ -40,4 +40,20 @@ struct PaneTests {
     @Test func bellLeavesPaneUnchanged() {
         #expect(pane.applying(.bell) == pane)
     }
+
+    @Test func paneRecordsForegroundProcess() {
+        #expect(pane.applying(.foregroundProcessChanged("claude")).processName == "claude")
+    }
+
+    @Test func closeRequestedLeavesPaneUnchanged() {
+        #expect(pane.applying(.closeRequested) == pane)
+    }
+
+    @Test func headerNamePrefersProcessThenTitleThenEmpty() {
+        let titled = pane.applying(.titleChanged("~/dev"))
+
+        #expect(pane.headerName == "")
+        #expect(titled.headerName == "~/dev")
+        #expect(titled.applying(.foregroundProcessChanged("vim")).headerName == "vim")
+    }
 }

@@ -1,34 +1,46 @@
 import Foundation
+import SmaltiCoreTestSupport
 import Testing
 
 @Suite("Import guard")
 struct ImportGuardTests {
+    /// SmaltiCore stays pure Swift: Foundation value types are the only allowed import.
+    private let scanner = ImportScanner.allowing(["Foundation"])
+
     @Test func scannerFlagsForbiddenModule() {
-        let violations = forbiddenImports(in: "import Foundation\nimport AppKit\n", file: "X.swift")
+        let violations = scanner.violations(in: "import Foundation\nimport AppKit\n", file: "X.swift")
 
         #expect(violations == [ImportViolation(file: "X.swift", line: 2, module: "AppKit")])
     }
 
     @Test func scannerIgnoresCommentsAndAllowedModules() {
-        let violations = forbiddenImports(in: "// import AppKit\nimport Foundation", file: "X.swift")
+        let violations = scanner.violations(in: "// import AppKit\nimport Foundation", file: "X.swift")
 
         #expect(violations.isEmpty)
     }
 
     @Test func scannerFlagsAttributedImports() {
-        let violations = forbiddenImports(in: "@preconcurrency import GhosttyKit", file: "X.swift")
+        let violations = scanner.violations(in: "@preconcurrency import GhosttyKit", file: "X.swift")
 
         #expect(violations.map(\.module) == ["GhosttyKit"])
     }
 
     @Test func scannerFlagsDeclarationKindImports() {
-        let violations = forbiddenImports(in: "import struct CoreGraphics.CGRect", file: "X.swift")
+        let violations = scanner.violations(in: "import struct CoreGraphics.CGRect", file: "X.swift")
 
         #expect(violations.map(\.module) == ["CoreGraphics"])
     }
 
+    @Test func forbiddingScannerFlagsOnlyTheListedModules() {
+        let scanner = ImportScanner.forbidding(["TOMLDecoder"])
+
+        let violations = scanner.violations(in: "import AppKit\nimport TOMLDecoder\n", file: "X.swift")
+
+        #expect(violations == [ImportViolation(file: "X.swift", line: 2, module: "TOMLDecoder")])
+    }
+
     @Test func coreSourcesHaveNoForbiddenImports() throws {
-        let violations = try forbiddenImports(inDirectory: coreSourcesDirectory())
+        let violations = try scanner.violations(inDirectory: coreSourcesDirectory())
 
         #expect(
             violations.isEmpty,

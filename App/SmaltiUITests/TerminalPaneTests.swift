@@ -5,12 +5,12 @@ final class TerminalPaneTests: XCTestCase {
     private var app: XCUIApplication!  // Assigned in setUp before every test; XCTest has no init-time setup.
     private var outputFile: URL!  // Same: created per test in setUp.
     private var exitMarker: URL!  // Same: written by the app only when it terminates cleanly.
-    /// The user's pasteboard text, restored in tearDown, which XCTest runs even when a test fails.
-    private var savedPasteboard: String?
+    /// The user's whole pasteboard, restored in tearDown, which XCTest runs even when a test fails (R9).
+    private var pasteboard: PasteboardGuard!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        savedPasteboard = NSPasteboard.general.string(forType: .string)
+        pasteboard = PasteboardGuard()
         outputFile = FileManager.default.temporaryDirectory.appending(path: "smalti-uitest-\(UUID().uuidString)")
         exitMarker = FileManager.default.temporaryDirectory.appending(path: "smalti-exit-\(UUID().uuidString)")
         app = XCUIApplication.isolatedSmalti()
@@ -20,9 +20,8 @@ final class TerminalPaneTests: XCTestCase {
     }
 
     override func tearDown() {
-        NSPasteboard.general.clearContents()
-        if let savedPasteboard { NSPasteboard.general.setString(savedPasteboard, forType: .string) }
         app.terminate()
+        pasteboard.restore()
         try? FileManager.default.removeItem(at: outputFile)
         try? FileManager.default.removeItem(at: exitMarker)
     }
@@ -51,14 +50,15 @@ final class TerminalPaneTests: XCTestCase {
         wait(for: [written], timeout: 10)
     }
 
-    /// Review Focus 2: when the shell exits, the pane closes its window and the app terminates.
-    func testShellExitTerminatesApp() {
+    /// B15: when the last shell exits, the workspace stays open and empty, with its hint, instead of quitting.
+    func testShellExitLeavesEmptyWorkspace() {
         XCTAssertTrue(app.descendants(matching: .any)["smalti.terminal"].firstMatch.waitForExistence(timeout: 5))
 
         app.typeText("exit\n")
 
-        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: exitMarker.path), "the app must quit cleanly, not crash")
+        XCTAssertTrue(app.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(app.windows["smalti.window"].exists)
     }
 
     /// A11 (synthesized input): accented letters and the characters ⌥ produces on the Latin American layout
@@ -127,16 +127,17 @@ final class TerminalPaneTests: XCTestCase {
         wait(for: [written], timeout: 10)
     }
 
-    /// A shell that dies right after starting is reported instead of the window vanishing.
-    func testShellThatFailsToStartIsReported() {
+    /// A shell that dies right after starting is reported in the status bar; the window stays (spec R4).
+    func testShellThatFailsToStartIsReportedInTheStatusBar() {
         app.terminate()
-        let failing = XCUIApplication()
-        failing.launchArguments += ["-SmaltiShellCommand", "/usr/bin/false"]
+        let failing = XCUIApplication.isolatedSmalti(shell: "/usr/bin/false")
         failing.launch()
 
-        let message = failing.staticTexts["El shell terminó al iniciar"]
-        XCTAssertTrue(message.waitForExistence(timeout: 10))
-        failing.buttons["Cerrar"].click()
-        XCTAssertTrue(failing.wait(for: .notRunning, timeout: 10))
+        let statusBar = failing.descendants(matching: .any)["smalti.statusBar"].firstMatch
+        let reported = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value BEGINSWITH 'El shell terminó al iniciar'"), object: statusBar)
+        wait(for: [reported], timeout: 10)
+        XCTAssertTrue(failing.descendants(matching: .any)["smalti.emptyWorkspace"].firstMatch.exists)
+        failing.terminate()
     }
 }

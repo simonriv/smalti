@@ -1,4 +1,5 @@
-// The only file with literal design tokens. Source: docs/design/README.md and Apariencia.dc.html.
+// The only file with literal design tokens. Sources: docs/design/README.md, Apariencia.dc.html, Main.dc.html and
+// Paleta.dc.html.
 
 private func rgb(_ value: UInt32) -> RGBAColor {
     RGBAColor(
@@ -8,8 +9,20 @@ private func rgb(_ value: UInt32) -> RGBAColor {
         alpha: 1)
 }
 
+private func white(_ alpha: Double) -> RGBAColor {
+    RGBAColor(red: 255, green: 255, blue: 255, alpha: alpha)
+}
+
+private let monospacedFontFamily = "JetBrains Mono"
 private let obsidianAccent = rgb(0x7aa2f7)
 private let obsidianPrimaryText = rgb(0xd7dae0)
+private let obsidianTitleText = rgb(0xe6e9ef)
+/// Minimum for small text over the glass (docs/design/README.md); status bar and empty hint use it too.
+private let obsidianSecondaryText = rgb(0x8b919c)
+/// Status dot before agents have a state (F2 colors it).
+private let obsidianNeutralDot = rgb(0x565c68)
+/// Inactive workspace names and pane directories (Main.dc.html).
+private let obsidianMutedText = rgb(0x9aa0ab)
 
 extension Theme {
     public static let obsidian = Theme(
@@ -27,11 +40,13 @@ extension Theme {
             cornerRadius: 11,
             gap: 8,
             areaPadding: 10),
-        chrome: ChromeTokens(topStripHeight: 40),
-        text: TextTokens(primary: obsidianPrimaryText, title: rgb(0xe6e9ef), secondary: rgb(0x8b919c)),
+        chrome: ChromeTokens(topStripHeight: 40, hairlineWidth: 1),
+        text: TextTokens(
+            interfaceFontFamily: "Inter", primary: obsidianPrimaryText, title: obsidianTitleText,
+            secondary: obsidianSecondaryText),
         accent: obsidianAccent,
         terminal: TerminalAppearance(
-            fontFamily: "JetBrains Mono",
+            fontFamily: monospacedFontFamily,
             fontSize: 13,
             lineHeight: 1.62,
             foreground: obsidianPrimaryText,
@@ -41,5 +56,36 @@ extension Theme {
                 0x414868, 0xff99ad, 0xb9f27c, 0xffc777, 0xa3bdfa, 0xd3b8ff, 0xa4e3ff, 0xc0caf5,
             ].map(rgb),
             paddingX: 16,
-            paddingY: 12))
+            paddingY: 12),
+        strip: StripTokens(
+            pillHeight: 26, pillCornerRadius: 7, pillPadding: 11, pillGap: 6, paddingLeading: 16,
+            paddingTrailing: 14, inactiveText: obsidianMutedText, activeText: obsidianTitleText, labelGap: 7,
+            fontSize: 12,
+            fontWeight: 500, dotSize: 6, dot: obsidianNeutralDot,
+            bottomBorder: white(0.05), addButtonIconSize: 12, addButtonIconStroke: 1.4,
+            addButtonColor: obsidianSecondaryText),
+        header: HeaderTokens(
+            height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, dot: obsidianNeutralDot,
+            directory: obsidianMutedText,
+            bottomBorder: white(0.05), processFontWeight: 600),
+        kbd: KbdTokens(
+            fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
+            cornerRadius: 5, borderWidth: 1, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
+        statusBar: StatusBarTokens(
+            height: 28, padding: 16, gap: 16, fontSize: 11, text: obsidianSecondaryText, topBorder: white(0.05)),
+        focus: FocusTokens(
+            ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28,
+            ringWidth: 1),
+        palette: PaletteTokens(
+            width: 640, cornerRadius: 14, background: RGBAColor(red: 20, green: 22, blue: 30, alpha: 0.82),
+            blurRadius: 36, border: white(0.12), fieldHeight: 52, fieldPadding: 16, rowHeight: 38,
+            rowCornerRadius: 8, rowGap: 12, rowFontSize: 13.5, groupFontSize: 10.5, groupTracking: 0.06,
+            groupPaddingTop: 10, groupPaddingHorizontal: 12, groupPaddingBottom: 4,
+            selection: obsidianAccent.withAlpha(0x26 / 255), footerHeight: 36, footerFontSize: 11.5,
+            footerBorder: white(0.07), topOffset: 110, panelsBackdropOpacity: 0.45, fieldFontSize: 16, fieldGap: 10,
+            iconSize: 16, searchIconStroke: 1.5, commandIconStroke: 1.4, listPaddingTop: 4, listPaddingHorizontal: 6,
+            listPaddingBottom: 8, rowPadding: 12, shadowOffsetY: 40, shadowBlur: 100, shadowOpacity: 0.55,
+            markerFontSize: 11.5, footerGap: 16),
+        motion: MotionTokens(rearrangeDuration: 0.15),
+        emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText))
 }

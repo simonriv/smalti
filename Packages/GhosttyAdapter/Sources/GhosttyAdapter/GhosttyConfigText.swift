@@ -12,9 +12,17 @@ public enum GhosttyConfigText {
         "\(Int(((lineHeight / naturalLineHeight - 1) * 100).rounded()))%"
     }
 
+    /// libghostty's default bindings (⌘K clear_screen, ⌘D new_split, ⌘1…9 goto_tab, ⌘W close_surface…) would take
+    /// Smalti's own shortcuts before the `KeyRouter` sees them (R6), so they are cleared and only copy and paste,
+    /// which need the terminal's selection, come back.
+    static let keybinds = [
+        "keybind = clear",
+        "keybind = super+c=copy_to_clipboard",
+        "keybind = super+v=paste_from_clipboard",
+    ]
+
     public static func render(_ appearance: TerminalAppearance) -> String {
         let settings = [
-            "font-family = \"\(appearance.fontFamily)\"",
             "font-size = \(number(appearance.fontSize))",
             "adjust-cell-height = \(cellHeightAdjustment(lineHeight: appearance.lineHeight))",
             "foreground = \(hex(appearance.foreground))",
@@ -30,7 +38,14 @@ public enum GhosttyConfigText {
             "confirm-close-surface = false",
         ]
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
-        return (settings + palette).joined(separator: "\n") + "\n"
+        return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"
+    }
+
+    /// Defense in depth behind the config's own validation: an invalid name (one that could close the quote or start
+    /// a new line) is dropped, not escaped, and libghostty keeps its default font.
+    private static func fontFamily(_ name: String) -> [String] {
+        guard AppearanceSettings.isValidFontFamily(name) else { return [] }
+        return ["font-family = \"\(name)\""]
     }
 
     private static func hex(_ color: RGBAColor) -> String {

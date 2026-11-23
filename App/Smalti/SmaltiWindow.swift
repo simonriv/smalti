@@ -7,11 +7,19 @@ final class SmaltiWindow: NSWindow {
     static let defaultContentSize = NSSize(width: 1328, height: 820)
     static let minimumContentSize = NSSize(width: 480, height: 300)
 
-    let paneContainer: PaneContainerView
+    let paneGrid: PaneGridView
+    let strip: WorkspaceStripView
+    let statusBar: StatusBarView
+    private let content: WindowContentView
+    /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
+    var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 
     init(theme: Theme) {
         let content = WindowContentView(theme: theme)
-        paneContainer = content.paneContainer
+        self.content = content
+        paneGrid = content.paneGrid
+        strip = content.strip
+        statusBar = content.statusBar
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -33,23 +41,50 @@ final class SmaltiWindow: NSWindow {
         setAccessibilityIdentifier("smalti.window")
         center()
     }
+
+    /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
+    func applyGlass(_ theme: Theme) {
+        let blur = WindowGlass.apply(blurRadius: theme.window.blurRadius, to: self)
+        content.apply(theme.window, blur: blur)
+    }
+
+    /// ⌘ shortcuts arrive here first, before the menu and the terminal's own key equivalents.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        routeKey?(event, isComposing) == true || super.performKeyEquivalent(with: event)
+    }
+
+    /// Shortcuts without ⌘ (⌃1…⌃9) arrive as plain key-down events.
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, routeKey?(event, isComposing) == true { return }
+        super.sendEvent(event)
+    }
+
+    /// The first responder is in the middle of a dead key or an IME composition.
+    private var isComposing: Bool {
+        (firstResponder as? NSTextInputClient)?.hasMarkedText() ?? false
+    }
 }
 
-/// Rounded glass surface holding the drag strip and the pane area.
+/// Rounded glass surface: workspace strip (40 pt), pane area with a 10 pt margin, status bar (28 pt).
 final class WindowContentView: NSView {
-    let paneContainer: PaneContainerView
+    let paneGrid: PaneGridView
+    let strip: WorkspaceStripView
+    let statusBar: StatusBarView
 
     init(theme: Theme) {
-        paneContainer = PaneContainerView(theme: theme)
+        paneGrid = PaneGridView(theme: theme)
+        strip = WorkspaceStripView(theme: theme)
+        statusBar = StatusBarView(theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = theme.window.cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
-        layer?.borderWidth = theme.window.borderWidth
-        layer?.borderColor = theme.window.border.nsColor.cgColor
-        layer?.backgroundColor = theme.window.background.nsColor.cgColor
-        layout(strip: DragStripView(), theme: theme)
+        paint(theme.window)
+        layoutChrome(theme: theme)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityIdentifier("smalti.glass")
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -60,9 +95,24 @@ final class WindowContentView: NSView {
         window?.invalidateShadow()
     }
 
-    private func layout(strip: DragStripView, theme: Theme) {
+    /// Repaints the glass and states what was applied as the accessibility value, e.g. "vidrio 0.62 · desenfoque 28",
+    /// read back from the layer so tests see what is on screen rather than what was asked for.
+    func apply(_ tokens: WindowTokens, blur: GlassBlur) {
+        paint(tokens)
+        let opacity = layer?.backgroundColor?.alpha ?? 0
+        setAccessibilityValue("vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)")
+    }
+
+    private func paint(_ tokens: WindowTokens) {
+        layer?.cornerRadius = tokens.cornerRadius
+        layer?.borderWidth = tokens.borderWidth
+        layer?.borderColor = tokens.border.nsColor.cgColor
+        layer?.backgroundColor = tokens.background.nsColor.cgColor
+    }
+
+    private func layoutChrome(theme: Theme) {
         let padding = theme.panel.areaPadding
-        for view in [strip, paneContainer] as [NSView] {
+        for view in [strip, paneGrid, statusBar] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -71,10 +121,23 @@ final class WindowContentView: NSView {
             strip.leadingAnchor.constraint(equalTo: leadingAnchor),
             strip.trailingAnchor.constraint(equalTo: trailingAnchor),
             strip.heightAnchor.constraint(equalToConstant: theme.chrome.topStripHeight),
-            paneContainer.topAnchor.constraint(equalTo: strip.bottomAnchor, constant: padding),
-            paneContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
-            paneContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
-            paneContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padding),
+            paneGrid.topAnchor.constraint(equalTo: strip.bottomAnchor, constant: padding),
+            paneGrid.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
+            paneGrid.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
+            paneGrid.bottomAnchor.constraint(equalTo: statusBar.topAnchor, constant: -padding),
+            statusBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            statusBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            statusBar.bottomAnchor.constraint(equalTo: bottomAnchor),
+            statusBar.heightAnchor.constraint(equalToConstant: theme.statusBar.height),
         ])
+    }
+}
+
+extension GlassBlur {
+    fileprivate var description: String {
+        switch self {
+        case .exact(let radius): "\(radius)"
+        case .systemMaterial: "del sistema"
+        }
     }
 }

@@ -1,0 +1,17 @@
+# ~/.config/smalti/config.toml: valores por defecto
+[appearance]
+accent = "#7aa2f7"
+glass_opacity = 0.62
+blur = 28
+font_family = "JetBrains Mono"
+font_size = 13
+gap = 8
+radius = 11
+
+[tiling]
+default_layout = "dwindle"   # dwindle | columns | master
+
+[shell]
+command = "login"            # login shell del usuario
+
+[keys]                       # atajo → id de comando; ver tabla de atajos
