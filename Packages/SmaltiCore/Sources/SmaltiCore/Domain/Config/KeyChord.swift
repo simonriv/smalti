@@ -50,8 +50,11 @@ public struct KeyChord: Hashable, Sendable {
     /// Modifiers in Apple's order (⌃⌥⇧⌘) followed by the key, e.g. `⌥⇧⌘←`.
     public var display: String {
         let symbols = Self.displayOrder.filter { modifiers.contains($0.modifier) }.map(\.symbol)
-        return symbols.joined() + (Self.namedKeySymbols[key] ?? key.uppercased())
+        return symbols.joined() + keySymbol
     }
+
+    /// The key alone as shown: `←`, `⇞`, `K`.
+    public var keySymbol: String { Self.namedKeySymbols[key] ?? key.uppercased() }
 
     /// ⌥ without ⌘ or ⌃ is reserved for typing characters.
     public var usesOptionAlone: Bool {

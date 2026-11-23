@@ -4,6 +4,9 @@ public enum CommandGroup: String, Sendable {
     case panes = "Paneles"
     case workspaces = "Workspaces y sesiones"
     case configuration = "Configuración"
+    case windows = "Ventanas"
+    case terminal = "Terminal"
+    case help = "Ayuda"
 }
 
 /// One entry of the command palette: what the user can do right now.

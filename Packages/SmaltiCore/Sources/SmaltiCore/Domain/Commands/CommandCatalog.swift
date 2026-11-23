@@ -8,9 +8,47 @@ public enum CommandCatalog {
         let context = Context(workspaces: set, keymap: keymap)
         return tilingCommands(context, layouts)
             + paneCommands(context)
+            + terminalCommands(context)
             + workspaceCommands(context)
             + savedLayouts.map(restoreCommand)
+            + windowCommands(context)
             + configurationCommands(context)
+            + helpCommands(context)
+    }
+
+    /// F4.5: titles as in the spec's menu table; the menu and the help reuse them.
+    static let titles: [CommandID: String] = [
+        .windowNew: "Nueva ventana", .windowClose: "Cerrar ventana", .windowFullscreen: "Pantalla completa",
+        .windowMinimize: "Minimizar", .terminalCopy: "Copiar", .terminalPaste: "Pegar",
+        .terminalSelectAll: "Seleccionar todo", .terminalClear: "Limpiar pantalla", .searchOpen: "Buscar…",
+        .searchNext: "Buscar siguiente", .searchPrevious: "Buscar anterior", .fontIncrease: "Aumentar letra",
+        .fontDecrease: "Reducir letra", .fontReset: "Tamaño real", .scrollPageUp: "Página arriba",
+        .scrollPageDown: "Página abajo", .scrollTop: "Al principio", .scrollBottom: "Al final",
+        .promptPrevious: "Prompt anterior", .promptNext: "Prompt siguiente", .configOpen: "Configuración…",
+        .secureInputToggle: "Entrada de teclado segura", .helpShow: "Ayuda de Smalti",
+        .feedbackReport: "Reportar un problema o una idea…", .logsShow: "Mostrar registros…",
+        .appAbout: "Acerca de Smalti",
+    ]
+
+    static let terminalIDs: [CommandID] = [
+        .terminalCopy, .terminalPaste, .terminalSelectAll, .terminalClear, .searchOpen, .searchNext, .searchPrevious,
+        .fontIncrease, .fontDecrease, .fontReset, .scrollPageUp, .scrollPageDown, .scrollTop, .scrollBottom,
+        .promptPrevious, .promptNext,
+    ]
+
+    private static func terminalCommands(_ context: Context) -> [Command] {
+        guard context.paneCount >= 1 else { return [] }
+        return terminalIDs.map { context.titled($0, group: .terminal) }
+    }
+
+    private static func windowCommands(_ context: Context) -> [Command] {
+        [CommandID.windowNew, .windowClose, .windowFullscreen, .windowMinimize].map {
+            context.titled($0, group: .windows)
+        }
+    }
+
+    private static func helpCommands(_ context: Context) -> [Command] {
+        [CommandID.helpShow, .feedbackReport, .logsShow, .appAbout].map { context.titled($0, group: .help) }
     }
 
     /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
@@ -41,6 +79,10 @@ public enum CommandCatalog {
             Command(
                 id: id, title: title, subtitle: subtitle, group: group, shortcut: keymap.chord(for: id),
                 isCurrent: false)
+        }
+
+        func titled(_ id: CommandID, group: CommandGroup) -> Command {
+            command(id, CommandCatalog.titles[id] ?? id.rawValue, group: group)
         }
     }
 
@@ -123,6 +165,8 @@ public enum CommandCatalog {
             context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration),
             context.command(
                 .claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration),
+            context.titled(.configOpen, group: .configuration),
+            context.titled(.secureInputToggle, group: .configuration),
         ]
     }
 }

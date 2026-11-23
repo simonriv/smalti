@@ -182,7 +182,7 @@
 - [x] T2 · Ids nuevos, varios atajos por comando y teclas con nombre (⇧ forma parte del carácter en símbolos: ayuda en ⌘?, ⌘+ en los dos layouts, sin aviso de ⇧⌘=)
 - [x] T3 · Ventanas y sesión v2
 - [x] T4 · Acciones del terminal, tamaño de letra y confirmar cierre (ocupado = programa en primer plano que no es el shell, sin depender de OSC 133)
-- [ ] T5 · Catálogo, ayuda y modelo del menú
+- [x] T5 · Catálogo, ayuda y modelo del menú
 #### Bloque 2 · Adaptadores
 - [ ] T6 · Feedback, plantilla del TOML y versión
 - [ ] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra

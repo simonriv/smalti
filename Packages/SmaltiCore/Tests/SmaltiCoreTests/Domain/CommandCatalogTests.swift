@@ -194,7 +194,8 @@ struct CommandCatalogTests {
     }
 
     private static func order(_ group: CommandGroup) -> Int {
-        [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
+        [CommandGroup.tiling, .panes, .terminal, .workspaces, .windows, .configuration, .help].firstIndex(of: group)
+            ?? 0
     }
 
     @Test func searchHistoryIsListed() {
