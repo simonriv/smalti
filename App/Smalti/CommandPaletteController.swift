@@ -189,6 +189,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private func highlight() {
         let selected = resultWindow.selection - resultWindow.visible.lowerBound
         for (index, row) in rows.enumerated() { row.setSelected(index == selected) }
+        if rows.indices.contains(selected) { view?.reveal(rows[selected]) }
     }
 
     /// Rows that fit in the list area; group labels take a little more, and the list scrolls if they overflow.

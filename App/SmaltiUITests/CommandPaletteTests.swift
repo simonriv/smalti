@@ -90,4 +90,47 @@ final class CommandPaletteTests: SmaltiUITestCase {
             predicate: NSPredicate(format: "value ENDSWITH %@", suffix), object: element)
         wait(for: [matched], timeout: 5)
     }
+
+    // MARK: - The selected row stays in view (F3 Task 0)
+
+    func testArrowDownKeepsSelectedRowInsideTheList() {
+        openPalette()
+        let count = app.elements("smalti.paletteRow").count
+
+        for _ in 1..<max(count, 1) {
+            app.typeKey(.downArrow, modifierFlags: [])
+            assertSelectedRowIsInsideTheList()
+        }
+    }
+
+    func testArrowUpWrapsAndRevealsLastRow() {
+        openPalette()
+
+        app.typeKey(.upArrow, modifierFlags: [])
+
+        assertSelectedRowIsInsideTheList()
+    }
+
+    func testArrowDownPastTheEndRevealsFirstRow() {
+        openPalette()
+        app.typeKey(.upArrow, modifierFlags: [])
+
+        app.typeKey(.downArrow, modifierFlags: [])
+
+        assertSelectedRowIsInsideTheList()
+        assertInsideTheList(app.staticTexts["TILING"])
+    }
+
+    private func assertSelectedRowIsInsideTheList(file: StaticString = #filePath, line: UInt = #line) {
+        let selected = app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
+        XCTAssertTrue(selected.waitForExistence(timeout: 2), "no selected row", file: file, line: line)
+        assertInsideTheList(selected, file: file, line: line)
+    }
+
+    private func assertInsideTheList(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let list = app.element("smalti.palette.list").frame
+        XCTAssertTrue(
+            list.insetBy(dx: -0.5, dy: -0.5).contains(element.frame),
+            "\(element.label) at \(element.frame) is not inside the list \(list)", file: file, line: line)
+    }
 }
