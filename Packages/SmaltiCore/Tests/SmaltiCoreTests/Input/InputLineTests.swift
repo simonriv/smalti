@@ -17,7 +17,7 @@ struct InputLineTests {
         let tokens = line("git commit -m \"a b\"").currentCommand
 
         #expect(tokens.map(\.text) == ["git", "commit", "-m", "a b"])
-        #expect(tokens.last?.isQuoted == true)
+        #expect(tokens.last?.openingQuote == "\"")
     }
 
     @Test func escapedSpaceJoinsWord() {
@@ -129,5 +129,29 @@ struct InputLineTests {
 
     @Test func nonBreakingSpaceStaysInsideTheWord() {
         #expect(line("echo a\u{00A0}b").currentCommand.map(\.text) == ["echo", "a\u{00A0}b"])
+    }
+
+    // Mutation survivors (F4 close): escapes end after one character, `\"` only escapes inside double quotes,
+    // a trailing `&`, and the opening quote of one word never leaks into the next.
+    @Test func escapeCoversOnlyTheNextCharacter() {
+        #expect(line("echo a\\ b c").currentCommand.map(\.text) == ["echo", "a b", "c"])
+    }
+
+    @Test func backslashEscapesAQuoteInsideDoubleQuotes() {
+        #expect(line("echo \"a\\\"b\" x").currentCommand.map(\.text) == ["echo", "a\"b", "x"])
+    }
+
+    @Test func backslashIsLiteralInsideSingleQuotes() {
+        #expect(line("echo 'a\\b' x").currentCommand.map(\.text) == ["echo", "a\\b", "x"])
+    }
+
+    @Test func trailingAmpersandEndsTheCommand() {
+        #expect(line("sleep 1 &").currentCommand.map(\.text) == [])
+    }
+
+    @Test func openingQuoteBelongsToItsOwnWord() {
+        let tokens = line("echo 'a' b").currentCommand
+
+        #expect(tokens.map(\.openingQuote) == [nil, "'", nil])
     }
 }

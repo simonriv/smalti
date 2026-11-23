@@ -5,6 +5,7 @@ public actor InMemoryCommandHistory: CommandHistory {
     public private(set) var entries: [HistoryEntry]
     public private(set) var loads = 0
     private var loadFailure: HistoryError?
+    private var appendFailure: HistoryError?
     private var isHoldingLoads = false
     private var heldLoad: CheckedContinuation<Void, Never>?
     private var loadingWaiters: [CheckedContinuation<Void, Never>] = []
@@ -15,6 +16,10 @@ public actor InMemoryCommandHistory: CommandHistory {
 
     public func failLoading(with error: HistoryError) {
         loadFailure = error
+    }
+
+    public func failAppending(with error: HistoryError) {
+        appendFailure = error
     }
 
     /// Makes the next `load` wait for `releaseLoads()`, to test what happens while the history is loading.
@@ -48,6 +53,7 @@ public actor InMemoryCommandHistory: CommandHistory {
     }
 
     public func append(_ entry: HistoryEntry) async throws(HistoryError) {
+        if let appendFailure { throw appendFailure }
         entries.append(entry)
     }
 }

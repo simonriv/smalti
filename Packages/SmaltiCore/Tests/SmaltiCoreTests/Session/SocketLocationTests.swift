@@ -54,4 +54,15 @@ struct SocketLocationTests {
         #expect(input != SocketLocation.socketFile(stateDirectory: state, temporaryDirectory: temporary))
         #expect(input.path(percentEncoded: false).utf8.count < SocketLocation.maximumPathBytes)
     }
+
+    // Mutation survivor (F4 close): sockets other than the hooks' one carry their name in the short path.
+    @Test func shortPathsOfNamedSocketsCarryTheName() {
+        let state = URL(filePath: "/Users/s/" + String(repeating: "deep/", count: 20) + "state")
+
+        let input = SocketLocation.socketFile(named: "input", stateDirectory: state, temporaryDirectory: temporary)
+        let hooks = SocketLocation.socketFile(stateDirectory: state, temporaryDirectory: temporary)
+
+        #expect(input.lastPathComponent.hasSuffix("-input.sock"))
+        #expect(!hooks.lastPathComponent.contains("-smalti"))
+    }
 }

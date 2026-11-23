@@ -122,4 +122,15 @@ struct InputProtocolTests {
     @Test func noSpecsIsStillOneAnswer() {
         #expect(InputProtocol.specMessages([]) == [.specs([])])
     }
+
+    // Mutation survivors (F4 close).
+    @Test func shortSpecListIsOneAnswer() {
+        #expect(InputProtocol.specMessages(["git", "npm"]) == [.specs(["git", "npm"])])
+    }
+
+    @Test func fieldStartingWithNIsNotANewline() throws {
+        let packet = try InputProtocol.decode("history\t3\t/tmp\tnano")
+
+        #expect(packet.message == .history(seq: 3, query: "nano"))
+    }
 }

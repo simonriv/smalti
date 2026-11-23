@@ -125,6 +125,17 @@ struct OpenPaneTests {
                 == "/state/input.sock")
     }
 
+    // Mutation survivor (F4 close): the path is exported as is, never percent-encoded.
+    @Test func inputSocketWithSpacesIsExportedAsIs() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/s.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin",
+            inputSocket: URL(filePath: "/Application Support/input.sock"))
+
+        #expect(
+            PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"]
+                == "/Application Support/input.sock")
+    }
+
     @Test func withoutInputSocketThereIsNoInputVariable() {
         let ipc = IPCEndpoints(
             socket: URL(filePath: "/s.sock"), cli: URL(filePath: "/bin/smalti"), inheritedPath: "/usr/bin")

@@ -23,18 +23,11 @@ public struct OptionSpec: Equatable, Hashable, Sendable {
     public let names: [String]
     public let description: String?
     public let args: [ArgSpec]
-    public let isRepeatable: Bool
-    public let requiresSeparator: Bool
 
-    public init(
-        names: [String], description: String? = nil, args: [ArgSpec] = [], isRepeatable: Bool = false,
-        requiresSeparator: Bool = false
-    ) {
+    public init(names: [String], description: String? = nil, args: [ArgSpec] = []) {
         self.names = names
         self.description = description
         self.args = args
-        self.isRepeatable = isRepeatable
-        self.requiresSeparator = requiresSeparator
     }
 }
 
@@ -61,18 +54,17 @@ public struct ArgSpec: Equatable, Hashable, Sendable {
     public let suggestions: [Suggestion]
     public let templates: Set<ArgTemplate>
     public let generators: [GeneratorID]
-    public let isOptional: Bool
+    /// A variadic argument takes every remaining word: the walk stays on it.
     public let isVariadic: Bool
 
     public init(
         name: String? = nil, suggestions: [Suggestion] = [], templates: Set<ArgTemplate> = [],
-        generators: [GeneratorID] = [], isOptional: Bool = false, isVariadic: Bool = false
+        generators: [GeneratorID] = [], isVariadic: Bool = false
     ) {
         self.name = name
         self.suggestions = suggestions
         self.templates = templates
         self.generators = generators
-        self.isOptional = isOptional
         self.isVariadic = isVariadic
     }
 }

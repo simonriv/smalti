@@ -135,4 +135,31 @@ struct HistoryIndexTests {
         #expect(index.uses(ofWord: "cherry-pick") == 1)
         #expect(index.uses(ofWord: "absent") == 0)
     }
+
+    // Mutation survivors (F4 close).
+    @Test func unknownExitIsNotAFailure() {
+        #expect(!historyEntry("ls", exit: nil).hasFailed)
+    }
+
+    @Test func olderEntryAddedLaterKeepsTheNewestUse() {
+        let index = HistoryIndex(
+            entries: [historyEntry("make", exit: 0, at: 200), historyEntry("make", exit: 2, at: 100)], limit: 10)
+
+        #expect(index.stats(for: "make")?.lastUsed == Date(timeIntervalSince1970: 200))
+        #expect(index.stats(for: "make")?.lastExit == 0)
+    }
+
+    @Test func evictionKeepsTheDirectoryCountOfTheRest() {
+        var index = HistoryIndex(entries: [], limit: 2)
+        for second in 1...3 { index.append(historyEntry("ls", at: Double(second))) }
+
+        #expect(index.stats(for: "ls")?.usesByDirectory == ["/repo": 2])
+    }
+
+    @Test func evictionStaysRightAcrossStorageCompaction() {
+        var index = HistoryIndex(entries: [], limit: 10)
+        for number in 0..<3_000 { index.append(historyEntry("c\(number)", at: Double(number))) }
+
+        #expect(Set(index.commands(in: nil).map(\.command)) == Set((2_990..<3_000).map { "c\($0)" }))
+    }
 }

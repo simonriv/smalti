@@ -127,7 +127,7 @@ En la máquina de Simón (solo lectura de `~/.zshrc`): zsh 5.9, zsh-autosuggesti
 ### Dominio (`SmaltiCore/Domain/Input`)
 
 - `CommandLine`: texto + cursor; `tokens` con comillas simples y dobles, escapes y `;`, `&&`, `||`, `|` (la completion actúa sobre el último comando simple).
-- `CompletionSpec`: nombre, subcomandos, opciones (con `isRepeatable`, `requiresSeparator`, argumentos), argumentos (`template` de archivos o carpetas, sugerencias fijas, generador), `description`. Es el modelo que el adaptador de Fig produce.
+- `CompletionSpec`: nombre, subcomandos, opciones (con sus argumentos), argumentos (`template` de archivos o carpetas, sugerencias fijas, generador, `isVariadic`; las marcas de Fig que el menú no usa no se traducen), `description`. Es el modelo que el adaptador de Fig produce.
 - `CompletionEngine`: dado `CommandLine` y la spec, decide qué se completa (subcomando, opción, valor de opción, argumento) y filtra por prefijo y luego difuso; ordena por coincidencia y por uso del historial.
 - `HistoryEntry`: comando, directorio, exit, duración, hora, panel. `HistoryIndex`: por comando (veces, último uso, por directorio, último exit) y por secuencia (`anterior → siguiente`); límite 100.000 entradas con compactación de las más antiguas **(Claude)**.
 - `Prediction`: cada fuente es un tipo que implementa `PredictionRule` (OCP), y el resultado mezcla sus puntuaciones:

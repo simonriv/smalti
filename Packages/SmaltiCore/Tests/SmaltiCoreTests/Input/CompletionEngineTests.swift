@@ -216,4 +216,66 @@ struct CompletionEngineTests {
             CompletionEngine.insertion(ofPrefix: "My F", into: line("cd My")) == InputLine(text: "cd My\\ F", cursor: 8)
         )
     }
+
+    // Mutation survivors (F4 close).
+    private static let tool = CompletionSpec(
+        name: ["tool"],
+        subcommands: [
+            CompletionSpec(name: ["sub"], args: [ArgSpec(name: "inner", suggestions: [Suggestion(name: "in")])])
+        ],
+        args: [
+            ArgSpec(name: "first", suggestions: [Suggestion(name: "A")]),
+            ArgSpec(name: "second", suggestions: [Suggestion(name: "B")]),
+        ])
+    private static let plain = CompletionSpec(
+        name: ["plain"], options: [OptionSpec(names: ["-v"])],
+        args: [
+            ArgSpec(name: "first", suggestions: [Suggestion(name: "A")]),
+            ArgSpec(name: "second", suggestions: [Suggestion(name: "B")]),
+        ])
+    private static let files = CompletionSpec(
+        name: ["files"], args: [ArgSpec(name: "file", templates: [.filepaths], isVariadic: true)])
+
+    @Test func fullerMatchRanksFirstAmongFuzzyOnes() {
+        let ranked = CompletionEngine.rank(["xcxo", "xco"].map { Suggestion(name: $0) }, prefix: "co", history: nil)
+
+        #expect(ranked.map(\.name) == ["xco", "xcxo"])
+    }
+
+    @Test func wordAfterAnArgumentMovesToTheNextArgument() {
+        #expect(
+            CompletionEngine.target(for: line("plain x "), spec: Self.plain)
+                == .argument(Self.plain.args[1], prefix: ""))
+    }
+
+    @Test func variadicArgumentTakesEveryWord() {
+        #expect(
+            CompletionEngine.target(for: line("files a b "), spec: Self.files)
+                == .argument(Self.files.args[0], prefix: ""))
+    }
+
+    @Test func subcommandStartsAtItsFirstArgument() {
+        let sub = Self.tool.subcommands[0]
+
+        #expect(
+            CompletionEngine.target(for: line("tool x sub "), spec: Self.tool) == .argument(sub.args[0], prefix: ""))
+    }
+
+    @Test func dashOnACommandWithoutSubcommandsOffersOptions() {
+        #expect(
+            CompletionEngine.target(for: line("plain -"), spec: Self.plain)
+                == .subcommandOrOption(prefix: "-", spec: Self.plain))
+    }
+
+    @Test func commandWithSubcommandsAndArgumentsOffersSubcommandsFirst() {
+        #expect(
+            CompletionEngine.target(for: line("tool "), spec: Self.tool)
+                == .subcommandOrOption(prefix: "", spec: Self.tool))
+    }
+
+    @Test func tildeNameIsEscapedUnlessItIsAHomePath() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "~xfile"), into: line("cat ~x"))
+
+        #expect(inserted.text == "cat \\~xfile ")
+    }
 }

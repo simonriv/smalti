@@ -241,4 +241,64 @@ struct CompletionMenuTests {
         #expect(menu.receive([Suggestion(name: "checkout")], for: gitCh, generating: true) == .show)
         #expect(menu.isOpen)
     }
+
+    // Mutation survivors (F4 close).
+    private func line(_ text: String) -> InputLine { InputLine(text: text, cursor: text.unicodeScalars.count) }
+
+    @Test func emptyGeneratorsKeepAShownSingleItem() {
+        var menu = CompletionMenu()
+        menu.request(for: gitCh)
+        #expect(menu.receive([Suggestion(name: "checkout")], for: gitCh, generating: true) == .show)
+
+        #expect(menu.addGenerated([], for: gitCh) == .none)
+        #expect(menu.isOpen)
+    }
+
+    @Test func menuClosesWhenFilteredEmptyAfterGeneratorsFinished() {
+        var menu = CompletionMenu()
+        menu.request(for: gitCh)
+        _ = menu.receive(items, for: gitCh, generating: true)
+        _ = menu.addGenerated([], for: gitCh)
+
+        #expect(menu.lineChanged(line("git chz")) == .close)
+    }
+
+    @Test func menuClosesWhenFilteredEmptyAfterGeneratedItems() {
+        var menu = CompletionMenu()
+        menu.request(for: gitCh)
+        _ = menu.receive(items, for: gitCh, generating: true)
+        _ = menu.addGenerated([Suggestion(name: "chown")], for: gitCh)
+
+        #expect(menu.lineChanged(line("git chz")) == .close)
+    }
+
+    @Test func menuClosesWhenFilteredEmptyAfterCommonPrefix() {
+        var menu = CompletionMenu()
+        let typed = line("git c")
+        menu.request(for: typed)
+        _ = menu.receive(items, for: typed)
+
+        #expect(menu.lineChanged(line("git chz")) == .close)
+    }
+
+    @Test func closingClearsTheRowsAndTheSelection() {
+        var menu = openMenu()
+        _ = menu.press(.down)
+
+        _ = menu.press(.escape)
+
+        #expect(menu.visible.isEmpty)
+        #expect(menu.selected == 0)
+    }
+
+    @Test func reopeningStartsAtTheFirstRow() {
+        var menu = openMenu()
+        _ = menu.press(.down)
+        _ = menu.press(.escape)
+
+        menu.request(for: gitCh)
+        _ = menu.receive(items, for: gitCh)
+
+        #expect(menu.selected == 0)
+    }
 }

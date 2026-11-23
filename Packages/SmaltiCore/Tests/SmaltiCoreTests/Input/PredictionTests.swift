@@ -224,3 +224,41 @@ struct HeuristicPredictorTests {
         #expect(predictor.predict(context("git status", entries: history)) == nil)
     }
 }
+
+@Suite("Prediction weights")
+struct PredictionWeightTests {
+    // Mutation survivors (F4 close): each rule scales its count by its own weight.
+    @Test func learnedSequenceScalesByItsWeight() {
+        let entries = [historyEntry("git add .", at: 1), historyEntry("git commit", at: 2)]
+
+        let candidates = LearnedSequence().candidates(
+            context("", entries: entries, previous: historyEntry("git add .")))
+
+        #expect(candidates.map(\.score) == [LearnedSequence.weight])
+    }
+
+    @Test func exitRecoveryScalesByItsWeight() {
+        let entries = [historyEntry("swift tset", exit: 1, at: 1), historyEntry("swift test", at: 2)]
+
+        let candidates = ExitRecovery().candidates(
+            context("", entries: entries, previous: historyEntry("swift tset", exit: 1, at: 3)))
+
+        #expect(candidates.map(\.score) == [ExitRecovery.weight])
+    }
+
+    /// Only the recovery rule knows this fix (no history): it must work on an empty line.
+    @Test func emptyLineAfterAFailureSuggestsTheFix() {
+        let project = ProjectSnapshot(scripts: [], makeTargets: [], branch: "feature/x", branches: [])
+
+        let prediction = HeuristicPredictor().predict(
+            context("", previous: historyEntry("git push", exit: 128), project: project))
+
+        #expect(prediction == Prediction(suffix: "git push -u origin feature/x"))
+    }
+
+    @Test func emptyLineNeverSuggestsProjectCommands() {
+        let project = ProjectSnapshot(scripts: ["test"], makeTargets: ["build"], branch: "main", branches: [])
+
+        #expect(HeuristicPredictor().predict(context("", project: project)) == nil)
+    }
+}

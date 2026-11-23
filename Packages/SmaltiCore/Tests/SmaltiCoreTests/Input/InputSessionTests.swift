@@ -221,6 +221,20 @@ struct InputSessionTests {
         #expect(await history.loads == 1)
     }
 
+    // Mutation survivor (F4 close): a command that cannot be saved still counts, and the error is kept.
+    @Test func failedAppendKeepsTheError() async {
+        let history = InMemoryCommandHistory()
+        await history.failAppending(with: HistoryError(operation: "append", file: "h.jsonl", cause: "disk full"))
+        let session = session(history: history)
+        await session.start()
+
+        await session.began("ls", pane: pane, directory: "/repo")
+        await session.finished(pane: pane, exit: 0)
+
+        #expect(await session.lastError == HistoryError(operation: "append", file: "h.jsonl", cause: "disk full"))
+        #expect(await session.search("ls", scope: .all).map(\.stats.command) == ["ls"])
+    }
+
     @Test func failedLoadStartsEmptyAndKeepsTheError() async {
         let history = InMemoryCommandHistory()
         await history.failLoading(with: HistoryError(operation: "load", file: "h.jsonl", cause: "corrupt"))

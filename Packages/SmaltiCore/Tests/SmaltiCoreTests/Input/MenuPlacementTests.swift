@@ -1,4 +1,4 @@
-import SmaltiCore
+@testable import SmaltiCore
 import Testing
 
 @Suite("MenuPlacement")
@@ -83,5 +83,21 @@ struct MenuPlacementTests {
         #expect(palette.rowHeight == 32)
         #expect(palette.visibleRows == 8)
         #expect(Theme.obsidian.motion.overlayAppearDuration == 0.12)
+    }
+
+    // Mutation survivor (F4 close): every term of the height, with values that tell them apart.
+    @Test func heightAddsPaddingRowsGapsAndHelpLine() {
+        let menu = Theme.obsidian.inputMenu
+        let tokens = InputMenuTokens(
+            width: menu.width, cornerRadius: menu.cornerRadius, border: menu.border, background: menu.background,
+            shadowRadius: menu.shadowRadius, shadowOffsetY: menu.shadowOffsetY, shadowOpacity: menu.shadowOpacity,
+            padding: 5, rowFontSize: menu.rowFontSize, rowHeight: 20, rowGap: 3,
+            rowCornerRadius: menu.rowCornerRadius, rowPaddingHorizontal: menu.rowPaddingHorizontal,
+            nameColumnWidth: menu.nameColumnWidth, columnGap: menu.columnGap, footerHeight: 24,
+            footerFontSize: menu.footerFontSize, footerTopGap: menu.footerTopGap, textLineHeight: menu.textLineHeight,
+            cursorGap: menu.cursorGap, rowsBelowCursor: menu.rowsBelowCursor, maximumVisibleRows: 8)
+
+        // 5 × 2 padding + 3 × 20 rows + 2 × 3 gaps + 24 help line.
+        #expect(MenuPlacement.height(rows: 3, tokens: tokens) == 100)
     }
 }

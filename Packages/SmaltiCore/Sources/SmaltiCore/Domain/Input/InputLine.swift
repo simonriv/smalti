@@ -22,7 +22,7 @@ public struct InputLine: Equatable, Hashable, Sendable {
     public var currentWord: Token {
         let tokens = ShellWords.command(in: scalars, upTo: scalars.count, stoppingAfter: cursor).tokens
         return tokens.first { $0.range.lowerBound < cursor && cursor <= $0.range.upperBound }
-            ?? Token(text: "", range: cursor..<cursor, isQuoted: false, openingQuote: nil)
+            ?? Token(text: "", range: cursor..<cursor, openingQuote: nil)
     }
 
     /// The current word's text before the cursor, without quotes or escapes: what was typed of it.
@@ -40,14 +40,12 @@ public struct InputLine: Equatable, Hashable, Sendable {
 public struct Token: Equatable, Hashable, Sendable {
     public let text: String
     public let range: Range<Int>
-    public let isQuoted: Bool
     /// The quote the word starts with (`"` or `'`), which a completion keeps and closes.
     public let openingQuote: Character?
 
-    public init(text: String, range: Range<Int>, isQuoted: Bool, openingQuote: Character? = nil) {
+    public init(text: String, range: Range<Int>, openingQuote: Character? = nil) {
         self.text = text
         self.range = range
-        self.isQuoted = isQuoted
         self.openingQuote = openingQuote
     }
 }
@@ -78,8 +76,6 @@ enum ShellWords {
         private var quote: Unicode.Scalar?
         private var openingQuote: Character?
         private var isEscaped = false
-        private var wasQuoted = false
-        private var endOverride: Int?
 
         init(scalars: [Unicode.Scalar], stop: Int) {
             self.scalars = scalars
@@ -99,7 +95,7 @@ enum ShellWords {
         }
 
         mutating func finish(at end: Int) -> [Token] {
-            closeWord(at: endOverride ?? end)
+            closeWord(at: end)
             return tokens
         }
 
@@ -122,7 +118,6 @@ enum ShellWords {
                 if start == nil { openingQuote = Character(scalar) }
                 markStart(at: offset)
                 quote = scalar
-                wasQuoted = true
             case "&" where isRedirection(at: offset):
                 append(scalar, at: offset)
             case ";", "|", "&", "\n":
@@ -145,7 +140,6 @@ enum ShellWords {
         private mutating func separate(at offset: Int) {
             if offset >= stop {
                 closeWord(at: offset)
-                endOverride = offset
                 isDone = true
                 return
             }
@@ -165,10 +159,9 @@ enum ShellWords {
         private mutating func closeWord(at end: Int) {
             guard let begin = start else { return }
             tokens.append(
-                Token(text: String(word), range: begin..<end, isQuoted: wasQuoted, openingQuote: openingQuote))
+                Token(text: String(word), range: begin..<end, openingQuote: openingQuote))
             word = String.UnicodeScalarView()
             start = nil
-            wasQuoted = false
             openingQuote = nil
         }
     }

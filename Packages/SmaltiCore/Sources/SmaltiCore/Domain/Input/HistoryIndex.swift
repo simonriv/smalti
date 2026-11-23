@@ -84,7 +84,8 @@ public struct HistoryIndex: Sendable {
             stats[entry.command]
             ?? CommandStats(command: entry.command, uses: 0, lastUsed: entry.date, lastExit: nil, usesByDirectory: [:])
         current.uses += 1
-        if entry.date >= current.lastUsed || current.uses == 1 {
+        // A new command starts with this entry's date, so its first use always lands here.
+        if entry.date >= current.lastUsed {
             current.lastUsed = entry.date
             current.lastExit = entry.exit
         }

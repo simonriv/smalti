@@ -21,7 +21,7 @@
 | C13 | ⚠️ | `InputLatencyTests`, a demanda: 60 s tecleando (prefijo con fantasma, pegado, Tab con generadores de git, esc, ⌃U) sobre 50.000 entradas, con la sonda de latencia. Tras una ronda de calentamiento fuera de la ventana: 1 tick de 16,3 ms. Sin calentamiento: 1 tick de 16,5 ms. Línea base sin teclear en la misma ventana: 2 ticks de 17,2 y 19,7 ms. El único exceso queda por debajo del ruido del runner; se aplaza la confirmación sin XCUITest, como C11 de F3 |
 | C14 | ✅ | `ImportGuardTests` (SmaltiCore en Swift puro); `FigAdapterGuardTests.onlyThisAdapterImportsJavaScriptCore`; `UserHistoryGuardTests.onlyTheBenchmarkNamesTheUserHistory` (App, Packages y scripts; solo `scripts/measure-input.sh` y `scripts/input-bench` nombran `~/.zsh_history`; comprobada con un lector plantado que la hizo fallar) |
 | C15 | ✅ | `InputIsolationTests.testInputTestsUseAnIsolatedShell`; toda suite E2E corrida bajo `scripts/check-daily-untouched.sh` con "daily state untouched" |
-| C16 | pendiente | Se completa al cierre de fase |
+| C16 | ✅ | `scripts/mutation/mutate.py --package Packages/SmaltiCore`: 92,7 % en la primera pasada (55 sobrevivientes); tras pruebas nuevas y borrar código muerto (`isQuoted`, `endOverride`, marcas de Fig sin uso), 98,6 % (856 mutantes, 730 muertos, 10 sobrevivientes, 116 inválidos). Dos sobrevivientes delataban pruebas mal planteadas, ya corregidas y verificadas aplicando el mutante a mano. Quedan 8 equivalentes: `InputSession.swift:81–82` (solo memoria de la lista temporal de carga), `HistoryIndex.swift:139` ×3 (cuándo se compacta el almacenamiento interno), `InputLine.swift:143` ×2 (salida anticipada del tokenizador tras el comando del cursor) |
 
 ## Diferencias visuales justificadas
 

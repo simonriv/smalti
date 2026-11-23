@@ -36,8 +36,7 @@ struct FigSpecTranslator {
     private mutating func option(from value: JSValue, path: [String]) -> OptionSpec {
         OptionSpec(
             names: Self.names(of: value["name"]), description: Self.text(value["description"]),
-            args: Self.elements(of: value["args"]).map { arg(from: $0, path: path) },
-            isRepeatable: value["isRepeatable"].toBool(), requiresSeparator: value["requiresSeparator"].toBool())
+            args: Self.elements(of: value["args"]).map { arg(from: $0, path: path) })
     }
 
     private mutating func arg(from value: JSValue, path: [String]) -> ArgSpec {
@@ -46,7 +45,7 @@ struct FigSpecTranslator {
             suggestions: Self.elements(of: value["suggestions"]).compactMap(Self.suggestion(from:)),
             templates: Self.templates(of: value["template"]),
             generators: Self.elements(of: value["generators"]).map { register($0, path: path) },
-            isOptional: value["isOptional"].toBool(), isVariadic: value["isVariadic"].toBool())
+            isVariadic: value["isVariadic"].toBool())
     }
 
     private mutating func register(_ generator: JSValue, path: [String]) -> GeneratorID {
