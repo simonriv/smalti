@@ -54,6 +54,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - Atajo para saltar al agente que lleva más tiempo esperando.
   - Reanudación de Claude con `claude --resume <id>`.
   - Arrastrar una imagen al panel de un agente adjunta la imagen.
+  - Builds de desarrollo separados del Smalti diario: bundle ID `dev.simonriv.smalti.dev`, nombre de proceso y datos propios, para que las pruebas y los scripts de medición nunca cierren la instancia en uso (decidido por Simón, 2026-11-22).
 - **Criterio de cierre**
   - Al reabrir, layout, directorios y scrollback vuelven en menos de 5 s, medido desde el lanzamiento hasta que el último panel es interactivo, con 3 workspaces y 6 paneles.
   - En una semana de uso, todo `Notification` de Claude produce estado ámbar y notificación de macOS (lo verifica un log de eventos contra la UI).
