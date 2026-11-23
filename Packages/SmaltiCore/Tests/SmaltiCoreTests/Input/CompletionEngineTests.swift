@@ -134,4 +134,61 @@ struct CompletionEngineTests {
 
         #expect(inserted == InputLine(text: "git status  && ls", cursor: 11))
     }
+
+    // Review I1: completing inside a quoted word keeps the quote and closes it.
+    @Test func insertionInsideDoubleQuotesClosesThem() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "My File.txt"), into: line("cat \"My Fi"))
+
+        #expect(inserted.text == "cat \"My File.txt\" ")
+    }
+
+    @Test func insertionOfAFolderInsideQuotesLeavesThemOpen() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "My Folder/"), into: line("cd 'My F"))
+
+        #expect(inserted == InputLine(text: "cd 'My Folder/", cursor: 14))
+    }
+
+    @Test func insertionEscapesDoubleQuoteMetacharacters() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "a$b\"c"), into: line("cat \"a"))
+
+        #expect(inserted.text == "cat \"a\\$b\\\"c\" ")
+    }
+
+    @Test func insertionInsideSingleQuotesEscapesTheQuote() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "Tom's.txt"), into: line("cat 'To"))
+
+        #expect(inserted.text == "cat 'Tom'\\''s.txt' ")
+    }
+
+    // Review I2: unquoted names escape every zsh metacharacter.
+    @Test(arguments: [
+        ("Doc (1).pdf", "Doc\\ \\(1\\).pdf "), ("Tom's notes.txt", "Tom\\'s\\ notes.txt "),
+        ("a&b;c|d", "a\\&b\\;c\\|d "), ("$HOME*?", "\\$HOME\\*\\? "), ("~x=y", "\\~x=y "),
+        ("=cmd", "\\=cmd "), ("#tag", "\\#tag "),
+    ])
+    func insertionEscapesZshMetacharacters(name: String, expected: String) {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: name), into: line("open "))
+
+        #expect(inserted.text == "open " + expected)
+    }
+
+    // Review I3: the rest of the word after the cursor is replaced, not duplicated.
+    @Test func insertionReplacesTheWholeWordAroundTheCursor() {
+        let inserted = CompletionEngine.insertion(
+            of: Suggestion(name: "checkout"), into: InputLine(text: "git chekout main", cursor: 7))
+
+        #expect(inserted == InputLine(text: "git checkout  main", cursor: 13))
+    }
+
+    @Test func targetUsesTheTextBeforeTheCursor() {
+        #expect(
+            CompletionEngine.target(for: InputLine(text: "git chekout", cursor: 6), spec: SpecFixtures.git)
+                == .subcommandOrOption(prefix: "ch", spec: SpecFixtures.git))
+    }
+
+    @Test func prefixInsertionEscapesAndAddsNothing() {
+        #expect(
+            CompletionEngine.insertion(ofPrefix: "My F", into: line("cd My")) == InputLine(text: "cd My\\ F", cursor: 8)
+        )
+    }
 }

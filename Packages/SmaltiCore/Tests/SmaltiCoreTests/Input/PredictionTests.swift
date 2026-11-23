@@ -52,6 +52,16 @@ struct LearnedSequenceTests {
         #expect(candidates.map(\.command) == ["git commit"])
     }
 
+    // Review I4: after `cd web` the sequence was filed under the directory where `cd` ran.
+    @Test func sequenceFollowsACdIntoAnotherDirectory() {
+        let entries = [historyEntry("cd web", in: "/p", at: 1), historyEntry("npm run dev", in: "/p/web", at: 2)]
+
+        let candidates = LearnedSequence().candidates(
+            context("", entries: entries, previous: historyEntry("cd web", in: "/p"), directory: "/p/web"))
+
+        #expect(candidates.map(\.command) == ["npm run dev"])
+    }
+
     @Test func noPreviousCommandSuggestsNothing() {
         let entries = [historyEntry("git add .", at: 1), historyEntry("git commit", at: 2)]
 
@@ -166,6 +176,13 @@ struct HeuristicPredictorTests {
         let entries = [historyEntry("make alpha", at: 29 * day), historyEntry("make beta", at: 29 * day + 60)]
 
         #expect(predictor.predict(context("make ", entries: entries)) == Prediction(suffix: "beta"))
+    }
+
+    // Review m8: equal scores without history break ties the same way every time.
+    @Test func tiesWithoutHistoryAreDeterministic() {
+        let project = ProjectSnapshot(scripts: ["test", "dev", "build"], makeTargets: [], branch: nil, branches: [])
+
+        #expect(predictor.predict(context("npm run ", project: project)) == Prediction(suffix: "build"))
     }
 
     @Test func exactMatchIsNotSuggested() {

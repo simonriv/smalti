@@ -11,6 +11,20 @@ struct SecretFilterTests {
         #expect(SecretFilter.isSensitive(command))
     }
 
+    // Review I6: assignments are usually quoted.
+    @Test(arguments: ["export API_KEY=\"abc123\"", "export OPENAI_API_KEY='abc'", "DB_PASSWORD=\"p a s s\" make"])
+    func sensitiveQuotedAssignments(command: String) {
+        #expect(SecretFilter.isSensitive(command))
+    }
+
+    @Test func quotedAssignmentIsRedactedWhole() {
+        #expect(SecretFilter.redacted("export API_KEY=\"abc 123\" && run") == "export API_KEY=«redactado» && run")
+    }
+
+    @Test func authorizationSchemeWordIsNotTheSecret() {
+        #expect(!SecretFilter.redacted("curl -H 'Authorization: token abc123' x").contains("abc123"))
+    }
+
     @Test func sensitiveHeaders() {
         #expect(SecretFilter.isSensitive("curl -H \"Authorization: Bearer abc.def\" https://api.example.com"))
     }
@@ -32,6 +46,9 @@ struct SecretFilterTests {
     @Test(arguments: [
         "echo KEY", "cat token_list.txt", "ls ~/.ssh", "git commit -m \"rotate API key handling\"",
         "open https://github.com/simonriv/smalti", "export EDITOR=nvim", "grep -r password src",
+        // Review I5: words that merely contain a token prefix.
+        "git checkout task-refactor-history-index", "npm run disk-usage-report-all", "echo maxoxb-thing",
+        "ls theyJson.txt", "cat SKAKIAABCDEFGHIJKLMNOPQ",
     ])
     func notSensitiveLookalikes(command: String) {
         #expect(!SecretFilter.isSensitive(command))

@@ -91,4 +91,43 @@ struct InputLineTests {
         #expect(line("").currentCommand.isEmpty)
         #expect(line("   ").currentCommand.isEmpty)
     }
+
+    // Review I3: the word containing the cursor is the whole word, and only its part before the cursor is typed.
+    @Test func currentWordCoversTheWholeWordAroundTheCursor() {
+        let line = InputLine(text: "git chekout main", cursor: 7)
+
+        #expect(line.currentWord.range == 4..<11)
+        #expect(line.wordBeforeCursor == "che")
+    }
+
+    @Test func cursorAtTheStartOfAWordStartsAnEmptyWord() {
+        let line = InputLine(text: "git checkout", cursor: 4)
+
+        #expect(line.currentWord.range == 4..<4)
+        #expect(line.wordBeforeCursor.isEmpty)
+    }
+
+    @Test func openingQuoteIsRemembered() {
+        #expect(line("cat \"My Fi").currentWord.openingQuote == "\"")
+        #expect(line("cat 'My Fi").currentWord.openingQuote == "'")
+        #expect(line("cat My").currentWord.openingQuote == nil)
+    }
+
+    // Review m5: zsh's word and command rules.
+    @Test func newlineSeparatesCommands() {
+        #expect(line("ls\ngit ch").currentCommand.map(\.text) == ["git", "ch"])
+    }
+
+    @Test func backslashNewlineContinuesTheLine() {
+        #expect(line("git \\\ncommit").currentCommand.map(\.text) == ["git", "commit"])
+    }
+
+    @Test func ampersandInRedirectionDoesNotSplit() {
+        #expect(line("git log 2>&1 --on").currentCommand.map(\.text) == ["git", "log", "2>&1", "--on"])
+        #expect(line("make &>/dev/null bu").currentCommand.map(\.text) == ["make", "&>/dev/null", "bu"])
+    }
+
+    @Test func nonBreakingSpaceStaysInsideTheWord() {
+        #expect(line("echo a\u{00A0}b").currentCommand.map(\.text) == ["echo", "a\u{00A0}b"])
+    }
 }

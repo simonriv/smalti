@@ -37,6 +37,7 @@ public struct HistoryIndex: Sendable {
     private var stats: [String: CommandStats] = [:]
     private var successorCounts: [String: [String: [String: Int]]] = [:]
     private var fixCounts: [String: [String: Int]] = [:]
+    private var wordUses: [String: Int] = [:]
     private var lastByPane: [PaneID: HistoryEntry] = [:]
 
     public init(entries: [HistoryEntry], limit: Int) {
@@ -75,6 +76,9 @@ public struct HistoryIndex: Sendable {
 
     public func fixes(after failed: String) -> [String: Int] { fixCounts[failed] ?? [:] }
 
+    /// How many kept uses contain `word` as one of their space-separated words: the completion tiebreaker.
+    public func uses(ofWord word: String) -> Int { wordUses[word] ?? 0 }
+
     private mutating func tally(_ entry: HistoryEntry) {
         var current =
             stats[entry.command]
@@ -86,6 +90,7 @@ public struct HistoryIndex: Sendable {
         }
         current.usesByDirectory[entry.directory, default: 0] += 1
         stats[entry.command] = current
+        countWords(of: entry.command, by: 1)
     }
 
     private mutating func tally(_ pair: Pair, by step: Int) {
@@ -117,6 +122,15 @@ public struct HistoryIndex: Sendable {
         current.usesByDirectory[entry.directory, default: 1] -= 1
         if current.usesByDirectory[entry.directory] == 0 { current.usesByDirectory[entry.directory] = nil }
         stats[entry.command] = current.uses > 0 ? current : nil
+        countWords(of: entry.command, by: -1)
+    }
+
+    private mutating func countWords(of command: String, by step: Int) {
+        for word in Set(command.split(separator: " ")) {
+            let key = String(word)
+            wordUses[key, default: 0] += step
+            if wordUses[key] == 0 { wordUses[key] = nil }
+        }
     }
 
     /// Drops evicted slots once they are half the storage, so eviction stays amortized O(1).

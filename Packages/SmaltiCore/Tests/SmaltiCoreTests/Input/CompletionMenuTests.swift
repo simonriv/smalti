@@ -141,4 +141,104 @@ struct CompletionMenuTests {
 
         #expect(effect == .insertThenShow(InputLine(text: "cd My\\ F", cursor: 8)))
     }
+
+    // Review I8: a space (or any edit outside the word) closes the menu.
+    @Test func typingASpaceClosesTheMenu() {
+        var menu = openMenu()
+
+        #expect(menu.lineChanged(InputLine(text: "git ch ", cursor: 7)) == .close)
+        #expect(!menu.isOpen)
+    }
+
+    @Test func editingBeforeTheWordClosesTheMenu() {
+        var menu = openMenu()
+
+        #expect(menu.lineChanged(InputLine(text: "gitx ch", cursor: 7)) == .close)
+    }
+
+    // Review m1: generated items for another request are dropped.
+    @Test func generatedItemsForAnotherLineAreIgnored() {
+        var menu = openMenu()
+
+        #expect(
+            menu.addGenerated([Suggestion(name: "chx")], for: InputLine(text: "git add ch", cursor: 10))
+                == MenuEffect.none)
+        #expect(menu.visible.count == 3)
+    }
+
+    @Test func generatedItemsStillApplyAfterRefiltering() {
+        var menu = openMenu()
+        _ = menu.lineChanged(InputLine(text: "git che", cursor: 7))
+
+        #expect(menu.addGenerated([Suggestion(name: "chess")], for: gitCh) == .show)
+        #expect(menu.visible.map(\.name).contains("chess"))
+    }
+
+    // Review m2: the common prefix must extend what was typed.
+    @Test func fuzzyOnlyItemsDoNotRewriteTheWord() {
+        var menu = CompletionMenu()
+        let line = InputLine(text: "x a", cursor: 3)
+        menu.request(for: line)
+
+        #expect(menu.receive([Suggestion(name: "bar"), Suggestion(name: "baz")], for: line) == .show)
+    }
+
+    // Review m3: a single fuzzy match is shown, not inserted.
+    @Test func singleFuzzyMatchOpensTheMenu() {
+        var menu = CompletionMenu()
+        let line = InputLine(text: "rm docs", cursor: 7)
+        menu.request(for: line)
+
+        #expect(menu.receive([Suggestion(name: "Documents/")], for: line) == .show)
+    }
+
+    // Review m4: refiltering keeps the selected suggestion when it is still visible.
+    @Test func refilteringFollowsTheSelectedItem() {
+        var menu = openMenu()
+        _ = menu.press(.down)
+        _ = menu.press(.down)
+
+        _ = menu.lineChanged(InputLine(text: "git chm", cursor: 7))
+
+        #expect(menu.visible[menu.selected].name == "chmod")
+    }
+
+    // Review I7: a target with generators waits for them before deciding.
+    @Test func generatorOnlyTargetWaitsForGeneratedItems() {
+        var menu = CompletionMenu()
+        let line = InputLine(text: "git checkout ", cursor: 13)
+        menu.request(for: line)
+
+        #expect(menu.receive([], for: line, generating: true) == MenuEffect.none)
+        #expect(menu.addGenerated([Suggestion(name: "main"), Suggestion(name: "dev")], for: line) == .show)
+        #expect(menu.visible.map(\.name) == ["main", "dev"])
+    }
+
+    @Test func generatorsFindingNothingFallBack() {
+        var menu = CompletionMenu()
+        let line = InputLine(text: "git checkout ", cursor: 13)
+        menu.request(for: line)
+        _ = menu.receive([], for: line, generating: true)
+
+        #expect(menu.addGenerated([], for: line) == .fallback)
+    }
+
+    @Test func singleGeneratedItemIsInserted() {
+        var menu = CompletionMenu()
+        let line = InputLine(text: "git checkout ", cursor: 13)
+        menu.request(for: line)
+        _ = menu.receive([], for: line, generating: true)
+
+        #expect(
+            menu.addGenerated([Suggestion(name: "main")], for: line)
+                == .insert(InputLine(text: "git checkout main ", cursor: 18)))
+    }
+
+    @Test func singleFixedItemWaitsWhileGenerating() {
+        var menu = CompletionMenu()
+        menu.request(for: gitCh)
+
+        #expect(menu.receive([Suggestion(name: "checkout")], for: gitCh, generating: true) == .show)
+        #expect(menu.isOpen)
+    }
 }

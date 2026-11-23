@@ -9,12 +9,11 @@ public enum CompletionEngine {
     /// Walks the words before the cursor down the spec: subcommands go deeper, options skip their values,
     /// other words fill the positional arguments. Nil when the line is not this spec's command.
     public static func target(for line: InputLine, spec: CompletionSpec) -> CompletionTarget? {
-        let word = line.currentWord
-        let words = line.currentCommand.filter { $0.range.upperBound <= word.range.lowerBound }
+        let words = line.currentCommand.filter { $0.range.upperBound < line.cursor || $0.range.isEmpty }
         guard let command = words.first, spec.name.contains(command.text) else { return nil }
         var walk = SpecWalk(spec: spec)
         for token in words.dropFirst() { walk.consume(token.text) }
-        return walk.target(prefix: word.text)
+        return walk.target(prefix: line.wordBeforeCursor)
     }
 
     /// The fixed suggestions a target offers; templates and generators are resolved by the caller.
@@ -35,42 +34,50 @@ public enum CompletionEngine {
     /// Prefix matches first, then fuzzy ones by score; each group by how often history used the word, then in
     /// the spec's order. Suggestions that match neither way are dropped.
     public static func rank(_ suggestions: [Suggestion], prefix: String, history: HistoryIndex?) -> [Suggestion] {
-        let usage = history.map { wordUsage(in: $0) } ?? [:]
         let ranked = suggestions.enumerated().compactMap { offset, suggestion -> RankedSuggestion? in
             let isPrefix = suggestion.name.hasPrefix(prefix)
             guard isPrefix || fuzzyScore(prefix, in: suggestion.name) != nil else { return nil }
             return RankedSuggestion(
                 suggestion: suggestion, isPrefix: isPrefix,
                 fuzzy: isPrefix ? 0 : fuzzyScore(prefix, in: suggestion.name) ?? 0,
-                uses: usage[suggestion.name] ?? 0, offset: offset)
+                uses: history?.uses(ofWord: suggestion.name) ?? 0, offset: offset)
         }
         return ranked.sorted(by: RankedSuggestion.precedes).map(\.suggestion)
     }
 
-    /// The line with the word at the cursor replaced by the suggestion. A space follows unless the value ends a
-    /// folder (`/`) or awaits a value (`=`); spaces in a name are escaped outside quotes (`insertValue` is literal
-    /// shell text); `{cursor}` places the cursor.
+    /// The line with the whole word at the cursor replaced by the suggestion, as zsh does without
+    /// `COMPLETE_IN_WORD`. The name is quoted the way the word is: inside its opening quote (closed after the
+    /// value, unless the value is a folder to keep descending) or with zsh's metacharacters escaped. A space
+    /// follows unless the value ends a folder (`/`) or awaits a value (`=`). `insertValue` is literal shell text:
+    /// it is not escaped, and `{cursor}` places the cursor.
     public static func insertion(of suggestion: Suggestion, into line: InputLine) -> InputLine {
         let word = line.currentWord
-        let raw = suggestion.insertValue ?? suggestion.name
-        let marked = raw.contains("{cursor}")
-        var value =
-            word.isQuoted || suggestion.insertValue != nil ? raw : raw.replacingOccurrences(of: " ", with: "\\ ")
-        if !marked && !(value.hasSuffix("/") || value.hasSuffix("=")) { value += " " }
-        let scalars = Array(line.text.unicodeScalars)
-        let before = String(String.UnicodeScalarView(scalars[..<word.range.lowerBound]))
-        let after = String(String.UnicodeScalarView(scalars[line.cursor...]))
-        let cursorOffset = value.range(of: "{cursor}").map { value.unicodeScalars[..<$0.lowerBound].count }
-        value = value.replacingOccurrences(of: "{cursor}", with: "")
-        let cursor = word.range.lowerBound + (cursorOffset ?? value.unicodeScalars.count)
-        return InputLine(text: before + value + after, cursor: cursor)
+        guard let literal = suggestion.insertValue else {
+            let quoted = ShellQuoting.word(suggestion.name, opening: word.openingQuote)
+            let isOpenEnded = suggestion.name.hasSuffix("/") || suggestion.name.hasSuffix("=")
+            let closing = isOpenEnded ? "" : (word.openingQuote.map(String.init) ?? "") + " "
+            return replace(word, in: line, with: quoted + closing, cursorAt: nil)
+        }
+        let marker = literal.range(of: "{cursor}").map { literal.unicodeScalars[..<$0.lowerBound].count }
+        let value = literal.replacingOccurrences(of: "{cursor}", with: "")
+        return replace(word, in: line, with: marker == nil ? value + " " : value, cursorAt: marker)
     }
 
-    /// How many history uses contain each word: what breaks ties between equally good suggestions.
-    private static func wordUsage(in history: HistoryIndex) -> [String: Int] {
-        history.commands(in: nil).reduce(into: [:]) { usage, stats in
-            for word in Set(stats.command.split(separator: " ")) { usage[String(word), default: 0] += stats.uses }
-        }
+    /// The word at the cursor extended to `prefix` (quoted like the word), with nothing after it: the menu's
+    /// common prefix.
+    public static func insertion(ofPrefix prefix: String, into line: InputLine) -> InputLine {
+        let word = line.currentWord
+        return replace(word, in: line, with: ShellQuoting.word(prefix, opening: word.openingQuote), cursorAt: nil)
+    }
+
+    private static func replace(_ word: Token, in line: InputLine, with value: String, cursorAt marker: Int?)
+        -> InputLine
+    {
+        let scalars = Array(line.text.unicodeScalars)
+        let before = String(String.UnicodeScalarView(scalars[..<word.range.lowerBound]))
+        let after = String(String.UnicodeScalarView(scalars[word.range.upperBound...]))
+        let cursor = word.range.lowerBound + (marker ?? value.unicodeScalars.count)
+        return InputLine(text: before + value + after, cursor: cursor)
     }
 
     private struct RankedSuggestion {

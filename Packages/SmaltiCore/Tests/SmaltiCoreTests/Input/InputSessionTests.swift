@@ -69,7 +69,8 @@ struct InputSessionTests {
 
         let items = await session(completions: completions).complete(line("git ch"), directory: "/repo")
 
-        #expect(items?.map(\.name) == ["checkout", "cherry-pick", "check-ignore"])
+        #expect(items?.items.map(\.name) == ["checkout", "cherry-pick", "check-ignore"])
+        #expect(items?.hasGenerators == false)
     }
 
     @Test func completeAddsTemplatePaths() async {
@@ -78,7 +79,7 @@ struct InputSessionTests {
 
         let items = await session(completions: completions).complete(line("cd Pro"), directory: "/Users/s")
 
-        #expect(items?.map(\.name) == ["Projects/"])
+        #expect(items?.items.map(\.name) == ["Projects/"])
         #expect(
             await completions.pathRequests == [PathRequest(prefix: "Pro", directory: "/Users/s", foldersOnly: true)])
     }
@@ -98,7 +99,9 @@ struct InputSessionTests {
     @Test func specWithNothingToCompleteReturnsEmpty() async {
         let completions = FakeCompletionProvider(specs: [CompletionSpec(name: ["true"])])
 
-        #expect(await session(completions: completions).complete(line("true x"), directory: "/") == [])
+        #expect(
+            await session(completions: completions).complete(line("true x"), directory: "/")
+                == CompletionResult(items: [], hasGenerators: false))
     }
 
     @Test func generatedItemsAreRankedByPrefix() async {
@@ -201,6 +204,59 @@ struct InputSessionTests {
         let completions = FakeCompletionProvider(specs: [SpecFixtures.git, SpecFixtures.cd])
 
         #expect(await session(completions: completions).specCommands == ["cd", "git"])
+    }
+
+    // Review I7: the menu must know that generated items are coming.
+    @Test func completeReportsPendingGenerators() async {
+        let generator = GeneratorID(spec: "git", path: ["checkout"], ordinal: 0)
+        let git = CompletionSpec(
+            name: ["git"], subcommands: [CompletionSpec(name: ["checkout"], args: [ArgSpec(generators: [generator])])])
+        let completions = FakeCompletionProvider(specs: [git])
+
+        let result = await session(completions: completions).complete(line("git checkout "), directory: "/repo")
+
+        #expect(result == CompletionResult(items: [], hasGenerators: true))
+    }
+
+    // Review m6: commands recorded while the history loads are kept.
+    @Test func commandsRecordedDuringLoadAreKept() async {
+        let history = InMemoryCommandHistory(entries: [historyEntry("old", at: 1)])
+        await history.holdLoads()
+        let session = session(history: history)
+
+        async let started: Void = session.start()
+        await history.waitUntilLoading()
+        await session.began("new", pane: pane, directory: "/repo")
+        await session.finished(pane: pane, exit: 0)
+        await history.releaseLoads()
+        await started
+
+        #expect(Set(await session.search("", scope: .all).map(\.stats.command)) == ["old", "new"])
+    }
+
+    // Review m7: with completions off, zsh must not wait for Smalti on Tab.
+    @Test func specCommandsAreEmptyWithCompletionsOff() async {
+        var settings = InputSettings.standard
+        settings.hasCompletions = false
+        let completions = FakeCompletionProvider(specs: [SpecFixtures.git])
+
+        #expect(await session(completions: completions, settings: settings).specCommands.isEmpty)
+    }
+
+    // Review m12: a command kept out of the history also stops being "the previous command".
+    @Test func sensitiveCommandClearsThePreviousCommand() async {
+        let history = InMemoryCommandHistory(entries: [
+            historyEntry("git push", exit: 1, at: 1), historyEntry("git push -u origin main", at: 2),
+        ])
+        let session = session(history: history)
+        await session.start()
+        await session.began("git push", pane: pane, directory: "/repo")
+        await session.finished(pane: pane, exit: 1)
+
+        await session.began("export GH_TOKEN=abc", pane: pane, directory: "/repo")
+        await session.finished(pane: pane, exit: 0)
+
+        #expect(await session.suggest(line(""), pane: pane, directory: "/repo") == "")
     }
 }
 

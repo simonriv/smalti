@@ -1,6 +1,7 @@
 /// Finds credentials in a command line: what stays out of Smalti's history (F4) and of any API request (F7).
 ///
-/// It looks for values, not words: `cat token_list.txt` is clean, `FOO_TOKEN=x` is not. Each pattern names the
+/// `\b` uses simple word boundaries: with Unicode's default, `:` between letters does not break a word
+/// (`X-Token:eyJ…`). It looks for values, not words: `cat token_list.txt` is clean, `FOO_TOKEN=x` is not. Each pattern names the
 /// part to hide; redaction keeps the key so the line still reads (`OPENAI_API_KEY=«redactado»`).
 public enum SecretFilter {
     public static let mask = "«redactado»"
@@ -25,19 +26,22 @@ public enum SecretFilter {
     private static var patterns: [Pattern] {
         [
             Pattern(
-                regex: /\b[A-Za-z0-9_]*(?:_KEY|_TOKEN|_SECRET|PASSWORD|_PASSWD)=[^\s"']+/.ignoresCase(),
+                regex: /\b[A-Za-z0-9_]*(?:_KEY|_TOKEN|_SECRET|PASSWORD|_PASSWD)=(?:"[^"]*"|'[^']*'|[^\s"']+)/
+                    .ignoresCase().wordBoundaryKind(.simple),
                 keep: { prefix(of: $0, through: "=") }),
             Pattern(
-                regex: /Authorization:\s*(?:Bearer\s+|Basic\s+)?[^\s"']+/.ignoresCase(),
+                regex: /Authorization:\s*(?:[A-Za-z]+\s+)?[^\s"']+/.ignoresCase().wordBoundaryKind(.simple),
                 keep: { prefix(of: $0, through: ":") + " " }),
-            Pattern(regex: /sk-[A-Za-z0-9_-]{16,}/, keep: { _ in "" }),
-            Pattern(regex: /ghp_[A-Za-z0-9]{20,}/, keep: { _ in "" }),
-            Pattern(regex: /github_pat_[A-Za-z0-9_]{20,}/, keep: { _ in "" }),
-            Pattern(regex: /xox[abposr]-[A-Za-z0-9-]{10,}/, keep: { _ in "" }),
-            Pattern(regex: /AKIA[0-9A-Z]{16}/, keep: { _ in "" }),
-            Pattern(regex: /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/, keep: { _ in "" }),
+            Pattern(regex: /\bsk-[A-Za-z0-9_-]{16,}/.wordBoundaryKind(.simple), keep: { _ in "" }),
+            Pattern(regex: /\bghp_[A-Za-z0-9]{20,}/.wordBoundaryKind(.simple), keep: { _ in "" }),
+            Pattern(regex: /\bgithub_pat_[A-Za-z0-9_]{20,}/.wordBoundaryKind(.simple), keep: { _ in "" }),
+            Pattern(regex: /\bxox[abposr]-[A-Za-z0-9-]{10,}/.wordBoundaryKind(.simple), keep: { _ in "" }),
+            Pattern(regex: /\bAKIA[0-9A-Z]{16}/.wordBoundaryKind(.simple), keep: { _ in "" }),
             Pattern(
-                regex: /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s\/:@]+:[^\s\/@]+(?=@)/,
+                regex: /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.wordBoundaryKind(.simple),
+                keep: { _ in "" }),
+            Pattern(
+                regex: /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s\/:@]+:[^\s\/@]+(?=@)/.wordBoundaryKind(.simple),
                 keep: { prefix(of: $0, throughLast: ":") }),
         ]
     }

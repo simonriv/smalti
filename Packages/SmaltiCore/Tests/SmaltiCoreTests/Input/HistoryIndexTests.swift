@@ -124,4 +124,15 @@ struct HistoryIndexTests {
 
         #expect(index.fixes(after: "make").isEmpty)
     }
+
+    // Review m9: word usage is kept incrementally, eviction included.
+    @Test func wordUsageCountsUsesOfCommandsContainingTheWord() {
+        var index = HistoryIndex(
+            entries: [historyEntry("git cherry-pick a", at: 1), historyEntry("git cherry-pick a", at: 2)], limit: 2)
+
+        #expect(index.uses(ofWord: "cherry-pick") == 2)
+        index.append(historyEntry("ls", at: 3))
+        #expect(index.uses(ofWord: "cherry-pick") == 1)
+        #expect(index.uses(ofWord: "absent") == 0)
+    }
 }
