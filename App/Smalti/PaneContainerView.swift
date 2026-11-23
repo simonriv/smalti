@@ -51,13 +51,16 @@ final class PaneContainerView: NSView {
         needsLayout = true
     }
 
+    /// A pane whose agent waits gets the amber border, unless it has focus: the focus ring wins.
     func apply(_ theme: Theme, isFocused: Bool, header content: PaneHeaderContent?) {
         self.theme = theme
         content.map { header.show($0, theme: theme) }
         let radius = theme.panel.cornerRadius
         clip.layer?.cornerRadius = radius
         clip.layer?.borderWidth = theme.panel.borderWidth
-        clip.layer?.borderColor = (isFocused ? theme.focus.ring : theme.panel.border).nsColor.cgColor
+        let isWaiting = content?.status == .waiting
+        let border = isFocused ? theme.focus.ring : (isWaiting ? theme.agent.waitingBorder : theme.panel.border)
+        clip.layer?.borderColor = border.nsColor.cgColor
         clip.layer?.backgroundColor = theme.panel.background.nsColor.cgColor
         glow.isHidden = !isFocused
         glow.lineWidth = theme.focus.ringWidth

@@ -8,6 +8,7 @@ final class WorkspaceStripView: NSView {
     var onCommand: ((CommandID) -> Void)?
 
     private let pills = NSStackView()
+    private let counters = NSStackView()
     private let paletteHint: KbdView
     private var theme: Theme
     /// Last drawn model: terminal events publish often, and pills only change with workspaces.
@@ -16,6 +17,7 @@ final class WorkspaceStripView: NSView {
     /// Everything the strip draws; rebuilding happens only when it changes.
     private struct StripModel: Equatable {
         let pills: [Pill]
+        let counters: [StripCounter]
         let paletteChord: String
         let theme: Theme
 
@@ -23,6 +25,7 @@ final class WorkspaceStripView: NSView {
             let id: WorkspaceID
             let name: String
             let isActive: Bool
+            let status: AgentStateKind?
         }
     }
 
@@ -33,7 +36,9 @@ final class WorkspaceStripView: NSView {
         wantsLayer = true
         pills.orientation = .horizontal
         pills.spacing = theme.strip.pillGap
-        for view in [pills, paletteHint] as [NSView] {
+        counters.orientation = .horizontal
+        counters.spacing = theme.agent.counterGap
+        for view in [pills, counters, paletteHint] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -41,6 +46,8 @@ final class WorkspaceStripView: NSView {
             pills.leadingAnchor.constraint(equalTo: leadingAnchor, constant: theme.strip.paddingLeading),
             pills.centerYAnchor.constraint(equalTo: centerYAnchor),
             paletteHint.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -theme.strip.paddingTrailing),
+            counters.trailingAnchor.constraint(equalTo: paletteHint.leadingAnchor, constant: -theme.agent.counterGap),
+            counters.centerYAnchor.constraint(equalTo: centerYAnchor),
             paletteHint.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
         setAccessibilityElement(true)
@@ -53,18 +60,22 @@ final class WorkspaceStripView: NSView {
 
     func render(_ state: TilingState) {
         let model = StripModel(
-            pills: state.set.workspaces.map { .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID) },
+            pills: state.set.workspaces.map {
+                .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID, status: $0.agentStatus)
+            },
+            counters: StripCounter.counters(AgentCounts.of(state.set)),
             paletteChord: state.config.keys.chord(for: .paletteOpen)?.display ?? "", theme: state.theme)
         guard model != rendered else { return }
         rendered = model
         theme = model.theme
         let buttons: [NSView] =
             model.pills.map { pill in
-                WorkspacePill(name: pill.name, isActive: pill.isActive, theme: theme) { [weak self] in
+                WorkspacePill(pill: (pill.name, pill.isActive, pill.status), theme: theme) { [weak self] in
                     self?.onCommand?(.workspaceGo(pill.id))
                 }
             } + [AddWorkspaceButton(theme: theme) { [weak self] in self?.onCommand?(.workspaceNew) }]
         pills.setViews(buttons, in: .leading)
+        counters.setViews(model.counters.map { CounterView($0, theme: theme) }, in: .leading)
         paletteHint.text = model.paletteChord
         needsDisplay = true
     }
@@ -84,11 +95,14 @@ final class WorkspaceStripView: NSView {
 private final class WorkspacePill: NSView {
     private let action: () -> Void
 
-    init(name: String, isActive: Bool, theme: Theme, action: @escaping () -> Void) {
+    init(
+        pill: (name: String, isActive: Bool, status: AgentStateKind?), theme: Theme, action: @escaping () -> Void
+    ) {
+        let (name, isActive, status) = pill
         self.action = action
         super.init(frame: .zero)
         style(isActive: isActive, theme: theme)
-        layoutRow(name: name, isActive: isActive, theme: theme)
+        layoutRow(name: name, isActive: isActive, dot: theme.statusDot(for: status), theme: theme)
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityIdentifier("smalti.workspace")
@@ -108,12 +122,12 @@ private final class WorkspacePill: NSView {
         layer?.backgroundColor = isActive ? theme.focus.glow.nsColor.cgColor : NSColor.clear.cgColor
     }
 
-    private func layoutRow(name: String, isActive: Bool, theme: Theme) {
+    private func layoutRow(name: String, isActive: Bool, dot: StatusDotStyle, theme: Theme) {
         let strip = theme.strip
         let label = NSTextField(labelWithString: name)
         label.font = theme.interfaceFont(size: strip.fontSize, weight: strip.fontWeight)
         label.textColor = (isActive ? strip.activeText : strip.inactiveText).nsColor
-        let row = NSStackView(views: [StatusDot(diameter: strip.dotSize, color: strip.dot), label])
+        let row = NSStackView(views: [StatusDot(diameter: strip.dotSize, style: dot), label])
         row.spacing = strip.labelGap
         row.translatesAutoresizingMaskIntoConstraints = false
         addSubview(row)
@@ -205,6 +219,27 @@ final class StatusDot: NSView {
             layer?.borderWidth = width
             layer?.borderColor = color.nsColor.cgColor
         }
+    }
+
+    @available(*, unavailable, message: "Built in code only")
+    required init?(coder: NSCoder) { nil }
+}
+
+/// "2 trabajando": a state dot and its count; "te espera" is amber, the others in the muted text colour.
+@MainActor
+private final class CounterView: NSStackView {
+    init(_ counter: StripCounter, theme: Theme) {
+        super.init(frame: .zero)
+        let label = NSTextField(labelWithString: counter.text)
+        label.font = theme.interfaceFont(size: theme.agent.counterFontSize)
+        label.textColor = (counter.kind == .waiting ? theme.agent.waiting : theme.agent.counterText).nsColor
+        setViews(
+            [StatusDot(diameter: theme.strip.dotSize, style: theme.statusDot(for: counter.kind)), label], in: .leading)
+        spacing = theme.agent.counterItemGap
+        setAccessibilityElement(true)
+        setAccessibilityRole(.staticText)
+        setAccessibilityIdentifier("smalti.counter.\(counter.kind.rawValue)")
+        setAccessibilityValue(counter.text)
     }
 
     @available(*, unavailable, message: "Built in code only")

@@ -27,6 +27,13 @@ public struct AgentStatusTokens: Equatable, Sendable {
     public let failed: RGBAColor
     public let stopped: RGBAColor
     public let stoppedRingWidth: Double
+    /// Border of a pane whose agent waits, when it has no focus (Main.dc.html).
+    public let waitingBorder: RGBAColor
+    /// Counters right of the workspace pills: "2 trabajando · 1 te espera".
+    public let counterGap: Double
+    public let counterItemGap: Double
+    public let counterFontSize: Double
+    public let counterText: RGBAColor
 }
 
 /// How a status dot is drawn.

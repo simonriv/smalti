@@ -102,5 +102,6 @@ extension Theme {
             headerPadding: ResumeTokens.Insets(top: 4, horizontal: 12, bottom: 8), hintGap: 6, buttonBorderWidth: 1),
         agent: AgentStatusTokens(
             working: rgb(0x9ece6a), waiting: rgb(0xe0af68), failed: rgb(0xf7768e), stopped: rgb(0x6b717c),
-            stoppedRingWidth: 1))
+            stoppedRingWidth: 1, waitingBorder: RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35), counterGap: 14,
+            counterItemGap: 6, counterFontSize: 11.5, counterText: obsidianMutedText))
 }

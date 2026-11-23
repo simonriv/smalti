@@ -237,5 +237,10 @@ struct ObsidianThemeTests {
             theme.statusDot(for: .stopped) == .hollow(RGBAColor(red: 0x6b, green: 0x71, blue: 0x7c, alpha: 1), width: 1)
         )
         #expect(theme.statusDot(for: nil) == .filled(theme.strip.dot))
+        #expect(theme.agent.waitingBorder == RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35))
+        #expect(theme.agent.counterGap == 14)
+        #expect(theme.agent.counterItemGap == 6)
+        #expect(theme.agent.counterFontSize == 11.5)
+        #expect(theme.agent.counterText == RGBAColor(red: 0x9a, green: 0xa0, blue: 0xab, alpha: 1))
     }
 }

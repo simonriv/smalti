@@ -57,6 +57,7 @@ final class TilingController {
     /// `restore` signpost: ends when every restored pane's shell reported its directory (it is interactive).
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
     private var pendingRestore: (interval: OSSignpostIntervalState, panes: Set<PaneID>)?
+    private var minuteTicker: Task<Void, Never>?
 
     /// `initial` is the startup load, done before the engine exists because the engine needs its appearance.
     init(_ deps: Dependencies, initial reload: ConfigReload) {
@@ -401,7 +402,29 @@ final class TilingController {
 
     private func publish() {
         onChange?(TilingState(set: set, config: config, theme: theme, message: status.showing, home: deps.home))
+        keepMinutesFresh()
     }
+
+    /// "te espera · 2m" counts minutes: while an agent waits or failed, the headers are redrawn once a minute.
+    private func keepMinutesFresh() {
+        let needed = !AttentionQueue.panes(in: set).isEmpty
+        guard needed != (minuteTicker != nil) else { return }
+        minuteTicker?.cancel()
+        minuteTicker =
+            needed
+            ? Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.minute)
+                    guard !Task.isCancelled, let self else { return }
+                    self.onChange?(
+                        TilingState(
+                            set: self.set, config: self.config, theme: self.theme, message: self.status.showing,
+                            home: self.deps.home))
+                }
+            } : nil
+    }
+
+    private static let minute: Duration = .seconds(60)
 }
 
 /// Install and uninstall share one shape, so the palette runs either the same way.
