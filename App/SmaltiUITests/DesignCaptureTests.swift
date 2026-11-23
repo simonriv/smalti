@@ -46,6 +46,19 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "c18-restore.png")
     }
 
+    /// F3 C12: the observatory over the bundled fixture, to lay over Observatorio.dc.html.
+    func testCaptureObservatory() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        try app.installObservatoryFixture(
+            from: Bundle(for: Self.self), newestFirst: ["projects/-fixture-work-x/tools-session.jsonl"])
+        launch(app)
+        app.typeKey("a", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.observatory").waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 3)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f3-observatory.png")
+    }
+
     /// F3 Task 0: the palette after arrowing to its last row (the selection used to sit below the clipped edge).
     func testCapturePaletteLastRowSelected() throws {
         let app = XCUIApplication.isolatedSmalti()

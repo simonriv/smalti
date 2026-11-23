@@ -1,8 +1,11 @@
 import AppKit
 import ClaudeHarnessAdapter
+import ClaudeTelemetryAdapter
+import DarwinMetricsAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import IPCAdapter
+import OllamaAdapter
 import UserNotificationsAdapter
 import OSLog
 import SmaltiCore
@@ -20,6 +23,8 @@ final class AppComposition {
     private var sessionKeeper: SessionKeeper?
     private var restoreScreen: RestoreController?
     private var telemetry: UnixSocketTelemetry?
+    private var observatory: ObservatoryRefresher?
+    private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -64,9 +69,16 @@ final class AppComposition {
     }
 
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
+    /// Claude Code's `CLAUDE_CONFIG_DIR` rides along in the same map (LaunchSettings keeps three parameters).
     private static func launchArguments() -> [String: String] {
-        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey]
-        return keys.reduce(into: [:]) { arguments, key in arguments[key] = UserDefaults.standard.string(forKey: key) }
+        let keys = [
+            LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
+            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey,
+        ]
+        var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
+        arguments[LaunchSettings.claudeConfigDirKey] =
+            ProcessInfo.processInfo.environment[LaunchSettings.claudeConfigDirKey]
+        return arguments
     }
 
     /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
@@ -110,6 +122,7 @@ final class AppComposition {
                     try runtime?.apply(appearance)
                 }),
             initial: startup.initial)
+        startObservatory(startup, controller: controller)
         listenForAgents(on: socket, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
@@ -194,6 +207,30 @@ final class AppComposition {
             onDenied: { [weak self] in self?.controller?.report(.notificationsDisabled) })
     }
 
+    /// The observatory's sources: Claude's transcripts and session registry, Ollama and the machine (F3).
+    private func startObservatory(_ startup: Startup, controller: TilingController) {
+        let settings = startup.settings
+        let sources = ObservatorySources(
+            transcripts: ClaudeTranscripts(
+                claudeHome: settings.claudeHome,
+                indexFile: settings.stateDirectory.appending(path: "observatory/index.json"), now: { .now }),
+            live: ClaudeSessionRegistry(claudeHome: settings.claudeHome),
+            localModels: OllamaLocalModels(baseURL: settings.ollamaURL), system: DarwinSystemMetrics(),
+            catalog: startup.initial.config.observatory.catalog,
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
+        let refresher = ObservatoryRefresher(
+            observe: ObserveAgents(sources),
+            callbacks: .init(
+                panes: { [weak controller] in controller.map { PaneAgent.all(in: $0.set) } ?? [] },
+                onSnapshot: { [weak self, weak controller] snapshot in
+                    controller?.show(snapshot)
+                    self?.observatoryScreen?.show(snapshot)
+                },
+                onError: { [weak controller] in controller?.report(.transcriptsUnreadable($0)) }))
+        refresher.start()
+        observatory = refresher
+    }
+
     /// Hooks reach the app through `<state>/smalti.sock`. If another instance of this build owns it, this one runs
     /// without agent states and says so.
     private func listenForAgents(on socket: URL, controller: TilingController) {
@@ -201,8 +238,11 @@ final class AppComposition {
             let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
             self.telemetry = telemetry
             let events = telemetry.events()
-            Task { [weak controller] in
-                for await event in events { controller?.handle(event) }
+            Task { [weak self, weak controller] in
+                for await event in events {
+                    controller?.handle(event)
+                    self?.observatory?.agentEvent(event)
+                }
             }
         } catch IPCError.socketInUse {
             controller.report(.agentSocketInUse)
@@ -235,6 +275,7 @@ final class AppComposition {
     func saveForQuit() {
         sessionKeeper?.saveForQuit()
         telemetry?.stop()
+        observatory?.stop()
     }
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
@@ -248,6 +289,11 @@ final class AppComposition {
             window.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
             self?.sessionKeeper?.changed(state.set)
+        }
+        controller.onObservatoryChange = { [weak window] state in
+            guard let window else { return }
+            window.paneGrid.render(state) { engine.view(for: $0) }
+            window.statusBar.render(state)
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
@@ -274,22 +320,57 @@ final class AppComposition {
             window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
             if !isOpen { self?.focusKeyboard(on: controller.set.active.focusedPane) }
         }
-        controller.onViewCommand = { [weak palette, weak controller] command in
+        let screen = observatoryScreen(controller, in: window)
+        observatoryScreen = screen
+        controller.onViewCommand = { [weak palette, weak controller, weak screen] command in
             guard let palette, let theme = controller?.theme else { return }
-            command == .workspaceRename ? palette.beginRename(theme: theme) : palette.toggle(theme: theme)
+            switch command {
+            case .workspaceRename: palette.beginRename(theme: theme)
+            case .observatoryToggle: screen?.toggle(theme: theme)
+            case .observatoryPeriod: screen?.cyclePeriod()
+            default: palette.toggle(theme: theme)
+            }
         }
         self.palette = palette
+    }
+
+    /// ⌘⇧A: the observatory over the window; the panes stay alive and get the focus back when it closes.
+    private func observatoryScreen(_ controller: TilingController, in window: SmaltiWindow) -> ObservatoryController {
+        ObservatoryController(
+            window: window,
+            actions: .init(
+                setTilingHidden: { [weak self, weak window] hidden in
+                    guard let window else { return }
+                    self?.setTilingHidden(hidden, in: window)
+                },
+                didClose: { [weak self, weak controller] pane in
+                    guard let controller else { return }
+                    if let pane {
+                        controller.activate(pane)
+                    } else {
+                        self?.focusKeyboard(on: controller.set.active.focusedPane)
+                    }
+                },
+                openChanged: { [weak self] isOpen in self?.observatory?.isObservatoryOpen = isOpen }))
     }
 
     private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
         let router = KeyRouter(
             keymap: { [weak controller] in controller?.config.keys ?? .standard },
-            allowing: { [weak self] in self?.palette?.isOpen == true ? [.paletteOpen] : nil },
+            context: { [weak self] in self?.keyContext ?? .unrestricted },
             perform: { [weak controller] command in controller?.perform(command) })
         // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
         window.routeKey = { [weak self] event, composing in
             self?.restoreScreen == nil && router.route(event, composing: composing)
         }
+    }
+
+    /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
+    /// reaches the terminal while the observatory is closed.
+    private var keyContext: KeyContext {
+        if palette?.isOpen == true { return KeyContext(allowing: [.paletteOpen]) }
+        if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
+        return KeyContext(passingThrough: [.observatoryPeriod])
     }
 
     /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.

@@ -18,6 +18,16 @@ extension Theme {
         }
     }
 
+    /// An agent state's own color: green working, amber waiting, red failed, grey stopped.
+    func color(for state: AgentStateKind) -> RGBAColor {
+        switch state {
+        case .working: agent.working
+        case .waiting: agent.waiting
+        case .failed: agent.failed
+        case .stopped: agent.stopped
+        }
+    }
+
     /// Inter at `size` and `weight` (CSS 400/500/600). Falls back to the system font while Inter is not installed.
     @MainActor
     func interfaceFont(size: Double, weight: Int = 400) -> NSFont {

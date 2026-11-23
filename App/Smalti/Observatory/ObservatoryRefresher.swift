@@ -1,0 +1,97 @@
+import Foundation
+import OSLog
+import SmaltiCore
+
+/// Primary adapter that keeps the observatory's snapshot fresh: every 2 s while the observatory is open, every 10 s
+/// otherwise (status bar and headers), right away after the hooks that change tokens, and samples the machine every
+/// 2 s on its own. Refreshes never overlap: one asked for during another runs once, after it.
+@MainActor
+final class ObservatoryRefresher {
+    private let observe: ObserveAgents
+    private let panes: () -> [PaneAgent]
+    private let onSnapshot: (ObservatorySnapshot) -> Void
+    private let onError: (String) -> Void
+    private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "observatory")
+    private var isRefreshing = false
+    private var isQueued = false
+    private var refreshLoop: Task<Void, Never>?
+    private var samplingLoop: Task<Void, Never>?
+    private var loggedStatuses: Set<String> = []
+    private var lastError: String?
+
+    static let openInterval: Duration = .seconds(2)
+    static let closedInterval: Duration = .seconds(10)
+    static let samplingInterval: Duration = .seconds(2)
+    /// Hooks after which a session's tokens or context changed.
+    static let refreshingHooks: Set<AgentHook> = [.stop, .postToolUse, .sessionStart]
+
+    var isObservatoryOpen = false {
+        didSet { if isObservatoryOpen && !oldValue { refreshNow() } }
+    }
+
+    struct Callbacks {
+        let panes: () -> [PaneAgent]
+        let onSnapshot: (ObservatorySnapshot) -> Void
+        /// A refresh could not read the transcripts; called once per distinct message.
+        let onError: (String) -> Void
+    }
+
+    init(observe: ObserveAgents, callbacks: Callbacks) {
+        self.observe = observe
+        panes = callbacks.panes
+        onSnapshot = callbacks.onSnapshot
+        onError = callbacks.onError
+    }
+
+    func start() {
+        samplingLoop = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.observe.sampleSystem()
+                try? await Task.sleep(for: Self.samplingInterval)
+            }
+        }
+        refreshLoop = Task { [weak self] in
+            while !Task.isCancelled, let self {
+                self.refreshNow()
+                try? await Task.sleep(for: self.isObservatoryOpen ? Self.openInterval : Self.closedInterval)
+            }
+        }
+    }
+
+    func stop() {
+        samplingLoop?.cancel()
+        refreshLoop?.cancel()
+    }
+
+    func agentEvent(_ event: AgentEvent) {
+        if Self.refreshingHooks.contains(event.hook) { refreshNow() }
+    }
+
+    func refreshNow() {
+        guard !isRefreshing else {
+            isQueued = true
+            return
+        }
+        isRefreshing = true
+        Task { [weak self] in
+            guard let self else { return }
+            let snapshot = await self.observe.snapshot(panes: self.panes(), now: .now)
+            self.deliver(snapshot)
+            self.isRefreshing = false
+            if self.isQueued {
+                self.isQueued = false
+                self.refreshNow()
+            }
+        }
+    }
+
+    private func deliver(_ snapshot: ObservatorySnapshot) {
+        for status in observe.unknownStatuses.subtracting(loggedStatuses) {
+            logger.notice("unknown Claude session status \(status, privacy: .public): shown as working")
+            loggedStatuses.insert(status)
+        }
+        if let error = snapshot.lastError, error != lastError { onError(error) }
+        lastError = snapshot.lastError
+        onSnapshot(snapshot)
+    }
+}

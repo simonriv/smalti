@@ -24,6 +24,9 @@ extension XCUIApplication {
         if let shell { app.launchArguments += ["-SmaltiShellCommand", shell] }
         app.launchArguments += [
             "-SmaltiStatePath", file.deletingLastPathComponent().appending(path: "state").path(percentEncoded: false),
+            // F3: never the user's Claude data nor their Ollama; tests that need transcripts copy a fixture here.
+            "-SmaltiClaudeHome", file.deletingLastPathComponent().appending(path: "claude").path(percentEncoded: false),
+            "-SmaltiOllamaURL", "http://127.0.0.1:1",
         ]
         if let config { app.writeConfig(config) }
         return app
@@ -60,5 +63,48 @@ extension XCUIApplication {
     /// Named `config.toml`, as the user's file, so the status bar shows the same name. Created only on write.
     private static var isolatedConfigFile: URL {
         FileManager.default.temporaryDirectory.appending(path: "smalti-ui-tests-\(UUID().uuidString)/config.toml")
+    }
+
+    /// The Claude home this launch reads (`-SmaltiClaudeHome`): empty unless a test installs transcripts.
+    var claudeHome: URL {
+        guard let position = launchArguments.firstIndex(of: "-SmaltiClaudeHome") else {
+            preconditionFailure("not an isolated Smalti: no -SmaltiClaudeHome")
+        }
+        return URL(filePath: launchArguments[position + 1])
+    }
+
+    /// Writes the bundled observatory fixture into `claudeHome`, each transcript moved so its newest line is a few
+    /// minutes ago (the first file newest), so every session falls in "today" whenever the suite runs.
+    func installObservatoryFixture(from bundle: Bundle, newestFirst: [String] = []) throws {
+        let url = try XCTUnwrap(bundle.url(forResource: "observatory-claude-home", withExtension: "json"))
+        let fixture = try JSONDecoder().decode([String: [String: [String]]].self, from: Data(contentsOf: url))
+        let files = fixture["files"] ?? [:]
+        let order = newestFirst + files.keys.sorted().filter { !newestFirst.contains($0) }
+        for (rank, path) in order.enumerated() {
+            let newest = Date().addingTimeInterval(-Double(5 + rank) * 60)
+            let target = claudeHome.appending(path: path)
+            try FileManager.default.createDirectory(
+                at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let lines = TranscriptShift.lines(files[path] ?? [], newest: newest)
+            try Data(lines.map { $0 + "\n" }.joined().utf8).write(to: target)
+        }
+    }
+}
+
+/// Moves every `timestamp` of a transcript by the same amount, so its last one lands on `newest`.
+enum TranscriptShift {
+    static func lines(_ lines: [String], newest: Date) -> [String] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let parse = { (text: String) in formatter.date(from: text) ?? ISO8601DateFormatter().date(from: text) }
+        let records = lines.map { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
+        let latest = records.compactMap { ($0?["timestamp"] as? String).flatMap(parse) }.max() ?? newest
+        let delta = newest.timeIntervalSince(latest)
+        return zip(lines, records).map { line, record in
+            guard var record, let text = record["timestamp"] as? String, let date = parse(text) else { return line }
+            record["timestamp"] = formatter.string(from: date.addingTimeInterval(delta))
+            return (try? JSONSerialization.data(withJSONObject: record)).flatMap { String(data: $0, encoding: .utf8) }
+                ?? line
+        }
     }
 }
