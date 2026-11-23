@@ -53,6 +53,11 @@ struct FeedbackReportTests {
         #expect(body.contains("0.4.5&x=1#y"))
     }
 
+    @Test(arguments: [(FeedbackKind.bug, "Fallo: "), (.idea, "Idea: ")])
+    func issueTitleStartsWithItsKind(_ kind: FeedbackKind, _ prefix: String) {
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["title"] == prefix)
+    }
+
     @Test func issueURLUnder8000Bytes() {
         #expect(FeedbackReport.issueURL(kind: .bug, build: build).absoluteString.utf8.count < 8_000)
     }

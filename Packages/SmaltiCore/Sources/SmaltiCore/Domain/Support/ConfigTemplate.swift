@@ -13,7 +13,7 @@ public enum ConfigTemplate {
             # accent = "\(appearance.accent.hexString)"
             # glass_opacity = \(number(appearance.glassOpacity))
             # blur = \(number(appearance.blur))
-            # font_family = "\(appearance.fontFamily)"
+            # font_family = "\(escaped(appearance.fontFamily))"
             # font_size = \(number(appearance.fontSize))
             # gap = \(number(appearance.gap))
             # radius = \(number(appearance.radius))
@@ -24,7 +24,7 @@ public enum ConfigTemplate {
 
             [shell]
             # "login" abre tu shell de inicio de sesión; también vale una orden, por ejemplo "/bin/zsh".
-            # command = "\(shell(defaults.shell))"
+            # command = "\(escaped(shell(defaults.shell)))"
 
             [input]
             # enabled = \(input.isEnabled)
@@ -37,8 +37,20 @@ public enum ConfigTemplate {
             # Preguntar antes de cerrar un panel, un workspace o una ventana, o de salir, con procesos en marcha.
             # confirm_close = \(defaults.window.confirmClose)
 
+            [observatory]
+            # Precios en dólares por millón de tokens y ventana de contexto; un modelo que Smalti no conoce necesita
+            # todas las claves. Por ejemplo:
+            # [observatory.models."mi-modelo"]
+            #   input = 3
+            #   output = 15
+            #   cache_read = 0.3
+            #   cache_write_5m = 3.75
+            #   cache_write_1h = 6
+            #   context = 200000
+
             [keys]
-            # Un atajo por línea, del atajo al comando, por ejemplo cmd+t para pane.new (ids en la ayuda, ⌘?).
+            # Un atajo por línea, del atajo al id del comando (los ids están en la ayuda, ⌘?):
+            # "cmd+t" = "pane.new"
             # Los atajos que escribas para un comando reemplazan los suyos por defecto; dos líneas para el mismo
             # comando le dan dos atajos. "none" suelta un atajo.
 
@@ -60,6 +72,11 @@ public enum ConfigTemplate {
 
     private static func milliseconds(_ duration: Duration) -> Int64 {
         duration.components.seconds * 1_000 + duration.components.attoseconds / 1_000_000_000_000_000
+    }
+
+    /// A TOML basic string body: `\` and `"` escaped.
+    private static func escaped(_ text: String) -> String {
+        text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     }
 
     private static func number(_ value: Double) -> String {

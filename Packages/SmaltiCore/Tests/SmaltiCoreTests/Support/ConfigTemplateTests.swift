@@ -26,6 +26,18 @@ struct ConfigTemplateTests {
         #expect(text.contains("\"none\""))
     }
 
+    @Test func templateShowsTheKeysSyntaxAndAnObservatoryExample() {
+        #expect(text.contains("# \"cmd+t\" = \"pane.new\""))
+        #expect(text.contains("[observatory.models."))
+    }
+
+    @Test func stringsWithQuotesAndBackslashesAreEscaped() {
+        var config = SmaltiConfig.defaults
+        config.shell = .custom(#"/bin/zsh -c "echo \ hi""#)
+
+        #expect(ConfigTemplate.text(defaults: config).contains(#"# command = "/bin/zsh -c \"echo \\ hi\"""#))
+    }
+
     @Test func uncommentingTurnsValuesIntoTOML() {
         let uncommented = ConfigTemplate.uncommented(text)
 

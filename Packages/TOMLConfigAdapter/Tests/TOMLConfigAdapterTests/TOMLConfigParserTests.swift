@@ -417,3 +417,16 @@ struct TOMLF45Tests {
         #expect(throws: ConfigError.self) { try parse("[window]\nconfirm = true") }
     }
 }
+
+@Suite("TOML · F4.5 template examples")
+struct TOMLTemplateExampleTests {
+    /// The commented observatory example, uncommented by hand, is a valid table.
+    @Test func observatoryExampleParses() throws {
+        let lines = ConfigTemplate.text(defaults: .defaults).split(separator: "\n")
+        let example = lines.drop { !$0.hasPrefix("# [observatory.models.") }.prefix { $0.hasPrefix("# ") }
+            .map { String($0.dropFirst(2)) }.joined(separator: "\n")
+
+        #expect(!example.isEmpty)
+        #expect(throws: Never.self) { try TOMLConfigParser.parse(example, file: "config.toml") }
+    }
+}

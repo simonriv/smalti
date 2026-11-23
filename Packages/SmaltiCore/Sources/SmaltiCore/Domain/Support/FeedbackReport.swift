@@ -13,15 +13,26 @@ public enum FeedbackReport {
         charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
     public static func issueURL(kind: FeedbackKind, build: BuildInfo) -> URL {
-        let query = [("labels", label(kind)), ("title", ""), ("body", body(kind, build: build))]
+        let query = [("labels", label(kind)), ("title", title(kind)), ("body", body(kind, build: build))]
             .map { name, value in name + "=" + encoded(value) }
             .joined(separator: "&")
-        // Safe fallback never taken: the base is a valid constant and every value is percent-encoded.
-        return URL(string: newIssue + "?" + query) ?? URL(filePath: "/")
+        guard let url = URL(string: newIssue + "?" + query) else {
+            // Unreachable: the base is a valid constant and every value is percent-encoded to unreserved characters.
+            preconditionFailure("issue URL could not be built from \(newIssue)")
+        }
+        return url
     }
 
     private static func encoded(_ value: String) -> String {
         value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
+    }
+
+    /// "Fallo: " / "Idea: ", for the user to finish.
+    private static func title(_ kind: FeedbackKind) -> String {
+        switch kind {
+        case .bug: "Fallo: "
+        case .idea: "Idea: "
+        }
     }
 
     private static func label(_ kind: FeedbackKind) -> String {

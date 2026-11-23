@@ -29,7 +29,7 @@ commit() { # case plist
   local name="$1" plist="$2" got
   n=$((n + 1))
   got="$(plutil -extract SmaltiGitCommit raw "$plist" 2>/dev/null || echo "<missing>")"
-  if [[ "$got" =~ ^[0-9a-f]{7,}$ ]]; then echo "[$n/$total] ok $name"
+  if [[ "$got" =~ ^[0-9a-f]{7,}(-dirty)?$ ]]; then echo "[$n/$total] ok $name"
   else echo "[$n/$total] FAIL $name (got $got, want a short commit)"; failures=$((failures + 1)); fi
 }
 

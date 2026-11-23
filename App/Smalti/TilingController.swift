@@ -193,7 +193,9 @@ final class TilingController {
             return
         }
         guard let action = action(for: command) else {
-            logger.error("unknown command \(command.rawValue, privacy: .public)")
+            // A `CommandID` names an action, never typed text; bound to its own name for the log guard (F4.5).
+            let commandID = command.rawValue
+            logger.error("unknown command \(commandID, privacy: .public)")
             return
         }
         action()

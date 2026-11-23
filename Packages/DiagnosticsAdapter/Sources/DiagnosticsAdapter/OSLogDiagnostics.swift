@@ -3,8 +3,9 @@ import OSLog
 import SmaltiCore
 
 /// `DiagnosticLog` over the unified log: this process's entries of one subsystem, since the app started. What the
-/// code logged as private stays redacted. One line per entry: `fecha · categoría · nivel · mensaje`.
-@MainActor
+/// code logged as private stays redacted, and `info` and `debug` entries are not kept by the system, so notices,
+/// errors and faults are what comes out. After the heading, one line per entry: `fecha · categoría · nivel · mensaje`,
+/// with the date in local time. Not isolated to the main actor: reading and writing run on the caller's executor.
 public final class OSLogDiagnostics: DiagnosticLog {
     private let subsystem: String
 
@@ -12,7 +13,7 @@ public final class OSLogDiagnostics: DiagnosticLog {
         self.subsystem = subsystem
     }
 
-    public func export(to file: URL) throws(DiagnosticLogError) {
+    public func export(to file: URL, heading: String) async throws(DiagnosticLogError) {
         let path = file.path(percentEncoded: false)
         let lines: [String]
         do {
@@ -21,7 +22,8 @@ public final class OSLogDiagnostics: DiagnosticLog {
             throw .exportFailed(file: path, reason: "the unified log could not be read: \(error.localizedDescription)")
         }
         do {
-            try (lines.joined(separator: "\n") + "\n").write(to: file, atomically: true, encoding: .utf8)
+            try ([heading] + lines).joined(separator: "\n").appending("\n").write(
+                to: file, atomically: true, encoding: .utf8)
         } catch {
             throw .exportFailed(file: path, reason: error.localizedDescription)
         }
@@ -34,7 +36,7 @@ public final class OSLogDiagnostics: DiagnosticLog {
     }
 
     private static func line(_ entry: OSLogEntryLog) -> String {
-        let date = entry.date.formatted(.iso8601)
+        let date = entry.date.formatted(Date.ISO8601FormatStyle(timeZone: .current))
         return [date, entry.category, level(entry.level), entry.composedMessage].joined(separator: " · ")
     }
 
