@@ -12,6 +12,8 @@ final class HistoryPaletteView: NSView {
     static let visibleRows = 8
 
     let field = PaletteField()
+    /// ⌘↩: reaches the view as a key equivalent, not as the field's newline.
+    var onCommandReturn: (() -> Void)?
     private let theme: Theme
     private let list = NSStackView()
     private let directoryChip = NSTextField(labelWithString: "Este directorio")
@@ -49,6 +51,15 @@ final class HistoryPaletteView: NSView {
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
 
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let isReturn = event.keyCode == 36 || event.keyCode == 76
+        guard isReturn, event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command else {
+            return super.performKeyEquivalent(with: event)
+        }
+        onCommandReturn?()
+        return true
+    }
+
     func showScope(everywhere: Bool) {
         style(directoryChip, isOn: !everywhere)
         style(everywhereChip, isOn: everywhere)
@@ -77,7 +88,8 @@ final class HistoryPaletteView: NSView {
         field.textColor = theme.text.title.nsColor
         field.setAccessibilityLabel("Buscar en el historial")
         field.setAccessibilityIdentifier("smalti.historyField")
-        directoryChip.setAccessibilityIdentifier("smalti.historyScope")
+        directoryChip.setAccessibilityIdentifier("smalti.historyScopeDirectory")
+        everywhereChip.setAccessibilityIdentifier("smalti.historyScopeAll")
         for chip in [directoryChip, everywhereChip] {
             chip.font = theme.interfaceFont(size: palette.footerFontSize, weight: 500)
             chip.wantsLayer = true
@@ -97,7 +109,7 @@ final class HistoryPaletteView: NSView {
         chip.layer?.borderColor =
             (isOn ? theme.accent.withAlpha(0.5) : RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.1))
             .nsColor.cgColor
-        chip.setAccessibilityValue(isOn ? "activo" : "")
+        chip.setAccessibilitySelected(isOn)
     }
 
     private func listArea() -> NSView {

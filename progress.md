@@ -163,6 +163,6 @@
 - [x] T13 · `InputCoordinator` y composición
 - [x] T14 · Menú de completions
 - [x] T15 · Paleta ⌃R y comando de ⌘K
-- [ ] T16 · UI tests, aislamiento y capturas
+- [x] T16 · UI tests, aislamiento y capturas
 #### Bloque 5 · Cierre
 - [ ] T17 · Mediciones, checklist, revisión final, mutación y PR

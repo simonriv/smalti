@@ -31,6 +31,15 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
 
     var isOpen: Bool { view != nil }
 
+    /// ⌘↩ is also a Smalti shortcut; while the palette is open it is the palette's.
+    func handle(_ event: NSEvent) -> Bool {
+        guard isOpen, event.type == .keyDown, event.keyCode == 36 || event.keyCode == 76,
+            event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+        else { return false }
+        choose(running: true)
+        return true
+    }
+
     func close() {
         guard let request, let view else { return }
         view.removeFromSuperview()
@@ -47,6 +56,7 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
         let palette = HistoryPaletteView(theme: theme())
         palette.field.stringValue = query
         palette.field.delegate = self
+        palette.onCommandReturn = { [weak self] in self?.choose(running: true) }
         let width = min(max(host.bounds.width * 0.86, 480), 720)
         palette.translatesAutoresizingMaskIntoConstraints = false
         host.addSubview(palette)
@@ -74,7 +84,7 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
             selected = 0
             search()
         case #selector(NSResponder.insertNewline(_:)):
-            choose(running: NSApp.currentEvent?.modifierFlags.contains(.command) == true)
+            choose(running: false)
         case #selector(NSResponder.cancelOperation(_:)): close()
         default: return false
         }

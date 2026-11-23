@@ -80,7 +80,7 @@ final class AppComposition {
     private static func launchArguments() -> [String: String] {
         let keys = [
             LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
-            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey,
+            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
         ]
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
         arguments[LaunchSettings.claudeConfigDirKey] =
@@ -433,6 +433,7 @@ final class AppComposition {
         window.routeKey = { [weak self] event, composing in
             guard self?.restoreScreen == nil else { return false }
             if !composing, self?.completionMenu?.handle(event) == true { return true }
+            if self?.historyPalette?.handle(event) == true { return true }
             return router.route(event, composing: composing)
         }
     }
@@ -441,6 +442,8 @@ final class AppComposition {
     /// reaches the terminal while the observatory is closed.
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return KeyContext(allowing: [.paletteOpen]) }
+        // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
+        if historyPalette?.isOpen == true { return KeyContext(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
         return KeyContext(passingThrough: [.observatoryPeriod])
     }
