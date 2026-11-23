@@ -357,6 +357,7 @@ final class AppComposition {
             window.statusBar.render(state)
             self?.focusKeyboard(on: state.set.active.focusedPane)
             self?.sessionKeeper?.changed(state.set)
+            self?.input?.keepOnly(Set(state.set.workspaces.flatMap { $0.panes.map(\.id) }))
         }
         controller.onObservatoryChange = { [weak window] state in
             guard let window else { return }

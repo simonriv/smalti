@@ -93,4 +93,15 @@ struct HistorySearchTests {
             HistorySearch.ago(date("2026-10-30T15:00:00Z"), now: date("2026-11-02T15:00:00Z"), calendar: bogota)
                 == "hace 3 días")
     }
+
+    // Final review m2: a broad query over a big history returns the best `maximumHits`, not every command.
+    @Test func searchReturnsAtMostTheBestHits() {
+        let entries = (0..<(HistorySearch.maximumHits + 50)).map { historyEntry("git log \($0)", at: Double($0)) }
+        let index = HistoryIndex(entries: entries, limit: 100_000)
+
+        let hits = HistorySearch.search("git", scope: .all, in: index)
+
+        #expect(hits.count == HistorySearch.maximumHits)
+        #expect(hits.first?.stats.command == "git log \(HistorySearch.maximumHits + 49)")
+    }
 }

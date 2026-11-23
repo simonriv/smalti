@@ -17,6 +17,7 @@ final class CompletionMenuController {
     private var view: CompletionMenuView?
     private var promptWatch: Timer?
     private var resizes: NSObjectProtocol?
+    private var clicks: Any?
 
     init(coordinator: InputCoordinator, provider: any TerminalViewProvider, theme: @escaping () -> Theme) {
         self.coordinator = coordinator
@@ -40,6 +41,11 @@ final class CompletionMenuController {
         guard isOpen, event.type == .keyDown, let pane = request?.pane, let terminal = provider.view(for: pane),
             terminal.window?.firstResponder === terminal
         else { return false }
+        // A command may have started since the last prompt check: its keys are never the menu's.
+        guard provider.isAtPrompt(pane) else {
+            close()
+            return false
+        }
         let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
         guard modifiers.isEmpty, let key = Self.menuKey(event.keyCode) else {
             if !Self.edits(event, modifiers: modifiers) { apply(menu.press(.other)) }
@@ -81,9 +87,15 @@ final class CompletionMenuController {
     }
 
     private func render() {
-        guard let request, provider.isAtPrompt(request.pane), let host = provider.view(for: request.pane),
-            let cell = provider.cursorCell(request.pane), !menu.visible.isEmpty
-        else { return close() }
+        guard let request else { return }
+        guard !menu.visible.isEmpty else { return close() }
+        guard provider.isAtPrompt(request.pane), let host = provider.view(for: request.pane),
+            let cell = provider.cursorCell(request.pane)
+        else {
+            // The menu cannot show (no cursor cell, no view): zsh's own Tab instead, unless the menu was already up.
+            if view == nil { coordinator.send({ .fallback(seq: $0) }, to: request) }
+            return close()
+        }
         let isNew = view == nil
         let menuView = view ?? CompletionMenuView(theme: theme())
         let frame = MenuPlacement.frame(
@@ -108,16 +120,23 @@ final class CompletionMenuController {
         promptWatch = nil
         resizes.map(NotificationCenter.default.removeObserver)
         resizes = nil
+        clicks.map(NSEvent.removeMonitor)
+        clicks = nil
     }
 
     /// A command that starts (or a full-screen program) closes the menu even without a key press; a resize or a
     /// font change places it again.
     private func watch(_ host: NSView) {
-        promptWatch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        promptWatch = Timer.scheduledTimer(withTimeInterval: PromptWatch.interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let pane = self.request?.pane else { return }
                 if !self.provider.isAtPrompt(pane) { self.close() }
             }
+        }
+        // The menu takes no clicks: any click (another pane, the same one, elsewhere) closes it and goes through.
+        clicks = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            MainActor.assumeIsolated { self?.close() }
+            return event
         }
         host.postsFrameChangedNotifications = true
         resizes = NotificationCenter.default.addObserver(
@@ -129,18 +148,18 @@ final class CompletionMenuController {
 
     private static func menuKey(_ keyCode: UInt16) -> MenuKey? {
         switch keyCode {
-        case 126: .up
-        case 125: .down
-        case 48: .tab
-        case 36, 76: .enter
-        case 53: .escape
+        case KeyCode.upArrow: .up
+        case KeyCode.downArrow: .down
+        case KeyCode.tab: .tab
+        case KeyCode.returnKey, KeyCode.keypadEnter: .enter
+        case KeyCode.escape: .escape
         default: nil
         }
     }
 
     /// Typing (characters without ⌘ or ⌃) and ⌫ change the line: zsh's next `line` refilters the menu.
     private static func edits(_ event: NSEvent, modifiers: NSEvent.ModifierFlags) -> Bool {
-        if event.keyCode == 51 { return modifiers.isEmpty }
+        if event.keyCode == KeyCode.delete { return modifiers.isEmpty }
         guard modifiers.isDisjoint(with: [.command, .control]), let text = event.characters, !text.isEmpty else {
             return false
         }

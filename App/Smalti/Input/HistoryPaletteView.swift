@@ -40,7 +40,7 @@ final class HistoryPaletteView: NSView {
 
     /// ⌘↩ from the main keyboard or the keypad (whose Enter also carries `.numericPad`).
     static func isCommandReturn(_ event: NSEvent) -> Bool {
-        (event.keyCode == 36 || event.keyCode == 76)
+        (event.keyCode == KeyCode.returnKey || event.keyCode == KeyCode.keypadEnter)
             && event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command
     }
 

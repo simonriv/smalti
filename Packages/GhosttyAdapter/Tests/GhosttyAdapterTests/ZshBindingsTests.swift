@@ -183,4 +183,67 @@ struct ZshBindingsTests {
         zsh.type("\r", settle: 0.6)
         #expect(server.waitFor { $0.contains { $0.hasPrefix("exec\t") && $0.hasSuffix("print -r -- OLD") } })
     }
+
+    /// Final review m1: when `complete` cannot go out (here, a line over the message cap), Tab still does something.
+    @Test func tabOnAnOverlongLineRunsUserWidget() throws {
+        let server = try FakeInputServer(reply: Self.specs)
+        let zsh = try ZshHarness(socket: server.path, zshrc: Self.userTab)
+        defer { zsh.close() }
+        zsh.type("git " + String(repeating: "a", count: 2_000), settle: 1)
+
+        zsh.type("\t")
+
+        #expect(zsh.dump()?.buffer.hasSuffix("a<user-tab>") == true)
+        #expect(!server.received.contains { $0.hasPrefix("complete") })
+    }
+
+    @Test func ctrlROnAnOverlongLineRunsUserWidget() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(
+            socket: server.path, zshrc: "_test_r() { BUFFER+='<user-r>' }\nzle -N _test_r\nbindkey '^R' _test_r")
+        defer { zsh.close() }
+        zsh.type(String(repeating: "a", count: 2_000), settle: 1)
+
+        zsh.type("\u{12}")
+
+        #expect(zsh.dump()?.buffer.hasSuffix("a<user-r>") == true)
+    }
+
+    /// Final review m9: a spec list split over several `specs` answers adds up.
+    @Test func specListsInSeveralAnswersAddUp() throws {
+        let server = try FakeInputServer { fields in
+            fields.first == "hello" ? ["specs\tgit", "specs\tnpm"] : []
+        }
+        let zsh = try ZshHarness(socket: server.path, zshrc: Self.userTab)
+        defer { zsh.close() }
+
+        zsh.type("git ch\t", settle: 0.5)
+        zsh.type("\u{15}npm ru\t")
+
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("complete\t") && $0.hasSuffix("\tgit ch") } })
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("complete\t") && $0.hasSuffix("\tnpm ru") } })
+    }
+
+    /// Final review m10: SS3 → (`^[OC`, application cursor mode) falls back to what the user bound to it.
+    @Test func ss3RightArrowRunsItsOwnPreviousWidget() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(
+            socket: server.path, zshrc: "_test_oc() { BUFFER+='<oc>' }\nzle -N _test_oc\nbindkey '^[OC' _test_oc")
+        defer { zsh.close() }
+
+        zsh.type("ab\u{1b}OC")
+
+        #expect(zsh.dump()?.buffer == "ab<oc>")
+    }
+
+    /// Final review m10: the channel's `zselect` never overwrites the user's `reply`.
+    @Test func typingKeepsTheUsersReply() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path, zshrc: "reply=(mine)")
+        defer { zsh.close() }
+
+        zsh.type("print -r -- R:$reply\r", settle: 0.8)
+
+        #expect(zsh.printed.contains("R:mine"))
+    }
 }

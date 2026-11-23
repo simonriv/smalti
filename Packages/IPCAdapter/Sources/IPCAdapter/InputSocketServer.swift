@@ -7,8 +7,8 @@ import Synchronization
 /// message whole or not at all: a shell that stops reading loses answers instead of stalling Smalti, and never
 /// receives half a line. Once the shell is gone, `send` does nothing (the descriptor is never reused by mistake).
 public struct InputConnection: Hashable, Sendable {
-    /// Answers are refused above this size: Darwin writes at most one socket buffer (8 KiB) at a time.
-    public static let maximumMessageBytes = 4000
+    /// Answers are refused above this size (see `InputProtocol.maximumAnswerBytes`).
+    public static let maximumMessageBytes = InputProtocol.maximumAnswerBytes
 
     public let id: UUID
     let writer: ConnectionWriter
@@ -24,6 +24,12 @@ public struct InputConnection: Hashable, Sendable {
         let data = Data((InputProtocol.encode(message) + "\n").utf8)
         guard data.count <= Self.maximumMessageBytes else { return false }
         return writer.write(data)
+    }
+
+    /// Ends the connection from the app's side (its pane closed, or a newer shell took the pane): the reader sees
+    /// the end and reports it once through `onClose`.
+    public func close() {
+        writer.shutDown()
     }
 
     public static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }

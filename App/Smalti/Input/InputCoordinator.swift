@@ -101,6 +101,8 @@ final class InputCoordinator {
     private func handle(_ packet: ShellPacket, from connection: InputConnection) async {
         let message = packet.message
         if case .hello(let pane) = message {
+            // `exec zsh` keeps the old socket open in the new shell: the newer connection replaces it.
+            if let older = connections[pane], older != connection { older.close() }
             panes[connection.id] = pane
             connections[pane] = connection
         }
@@ -111,6 +113,14 @@ final class InputCoordinator {
         let path = packet.directory ?? directory(pane) ?? Self.home
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
+    }
+
+    /// Ends the connections of panes that no longer exist (closed panes or workspaces): a background job that
+    /// outlived its shell would otherwise keep them, and their state, alive.
+    func keepOnly(_ open: Set<PaneID>) {
+        for (pane, connection) in connections where !open.contains(pane) {
+            connection.close()
+        }
     }
 
     private func forget(_ connection: InputConnection, of pane: PaneID) {
@@ -134,7 +144,11 @@ final class InputCoordinator {
         case .send(let messages):
             messages.forEach { connection.send($0) }
         case .openMenu(let seq, let line, let result):
-            guard provider.isAtPrompt(pane) else { return }
+            // Tab must always do something: if the menu cannot show, zsh runs its own Tab.
+            guard provider.isAtPrompt(pane) else {
+                connection.send(.fallback(seq: seq))
+                return
+            }
             let request = Request(pane: pane, seq: seq, connection: connection, directory: directory)
             onMenu?(request, line, result)
             if result.hasGenerators { generated(for: line, request: request) }

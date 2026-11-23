@@ -15,7 +15,7 @@ public enum InputRouting {
     ) async -> InputReply {
         switch message {
         case .hello:
-            return .send([.specs(await session.specCommands)])
+            return .send(InputProtocol.specMessages(await session.specCommands))
         case .line(let seq, let line):
             return .send([.suggest(seq: seq, await session.suggest(line, pane: pane, directory: directory))])
         case .exec(_, let command):

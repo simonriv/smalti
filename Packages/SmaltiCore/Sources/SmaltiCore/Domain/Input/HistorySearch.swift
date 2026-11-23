@@ -18,13 +18,19 @@ public struct HistoryHit: Equatable, Sendable {
 
 /// ⌃R: fuzzy search over the commands of a scope, best score first, then the most recently used.
 public enum HistorySearch {
+    /// The palette scrolls through at most this many; computing match ranges for every command would cost a
+    /// keystroke's time on a history of tens of thousands.
+    public static let maximumHits = 200
+
     public static func search(_ query: String, scope: HistoryScope, in index: HistoryIndex) -> [HistoryHit] {
         let candidates = index.commands(in: directory(of: scope))
         let scored = candidates.compactMap { stats in
             fuzzyScore(query, in: stats.command).map { (stats: stats, score: $0) }
         }
         return scored.sorted { ($0.score, $0.stats.lastUsed) > ($1.score, $1.stats.lastUsed) }
-            .map { HistoryHit(stats: $0.stats, matched: fuzzyMatchedRanges(query, in: $0.stats.command)) }
+            .prefix(maximumHits).map {
+                HistoryHit(stats: $0.stats, matched: fuzzyMatchedRanges(query, in: $0.stats.command))
+            }
     }
 
     /// "hace N min" under an hour (at least 1), "hace N h" under a day, then "ayer" or "hace N días" by calendar day.

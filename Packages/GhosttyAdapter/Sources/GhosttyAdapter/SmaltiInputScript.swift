@@ -54,6 +54,8 @@ enum SmaltiInputScript {
                 emulate -L zsh
                 setopt localtraps
                 trap '' PIPE
+                # `zselect` answers in `reply`: kept local so the user's own `reply` survives.
+                local -a reply
                 [[ -n $_smalti_input_fd ]] || return 1
                 _smalti_input_fits "$1" || return 2
                 zselect -t 0 -w $_smalti_input_fd 2>/dev/null || return 2
@@ -137,7 +139,8 @@ enum SmaltiInputScript {
                 fields=("${(@ps:\t:)1}")
                 case $fields[1] in
                     specs)
-                        _smalti_input_specs=(${(s: :)fields[2]})
+                        # A long list comes in several answers: they add up.
+                        _smalti_input_specs+=(${(s: :)fields[2]})
                         _smalti_input_have_specs=1
                         ;;
                     suggest)
@@ -169,6 +172,7 @@ enum SmaltiInputScript {
             _smalti_input_drain() {
                 emulate -L zsh
                 local chunk lines line
+                local -a reply
                 while [[ -n $_smalti_input_fd ]] && zselect -t 0 -r $_smalti_input_fd 2>/dev/null; do
                     chunk=
                     if ! sysread -i $_smalti_input_fd -s 4096 chunk 2>/dev/null || [[ -z $chunk ]]; then
@@ -211,6 +215,8 @@ enum SmaltiInputScript {
                     BUFFER+=$_smalti_input_ghost
                     CURSOR=${#BUFFER}
                     _smalti_input_paint ""
+                elif [[ $KEYS == $'\eOC' ]]; then
+                    _smalti_input_widget '^[OC' forward-char
                 else
                     _smalti_input_widget '^[[C' forward-char
                 fi
@@ -257,7 +263,9 @@ enum SmaltiInputScript {
                 fi
                 _smalti_input_where
                 _smalti_input_escape "$BUFFER"
-                _smalti_input_send "complete"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'$CURSOR$'\t'"$_smalti_input_text"
+                # A request that cannot go out (too long, socket full, channel off) leaves Tab to what it did before.
+                _smalti_input_send "complete"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'$CURSOR$'\t'"$_smalti_input_text" \
+                    || _smalti_input_widget '^I' expand-or-complete
                 return 0
             }
 
@@ -270,7 +278,8 @@ enum SmaltiInputScript {
                 fi
                 _smalti_input_where
                 _smalti_input_escape "$BUFFER"
-                _smalti_input_send "history"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'"$_smalti_input_text"
+                _smalti_input_send "history"$'\t'$(( ++_smalti_input_seq ))$'\t'"$_smalti_input_pwd"$'\t'"$_smalti_input_text" \
+                    || _smalti_input_widget '^R' history-incremental-search-backward
                 return 0
             }
 

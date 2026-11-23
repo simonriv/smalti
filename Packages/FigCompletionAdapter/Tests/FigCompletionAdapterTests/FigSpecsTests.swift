@@ -1,4 +1,4 @@
-import FigCompletionAdapter
+@testable import FigCompletionAdapter
 import Foundation
 import SmaltiCore
 import Testing
@@ -309,6 +309,22 @@ struct FigSpecsTests {
         _ = try await specs.generate(generator, tokens: ["ctok", "a"], in: "/tmp")
 
         #expect(try await specs.generate(generator, tokens: ["ctok", "b"], in: "/tmp").map(\.name) == ["b"])
+    }
+
+    /// Final review m4: each partial word adds a cache entry; expired ones go away instead of piling up.
+    @Test func expiredCacheEntriesAreDropped() async throws {
+        try writeUserSpec(
+            "cgrow",
+            "export default { name: \"cgrow\", args: { generators: { custom: async (t) => [{ name: t[t.length - 1] }] } } };"
+        )
+        let specs = specs()
+        let generator = try #require(await specs.spec(for: "cgrow")?.args.first?.generators.first)
+        for word in ["a", "ab", "abc"] { _ = try await specs.generate(generator, tokens: ["cgrow", word], in: "/tmp") }
+
+        clock.now += 31
+        _ = try await specs.generate(generator, tokens: ["cgrow", "abcd"], in: "/tmp")
+
+        #expect(await specs.cachedEntries == 1)
     }
 
     // Block 2 review I3: Fig path generators answer relative to the typed folder (getQueryTerm).

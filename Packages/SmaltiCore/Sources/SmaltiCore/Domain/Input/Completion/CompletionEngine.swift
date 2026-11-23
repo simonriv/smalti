@@ -53,7 +53,7 @@ public enum CompletionEngine {
     public static func insertion(of suggestion: Suggestion, into line: InputLine) -> InputLine {
         let word = line.currentWord
         guard let literal = suggestion.insertValue else {
-            let quoted = ShellQuoting.word(suggestion.name, opening: word.openingQuote)
+            let quoted = quoted(suggestion.name, for: word, in: line)
             let isOpenEnded = suggestion.name.hasSuffix("/") || suggestion.name.hasSuffix("=")
             let closing = isOpenEnded ? "" : (word.openingQuote.map(String.init) ?? "") + " "
             return replace(word, in: line, with: quoted + closing, cursorAt: nil)
@@ -67,7 +67,18 @@ public enum CompletionEngine {
     /// common prefix.
     public static func insertion(ofPrefix prefix: String, into line: InputLine) -> InputLine {
         let word = line.currentWord
-        return replace(word, in: line, with: ShellQuoting.word(prefix, opening: word.openingQuote), cursorAt: nil)
+        return replace(word, in: line, with: quoted(prefix, for: word, in: line), cursorAt: nil)
+    }
+
+    /// Quoted like the word; a word typed from a bare `~/` keeps that tilde unescaped, or it would stop being home.
+    private static func quoted(_ name: String, for word: Token, in line: InputLine) -> String {
+        let isHomePath = name == "~" || name.hasPrefix("~/")
+        let typed = Array(line.text.unicodeScalars)
+        let startsWithBareTilde = typed.indices.contains(word.range.lowerBound) && typed[word.range.lowerBound] == "~"
+        guard isHomePath, startsWithBareTilde else {
+            return ShellQuoting.word(name, opening: word.openingQuote)
+        }
+        return "~" + ShellQuoting.word(String(name.dropFirst()), opening: nil)
     }
 
     private static func replace(_ word: Token, in line: InputLine, with value: String, cursorAt marker: Int?)

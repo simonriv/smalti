@@ -92,9 +92,10 @@ public actor InputSession {
     /// SuggestForLine: the ghost text after the cursor, or "" for none.
     public func suggest(_ line: InputLine, pane: PaneID, directory: String) async -> String {
         guard settings.isEnabled, settings.hasPredictions else { return "" }
+        // The snapshot first: the index read after the wait is the current one, and is not copied across it.
+        let project = await ports.project.snapshot(of: directory)
         let context = PredictionContext(
-            line: line, directory: directory, previous: previous[pane], index: index,
-            project: await ports.project.snapshot(of: directory), now: clock())
+            line: line, directory: directory, previous: previous[pane], index: index, project: project, now: clock())
         return ports.predictor.predict(context)?.suffix ?? ""
     }
 

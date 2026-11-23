@@ -33,6 +33,27 @@ struct InputSessionTests {
 
     private func line(_ text: String) -> InputLine { InputLine(text: text, cursor: text.unicodeScalars.count) }
 
+    /// Final review m10: the index is read after the project snapshot arrives, so a command that ended meanwhile
+    /// already counts (and the actor never copies the whole index across that wait).
+    @Test func commandEndedWhileReadingTheProjectCounts() async {
+        let project = HeldProjectContext()
+        let clock = now
+        let session = InputSession(
+            ports: InputSession.Ports(
+                history: InMemoryCommandHistory(), project: project, completions: FakeCompletionProvider(),
+                predictor: HeuristicPredictor()),
+            settings: .standard, clock: { clock })
+        await session.start()
+
+        let suggestion = Task { await session.suggest(line("mak"), pane: pane, directory: "/repo") }
+        await project.waitUntilAsked()
+        await session.began("make build", pane: pane, directory: "/repo")
+        await session.finished(pane: pane, exit: 0)
+        await project.release()
+
+        #expect(await suggestion.value == "e build")
+    }
+
     @Test func suggestUsesPredictor() async {
         let history = InMemoryCommandHistory(entries: [historyEntry("git status", at: 999_000)])
         let session = session(history: history)
@@ -301,5 +322,30 @@ struct InputSettingsTests {
 
     @Test func configCarriesStandardInputSettings() {
         #expect(SmaltiConfig.defaults.input == .standard)
+    }
+}
+
+/// A project context whose answer waits until the test releases it.
+private actor HeldProjectContext: ProjectContext {
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var askers: [CheckedContinuation<Void, Never>] = []
+    private var isAsked = false
+
+    func snapshot(of directory: String) async -> ProjectSnapshot {
+        isAsked = true
+        askers.forEach { $0.resume() }
+        askers = []
+        await withCheckedContinuation { waiting.append($0) }
+        return .empty
+    }
+
+    func waitUntilAsked() async {
+        guard !isAsked else { return }
+        await withCheckedContinuation { askers.append($0) }
+    }
+
+    func release() {
+        waiting.forEach { $0.resume() }
+        waiting = []
     }
 }

@@ -5,7 +5,13 @@ import SmaltiCore
 /// directory with a minimal environment. A run past `timeout` is killed and fails without waiting for the rest
 /// of its output. When the process exits but a background child keeps the pipe open, what arrived within a short
 /// grace period is the output. Output beyond `maximumOutput` bytes is dropped.
+///
+/// Every run is offline: it goes through `sandbox-exec` with outgoing IP connections denied, because some Fig
+/// generators ask remote registries about what was typed (`npm install <word>`). Without `sandbox-exec` the run
+/// fails rather than go out unconfined.
 public struct GeneratorRunner: Sendable {
+    static let sandbox = URL(filePath: "/usr/bin/sandbox-exec")
+    static let offlineProfile = "(version 1)(allow default)(deny network-outbound (remote ip))"
     static let path = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     static let maximumOutput = 1 << 20
     static let exitGrace: Duration = .milliseconds(50)
@@ -22,20 +28,18 @@ public struct GeneratorRunner: Sendable {
     }
 
     public func run(arguments: [String], in directory: String) async throws(CompletionError) -> Output {
-        try await execute(URL(filePath: "/usr/bin/env"), arguments, in: directory)
+        try await execute(["/usr/bin/env"] + arguments, in: directory)
     }
 
     public func run(shell script: String, in directory: String) async throws(CompletionError) -> Output {
-        try await execute(URL(filePath: "/bin/zsh"), ["-f", "-c", script], in: directory)
+        try await execute(["/bin/zsh", "-f", "-c", script], in: directory)
     }
 
-    private func execute(_ executable: URL, _ arguments: [String], in directory: String) async throws(CompletionError)
-        -> Output
-    {
+    private func execute(_ arguments: [String], in directory: String) async throws(CompletionError) -> Output {
         let command = arguments.joined(separator: " ")
         let process = Process()
-        process.executableURL = executable
-        process.arguments = arguments
+        process.executableURL = Self.sandbox
+        process.arguments = ["-p", Self.offlineProfile] + arguments
         process.currentDirectoryURL = URL(filePath: directory)
         process.environment = ["PATH": Self.path, "HOME": NSHomeDirectory(), "LANG": "en_US.UTF-8"]
         let output = Pipe()

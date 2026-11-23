@@ -20,6 +20,9 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
     private var isEverywhere = false
     private var isHistoryEmpty = false
     private var searchID = 0
+    private var shownSearchID = 0
+    /// ↩ or ⌘↩ pressed while the latest query was still searching: applied to its results, not the old ones.
+    private var pendingChoice: Bool?
     private var outsideClicks: Any?
     private var promptWatch: Timer?
 
@@ -51,6 +54,7 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
         view?.removeFromSuperview()
         view = nil
         request = nil
+        pendingChoice = nil
         outsideClicks.map(NSEvent.removeMonitor)
         outsideClicks = nil
         promptWatch?.invalidate()
@@ -100,7 +104,7 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
             MainActor.assumeIsolated { self?.closeIfOutside(event) }
             return event
         }
-        promptWatch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        promptWatch = Timer.scheduledTimer(withTimeInterval: PromptWatch.interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, let pane = self.request?.pane else { return }
                 if !self.isOpen || !self.provider.isAtPrompt(pane) { self.close() }
@@ -146,6 +150,10 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
     }
 
     private func choose(running: Bool) {
+        guard shownSearchID == searchID else {
+            pendingChoice = running
+            return
+        }
         guard let request, hits.indices.contains(selected) else { return close() }
         let command = hits[selected].stats.command
         let line = InputLine(text: command, cursor: command.unicodeScalars.count)
@@ -167,7 +175,12 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
             self.hits = found
             self.isHistoryEmpty = isEmpty
             self.selected = min(self.selected, max(found.count - 1, 0))
+            self.shownSearchID = id
             self.render()
+            if let running = self.pendingChoice {
+                self.pendingChoice = nil
+                self.choose(running: running)
+            }
         }
     }
 

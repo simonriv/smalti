@@ -226,4 +226,17 @@ final class InputTests: SmaltiUITestCase {
         XCTAssertTrue(app.element("smalti.historyPalette").waitForNonExistence(timeout: 5))
         openPalette()
     }
+
+    // MARK: Final review
+
+    /// m7: the Tab menu takes no clicks; a click anywhere closes it.
+    func testClickClosesTheMenu() {
+        paste("git ch")
+        app.typeKey(.tab, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForExistence(timeout: 5))
+
+        app.element("smalti.terminal").coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.1)).click()
+
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForNonExistence(timeout: 5))
+    }
 }

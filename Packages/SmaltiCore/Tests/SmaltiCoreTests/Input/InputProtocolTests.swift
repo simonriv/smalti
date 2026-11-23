@@ -102,4 +102,24 @@ struct InputProtocolTests {
             InputProtocol.encode(SmaltiMessage.edit(seq: 5, InputLine(text: "ls", cursor: 2), thenEnter: true))
                 == "editrun\t5\t2\tls")
     }
+
+    // Final review m9: hundreds of specs go out in several `specs` answers, each under the answer cap.
+    @Test func longSpecListIsSplitUnderTheCap() {
+        let commands = (0..<800).map { "command-\($0)" }
+
+        let messages = InputProtocol.specMessages(commands)
+        let encoded = messages.map(InputProtocol.encode)
+        let sent = messages.flatMap { message -> [String] in
+            if case .specs(let part) = message { return part }
+            return []
+        }
+
+        #expect(messages.count > 1)
+        #expect(encoded.allSatisfy { $0.utf8.count + 1 <= InputProtocol.maximumAnswerBytes })
+        #expect(sent == commands)
+    }
+
+    @Test func noSpecsIsStillOneAnswer() {
+        #expect(InputProtocol.specMessages([]) == [.specs([])])
+    }
 }

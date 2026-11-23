@@ -48,6 +48,23 @@ public enum InputProtocol {
     /// stays under the socket's low-water mark (2048 bytes on Darwin), the room `zselect -w` guarantees, so a
     /// write never blocks the shell.
     public static let maxLineBytes = 1999
+    /// Smalti's answers, newline included, stay under this: Darwin writes at most one socket buffer (8 KiB) at a
+    /// time, and a bigger answer is refused whole.
+    public static let maximumAnswerBytes = 4000
+
+    /// The commands with a spec, in as many `specs` answers as fit under `maximumAnswerBytes`; zsh adds them up.
+    public static func specMessages(_ commands: [String]) -> [SmaltiMessage] {
+        var messages: [SmaltiMessage] = []
+        var part: [String] = []
+        for command in commands {
+            if !part.isEmpty, encode(.specs(part + [command])).utf8.count + 1 > maximumAnswerBytes {
+                messages.append(.specs(part))
+                part = []
+            }
+            part.append(command)
+        }
+        return messages + [.specs(part)]
+    }
 
     /// `line <seq> <pwd> <cursor> <buffer>`, `exec <seq> <pwd> <command>`, `complete <seq> <pwd> <cursor> <buffer>`,
     /// `history <seq> <pwd> <query>`, `done <seq> <exit>`, `hello <pane>`, `bye`.

@@ -172,6 +172,31 @@ struct CompletionEngineTests {
         #expect(inserted.text == "open " + expected)
     }
 
+    // Final review C1: a path typed from `~/` keeps its tilde unescaped, so it is still the home folder.
+    @Test func homePathKeepsItsTilde() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "~/Documents/"), into: line("cd ~/Do"))
+
+        #expect(inserted.text == "cd ~/Documents/")
+    }
+
+    @Test func homePathFileKeepsItsTildeAndEscapesTheRest() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "~/my notes.txt"), into: line("cat ~/my"))
+
+        #expect(inserted.text == "cat ~/my\\ notes.txt ")
+    }
+
+    @Test func commonPrefixOfHomePathsKeepsItsTilde() {
+        let inserted = CompletionEngine.insertion(ofPrefix: "~/Do", into: line("cd ~/D"))
+
+        #expect(inserted.text == "cd ~/Do")
+    }
+
+    @Test func escapedTildeStaysEscaped() {
+        let inserted = CompletionEngine.insertion(of: Suggestion(name: "~/Documents/"), into: line("cd \\~/Do"))
+
+        #expect(inserted.text == "cd \\~/Documents/")
+    }
+
     // Review I3: the rest of the word after the cursor is replaced, not duplicated.
     @Test func insertionReplacesTheWholeWordAroundTheCursor() {
         let inserted = CompletionEngine.insertion(

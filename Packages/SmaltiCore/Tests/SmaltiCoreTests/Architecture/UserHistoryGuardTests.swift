@@ -33,7 +33,9 @@ struct UserHistoryGuardTests {
         var offenders: [String] = []
         for folder in ["App", "Packages", "scripts"] {
             offenders += Self.files(under: root.appending(path: folder), root: root).filter { path in
-                guard let text = try? String(contentsOf: root.appending(path: path), encoding: .utf8) else { return false }
+                guard let text = try? String(contentsOf: root.appending(path: path), encoding: .utf8) else {
+                    return false
+                }
                 return text.split(separator: "\n").contains { $0.contains(pattern) }
             }
         }

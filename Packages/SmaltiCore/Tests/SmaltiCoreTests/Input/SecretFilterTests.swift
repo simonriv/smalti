@@ -67,4 +67,35 @@ struct SecretFilterTests {
     @Test func redactionKeepsCleanText() {
         #expect(SecretFilter.redacted("ls -la") == "ls -la")
     }
+
+    // Final review I2: secrets without the `_` prefix, in flags, `-u user:pass`, `-p<pass>` and custom headers.
+    @Test(arguments: [
+        "TOKEN=abc123 curl x", "export SECRET=hunter2", "API_KEY=x make", "curl --token=abcdef x",
+        "gh auth login --with-token abc", "curl -u user:hunter2 https://x", "curl -H 'X-Api-Key: 12345' x",
+        "curl -H 'X-Auth-Token: 12345' x", "mysql -u root -phunter2", "docker login -p hunter2",
+        "tool --password s3cret", "tool --api-key=k123",
+    ])
+    func sensitiveFlagsAndBareNames(command: String) {
+        #expect(SecretFilter.isSensitive(command))
+    }
+
+    @Test(arguments: [
+        "MONKEY=banana make", "mkdir -p src", "git commit -m 'token: rotate'", "docker login -u simon",
+        "curl -u simon https://x", "docker login --password-stdin", "curl -H 'X-Request-Id: 42' x",
+        "git log --author=simon",
+    ])
+    func flagLookalikesAreClean(command: String) {
+        #expect(!SecretFilter.isSensitive(command))
+    }
+
+    @Test(arguments: [
+        ("curl -u user:hunter2 https://x", "curl -u user:«redactado» https://x"),
+        ("mysql -u root -phunter2", "mysql -u root -p«redactado»"),
+        ("curl --token=abcdef x", "curl --token=«redactado» x"),
+        ("gh auth login --with-token abc", "gh auth login --with-token «redactado»"),
+        ("curl -H 'X-Api-Key: 12345' x", "curl -H 'X-Api-Key: «redactado»' x"),
+    ])
+    func flagRedactionKeepsTheFlag(command: String, expected: String) {
+        #expect(SecretFilter.redacted(command) == expected)
+    }
 }

@@ -174,6 +174,7 @@ public actor FigSpecs: CompletionProvider {
         ])
         try Self.check(context, command: request.id.spec)
         let items = try await suggestions(settling: promise, command: request.id.spec)
+        results = results.filter { isFresh($0.value.date) }
         results[key] = Cached(date: clock(), value: items)
         return items
     }
@@ -211,6 +212,7 @@ public actor FigSpecs: CompletionProvider {
             isShell
             ? try await runner.run(shell: arguments[0], in: request.directory).stdout
             : try await runner.run(arguments: arguments, in: request.directory).stdout
+        outputs = outputs.filter { isFresh($0.value.date) }
         outputs[key] = Cached(date: clock(), value: output)
         return output
     }
@@ -225,6 +227,9 @@ public actor FigSpecs: CompletionProvider {
         }
         return String(request.searchTerm.dropLast(text.count))
     }
+
+    /// Cached outputs and results, for the tests.
+    var cachedEntries: Int { outputs.count + results.count }
 
     private func isFresh(_ date: Date) -> Bool { clock().timeIntervalSince(date) < Self.cacheLifetime }
 

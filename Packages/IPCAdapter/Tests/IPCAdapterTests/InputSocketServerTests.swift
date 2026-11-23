@@ -138,6 +138,23 @@ struct InputSocketServerTests {
         #expect(received.closedCount == 1)
     }
 
+    /// Final review m5: the app can end a connection (its pane closed, or the shell was replaced by `exec zsh`
+    /// while a child still holds the old socket): the shell side sees the end and the server forgets it.
+    @Test func appCanCloseAConnection() throws {
+        let server = try start()
+        defer { server.stop() }
+        let client = try #require(LineClient(path: path))
+        client.send("hello\t\(UUID().uuidString)")
+        #expect(received.wait(for: 1))
+
+        try #require(received.all.first).0.close()
+
+        let deadline = Date().addingTimeInterval(2)
+        while received.closedCount == 0 && Date() < deadline { usleep(5_000) }
+        #expect(received.closedCount == 1)
+        #expect(client.readLine(timeout: 0.5) == nil)
+    }
+
     @Test func unreadableLineIsDropped() throws {
         let server = try start()
         defer { server.stop() }

@@ -5,7 +5,8 @@ import SmaltiCore
 ///
 /// The file and its folder are owner-only. Loading skips a half-written last line (no trailing newline) and any
 /// unreadable line, counting the latter. When the file holds more than 20 % over `limit` lines, loading rewrites it
-/// atomically with the last `limit`, so it never grows without bound.
+/// atomically from the line of the oldest entry it keeps (the last `limit`), so it never grows without bound;
+/// unreadable lines in that stretch stay as they were (a newer Smalti may read them).
 public actor FileCommandHistory: CommandHistory {
     static let compactionMargin = 1.2
 
@@ -28,9 +29,12 @@ public actor FileCommandHistory: CommandHistory {
             throw failure("load", error)
         }
         let lines = Self.completeLines(of: data)
-        let entries = decode(lines)
-        if Double(lines.count) > Double(limit) * Self.compactionMargin { try compact(keeping: entries.suffix(limit)) }
-        return Array(entries.suffix(limit))
+        let decoded = decode(lines)
+        let kept = decoded.suffix(limit)
+        if Double(lines.count) > Double(limit) * Self.compactionMargin, let first = kept.first {
+            try compact(keeping: lines[first.line...])
+        }
+        return kept.map(\.entry)
     }
 
     /// Appends with `O_APPEND`, so the line lands at the end even if another writer moved it; when the file ends
@@ -75,13 +79,14 @@ public actor FileCommandHistory: CommandHistory {
         else { throw CocoaError(.fileWriteNoPermission, userInfo: [NSFilePathErrorKey: path]) }
     }
 
-    private func decode(_ lines: [Data]) -> [HistoryEntry] {
+    /// Each readable entry with the index of its line.
+    private func decode(_ lines: [Data]) -> [(entry: HistoryEntry, line: Int)] {
         let decoder = JSONDecoder()
-        var entries: [HistoryEntry] = []
+        var entries: [(entry: HistoryEntry, line: Int)] = []
         skippedLines = 0
-        for line in lines where !line.isEmpty {
+        for (index, line) in lines.enumerated() where !line.isEmpty {
             if let entry = try? decoder.decode(HistoryEntry.self, from: line) {
-                entries.append(entry)
+                entries.append((entry, index))
             } else {
                 skippedLines += 1
             }
@@ -89,16 +94,12 @@ public actor FileCommandHistory: CommandHistory {
         return entries
     }
 
-    private func compact(keeping entries: ArraySlice<HistoryEntry>) throws(HistoryError) {
-        let encoder = JSONEncoder()
+    /// Rewrites the file with these lines as they are.
+    private func compact(keeping lines: ArraySlice<Data>) throws(HistoryError) {
         var data = Data()
-        do {
-            for entry in entries {
-                data.append(try encoder.encode(entry))
-                data.append(UInt8(ascii: "\n"))
-            }
-        } catch {
-            throw failure("compact", error)
+        for line in lines where !line.isEmpty {
+            data.append(line)
+            data.append(UInt8(ascii: "\n"))
         }
         do {
             try AtomicFile.write(data, to: file)

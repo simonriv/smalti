@@ -71,7 +71,8 @@ final class InputLatencyTests: SmaltiUITestCase {
         text.reserveCapacity(Self.historyEntries * 140)
         for index in 0..<Self.historyEntries {
             let command = ["git status", "git checkout main", "swift test", "make build", "npm run dev"][index % 5]
-            text += "{\"command\":\"\(command) \(index % 3000)\",\"directory\":\"/bench/p\(index % 400)\","
+            text +=
+                "{\"command\":\"\(command) \(index % 3000)\",\"directory\":\"/bench/p\(index % 400)\","
                 + "\"exit\":0,\"duration\":0.1,\"date\":\(now - Double(Self.historyEntries - index) * 60),"
                 + "\"pane\":\"\(pane)\"}\n"
         }

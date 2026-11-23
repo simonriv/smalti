@@ -67,6 +67,24 @@ struct FileCommandHistoryTests {
         #expect(lines.count == 10)
     }
 
+    /// Final review m8: compaction keeps recent lines it cannot read (a newer Smalti's format) instead of losing them.
+    @Test func compactionKeepsRecentLinesItCannotRead() async throws {
+        let history = FileCommandHistory(file: file, limit: 10)
+        for index in 0..<12 { try await history.append(entry("cmd \(index)", at: 1_800_000_000 + Double(index))) }
+        let future = #"{"command":"later","schema":2}"#
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data((future + "\n").utf8))
+        try handle.close()
+
+        let loaded = try await FileCommandHistory(file: file, limit: 10).load()
+        let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n").map(String.init)
+
+        #expect(loaded.map(\.command) == (2..<12).map { "cmd \($0)" })
+        #expect(lines.count == 11)
+        #expect(lines.last == future)
+    }
+
     @Test func doesNotCompactWithinTheMargin() async throws {
         let history = FileCommandHistory(file: file, limit: 10)
         for index in 0..<12 { try await history.append(entry("cmd \(index)")) }
