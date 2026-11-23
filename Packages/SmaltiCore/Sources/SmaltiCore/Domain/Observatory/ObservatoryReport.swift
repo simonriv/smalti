@@ -3,6 +3,11 @@ import Foundation
 public struct OutputPeak: Equatable, Sendable {
     public let output: Int
     public let at: Date
+
+    public init(output: Int, at: Date) {
+        self.output = output
+        self.at = at
+    }
 }
 
 /// What the observatory screen shows for one period and one selected session.
@@ -20,6 +25,22 @@ public struct ObservatoryReport: Equatable, Sendable {
         public let cost: CostEstimate
         /// False while the index still reads files older than the period's start ("leyendo transcripts…").
         public let isComplete: Bool
+
+        public init(
+            active: Int, working: Int, waiting: Int, failed: Int, input: Int, cacheShare: Int?, output: Int,
+            peak: OutputPeak?, cost: CostEstimate, isComplete: Bool
+        ) {
+            self.active = active
+            self.working = working
+            self.waiting = waiting
+            self.failed = failed
+            self.input = input
+            self.cacheShare = cacheShare
+            self.output = output
+            self.peak = peak
+            self.cost = cost
+            self.isComplete = isComplete
+        }
     }
 
     public struct Row: Equatable, Sendable {

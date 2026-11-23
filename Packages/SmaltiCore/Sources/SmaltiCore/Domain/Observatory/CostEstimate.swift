@@ -6,6 +6,11 @@ public struct CostEstimate: Equatable, Sendable {
 
     private static let tokensPerPriceUnit = 1_000_000.0
 
+    public init(usd: Double, unpricedModels: Set<ModelID>) {
+        self.usd = usd
+        self.unpricedModels = unpricedModels
+    }
+
     public static func of(_ usage: [ModelID: TokenUsage], catalog: ModelCatalog) -> CostEstimate {
         var usd = 0.0
         var unpriced: Set<ModelID> = []

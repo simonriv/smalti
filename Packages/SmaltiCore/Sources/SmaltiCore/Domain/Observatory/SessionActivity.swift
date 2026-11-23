@@ -37,6 +37,14 @@ public struct RecentTool: Codable, Equatable, Sendable {
     public let summary: String
     public let startedAt: Date
     public let outcome: ToolOutcome
+
+    public init(id: String, name: String, summary: String, startedAt: Date, outcome: ToolOutcome) {
+        self.id = id
+        self.name = name
+        self.summary = summary
+        self.startedAt = startedAt
+        self.outcome = outcome
+    }
 }
 
 /// Everything the observatory keeps about one session, folded from its transcript lines. It is what the index

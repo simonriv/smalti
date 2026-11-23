@@ -6,6 +6,12 @@ public struct SystemFigures: Equatable, Sendable {
         public let model: Double
         public let agents: Double
         public let rest: Double
+
+        public init(model: Double, agents: Double, rest: Double) {
+            self.model = model
+            self.agents = agents
+            self.rest = rest
+        }
     }
 
     public let title: String

@@ -67,12 +67,14 @@ extension Theme {
         header: HeaderTokens(
             height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, dot: obsidianNeutralDot,
             directory: obsidianMutedText,
-            bottomBorder: white(0.05), processFontWeight: 600),
+            bottomBorder: white(0.05), processFontWeight: 600, contextBarWidth: 44, contextBarHeight: 4,
+            contextBarTrack: white(0.08)),
         kbd: KbdTokens(
             fontFamily: monospacedFontFamily, fontSize: 10.5, paddingVertical: 2, paddingHorizontal: 6,
             cornerRadius: 5, borderWidth: 1, border: white(0.12), text: rgb(0xaeb3bd), background: white(0.04)),
         statusBar: StatusBarTokens(
-            height: 28, padding: 16, gap: 16, fontSize: 11, text: obsidianSecondaryText, topBorder: white(0.05)),
+            height: 28, padding: 16, gap: 16, fontSize: 11, text: obsidianSecondaryText, topBorder: white(0.05),
+            todayTokens: rgb(0xc3c7cf)),
         focus: FocusTokens(
             ring: obsidianAccent.withAlpha(0x80 / 255), glow: obsidianAccent.withAlpha(0x22 / 255), glowRadius: 28,
             ringWidth: 1),
@@ -104,5 +106,19 @@ extension Theme {
         agent: AgentStatusTokens(
             working: rgb(0x9ece6a), waiting: rgb(0xe0af68), failed: rgb(0xf7768e), stopped: rgb(0x6b717c),
             stoppedRingWidth: 1, waitingBorder: RGBAColor(red: 224, green: 175, blue: 104, alpha: 0.35), counterGap: 14,
-            counterItemGap: 6, counterFontSize: 11.5, counterText: obsidianMutedText))
+            counterItemGap: 6, counterFontSize: 11.5, counterText: obsidianMutedText),
+        observatory: ObservatoryTokens(
+            stripTitleSize: 13, stripSubtitleSize: 12, stripGap: 10, stripPaddingLeading: 18, stripPaddingTrailing: 14,
+            pillHeight: 26, pillPadding: 10, pillRadius: 7, pillFontSize: 12, pillBorder: white(0.08),
+            pillText: rgb(0xc3c7cf), padding: 14, gap: 12, sideColumnWidth: 330, cardGap: 10,
+            cardBackground: RGBAColor(red: 6, green: 7, blue: 10, alpha: 0.34), cardBorder: white(0.06), cardRadius: 11,
+            cardPaddingVertical: 12, cardPaddingHorizontal: 14, labelSize: 10.5, labelTracking: 0.06, valueSize: 26,
+            noteSize: 11.5, tableHeaderHeight: 34, rowHeight: 44, rowFontSize: 12.5, rowBorder: white(0.04),
+            cellPadding: 10, columns: [112, nil, nil, 76, 76, 70, 118, 56, 66], tableDot: 7, contextBarWidth: 56,
+            activityFontSize: 12, activityRowGap: 6, activityTimeWidth: 52, activityToolWidth: 64, chartHeight: 110,
+            chartLineWidth: 1.6, chartPeakRadius: 3, chartGrid: white(0.08), chartGridFaint: white(0.05),
+            sparklineHeight: 34, sparklineWidth: 1.4, cpu: rgb(0x7dcfff), gpu: rgb(0xbb9af7),
+            memoryModel: rgb(0xbb9af7),
+            memoryRest: rgb(0x6b717c), memoryTrack: white(0.07), memoryBarHeight: 8, separator: white(0.05),
+            footnoteSize: 11, modelNameSize: 13, systemRowSize: 12, fadeDuration: 0.15))
 }

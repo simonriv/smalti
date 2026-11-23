@@ -107,6 +107,20 @@ public struct PaneAgent: Equatable, Sendable {
     }
 }
 
+extension PaneAgent {
+    /// Every pane of every workspace with an agent, labelled like F2's notifications.
+    public static func all(in set: WorkspaceSet) -> [PaneAgent] {
+        set.workspaces.flatMap { workspace in
+            workspace.panes.compactMap { pane in
+                pane.agent.map {
+                    PaneAgent(
+                        pane: pane.id, label: "\(workspace.name)/\(pane.workingDirectory.lastComponent)", session: $0)
+                }
+            }
+        }
+    }
+}
+
 /// Everything one refresh gathered; the report, the status bar and the pane headers are drawn from it.
 public struct ObservatorySnapshot: Equatable, Sendable {
     public let activity: TranscriptActivity
