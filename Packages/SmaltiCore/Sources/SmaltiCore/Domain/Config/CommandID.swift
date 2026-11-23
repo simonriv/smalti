@@ -23,6 +23,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let observatoryToggle = CommandID(rawValue: "observatory.toggle")
     /// Cycles the observatory's period; acts only while the observatory is open, the terminal gets the key otherwise.
     public static let observatoryPeriod = CommandID(rawValue: "observatory.period")
+    /// F4: opens the ⌃R history palette for the focused pane (⌃R itself is zsh's key there, not Smalti's).
+    public static let historySearch = CommandID(rawValue: "history.search")
 
     /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
@@ -71,7 +73,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         [
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
-            observatoryPeriod,
+            observatoryPeriod, historySearch,
         ]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }

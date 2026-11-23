@@ -26,6 +26,7 @@ final class InputCoordinator {
     private var server: InputSocketServer?
     private var panes: [UUID: PaneID] = [:]
     private var latestSeq: [PaneID: Int] = [:]
+    private var connections: [PaneID: InputConnection] = [:]
     private var events: AsyncStream<(InputConnection, ShellMessage)>.Continuation?
 
     init(session: InputSession, provider: any TerminalViewProvider, directory: @escaping (PaneID) -> String?) {
@@ -53,6 +54,23 @@ final class InputCoordinator {
         events?.finish()
     }
 
+    /// ⌘K's "Buscar en el historial": the palette for `pane` as if its zsh had asked with ⌃R.
+    func openHistory(for pane: PaneID) {
+        guard let connection = connections[pane], provider.isAtPrompt(pane) else { return }
+        onHistory?(Request(pane: pane, seq: latestSeq[pane] ?? 0, connection: connection), "")
+    }
+
+    /// ⌃R search, scoped to the pane's directory or to every directory.
+    func search(_ query: String, in pane: PaneID, everywhere: Bool) async -> [HistoryHit] {
+        let scope: HistoryScope = everywhere ? .all : .directory(directory(pane) ?? "/")
+        return await session.search(query, scope: scope)
+    }
+
+    /// ⌘↩: Return typed into the pane once Smalti's `edit` went out whole (otherwise the old line would run).
+    func pressReturn(in pane: PaneID) {
+        provider.pressReturn(pane)
+    }
+
     /// Whether the pane's shell is at its prompt: menus close when it is not.
     func isAtPrompt(_ pane: PaneID) -> Bool { provider.isAtPrompt(pane) }
 
@@ -71,9 +89,15 @@ final class InputCoordinator {
     }
 
     private func handle(_ message: ShellMessage, from connection: InputConnection) async {
-        if case .hello(let pane) = message { panes[connection.id] = pane }
+        if case .hello(let pane) = message {
+            panes[connection.id] = pane
+            connections[pane] = connection
+        }
         guard let pane = panes[connection.id] else { return }
-        if message == .bye { panes[connection.id] = nil }
+        if message == .bye {
+            panes[connection.id] = nil
+            if connections[pane] == connection { connections[pane] = nil }
+        }
         if let seq = Self.seq(of: message) { latestSeq[pane] = seq }
         if case .line(_, let line) = message { onLine?(pane, line) }
         let path = directory(pane) ?? "/"

@@ -132,6 +132,11 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         views[pane]?.isAtPrompt ?? false
     }
 
+    /// Presses Return in the pane, as if typed.
+    public func pressReturn(_ pane: PaneID) {
+        views[pane]?.pressReturn()
+    }
+
     /// The cursor's cell in the pane's view, in points from its top-left corner.
     public func cursorCell(_ pane: PaneID) -> Rect? {
         views[pane]?.cursorCell

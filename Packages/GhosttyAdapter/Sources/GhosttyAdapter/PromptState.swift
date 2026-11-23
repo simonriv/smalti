@@ -10,6 +10,19 @@ extension GhosttySurfaceView {
         return !ghostty_surface_process_exited(surface) && !ghostty_surface_needs_confirm_quit(surface)
     }
 
+    /// Presses Return in the terminal, as the keyboard would (F4: ⌘↩ in the history palette runs the line).
+    func pressReturn() {
+        guard let surface else { return }
+        var key = ghostty_input_key_s()
+        key.keycode = 0x24
+        key.mods = GHOSTTY_MODS_NONE
+        key.consumed_mods = GHOSTTY_MODS_NONE
+        for action in [GHOSTTY_ACTION_PRESS, GHOSTTY_ACTION_RELEASE] {
+            key.action = action
+            _ = ghostty_surface_key(surface, key)
+        }
+    }
+
     /// The cursor's cell in points, origin at the view's top-left.
     var cursorCell: Rect? {
         guard let surface else { return nil }

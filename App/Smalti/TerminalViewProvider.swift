@@ -10,6 +10,8 @@ protocol TerminalViewProvider {
     /// F4: menus open only at the shell prompt and close when it is left.
     func isAtPrompt(_ pane: PaneID) -> Bool
     func cursorCell(_ pane: PaneID) -> Rect?
+    /// ⌘↩ in the history palette: Return typed into the pane after Smalti's `edit`.
+    func pressReturn(_ pane: PaneID)
 }
 
 extension GhosttyTerminalEngine: TerminalViewProvider {}

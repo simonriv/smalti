@@ -28,6 +28,7 @@ final class AppComposition {
     private var observatory: ObservatoryRefresher?
     private var input: InputCoordinator?
     private var completionMenu: CompletionMenuController?
+    private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
     private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
@@ -298,6 +299,12 @@ final class AppComposition {
                     theme: { [weak self] in self?.controller?.theme ?? startup.theme },
                     focusedPane: { [weak self] in self?.controller?.set.active.focusedPane }
                 ))
+            historyPalette = HistoryPaletteController(
+                coordinator: coordinator, provider: engine,
+                context: (
+                    theme: { [weak self] in self?.controller?.theme ?? startup.theme },
+                    returnFocus: { [weak self] pane in self?.focusKeyboard(on: pane) }
+                ))
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
         }
@@ -384,12 +391,14 @@ final class AppComposition {
         }
         let screen = observatoryScreen(controller, in: window)
         observatoryScreen = screen
-        controller.onViewCommand = { [weak palette, weak controller, weak screen] command in
+        controller.onViewCommand = { [weak self, weak palette, weak controller, weak screen] command in
             guard let palette, let theme = controller?.theme else { return }
             switch command {
             case .workspaceRename: palette.beginRename(theme: theme)
             case .observatoryToggle: screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
+            case .historySearch:
+                if let pane = controller?.set.active.focusedPane { self?.input?.openHistory(for: pane) }
             default: palette.toggle(theme: theme)
             }
         }

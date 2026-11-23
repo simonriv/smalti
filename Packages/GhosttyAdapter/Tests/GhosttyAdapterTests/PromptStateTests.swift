@@ -173,4 +173,17 @@ struct PromptStateTests {
         #expect(abs((after.origin.x - before.origin.x) - 4 * after.size.width) < 0.5)
         #expect(after.size.height > after.size.width)
     }
+
+    /// F4 ⌘↩ in the history palette: Smalti presses Return in the pane, as if typed.
+    @Test func pressReturnRunsTheLine() throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        let view = pane.view
+        #expect(wait { view.isAtPrompt })
+        try type("sleep 1", into: view)
+
+        view.pressReturn()
+
+        #expect(wait { !view.isAtPrompt })
+    }
 }
