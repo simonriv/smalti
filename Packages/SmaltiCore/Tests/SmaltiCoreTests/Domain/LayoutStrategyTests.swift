@@ -40,6 +40,15 @@ struct LayoutStrategyTests {
         }
     }
 
+    @Test func dwindleExplainsHowItSplits() {
+        #expect(DwindleLayout().subtitle == "cada panel nuevo divide el último")
+    }
+
+    @Test func columnsAndMasterHaveNoSubtitle() {
+        #expect(ColumnsLayout().subtitle == nil)
+        #expect(MasterStackLayout().subtitle == nil)
+    }
+
     private func expectNoOverlap(
         _ frames: [Rect], _ label: String, sourceLocation: SourceLocation = #_sourceLocation
     ) {

@@ -128,4 +128,19 @@ struct KeymapTests {
 
         #expect(throws: Never.self) { try Keymap.validate(chord) }
     }
+
+    @Test func numberedShortcutsAreOneThroughNine() {
+        #expect(NumberedShortcuts.range == 1...9)
+    }
+
+    @Test func standardKeymapBindsExactlyTheNumberedShortcutRange() {
+        let bindings = Keymap.standard.bindings
+        let paneNumbers = Set(NumberedShortcuts.range.filter { bindings.values.contains(.paneFocus($0)) })
+        let workspaceNumbers = Set(NumberedShortcuts.range.filter { bindings.values.contains(.workspace($0)) })
+        let digitKeys = Set(bindings.keys.compactMap { Int($0.key) })
+
+        #expect(paneNumbers == Set(NumberedShortcuts.range))
+        #expect(workspaceNumbers == Set(NumberedShortcuts.range))
+        #expect(digitKeys == Set(NumberedShortcuts.range))
+    }
 }

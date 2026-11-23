@@ -6,9 +6,6 @@ public enum WorkspaceSetError: Error, Equatable, Sendable {
 ///
 /// Invariant: there is at least one workspace and `activeID` is one of them.
 public struct WorkspaceSet: Sendable, Equatable {
-    /// Panes beyond this position get no `⌘n` index.
-    private static let maxPaneIndex = 9
-
     public private(set) var workspaces: [Workspace]
     public private(set) var activeID: WorkspaceID
 
@@ -71,8 +68,8 @@ public struct WorkspaceSet: Sendable, Equatable {
         workspaces.first { $0.contains(pane) }?.id
     }
 
-    /// Position of `pane` in the active workspace, 1…9; `nil` elsewhere or above 9.
+    /// Position of `pane` in the active workspace while it has a `⌘n` shortcut; `nil` elsewhere or beyond it.
     public func paneIndex(of pane: PaneID) -> Int? {
-        active.index(of: pane).flatMap { $0 <= Self.maxPaneIndex ? $0 : nil }
+        active.index(of: pane).flatMap { NumberedShortcuts.range.contains($0) ? $0 : nil }
     }
 }

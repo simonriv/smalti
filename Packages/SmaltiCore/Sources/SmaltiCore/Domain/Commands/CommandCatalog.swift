@@ -1,9 +1,6 @@
 /// Builds the commands the palette offers for the current state, in display order.
 public enum CommandCatalog {
-    /// The largest pane number that has a "go to pane" command, as it has a ⌘N shortcut.
-    private static let maxNumberedPanes = 9
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
-    private static let layoutSubtitles: [LayoutID: String] = [.dwindle: "cada panel nuevo divide el último"]
 
     public static func commands(for set: WorkspaceSet, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
         let context = Context(workspaces: set, keymap: keymap)
@@ -40,7 +37,7 @@ public enum CommandCatalog {
     private static func layoutCommand(_ layout: any LayoutStrategy, _ context: Context) -> Command {
         let id = CommandID.layout(layout.id)
         return Command(
-            id: id, title: "Layout: \(layout.displayName)", subtitle: layoutSubtitles[layout.id], group: .tiling,
+            id: id, title: "Layout: \(layout.displayName)", subtitle: layout.subtitle, group: .tiling,
             shortcut: context.keymap.chord(for: id), isCurrent: layout.id == context.workspaces.active.layout.id,
             icon: layout.icon)
     }
@@ -57,8 +54,9 @@ public enum CommandCatalog {
         return commands
     }
 
+    /// Only numbered panes get one, as only they have a ⌘N shortcut.
     private static func goToPaneCommands(_ context: Context) -> [Command] {
-        context.workspaces.active.panes.prefix(maxNumberedPanes).enumerated().map { index, pane in
+        context.workspaces.active.panes.prefix(NumberedShortcuts.range.upperBound).enumerated().map { index, pane in
             let number = index + 1
             let process = pane.headerName
             return context.command(

@@ -3,6 +3,7 @@ public struct ColumnsLayout: LayoutStrategy {
     public let id = LayoutID.columns
     public let displayName = "Columnas"
     public let statusName = "columnas"
+    public let subtitle: String? = nil
     /// Paleta.dc.html icon of this layout's command.
     public let icon = CommandIcon.layoutFrame(strokes: [
         [Point(x: 5.8, y: 2), Point(x: 5.8, y: 14)], [Point(x: 10.2, y: 2), Point(x: 10.2, y: 14)],

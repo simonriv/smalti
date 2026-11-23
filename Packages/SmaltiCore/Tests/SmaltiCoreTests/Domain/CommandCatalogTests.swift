@@ -37,6 +37,16 @@ struct CommandCatalogTests {
         #expect(dwindle.subtitle == "cada panel nuevo divide el último")
     }
 
+    @Test func layoutCommandSubtitleComesFromTheStrategy() throws {
+        let layouts = LayoutCatalog([SubtitledLayout()])
+
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: layouts)
+
+        let command = try #require(commands.first { $0.id == .layout(SubtitledLayout().id) })
+        #expect(command.subtitle == "de prueba")
+    }
+
     @Test func layoutCommandsCarryTheirLayoutIcon() throws {
         let commands = commands(paneCount: 1)
 
@@ -178,4 +188,15 @@ struct CommandCatalogTests {
     private static func order(_ group: CommandGroup) -> Int {
         [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
     }
+}
+
+/// A layout that only exists to show the catalog reads each strategy's own subtitle.
+private struct SubtitledLayout: LayoutStrategy {
+    let id = LayoutID(rawValue: "subtitled")
+    let displayName = "Con subtítulo"
+    let statusName = "subtitulado"
+    let subtitle: String? = "de prueba"
+    let icon = DwindleLayout().icon
+
+    func tree(for panes: [PaneID]) -> LayoutTree? { DwindleLayout().tree(for: panes) }
 }

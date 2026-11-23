@@ -18,7 +18,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let workspaceClose = CommandID(rawValue: "workspace.close")
     public static let configReload = CommandID(rawValue: "config.reload")
 
-    /// Focus the nth pane, `number` in 1…9.
+    /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
     public static func paneFocus(_ direction: Direction) -> CommandID {
         CommandID(rawValue: "pane.focus.\(direction.name)")
@@ -35,7 +35,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static func workspaceGo(_ id: WorkspaceID) -> CommandID {
         CommandID(rawValue: "workspace.go.\(id.rawValue.uuidString)")
     }
-    /// Go to the nth workspace, `number` in 1…9.
+    /// Go to the nth workspace, `number` in `NumberedShortcuts.range`.
     public static func workspace(_ number: Int) -> CommandID { CommandID(rawValue: "workspace.\(number)") }
 
     /// Every command the app ships, bound or not.
@@ -44,10 +44,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload,
         ]
-        + digits.map { paneFocus($0) } + digits.map { workspace($0) }
+        + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
-
-    static let digits = Array(1...9)
 }
 
 extension Direction {
