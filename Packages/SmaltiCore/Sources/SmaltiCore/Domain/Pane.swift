@@ -1,3 +1,5 @@
+import Foundation
+
 /// A terminal pane as the domain sees it: identity plus what its terminal has reported.
 public struct Pane: Equatable, Sendable {
     public let id: PaneID
@@ -23,6 +25,37 @@ public struct Pane: Equatable, Sendable {
 
     /// The shell itself is in the foreground (or nothing else was ever reported).
     public var isAtShell: Bool { processName.map(ShellNames.contains) ?? true }
+
+    /// An agent event: starts the agent if the event names a session, then applies it.
+    public func applying(_ event: AgentEvent) -> (Pane, AttentionReason?) {
+        let current = event.hook == .sessionStart ? restarted(from: event) : agent ?? AgentSession.start(from: event)
+        guard let current else { return (self, nil) }
+        let transition = current.applying(event)
+        return (attaching(transition.session), transition.attention)
+    }
+
+    /// A terminal event, plus what it means for the agent when the agent did not say so itself.
+    public func applying(_ event: TerminalEvent, at date: Date) -> Pane {
+        let updated = applying(event)
+        guard let session = updated.agent, session.state.isActive else { return updated }
+        switch event {
+        case .commandFinished(let exitCode, _): return updated.attaching(session.ended(exitCode: exitCode, at: date))
+        case .foregroundProcessChanged(let process) where ShellNames.contains(process.name):
+            return updated.attaching(session.leftForTheShell())
+        default: return updated
+        }
+    }
+
+    /// A new `SessionStart` (e.g. after `--resume`) replaces the agent; the same session keeps its title.
+    private func restarted(from event: AgentEvent) -> AgentSession? {
+        guard let fresh = AgentSession.start(from: event) else { return nil }
+        guard let previous = agent, previous.sessionID == fresh.sessionID, let title = previous.title else {
+            return fresh
+        }
+        return AgentSession(
+            harness: fresh.harness, sessionID: fresh.sessionID, title: title, state: fresh.state,
+            startedAt: previous.startedAt)
+    }
 
     public func attaching(_ session: AgentSession?) -> Pane {
         var updated = self

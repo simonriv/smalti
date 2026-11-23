@@ -50,7 +50,7 @@ public enum ResumeListing {
             let count = workspace.panes.count
             return ResumeWorkspace(
                 name: workspace.name, summary: "\(layout.displayName) · \(count) \(count == 1 ? "panel" : "paneles")",
-                status: mostUrgent(workspace.panes.compactMap(\.agent?.lastState)),
+                status: AgentStateKind.mostUrgent(workspace.panes.compactMap(\.agent?.lastState)),
                 rows: workspace.panes.map { row(for: $0, home: home, harnesses: harnesses) })
         }
     }
@@ -106,11 +106,5 @@ public enum ResumeListing {
             parts.append("\(grouped(pane.commandCount)) \(pane.commandCount == 1 ? "comando" : "comandos")")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    /// error > te espera > trabajando > detenido.
-    static func mostUrgent(_ states: [AgentStateKind]) -> AgentStateKind? {
-        let order: [AgentStateKind] = [.failed, .waiting, .working, .stopped]
-        return order.first(where: states.contains)
     }
 }

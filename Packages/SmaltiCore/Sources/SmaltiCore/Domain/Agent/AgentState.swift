@@ -29,6 +29,22 @@ public enum AgentState: Equatable, Sendable {
     case failed(since: Date, message: String)
     case stopped
 
+    /// Working or waiting: the agent is still running.
+    var isActive: Bool {
+        switch self {
+        case .working, .waiting: true
+        case .failed, .stopped: false
+        }
+    }
+
+    /// When it started waiting or failed (for "te espera · 2m" and the attention queue).
+    public var since: Date? {
+        switch self {
+        case .waiting(let since, _), .failed(let since, _): since
+        case .working, .stopped: nil
+        }
+    }
+
     public var kind: AgentStateKind {
         switch self {
         case .working: .working
@@ -42,4 +58,9 @@ public enum AgentState: Equatable, Sendable {
 /// `AgentState` without its details, as saved in a snapshot.
 public enum AgentStateKind: String, Codable, Sendable {
     case working, waiting, failed, stopped
+
+    /// error > te espera > trabajando > detenido; nil without agents.
+    public static func mostUrgent(_ kinds: [AgentStateKind]) -> AgentStateKind? {
+        [AgentStateKind.failed, .waiting, .working, .stopped].first(where: kinds.contains)
+    }
 }
