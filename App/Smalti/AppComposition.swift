@@ -20,9 +20,16 @@ final class AppComposition {
     private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
     private var sessionKeeper: SessionKeeper?
-    /// F4.5: the window and what is drawn in it.
-    private var front: WindowComposition?
+    /// F4.5: every window, in opening order, and the one in front (the last key window).
+    private var compositions: [WindowComposition] = []
+    private var frontID: WindowID?
+    private var front: WindowComposition? { compositions.first { $0.id == frontID } ?? compositions.last }
     private var controller: TilingController? { front?.controller }
+    /// What every window's controller is built with; set once the engine exists.
+    private var controllerDependencies: TilingController.Dependencies?
+    private var configStore: TOMLConfigStore?
+    private var restorePreferences: (any RestorePreferenceStore)?
+    private var stateDirectoryForTests: String?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
     private var input: InputCoordinator?
@@ -43,14 +50,12 @@ final class AppComposition {
     func showMainWindow() {
         AppFonts.registerBundled()
         let startup = Self.readStartup()
-        let window = SmaltiWindow(theme: startup.theme)
-        window.makeKeyAndOrderFront(nil)
         // Development builds state their state directory so UI tests can check they never use the user's.
         if AppIdentity.current.isDevelopment {
-            window.setAccessibilityValue(startup.settings.stateDirectory.path(percentEncoded: false))
+            stateDirectoryForTests = startup.settings.stateDirectory.path(percentEncoded: false)
         }
         do {
-            try start(startup, in: window)
+            try start(startup)
         } catch {
             fail(error)
         }
@@ -96,7 +101,7 @@ final class AppComposition {
         }
     }
 
-    private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
+    private func start(_ startup: Startup) throws(TerminalEngineError) {
         let runtime = try makeRuntime(
             startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let state = startup.settings.stateDirectory
@@ -116,20 +121,22 @@ final class AppComposition {
             version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
             files: PaneFileLocator(stateDirectory: state),
             ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
-        let controller = TilingController(
-            .init(
-                engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
-                namedLayouts: archive,
-                harnesses: harnesses,
-                agents: .init(
-                    notifier: makeNotifier(), integration: Self.claudeIntegration(),
-                    isAppActive: { NSApp.isActive }),
-                home: try homeDirectory(),
-                shellOverride: startup.settings.shellOverride,
-                applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
-                    try runtime?.apply(appearance)
-                }),
-            initial: startup.initial)
+        let dependencies = TilingController.Dependencies(
+            engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
+            namedLayouts: archive,
+            harnesses: harnesses,
+            agents: .init(
+                notifier: makeNotifier(), integration: Self.claudeIntegration(),
+                isAppActive: { NSApp.isActive }),
+            home: try homeDirectory(),
+            shellOverride: startup.settings.shellOverride,
+            applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
+                try runtime?.apply(appearance)
+            })
+        controllerDependencies = dependencies
+        configStore = startup.store
+        restorePreferences = archive
+        let controller = TilingController(dependencies, initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
         if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
         startObservatory(startup, controller: controller)
@@ -138,27 +145,156 @@ final class AppComposition {
         self.runtime = runtime
         self.engine = engine
         sessionKeeper = keeper
-        let composition = WindowComposition(window: window, controller: controller, services: windowServices(engine))
-        front = composition
-        window.contentView?.layoutSubtreeIfNeeded()
-        let choice = LoadLastSession(archive: archive, preferences: archive).execute()
-        controller.start(from: choice) { [weak composition] snapshot in
-            composition?.ask(snapshot, preferences: archive)
+        let composition = makeComposition(controller, engine: engine)
+        switch LoadLastSession(archive: archive, preferences: archive).execute() {
+        case .startFresh:
+            controller.start()
+        case .startFreshAfterUnreadable(let reason):
+            controller.start()
+            controller.report(.unreadableSession(reason))
+        case .restoreAll(let snapshot):
+            restoreWindows(snapshot, mode: .full, selection: .defaults(for: snapshot))
+        case .ask(let snapshot):
+            composition.ask(snapshot, preferences: archive)
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
-        if !composition.isAskingToRestore { beginSaving(controller.set, keepingPreviousSession: false) }
+        if !composition.isAskingToRestore { beginSaving(keepingPreviousSession: false) }
+    }
+
+    // MARK: - Windows (F4.5)
+
+    /// A window for `controller`, cascaded from the front one, in front. Its controller has not opened panes yet.
+    @discardableResult
+    private func makeComposition(_ controller: TilingController, engine: GhosttyTerminalEngine) -> WindowComposition {
+        let window = SmaltiWindow(theme: controller.theme)
+        if let frame = front?.window.frame {
+            let next = WindowFrame.cascaded(
+                from: Rect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height))
+            window.setFrameOrigin(NSPoint(x: next.minX, y: next.minY))
+        }
+        window.makeKeyAndOrderFront(nil)
+        if let path = stateDirectoryForTests { window.setAccessibilityValue(path) }
+        let composition = WindowComposition(window: window, controller: controller, services: windowServices(engine))
+        compositions.append(composition)
+        frontID = composition.id
+        window.contentView?.layoutSubtreeIfNeeded()
+        return composition
+    }
+
+    /// A new window with a fresh controller; nil before the engine exists.
+    private func makeWindow() -> WindowComposition? {
+        guard let dependencies = controllerDependencies, let store = configStore, let engine else { return nil }
+        return makeComposition(
+            TilingController(dependencies, initial: ReloadConfig(store: store).execute()), engine: engine)
+    }
+
+    /// Every window as the session sees it, the front one marked; nil with no windows.
+    private func windowSet() -> WindowSet? {
+        guard let first = compositions.first else { return nil }
+        let set = compositions.dropFirst().reduce(WindowSet(first: first.state)) { $0.opening($1.state) }
+        return set.bringingToFront(front?.id ?? first.id)
+    }
+
+    private func windowsChanged() {
+        guard let set = windowSet() else { return }
+        sessionKeeper?.changed(set)
+        input?.keepOnly(Set(set.allPanes.map(\.id)))
+    }
+
+    private func composition(containing pane: PaneID) -> WindowComposition? {
+        compositions.first { $0.controller.set.workspace(containing: pane) != nil }
+    }
+
+    private func perform(_ command: CommandID, from composition: WindowComposition) {
+        switch command {
+        case .windowNew: openWindow(from: composition)
+        case .windowClose: closeWindow(composition)
+        case .windowFullscreen: composition.window.toggleFullScreen(nil)
+        case .windowMinimize: composition.window.miniaturize(nil)
+        case .agentJump: jumpToWaitingAgent(from: composition)
+        case .configReload: compositions.forEach { $0.controller.reloadConfig() }
+        default: break
+        }
+    }
+
+    /// ⌘N: a window with one pane in the directory a new pane of `origin` would open in.
+    private func openWindow(from origin: WindowComposition?) {
+        let directory = origin?.controller.set.active.directoryForNewPane ?? controller?.home
+        guard let directory, let window = makeWindow() else { return }
+        window.controller.start(in: directory)
+    }
+
+    /// ⇧⌘W: closes the window and its panes; the last window quits instead, which saves it.
+    private func closeWindow(_ composition: WindowComposition) {
+        guard var set = windowSet(), let engine else { return }
+        guard CloseWindow(engine: engine).execute(composition.id, in: &set) == .closed else {
+            NSApp.terminate(nil)
+            return
+        }
+        compositions.removeAll { $0 === composition }
+        composition.window.close()
+        frontID = set.frontID
+        front?.window.makeKeyAndOrderFront(nil)
+        windowsChanged()
+    }
+
+    /// ⌘J: the window it came from first, then the others; the one with a waiting agent comes to the front.
+    private func jumpToWaitingAgent(from origin: WindowComposition) {
+        let order = [origin] + compositions.filter { $0 !== origin }
+        guard let found = order.first(where: { $0.controller.jumpToWaitingAgent() }) else {
+            origin.controller.reportNobodyWaiting()
+            return
+        }
+        found.window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Rebuilds every saved window: the first in the window that is already open, the rest in new ones, each at its
+    /// saved frame refitted to the screens there are now. A later window with nothing chosen is not opened.
+    private func restoreWindows(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+        var inFront: WindowComposition?
+        for (index, saved) in snapshot.windows.enumerated() {
+            let plan = RestorePlan.make(from: saved, mode: mode, selection: selection)
+            guard index == 0 || !plan.workspaces.isEmpty else { continue }
+            guard let composition = index == 0 ? compositions.first : makeWindow() else { continue }
+            if let frame = saved.frame { composition.place(at: frame) }
+            composition.controller.restore(plan, savedAt: snapshot.savedAt)
+            if saved.isFullScreen { composition.window.toggleFullScreen(nil) }
+            if index == snapshot.frontIndex { inFront = composition }
+        }
+        inFront?.window.makeKeyAndOrderFront(nil)
+    }
+
+    private func restoreChosen(_ choice: RestoreChoice, snapshot: SessionSnapshot) {
+        switch choice {
+        case .restore(let selection):
+            restoreWindows(snapshot, mode: .full, selection: selection)
+        case .layoutsOnly:
+            restoreWindows(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
+        case .startClean:
+            front?.controller.start()
+            beginSaving(keepingPreviousSession: true)
+            return
+        }
+        beginSaving(keepingPreviousSession: false)
+    }
+
+    /// The Dock's menu: "Nueva ventana".
+    func dockMenu() -> NSMenu {
+        let menu = NSMenu()
+        for item in MenuModel.dockMenu() {
+            menu.addItem(
+                ClosureMenuItem(title: item.title) { [weak self] in self?.openWindow(from: self?.front) })
+        }
+        return menu
     }
 
     private func windowServices(_ engine: GhosttyTerminalEngine) -> WindowServices {
         WindowServices(
             engine: engine, harnesses: harnesses,
-            workspacesChanged: { [weak self] set in
-                self?.sessionKeeper?.changed(set)
-                self?.input?.keepOnly(Set(set.workspaces.flatMap { $0.panes.map(\.id) }))
-            },
-            restoreFinished: { [weak self] set, keepingPrevious in
-                self?.beginSaving(set, keepingPreviousSession: keepingPrevious)
-            },
+            changed: { [weak self] in self?.windowsChanged() },
+            restoreChosen: { [weak self] choice, snapshot in self?.restoreChosen(choice, snapshot: snapshot) },
+            appCommand: { [weak self] command, composition in self?.perform(command, from: composition) },
+            becameFront: { [weak self] composition in self?.frontID = composition.id },
             completionMenu: { [weak self] in self?.completionMenu },
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
@@ -167,8 +303,8 @@ final class AppComposition {
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's
     /// session and prune its scrollback.
-    private func beginSaving(_ set: WorkspaceSet, keepingPreviousSession: Bool) {
-        guard telemetry != nil, let keeper = sessionKeeper else { return }
+    private func beginSaving(keepingPreviousSession: Bool) {
+        guard telemetry != nil, let keeper = sessionKeeper, let set = windowSet() else { return }
         keepingPreviousSession ? keeper.startKeepingPreviousSession(with: set) : keeper.start(with: set)
     }
 
@@ -181,7 +317,7 @@ final class AppComposition {
         return UserNotificationsNotifier(
             onActivate: { [weak self] pane in
                 NSApp.activate()
-                guard let front = self?.front else { return }
+                guard let front = self?.composition(containing: pane) ?? self?.front else { return }
                 if front.window.isMiniaturized { front.window.deminiaturize(nil) }
                 front.window.makeKeyAndOrderFront(nil)
                 front.dismissObservatory()
@@ -209,8 +345,8 @@ final class AppComposition {
         let refresher = ObservatoryRefresher(
             observe: ObserveAgents(sources),
             callbacks: .init(
-                panes: { [weak controller] in controller.map { PaneAgent.all(in: $0.set) } ?? [] },
-                onSnapshot: { [weak self] frame in self?.front?.show(frame) },
+                panes: { [weak self] in self?.compositions.flatMap { PaneAgent.all(in: $0.controller.set) } ?? [] },
+                onSnapshot: { [weak self] frame in self?.compositions.forEach { $0.show(frame) } },
                 onError: { [weak controller] in controller?.report(.transcriptsUnreadable($0)) }))
         refresher.start()
         observatory = refresher
@@ -223,9 +359,10 @@ final class AppComposition {
             let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
             self.telemetry = telemetry
             let events = telemetry.events()
-            Task { [weak self, weak controller] in
+            Task { [weak self] in
                 for await event in events {
-                    controller?.handle(event)
+                    // The window that holds the pane applies it; the others ignore a pane they do not have.
+                    self?.compositions.forEach { $0.controller.handle(event) }
                     self?.observatory?.agentEvent(event)
                 }
             }
@@ -252,7 +389,8 @@ final class AppComposition {
             predictor: HeuristicPredictor())
         let session = InputSession(ports: ports, settings: settings, clock: { .now })
         let coordinator = InputCoordinator(session: session, provider: engine) { [weak self] pane in
-            self?.controller?.set.workspaces.lazy.flatMap(\.panes).first { $0.id == pane }?.workingDirectory.path
+            self?.composition(containing: pane)?.controller.set.workspaces.lazy.flatMap(\.panes)
+                .first { $0.id == pane }?.workingDirectory.path
         }
         do {
             try coordinator.start(socketFile: socket)
@@ -293,6 +431,7 @@ final class AppComposition {
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
     func saveForQuit() {
+        windowsChanged()
         sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()

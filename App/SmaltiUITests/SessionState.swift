@@ -21,12 +21,42 @@ enum SessionState {
         let panes: [Pane]
     }
 
+    /// A format-1 session (F2–F4): one window's workspaces at the top level.
     static func seed(_ workspaces: [Workspace], activeIndex: Int = 0, alwaysRestore: Bool, in app: XCUIApplication) {
-        let directory = app.stateDirectory
         let snapshot: [String: Any] = [
             "version": 1, "savedAt": "2026-11-21T23:48:00Z", "activeIndex": activeIndex,
             "workspaces": workspaces.map(json),
         ]
+        write(snapshot, alwaysRestore: alwaysRestore, in: app)
+    }
+
+    /// One saved window (format 2, F4.5): its frame in AppKit screen coordinates and its workspaces.
+    struct Window {
+        let frame: (x: Double, y: Double, width: Double, height: Double)?
+        let workspaces: [Workspace]
+    }
+
+    /// A format-2 session with several windows; `frontIndex` is the one in front.
+    static func seed(windows: [Window], frontIndex: Int = 0, alwaysRestore: Bool, in app: XCUIApplication) {
+        let snapshot: [String: Any] = [
+            "version": 2, "savedAt": "2026-11-21T23:48:00Z", "frontIndex": frontIndex,
+            "windows": windows.map { window in
+                var json: [String: Any] = [
+                    "isFullScreen": false, "activeIndex": 0, "workspaces": window.workspaces.map(json),
+                ]
+                if let frame = window.frame {
+                    json["frame"] = [
+                        "origin": ["x": frame.x, "y": frame.y], "size": ["width": frame.width, "height": frame.height],
+                    ]
+                }
+                return json
+            },
+        ]
+        write(snapshot, alwaysRestore: alwaysRestore, in: app)
+    }
+
+    private static func write(_ snapshot: [String: Any], alwaysRestore: Bool, in app: XCUIApplication) {
+        let directory = app.stateDirectory
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try JSONSerialization.data(withJSONObject: snapshot).write(to: directory.appending(path: "session.json"))

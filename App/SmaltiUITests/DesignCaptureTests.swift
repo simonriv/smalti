@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 /// C18: window captures to lay over the boards (Reanudar.dc.html, Main.dc.html). They run only on demand:
@@ -141,6 +142,41 @@ final class DesignCaptureTests: SmaltiUITestCase {
         app.typeKey("a", modifierFlags: .command)
         app.typeText("solen")
         app.typeKey(.return, modifierFlags: [])
+    }
+
+    /// F4.5: "Retomar donde quedaste" grouped by window, then the two restored windows (mockup-windows.png). Only
+    /// Smalti's windows are captured, never the whole screen.
+    func testCaptureTwoWindows() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        let mainHeight = NSScreen.screens.first?.frame.height ?? 900
+        SessionState.seed(
+            windows: [
+                .init(
+                    frame: (x: 40, y: mainHeight - 600, width: 760, height: 560),
+                    workspaces: [
+                        .init(name: "solen", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")]),
+                        .init(name: "billi", root: "/usr", layout: "dwindle", panes: [.init(directory: "/usr")]),
+                    ]),
+                .init(
+                    frame: (x: 560, y: mainHeight - 820, width: 760, height: 560),
+                    workspaces: [
+                        .init(name: "smalti", root: "/tmp", layout: "columns", panes: [.init(directory: "/tmp")])
+                    ]),
+            ], frontIndex: 1, alwaysRestore: false, in: app)
+        self.app = app
+        app.launch()
+        XCTAssertTrue(app.element("smalti.restore").waitForExistence(timeout: 10))
+        try save(app.windows.firstMatch.screenshot(), as: "f45-resume-windows.png")
+
+        app.typeKey(.return, modifierFlags: [])
+        waitForShells(count: 2)
+        let windows = app.windows.matching(identifier: "smalti.window").allElementsBoundByIndex
+        for (index, window) in windows.enumerated() {
+            // Committed captures show no host name or login banner (see `neutralPrompt`).
+            window.click()
+            app.run("PS1='%# '; clear")
+            try save(window.screenshot(), as: "f45-window-\(index + 1).png")
+        }
     }
 
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {

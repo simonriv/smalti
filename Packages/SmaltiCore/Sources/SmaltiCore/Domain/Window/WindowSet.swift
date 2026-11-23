@@ -25,6 +25,9 @@ public struct WindowSet: Equatable, Sendable {
 
     public var allPanes: [Pane] { windows.flatMap(\.allPanes) }
 
+    /// What a user changes on purpose, window by window (`WorkspaceSet.structure`); frames are left out.
+    public var structure: [[String]] { windows.flatMap { [[$0.id.description]] + $0.workspaces.structure } }
+
     /// Adds `window` and puts it in front; a window already in the set changes nothing.
     public func opening(_ window: WindowState) -> WindowSet {
         guard !windows.contains(where: { $0.id == window.id }) else { return self }

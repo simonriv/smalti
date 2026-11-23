@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 import SmaltiCore
 
-/// Saves the window as it changes (spec F2): the structure one second after the last change, the scrollback every
+/// Saves the windows as they change (spec F2; every window since F4.5): the structure one second after the last change, the scrollback every
 /// five minutes and on quit. A failed save is logged and reported once through `onFailure`; it never blocks.
 @MainActor
 final class SessionKeeper {
@@ -15,7 +15,7 @@ final class SessionKeeper {
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "session")
     private var pendingStructure: Task<Void, Never>?
     private var periodicScrollback: Task<Void, Never>?
-    private var latest: WorkspaceSet?
+    private var latest: WindowSet?
     private var lastFailure: String?
     /// After "Empezar limpio", the last session stays on disk until the user changes something on purpose.
     private var heldStructure: [[String]]?
@@ -25,7 +25,7 @@ final class SessionKeeper {
     }
 
     /// Starts the periodic scrollback save; until then nothing is saved (e.g. while the resume screen shows).
-    func start(with set: WorkspaceSet) {
+    func start(with set: WindowSet) {
         latest = set
         periodicScrollback = Task { [weak self] in
             while !Task.isCancelled {
@@ -38,12 +38,12 @@ final class SessionKeeper {
     }
 
     /// Starts like `start(with:)`, but keeps the previous session (also at quit) until the structure changes.
-    func startKeepingPreviousSession(with set: WorkspaceSet) {
+    func startKeepingPreviousSession(with set: WindowSet) {
         heldStructure = set.structure
         start(with: set)
     }
 
-    func changed(_ set: WorkspaceSet) {
+    func changed(_ set: WindowSet) {
         guard periodicScrollback != nil else { return }
         if let held = heldStructure {
             guard set.structure != held else { return }

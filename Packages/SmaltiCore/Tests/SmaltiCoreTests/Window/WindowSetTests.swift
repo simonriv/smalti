@@ -101,6 +101,14 @@ struct WindowSetTests {
         #expect(set.windows[1].frame == nil)
     }
 
+    @Test func structureListsEveryWindowsWorkspacesWithoutFrames() {
+        let first = window(panes: 1)
+        let moved = WindowSet(first: first).updating(first.id) { $0.moved(to: Rect(x: 1, y: 2, width: 3, height: 4)) }
+
+        #expect(WindowSet(first: first).structure == moved.structure)
+        #expect(WindowSet(first: first).opening(window()).structure.count == 4)
+    }
+
     @Test func frontIsTheFrontWindowState() {
         let first = window()
         let second = window()

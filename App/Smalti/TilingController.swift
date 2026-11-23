@@ -50,6 +50,13 @@ final class TilingController {
     var area: () -> Rect = { .zero }
     /// Commands that open UI instead of changing tiling (the palette, the rename prompt) go to the views.
     var onViewCommand: ((CommandID) -> Void)?
+    /// F4.5: commands about the app's windows (⌘N, ⇧⌘W, ⌘J across windows…) go to the app.
+    var onAppCommand: ((CommandID) -> Void)?
+
+    /// What `onAppCommand` receives: they act on several windows or on the window itself.
+    static let appCommands: Set<CommandID> = [
+        .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload,
+    ]
 
     private let deps: Dependencies
     private let layouts = LayoutCatalog.standard
@@ -87,19 +94,12 @@ final class TilingController {
         publish()
     }
 
-    /// Starts from what the last run left: a fresh window, or the restored workspaces.
-    func start(from choice: StartupChoice, onAsk: (SessionSnapshot) -> Void) {
-        switch choice {
-        case .startFresh:
-            start()
-        case .startFreshAfterUnreadable(let reason):
-            start()
-            report(.unreadableSession(reason))
-        case .restoreAll(let snapshot):
-            restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
-        case .ask(let snapshot):
-            onAsk(snapshot)
-        }
+    /// F4.5 ⌘N: a new window starts with one workspace rooted at `directory` (the focused pane's of the window it came
+    /// from) and its first pane.
+    func start(in directory: WorkingDirectory) {
+        let layout = layouts.strategyOrDefault(for: config.defaultLayout)
+        set = WorkspaceSet(first: .empty(name: directory.lastComponent, rootDirectory: directory, layout: layout))
+        start()
     }
 
     /// An agent's hook event, from the IPC socket.
@@ -118,8 +118,15 @@ final class TilingController {
         return true
     }
 
-    private func jumpToWaitingAgent() {
-        if JumpToWaitingAgent(engine: deps.engine).execute(in: &set) == .nobodyWaiting { show(.nobodyWaiting) }
+    /// ⌘J in this window; false when nobody waits here (the app then tries the other windows).
+    func jumpToWaitingAgent() -> Bool {
+        guard JumpToWaitingAgent(engine: deps.engine).execute(in: &set) != .nobodyWaiting else { return false }
+        publish()
+        return true
+    }
+
+    func reportNobodyWaiting() {
+        show(.nobodyWaiting)
     }
 
     private func runIntegration(_ command: IntegrationCommand.Type) {
@@ -169,11 +176,10 @@ final class TilingController {
                 environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
     }
 
-    /// Rebuilds the saved workspaces; if none could open, starts as usual.
-    func restore(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+    /// Rebuilds one saved window's workspaces; if none could open, starts as usual.
+    func restore(_ plan: RestorePlan, savedAt: Date) {
         let interval = signposter.beginInterval("restore", id: signposter.makeSignpostID())
-        let plan = RestorePlan.make(from: snapshot, mode: mode, selection: selection)
-        let result = restoreSession.execute(plan, savedAt: snapshot.savedAt, home: deps.home)
+        let result = restoreSession.execute(plan, savedAt: savedAt, home: deps.home)
         guard let restored = result.set else {
             signposter.endInterval("restore", interval)
             start()
@@ -188,6 +194,10 @@ final class TilingController {
     }
 
     func perform(_ command: CommandID) {
+        if Self.appCommands.contains(command) {
+            onAppCommand?(command)
+            return
+        }
         if Self.viewCommands.contains(command) {
             onViewCommand?(command)
             return
@@ -241,8 +251,6 @@ final class TilingController {
             .panesEqualize: { [unowned self] in EqualizePanes().execute(in: &set) },
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
-            .configReload: { [unowned self] in reloadConfig() },
-            .agentJump: { [unowned self] in jumpToWaitingAgent() },
             .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
             .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
@@ -341,7 +349,13 @@ final class TilingController {
         }
     }
 
-    private func reloadConfig() {
+    /// "Recargar configuración": the app asks every window, so they all follow the file.
+    func reloadConfig() {
+        applyReloadedConfig()
+        publish()
+    }
+
+    private func applyReloadedConfig() {
         let reload = ReloadConfig(store: deps.configStore).execute()
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
         if let error = reload.error {

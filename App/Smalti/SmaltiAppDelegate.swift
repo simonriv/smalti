@@ -31,6 +31,11 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
+    /// F4.5: "Nueva ventana" in the Dock's menu.
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        composition?.dockMenu()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
     }

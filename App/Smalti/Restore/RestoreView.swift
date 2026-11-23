@@ -22,7 +22,7 @@ final class RestoreView: NSView {
     private let startClean: ResumeButton
     private let always = NSButton(checkboxWithTitle: "", target: nil, action: nil)
 
-    init(theme: Theme, workspaces: [ResumeWorkspace], closedAt: String) {
+    init(theme: Theme, windows: [ResumeWindow], closedAt: String) {
         self.theme = theme
         primary = ResumeButton(style: .primary, theme: theme, identifier: "restore.primary")
         layoutsOnly = ResumeButton(style: .secondary, theme: theme, identifier: "restore.layoutsOnly")
@@ -40,7 +40,7 @@ final class RestoreView: NSView {
         always.action = #selector(alwaysToggled)
         always.contentTintColor = theme.accent.nsColor
         always.setAccessibilityIdentifier("restore.always")
-        build(workspaces: workspaces, closedAt: closedAt)
+        build(windows: windows, closedAt: closedAt)
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -72,7 +72,7 @@ final class RestoreView: NSView {
 
     // MARK: - Layout
 
-    private func build(workspaces: [ResumeWorkspace], closedAt: String) {
+    private func build(windows: [ResumeWindow], closedAt: String) {
         let tokens = theme.resume
         let header = NSStackView(views: [
             label(
@@ -85,7 +85,12 @@ final class RestoreView: NSView {
         header.orientation = .vertical
         header.alignment = .leading
         header.spacing = tokens.titleGap
-        let sections = workspaces.map(section)
+        let sections = windows.flatMap { window in
+            let label = window.title.map {
+                CommandGroupLabel(text: $0, theme: theme, identifier: "smalti.resumeWindow")
+            }
+            return [label].compactMap { $0 } + window.workspaces.map(section)
+        }
         let list = NSStackView(views: sections)
         list.orientation = .vertical
         list.alignment = .leading

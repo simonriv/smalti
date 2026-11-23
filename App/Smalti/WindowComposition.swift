@@ -7,10 +7,14 @@ import SmaltiCore
 struct WindowServices {
     let engine: GhosttyTerminalEngine
     let harnesses: HarnessRegistry
-    /// The window's workspaces changed: the session keeper and the input coordinator follow.
-    let workspacesChanged: (WorkspaceSet) -> Void
-    /// The user chose on the resume screen; `keepingPreviousSession` is "Empezar de cero".
-    let restoreFinished: (_ set: WorkspaceSet, _ keepingPreviousSession: Bool) -> Void
+    /// The window's workspaces, frame or full screen changed: the session keeper and the input coordinator follow.
+    let changed: () -> Void
+    /// The user chose on the resume screen; the app restores every window.
+    let restoreChosen: (RestoreChoice, SessionSnapshot) -> Void
+    /// ⌘N, ⇧⌘W, ⌘J… (`TilingController.appCommands`), from this window.
+    let appCommand: (CommandID, WindowComposition) -> Void
+    /// The window became key: it is the front one now.
+    let becameFront: (WindowComposition) -> Void
     /// The Tab menu and the ⌃R palette are the app's (one input coordinator for every pane).
     let completionMenu: () -> CompletionMenuController?
     let historyPalette: () -> HistoryPaletteController?
@@ -22,6 +26,7 @@ struct WindowServices {
 /// keyboard routing. Only `AppComposition` creates it; it builds no infrastructure.
 @MainActor
 final class WindowComposition {
+    let id = WindowID()
     let window: SmaltiWindow
     let controller: TilingController
     private let services: WindowServices
@@ -30,6 +35,7 @@ final class WindowComposition {
     private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
+    private var observers: [NSObjectProtocol] = []
 
     init(window: SmaltiWindow, controller: TilingController, services: WindowServices) {
         self.window = window
@@ -37,6 +43,58 @@ final class WindowComposition {
         self.services = services
         applyGlass(controller.theme)
         connect()
+        observeWindow()
+    }
+
+    isolated deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    /// What the session saves of this window. Frames are AppKit screen coordinates (`WindowFrame`).
+    var state: WindowState {
+        let frame = window.frame
+        return WindowState(
+            id: id, workspaces: controller.set,
+            frame: Rect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height),
+            isFullScreen: window.styleMask.contains(.fullScreen))
+    }
+
+    /// Moves the window to a saved frame, refitted to the screens there are now.
+    func place(at saved: Rect) {
+        let screens = NSScreen.screens.map(\.frame).map {
+            Rect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height)
+        }
+        let main = screens.first ?? saved
+        let fitted = WindowFrame.fitted(saved, screens: screens, main: main)
+        window.setFrame(
+            NSRect(x: fitted.minX, y: fitted.minY, width: fitted.size.width, height: fitted.size.height), display: true)
+    }
+
+    /// Tells the app when the user moves, resizes, focuses or takes the window full screen.
+    private func observeWindow() {
+        let center = NotificationCenter.default
+        let changes: [Notification.Name] = [
+            NSWindow.didMoveNotification, NSWindow.didEndLiveResizeNotification,
+            NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification,
+        ]
+        observers = changes.map { name in
+            center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.windowChanged() }
+            }
+        }
+        observers.append(
+            center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) {
+                [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.services.becameFront(self)
+                }
+            })
+    }
+
+    private func windowChanged() {
+        window.showsFullScreenChrome(window.styleMask.contains(.fullScreen))
+        services.changed()
     }
 
     var isAskingToRestore: Bool { restoreScreen != nil }
@@ -61,12 +119,12 @@ final class WindowComposition {
     func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore) {
         guard let content = window.contentView else {
             // Without a place to ask, restore what the defaults would: never start empty over a saved session.
-            controller.restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+            services.restoreChosen(.restore(.defaults(for: snapshot)), snapshot)
             return
         }
         let listing = RestoreController.Content(
             snapshot: snapshot,
-            workspaces: ResumeListing.workspaces(in: snapshot, home: controller.home, harnesses: services.harnesses),
+            windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
             closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
         let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
             [weak self] choice in self?.finishAsking(choice, snapshot: snapshot)
@@ -83,15 +141,7 @@ final class WindowComposition {
         restoreScreen?.view.removeFromSuperview()
         restoreScreen = nil
         setTilingHidden(false)
-        switch choice {
-        case .restore(let selection): controller.restore(snapshot, mode: .full, selection: selection)
-        case .layoutsOnly: controller.restore(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
-        case .startClean:
-            controller.start()
-            services.restoreFinished(controller.set, true)
-            return
-        }
-        services.restoreFinished(controller.set, false)
+        services.restoreChosen(choice, snapshot)
     }
 
     private func setTilingHidden(_ hidden: Bool) {
@@ -110,8 +160,10 @@ final class WindowComposition {
             window.strip.render(state)
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
+            // The Window menu's list of windows names each by its active workspace.
+            window.title = state.set.active.name
             focusKeyboard(on: state.set.active.focusedPane)
-            services.workspacesChanged(state.set)
+            services.changed()
         }
         controller.onObservatoryChange = { [weak self] state in
             guard let self else { return }
@@ -120,6 +172,10 @@ final class WindowComposition {
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        controller.onAppCommand = { [weak self] command in
+            guard let self else { return }
+            services.appCommand(command, self)
+        }
         connectPalette()
         connectKeyboard()
     }

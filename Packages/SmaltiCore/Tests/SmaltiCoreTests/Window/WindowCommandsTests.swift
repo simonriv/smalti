@@ -15,43 +15,23 @@ struct WindowCommandsTests {
         other = try WorkingDirectory(path: "/tmp/other")
     }
 
-    private func request() -> CreateWorkspaceRequest {
-        CreateWorkspaceRequest(pane: OpenPaneRequest(shell: .loginShell, geometry: roomy), layout: DwindleLayout())
+    private func window(in directory: WorkingDirectory) throws -> WindowState {
+        var workspaces = WorkspaceSet(
+            first: .empty(name: directory.lastComponent, rootDirectory: directory, layout: DwindleLayout()))
+        _ = try OpenPane(engine: engine, version: "1").execute(
+            OpenPaneRequest(shell: .loginShell, geometry: roomy), in: &workspaces)
+        return WindowState(id: WindowID(), workspaces: workspaces, frame: nil, isFullScreen: false)
     }
 
     private func firstWindow() throws -> WindowSet {
-        var set: WindowSet?
-        let id = try OpenWindow(engine: engine, version: "1").execute(request(), in: root, into: &set)
-        _ = id
-        return try #require(set)
-    }
-
-    @Test func openWindowStartsOnePaneInDirectory() throws {
-        var set = try firstWindow()
-
-        let id = try OpenWindow(engine: engine, version: "1").execute(request(), in: other, into: &set)
-
-        #expect(set.frontID == id)
-        #expect(set.front.workspaces.active.panes.count == 1)
-        #expect(set.front.workspaces.active.name == "other")
-        #expect(engine.openedSpecs.last?.workingDirectory == other)
-    }
-
-    @Test func openWindowFailureLeavesTheSetUntouched() throws {
-        var set = try firstWindow()
-        let before = set
-        engine.failure = .surfaceCreationFailed(workingDirectory: "/tmp/other", reason: "test")
-
-        #expect(throws: OpenPaneError.self) {
-            try OpenWindow(engine: engine, version: "1").execute(request(), in: other, into: &set)
-        }
-        #expect(set == before)
+        WindowSet(first: try window(in: root))
     }
 
     @Test func closeWindowClosesItsPanesInEngine() throws {
-        var set = try firstWindow()
-        let second = try OpenWindow(engine: engine, version: "1").execute(request(), in: other, into: &set)
-        let panes = set.front.workspaces.active.panes.map(\.id)
+        let other = try window(in: other)
+        var set = try firstWindow().opening(other)
+        let second = other.id
+        let panes = other.workspaces.active.panes.map(\.id)
 
         let outcome = CloseWindow(engine: engine).execute(second, in: &set)
 

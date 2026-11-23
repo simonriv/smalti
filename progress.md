@@ -190,7 +190,7 @@
 - [x] T9 · DiagnosticsAdapter (OSLogStore del proceso, privados redactados, guarda de logs públicos)
 #### Bloque 3 · Ventanas en la app
 - [x] T10 · `WindowComposition` (refactor; 64 pruebas de UI de F1–F4 iguales antes y después)
-- [ ] T11 · Varias ventanas, pantalla completa, Dock y restauración
+- [x] T11 · Varias ventanas, pantalla completa, Dock y restauración (WindowTests 7/7; regresión de 8 clases en verde)
 - [ ] T12 · Confirmar antes de cerrar
 #### Bloque 4 · Descubrimiento y terminal en la app
 - [ ] T13 · Menú de macOS, contextual y comandos de la app
