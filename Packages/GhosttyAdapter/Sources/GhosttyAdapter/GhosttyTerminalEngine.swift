@@ -12,11 +12,8 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         self.runtime = runtime
     }
 
-    public func open(_ spec: TerminalSessionSpec) throws(TerminalEngineError) -> PaneID {
-        let view = try GhosttySurfaceView(app: runtime.app, spec: spec)
-        let id = PaneID()
-        views[id] = view
-        return id
+    public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
+        views[pane] = try GhosttySurfaceView(app: runtime.app, spec: spec)
     }
 
     public func close(_ pane: PaneID) {

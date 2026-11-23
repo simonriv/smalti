@@ -6,7 +6,8 @@
 /// the adapter defers them to the next run loop cycle.
 @MainActor
 public protocol TerminalEngine: AnyObject {
-    func open(_ spec: TerminalSessionSpec) throws(TerminalEngineError) -> PaneID
+    /// Opens a terminal for `pane`. The caller chooses the id so a restored pane keeps its identity.
+    func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError)
     func close(_ pane: PaneID)
     /// Makes the pane's terminal visible again.
     func show(_ pane: PaneID)

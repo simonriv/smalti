@@ -103,6 +103,15 @@ public struct Workspace: Sendable, Equatable {
         return updated
     }
 
+    /// Puts back a saved split tree, ratios included, when it holds exactly these panes in this order; otherwise
+    /// keeps the tree the layout built.
+    public func withSavedTree(_ saved: LayoutTree) -> Workspace {
+        guard saved.panes == panes.map(\.id) else { return self }
+        var updated = self
+        updated.tree = saved
+        return updated
+    }
+
     public func renamed(_ name: String) -> Workspace {
         var updated = self
         updated.name = name

@@ -19,6 +19,15 @@ public struct PlannedPane: Equatable, Sendable {
     public let restoresScrollback: Bool
     public let restoresHistory: Bool
     public let launch: PaneLaunch
+
+    public init(id: UUID, workingDirectory: String, restoresScrollback: Bool, restoresHistory: Bool, launch: PaneLaunch)
+    {
+        self.id = id
+        self.workingDirectory = workingDirectory
+        self.restoresScrollback = restoresScrollback
+        self.restoresHistory = restoresHistory
+        self.launch = launch
+    }
 }
 
 public struct PlannedWorkspace: Equatable, Sendable {
@@ -29,12 +38,29 @@ public struct PlannedWorkspace: Equatable, Sendable {
     public let tree: SnapshotTree?
     public let focusedIndex: Int?
     public let panes: [PlannedPane]
+
+    public init(
+        name: String, rootDirectory: String, layout: LayoutID, tree: SnapshotTree?, focusedIndex: Int?,
+        panes: [PlannedPane]
+    ) {
+        self.name = name
+        self.rootDirectory = rootDirectory
+        self.layout = layout
+        self.tree = tree
+        self.focusedIndex = focusedIndex
+        self.panes = panes
+    }
 }
 
 /// What reopening will rebuild, decided from a snapshot, a mode and the user's selection. Pure.
 public struct RestorePlan: Equatable, Sendable {
     public let workspaces: [PlannedWorkspace]
     public let activeIndex: Int
+
+    public init(workspaces: [PlannedWorkspace], activeIndex: Int) {
+        self.workspaces = workspaces
+        self.activeIndex = activeIndex
+    }
 
     public static func make(from snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection)
         -> RestorePlan
