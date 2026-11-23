@@ -1,8 +1,10 @@
 """Tests for the mutant generator of scripts/mutation/mutate.py."""
 
+import tempfile
 import unittest
+from pathlib import Path
 
-from mutate import Mutant, mutants_for_line, mutants_for_source
+from mutate import Mutant, mutants_for_line, mutants_for_source, missing_sources_message, source_files
 
 
 def replacements(line):
@@ -107,6 +109,30 @@ class SourceLevel(unittest.TestCase):
         mutant = Mutant(path="Domain/Pane.swift", line_number=7, original="a == b", replacement="a != b",
                         operator="== → !=")
         self.assertEqual(mutant.describe(), "Domain/Pane.swift:7 == → !=")
+
+
+class SourceFiles(unittest.TestCase):
+    def test_only_the_package_own_target_is_mutated(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            package = Path(scratch) / "SmaltiCore"
+            for relative in ("SmaltiCore/Domain/A.swift", "SmaltiCoreTestSupport/Fake.swift", "Other/B.swift"):
+                file = package / "Sources" / relative
+                file.parent.mkdir(parents=True)
+                file.write_text("")
+
+            found = source_files(package)
+
+            self.assertEqual(found, [package / "Sources" / "SmaltiCore" / "Domain" / "A.swift"])
+
+
+class MissingSources(unittest.TestCase):
+    def test_no_files_is_an_error_naming_the_directory(self):
+        message = missing_sources_message(Path("/x/SmaltiCore"), [])
+
+        self.assertEqual(message, "no sources under Sources/SmaltiCore")
+
+    def test_some_files_is_not_an_error(self):
+        self.assertIsNone(missing_sources_message(Path("/x/SmaltiCore"), [Path("A.swift")]))
 
 
 if __name__ == "__main__":

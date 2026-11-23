@@ -21,4 +21,36 @@ struct WorkingDirectoryTests {
     @Test func keepsRootAsIs() throws {
         #expect(try WorkingDirectory(path: "/").path == "/")
     }
+
+    @Test func abbreviatesHomeWithTilde() throws {
+        let home = try WorkingDirectory(path: "/Users/s")
+        let directory = try WorkingDirectory(path: "/Users/s/dev/x")
+
+        #expect(directory.abbreviated(home: home) == "~/dev/x")
+    }
+
+    @Test func homeItselfIsTilde() throws {
+        let home = try WorkingDirectory(path: "/Users/s")
+
+        #expect(home.abbreviated(home: home) == "~")
+    }
+
+    @Test func doesNotAbbreviateSiblingWithSamePrefix() throws {
+        let home = try WorkingDirectory(path: "/Users/s")
+        let sibling = try WorkingDirectory(path: "/Users/sam/dev")
+
+        #expect(sibling.abbreviated(home: home) == "/Users/sam/dev")
+    }
+
+    @Test func rootHomeDoesNotAbbreviateOtherPaths() throws {
+        let home = try WorkingDirectory(path: "/")
+
+        #expect(try WorkingDirectory(path: "/tmp/x").abbreviated(home: home) == "/tmp/x")
+        #expect(home.abbreviated(home: home) == "~")
+    }
+
+    @Test func lastComponentIsTheFolderName() throws {
+        #expect(try WorkingDirectory(path: "/Users/s/dev/x").lastComponent == "x")
+        #expect(try WorkingDirectory(path: "/").lastComponent == "/")
+    }
 }

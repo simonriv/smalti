@@ -5,9 +5,12 @@ import SmaltiCore
 /// Owns a finalized libghostty config built only from Smalti's generated file, never from ~/.config/ghostty.
 public final class GhosttyConfig {
     let handle: ghostty_config_t
+    /// The generated file this config was loaded from; reloading rewrites the same file.
+    let file: URL
 
-    private init(handle: ghostty_config_t) {
+    private init(handle: ghostty_config_t, file: URL) {
         self.handle = handle
+        self.file = file
     }
 
     deinit {
@@ -26,7 +29,7 @@ public final class GhosttyConfig {
         guard let handle = ghostty_config_new() else {
             throw .engineStartFailed(reason: "ghostty_config_new returned null")
         }
-        let config = GhosttyConfig(handle: handle)
+        let config = GhosttyConfig(handle: handle, file: url)
         ghostty_config_load_file(handle, url.path(percentEncoded: false))
         ghostty_config_finalize(handle)
         let diagnostics = config.diagnostics()

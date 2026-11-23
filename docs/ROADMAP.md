@@ -38,7 +38,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Objetivo:** trabajar con 3 sesiones de Claude en una sola ventana mejor que con los splits de Ghostty.
 - **Entregables:** árbol de splits (`LayoutTree`); layouts Dwindle, Columnas y Maestro + pila; foco, intercambio y tamaño por teclado; igualar tamaños; workspaces en la franja superior; cabecera de panel; barra de estado; configuración TOML en `~/.config/smalti/`; paleta ⌘K básica.
 - **Criterio de cierre:** 5 días laborales seguidos con 3 sesiones de Claude en Smalti, sin volver a Ghostty por una función que falte. Cada vez que se vuelva, se registra como issue. Además, la suite de dominio y los criterios de `docs/specs/F1-tiling.md` en verde.
-- **Dependencias:** F0 cerrado (motor y esqueleto hexagonal). **Requisito de entrada:** una semana usando cmux con el flujo real; lo que siga faltando se anota y ajusta la spec de F1.
+- **Dependencias:** F0 cerrado (motor y esqueleto hexagonal). ~~Requisito de entrada: una semana usando cmux~~ descartado por Simón (2026-11-22); lo que falte sale en los 5 días de uso del criterio de cierre.
 
 ## F2 · Persistencia e integración con Claude Code
 
@@ -54,6 +54,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - Atajo para saltar al agente que lleva más tiempo esperando.
   - Reanudación de Claude con `claude --resume <id>`.
   - Arrastrar una imagen al panel de un agente adjunta la imagen.
+  - Builds de desarrollo separados del Smalti diario: bundle ID `dev.simonriv.smalti.dev`, nombre de proceso y datos propios, para que las pruebas y los scripts de medición nunca cierren la instancia en uso (decidido por Simón, 2026-11-22).
 - **Criterio de cierre**
   - Al reabrir, layout, directorios y scrollback vuelven en menos de 5 s, medido desde el lanzamiento hasta que el último panel es interactivo, con 3 workspaces y 6 paneles.
   - En una semana de uso, todo `Notification` de Claude produce estado ámbar y notificación de macOS (lo verifica un log de eventos contra la UI).

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
 		C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */; };
+		81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 			files = (
 				CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */,
 				C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */,
+				81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +95,7 @@
 			packageProductDependencies = (
 				45270719A545F7E15F22D287 /* SmaltiCore */,
 				2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */,
+				1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */,
 			);
 			productName = Smalti;
 			productReference = 81918909E83595C8F4212CCC /* Smalti.app */;
@@ -150,6 +153,7 @@
 			packageReferences = (
 				4A2381B11E94060630713172 /* XCLocalSwiftPackageReference "../Packages/SmaltiCore" */,
 				1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */,
+				B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
@@ -381,6 +385,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/GhosttyAdapter;
 		};
+		B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/TOMLConfigAdapter;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -391,6 +399,10 @@
 		2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GhosttyAdapter;
+		};
+		1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TOMLConfigAdapter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

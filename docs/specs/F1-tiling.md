@@ -1,6 +1,6 @@
 # F1 · Tiling y workspaces — Spec
 
-Estado: aprobada (se revisa con el informe de F0 antes de empezar) · 2026-11-22 · Roadmap: `docs/ROADMAP.md#f1--tiling-y-workspaces`
+Estado: aprobada · 2026-11-22 · revisada con `docs/specs/F0-spike-report.md` (ajustes R1–R10, aprobados el 2026-11-22) · Roadmap: `docs/ROADMAP.md#f1--tiling-y-workspaces`
 Diseño: `docs/design/Main.dc.html` (ventana, layouts, cabeceras, barra de estado) y `docs/design/Paleta.dc.html` (⌘K).
 
 ## Objetivo
@@ -44,7 +44,7 @@ SmaltiApp ──▶ SmaltiCore ◀── GhosttyAdapter
 ### Dominio (`SmaltiCore/Domain`, Swift puro)
 
 - **Geometría propia:** `Size`, `Point` y `Rect` en puntos. No se usa `CGRect` en el dominio.
-- **`Pane`:** `id`, `workingDirectory`, `title` y `processName`. Se actualiza con los `TerminalEvent` de F0.
+- **`Pane`:** `id`, `workingDirectory`, `title` y `processName`. Se actualiza con los `TerminalEvent` de F0 más `foregroundProcessChanged(name)` (R3). La cabecera muestra `processName` y, si no se conoce, `title`.
 - **`LayoutTree`:** `indirect enum` con dos casos.
   - `leaf(PaneID)`
   - `split(axis: Axis, ratio: Ratio, first: LayoutTree, second: LayoutTree)`
@@ -70,11 +70,13 @@ SmaltiApp ──▶ SmaltiCore ◀── GhosttyAdapter
 
 ### Aplicación: casos de uso
 
-`OpenPane`, `ClosePane`, `FocusPane` (por dirección o índice), `SwapPane`, `ResizePane`, `EqualizePanes`, `SwitchLayout`, `CreateWorkspace`, `RenameWorkspace`, `SwitchWorkspace`, `CloseWorkspace`, `ReloadConfig` y `SearchCommands`.
+`OpenPane`, `ClosePane`, `HandlePaneExit`, `FocusPane` (por dirección o índice), `SwapPane`, `ResizePane`, `EqualizePanes`, `SwitchLayout`, `CreateWorkspace`, `RenameWorkspace`, `SwitchWorkspace`, `CloseWorkspace`, `ReloadConfig` y `SearchCommands`.
 
 - Cada uno se ejecuta desde una prueba con fakes en memoria.
 - Abrir y cerrar llaman a `TerminalEngine`. Cerrar el último panel de un workspace lo deja vacío con un panel nuevo al pedirlo, no cierra la ventana.
 - Un panel nuevo abre en el directorio del panel enfocado; si no se conoce, en el `rootDirectory` del workspace.
+- **Entorno de los hijos (R1):** `OpenPane` añade `SMALTI=1` y `SMALTI_VERSION=<versión>` al `environment` de cada `TerminalSessionSpec`, de modo que un `.zshrc` pueda condicionarse con `[[ -z $SMALTI ]]`.
+- **Cierre por un solo camino (R4):** ⌘W, la petición `close_surface` del motor y la salida del proceso terminan en `ClosePane`, que es idempotente: cerrar un panel que ya no está en el workspace no hace nada. `HandlePaneExit` recibe el workspace y el panel: quita el panel y reconstruye el árbol, nunca cierra la ventana. Si el shell muere al arrancar (vida < 250 ms), el error va a la barra de estado, no a un diálogo modal. El adaptador aplaza el cierre al siguiente ciclo del run loop cuando la petición nace dentro de una llamada de libghostty; el puerto lo documenta.
 - Tamaño mínimo de panel: 240 × 120 pt. Si abrir uno violaría el mínimo, el caso de uso devuelve un error tipado y la UI lo muestra en la barra de estado.
 
 ### Puertos
@@ -85,6 +87,9 @@ SmaltiApp ──▶ SmaltiCore ◀── GhosttyAdapter
 | `ConfigStore` | `current() throws(ConfigError) -> SmaltiConfig` y `reload()` | `TOMLConfigStore` |
 
 - `SmaltiConfig` es un tipo de valor del dominio con valores por defecto iguales a los tokens del tema Obsidiana.
+- **Shell (R2):** `SmaltiConfig.shell` es `.loginShell` o `.custom(String)`. Precedencia: valor por defecto < `[shell] command` del TOML < argumento de lanzamiento `-SmaltiShellCommand`, que queda solo como override de pruebas leído en el composition root.
+- **Aislamiento de pruebas (R2):** el argumento `-SmaltiConfigPath <ruta>` cambia el archivo de configuración; las pruebas nunca leen `~/.config/smalti/config.toml`. `isolatedSmalti()` pasa `-SmaltiShellCommand "/bin/zsh -f"` y una ruta de configuración propia.
+- **Validación de `[keys]` (R8):** un atajo que use ⌥ sin ⌘ ni ⌃ es un `ConfigError` con archivo, línea y clave.
 - Si el TOML no es válido, se conserva la última configuración válida y el error, con archivo, línea y clave, aparece en la barra de estado.
 
 ```toml
@@ -122,6 +127,12 @@ command = "login"            # login shell del usuario
   - Selección con fondo de acento al 15 %.
 - **`KeyRouter`:** traduce los atajos de `SmaltiConfig.keys` a casos de uso. Lo que no es atajo de Smalti pasa intacto a la superficie de libghostty.
 
+### Adaptador de libghostty (cambios de F1)
+
+- **Atajos del motor (R6):** la configuración generada empieza con `keybind = clear` y solo vuelve a declarar copiar y pegar (⌘C/⌘V). Los atajos por defecto de libghostty (⌘K `clear_screen`, ⌘D `new_split`, ⌘1…9 `goto_tab`, ⌘W `close_surface`) chocarían con los de Smalti.
+- **Proceso en primer plano (R3):** `ghostty_surface_foreground_pid` devuelve el grupo de procesos en primer plano (`tcgetpgrp`); el adaptador obtiene el nombre con `proc_name` y emite `foregroundProcessChanged` solo cuando cambia. Consulta tras `titleChanged` y `commandFinished` y con un sondeo de 1 s solo en los paneles visibles. Sin pid o sin permiso no emite nada.
+- **Superficies ocultas (R7):** al cambiar de workspace, las superficies que dejan de verse se marcan con `ghostty_surface_set_occlusion` para pausar su render; los procesos siguen vivos.
+
 ### Atajos por defecto (editables en TOML)
 
 | Acción | Atajo | Origen |
@@ -147,11 +158,16 @@ command = "login"            # login shell del usuario
 | B5 | Todos los casos de uso pasan con `FakeTerminalEngine` y `InMemoryConfigStore`; prueba de contrato compartida para `ConfigStore` (fake y TOML) | `swift test` |
 | B6 | TOML: los valores por defecto se aplican sin archivo; un archivo inválido conserva la configuración previa y muestra archivo, línea y clave | Pruebas del adaptador con fixtures |
 | B7 | `fuzzyMatch("lay")` devuelve los 3 layouts primero; la paleta abre en ≤ 50 ms y navega solo con teclado | Prueba de dominio; medición con signpost |
-| B8 | Con 4 paneles y 3 sesiones de Claude en streaming, escribir no genera bloqueos del hilo principal de más de 16 ms y el reacomodo no deja frames en blanco | Instruments, traza en el PR |
+| B8 | (a) Con 4 paneles y 3 sesiones de Claude en streaming, escribir no genera bloqueos del hilo principal de más de 16 ms y el reacomodo no deja frames en blanco. (b) Con 9 paneles visibles, lo mismo; memoria y GPU dentro de ±10 % de Ghostty.app con 9 splits. (c) 9 paneles en un workspace oculto: GPU antes y después de la oclusión (R5, R7) | Instruments y Monitor de Actividad, trazas y tabla en el PR |
 | B9 | Los procesos de un workspace oculto siguen vivos: un `sleep 30; say listo` termina mientras otro workspace está visible | Manual |
 | B10 | Capturas de la ventana con 3 paneles en los 3 layouts y de la paleta coinciden con los tableros (colores, medidas, tipografías y textos) | Captura superpuesta al tablero, adjunta al PR |
 | B11 | Los atajos no rompen la escritura: con el layout Latin American, todo carácter producido con ⌥ (@, \|, #…) llega al shell y a Claude Code; ningún atajo de Smalti usa ⌥ sin ⌘ o ⌃ | Manual, lista en el PR |
-| B12 | Prueba de guarda: `SmaltiCore` sigue sin importar AppKit, SwiftUI, GhosttyKit ni la librería TOML | `swift test` |
+| B12 | Prueba de guarda: `SmaltiCore` sigue sin importar AppKit, SwiftUI, GhosttyKit ni la librería TOML; solo `TOMLConfigAdapter` importa la librería TOML (R10) | `swift test` |
+| B13 | Cada panel recibe `SMALTI=1`: un E2E abre 2 paneles, comprueba `$SMALTI` en ambos y que `tmux list-clients` no cambia (R1) | XCUITest + prueba de `OpenPane` |
+| B14 | La cabecera muestra el proceso en primer plano (`sleep`, `nvim`, `claude`) y vuelve a `zsh` al terminar (R3) | Prueba del adaptador + E2E |
+| B15 | ⌘W, `exit` y `close_surface` cierran el panel una sola vez; el último panel deja el workspace vacío y la ventana abierta; un shell que muere al arrancar muestra el error en la barra de estado (R4) | Pruebas de casos de uso + E2E |
+| B16 | La configuración del motor contiene `keybind = clear` y solo ⌘C/⌘V; ⌘K, ⌘D, ⌘1 y ⌘W llegan al `KeyRouter` (R6) | Prueba de `GhosttyConfigText` + E2E |
+| B17 | Las UI tests guardan y restauran todos los tipos del portapapeles del usuario, aunque fallen (R9) | Helper compartido en `SmaltiUITests` |
 
 ## Riesgos
 
@@ -160,7 +176,25 @@ command = "login"            # login shell del usuario
 | Conflictos de atajos con programas de terminal (nvim y Claude usan ⌃; ⌃1…⌃9 podría chocar en algún TUI) | Atajos que roban teclas al programa | `KeyRouter` con lista explícita; todo editable en TOML |
 | Reconstruir el árbol en cambios estructurales borra ajustes manuales | Molestia al abrir o cerrar paneles | Regla documentada; si duele en el uso real, se guardan ratios por posición |
 | Reacomodar varias superficies Metal a la vez | Parpadeo o frames en blanco al redimensionar | Reacomodo sin animar el contenido del terminal, solo el marco; B8 lo mide |
-| Muchas superficies vivas en workspaces ocultos | Memoria y GPU | Medir con 9 paneles; pausar el render de superficies ocultas si la API lo permite (informe de F0) |
+| Muchas superficies vivas en workspaces ocultos | Memoria y GPU | Medir con 9 paneles; `ghostty_surface_set_occlusion` pausa el render de las ocultas (R7) |
 | Librería TOML de terceros | Dependencia y API ajena | Detrás de `ConfigStore`, con errores traducidos en la frontera; candidata TOMLKit, se elige en el plan |
 | `.zshrc` que engancha todo shell interactivo a una sesión de tmux compartida (`tmux new-session -A -s main`, el caso de Simón) | Todos los paneles de Smalti mostrarían la misma sesión de tmux, y el tiling dejaría de tener sentido | Smalti exporta `SMALTI=1` (y su versión) a cada proceso hijo; el `.zshrc` se condiciona con `-z "$SMALTI"`; prueba E2E con un panel nuevo que comprueba que `$SMALTI` llega |
-| Proceso en primer plano sin acceso al PTY | La cabecera muestra solo el título OSC | Depende de la pregunta técnica 6 de F0; en ese caso se usa el título |
+| Proceso en primer plano | Resuelto en F0 (pregunta 6): `ghostty_surface_foreground_pid` + `proc_name`; si falla, la cabecera usa el título OSC | R3, B14 |
+
+## Revisión con el informe de F0 (2026-11-22)
+
+Aprobada por Simón. Ningún ajuste cambia las Decisiones de `PROJECT.md`. El requisito de entrada de una semana con cmux se descarta (decisión de Simón): lo que falte sale en los 5 días de uso del criterio de cierre.
+
+| # | Ajuste | Origen |
+| --- | --- | --- |
+| R1 | `SMALTI=1` y `SMALTI_VERSION` en el entorno de cada panel | Hallazgo de tmux en F0 |
+| R2 | `-SmaltiShellCommand` pasa a `[shell] command`; el argumento queda como override de pruebas; `-SmaltiConfigPath` aísla la configuración en pruebas | Informe de F0 |
+| R3 | Nombre del proceso con `ghostty_surface_foreground_pid` + `proc_name` | Pregunta técnica 6 |
+| R4 | `HandlePaneExit` y el cierre diferido pasan a casos de uso multi-panel, con un solo camino de cierre idempotente | Correcciones de F0 |
+| R5 | Rendimiento con 4 y 9 superficies Metal | Riesgo de F1 en el informe |
+| R6 | `keybind = clear` en la configuración del motor | Lectura de `GhosttyConfigText` |
+| R7 | Oclusión de superficies ocultas | `ghostty.h` v1.4.0 |
+| R8 | Validación de atajos con ⌥ | Regla de plataforma |
+| R9 | Restaurar todos los tipos del portapapeles en las UI tests | Regla de Simón |
+| R10 | Guarda de imports del adaptador TOML | B12 |
+

@@ -1,0 +1,3 @@
+[keys]
+"cmd+k" = "palette.open"
+"opt+k" = "pane.new"

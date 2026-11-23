@@ -25,6 +25,10 @@ public struct RGBAColor: Equatable, Hashable, Sendable {
             alpha: 1)
     }
 
+    /// The same color with another opacity.
+    public func withAlpha(_ alpha: Double) -> RGBAColor {
+        RGBAColor(red: red, green: green, blue: blue, alpha: alpha)
+    }
 }
 
 public enum ColorError: Error, Equatable, Sendable {
