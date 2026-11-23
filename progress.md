@@ -90,10 +90,10 @@
 - [x] T14 · Pantalla "Retomar donde quedaste"
 - [x] T15 · Layouts con nombre y UI tests de restauración (revisión del bloque 4: 3 importantes y 9 menores corregidos)
 #### Bloque 5 · Estado del agente, IPC y plugin
-- [ ] T16 · Transiciones del agente y cola de atención
-- [ ] T17 · Casos de uso y puertos del agente
-- [ ] T18 · `IPCAdapter` y CLI `smalti`
-- [ ] T19 · Plugin de Claude Code e instalador
+- [x] T16 · Transiciones del agente y cola de atención
+- [x] T17 · Casos de uso y puertos del agente
+- [x] T18 · `IPCAdapter` y CLI `smalti`
+- [x] T19 · Plugin de Claude Code e instalador (revisión del bloque 5: 2 importantes y 7 menores corregidos; hook `PreToolUse` añadido)
 #### Bloque 6 · Estado y atención en la app
 - [ ] T20 · Entorno de paneles y cableado del IPC
 - [ ] T21 · Estado en cabecera, borde y franja
