@@ -89,13 +89,16 @@ public struct CloseWorkspace {
         self.engine = engine
     }
 
-    public func execute(_ id: WorkspaceID, in set: inout WorkspaceSet) throws(WorkspaceSetError) {
-        let closing = set.workspaces.first { $0.id == id }
+    /// Returns the panes it closed, so callers can forget what they kept about them; none for an unknown id.
+    @discardableResult
+    public func execute(_ id: WorkspaceID, in set: inout WorkspaceSet) throws(WorkspaceSetError) -> [PaneID] {
+        let closing = set.workspaces.first { $0.id == id }?.panes.map(\.id) ?? []
         let updated = try set.removing(id)
-        closing?.panes.forEach { engine.close($0.id) }
+        closing.forEach(engine.close)
         if id == set.activeID {
             updated.active.panes.forEach { engine.show($0.id) }
         }
         set = updated
+        return closing
     }
 }

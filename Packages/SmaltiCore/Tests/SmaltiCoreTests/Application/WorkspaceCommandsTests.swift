@@ -154,4 +154,26 @@ struct WorkspaceCommandsTests {
         #expect(set == before)
         #expect(engine.closedPanes.isEmpty)
     }
+
+    @Test mutating func closeWorkspaceReturnsTheClosedPanes() throws {
+        _ = try openInActive()
+        let second = try creator().execute(create(roomy), in: &set)
+        let secondPane = try OpenPane(engine: engine, version: "1").execute(
+            OpenPaneRequest(shell: .loginShell, geometry: roomy), in: &set)
+        let expected = set.active.panes.map(\.id)
+
+        let closed = try CloseWorkspace(engine: engine).execute(second, in: &set)
+
+        #expect(closed == expected)
+        #expect(closed.contains(secondPane))
+    }
+
+    @Test mutating func closeUnknownWorkspaceReturnsNoPanes() throws {
+        _ = try openInActive()
+        _ = try creator().execute(create(roomy), in: &set)
+
+        let closed = try CloseWorkspace(engine: engine).execute(WorkspaceID(), in: &set)
+
+        #expect(closed.isEmpty)
+    }
 }
