@@ -31,6 +31,7 @@ final class ZshHarness: @unchecked Sendable {
             _test_dump() { print -r -- "$BUFFER"$'\\x1f'"$CURSOR"$'\\x1f'"$POSTDISPLAY"$'\\x1f'"${region_highlight[*]}" >| \(dump) }
             zle -N _test_dump
             bindkey '^X^D' _test_dump
+            bindkey -M viins '^X^D' _test_dump
             \(zshrc)
             """
         try rc.write(to: user.appending(path: ".zshrc"), atomically: true, encoding: .utf8)

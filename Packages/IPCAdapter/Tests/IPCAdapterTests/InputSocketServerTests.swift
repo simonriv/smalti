@@ -1,6 +1,6 @@
 import Darwin
 import Foundation
-import IPCAdapter
+@testable import IPCAdapter
 import SmaltiCore
 import Testing
 
@@ -191,5 +191,88 @@ struct InputSocketServerTests {
         let mode = try FileManager.default.attributesOfItem(atPath: path)[.posixPermissions] as? Int
 
         #expect(mode == 0o600)
+    }
+
+    // MARK: Block 3 review
+
+    /// C3: an answer for a shell that is gone never lands in whatever reused its descriptor.
+    @Test func sendAfterCloseNeverReachesAReusedDescriptor() throws {
+        let server = try start()
+        defer { server.stop() }
+        var connection: InputConnection?
+        do {
+            let client = try #require(LineClient(path: path))
+            client.send("hello\t\(PaneID().description)")
+            #expect(received.wait(for: 1))
+            connection = received.all.first?.0
+        }
+        let deadline = Date().addingTimeInterval(2)
+        while received.closedCount == 0 && Date() < deadline { usleep(5_000) }
+        usleep(50_000)
+        let file = FileManager.default.temporaryDirectory.appending(path: "smalti-reused-\(UUID())")
+        FileManager.default.createFile(atPath: file.path(percentEncoded: false), contents: nil)
+        let reused = try FileHandle(forWritingTo: file)
+        defer { try? reused.close() }
+
+        let sent = connection?.send(.suggest(seq: 1, "git push --force"))
+
+        #expect(sent == false)
+        #expect(try Data(contentsOf: file).isEmpty)
+    }
+
+    /// C2: a message is written whole or not at all; one too big for the socket is refused.
+    @Test func oversizedAnswerIsRefusedWhole() throws {
+        let server = try start()
+        defer { server.stop() }
+        let client = try #require(LineClient(path: path))
+        client.send("hello\t\(PaneID().description)")
+        #expect(received.wait(for: 1))
+        let connection = try #require(received.all.first?.0)
+
+        let sent = connection.send(.suggest(seq: 1, String(repeating: "x", count: InputConnection.maximumMessageBytes)))
+        let small = connection.send(.suggest(seq: 2, "ok"))
+
+        #expect(!sent)
+        #expect(small)
+        #expect(client.readLine() == "suggest\t2\tok")
+    }
+
+    /// I6: `send` tells whether the whole message went out.
+    @Test func sendReportsSuccess() throws {
+        let server = try start()
+        defer { server.stop() }
+        let client = try #require(LineClient(path: path))
+        client.send("hello\t\(PaneID().description)")
+        #expect(received.wait(for: 1))
+
+        #expect(received.all.first?.0.send(.specs(["git"])) == true)
+    }
+
+    /// I2: `bye` ends the connection even if the shell's socket stays open in a background child.
+    @Test func byeClosesTheConnection() throws {
+        let server = try start()
+        defer { server.stop() }
+        let client = try #require(LineClient(path: path))
+
+        client.send("bye")
+
+        let deadline = Date().addingTimeInterval(2)
+        while received.closedCount == 0 && Date() < deadline { usleep(5_000) }
+        #expect(received.closedCount == 1)
+        _ = client
+    }
+
+    /// I2: Smalti's sockets never leak into the shells and generators it starts.
+    @Test func descriptorsAreCloseOnExec() throws {
+        let server = try start()
+        defer { server.stop() }
+        let client = try #require(LineClient(path: path))
+        client.send("hello\t\(PaneID().description)")
+        #expect(received.wait(for: 1))
+
+        let descriptors = server.openDescriptors
+
+        #expect(descriptors.count == 2)
+        #expect(descriptors.allSatisfy { fcntl($0, F_GETFD) & FD_CLOEXEC != 0 })
     }
 }

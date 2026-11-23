@@ -222,4 +222,117 @@ struct ZshChannelTests {
 
         #expect(zsh.printed.contains("PIPE=141"))
     }
+
+    // MARK: Block 3 review
+
+    /// C1: turning the channel off must not take the shell's stderr with it.
+    @Test func stderrSurvivesDisabling() throws {
+        let server = try FakeInputServer(mode: .closesAfter(2))
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("abc", settle: 0.5)
+
+        zsh.type("\u{15}ls /smalti-missing-path\r", settle: 0.6)
+
+        #expect(zsh.printed.contains("smalti-missing-path"))
+        #expect(zsh.printed.contains("No such file"))
+    }
+
+    /// C2: an answer without its newline never freezes the line editor.
+    @Test func partialAnswerNeverFreezesTyping() throws {
+        let server = try FakeInputServer { fields in
+            fields.first == "line" && fields.count > 3 && fields[3] == "ec" ? ["RAW:suggest\t\(fields[1])\tho hi"] : []
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("ec", settle: 0.4)
+        zsh.type("ho ok")
+
+        #expect(zsh.dump()?.buffer == "echo ok")
+    }
+
+    /// I1: the user's options never break the channel nor the shell.
+    @Test(arguments: ["nounset", "errexit", "shwordsplit", "extendedglob globsubst", "ksharrays", "errreturn"])
+    func userOptionsDoNotBreakTheChannel(options: String) throws {
+        let server = try FakeInputServer(reply: Self.suggesting)
+        let zsh = try ZshHarness(socket: server.path, zshrc: "setopt \(options)")
+        defer { zsh.close() }
+
+        zsh.type("echo ab\r", settle: 0.5)
+        zsh.type("git s")
+        zsh.type("\u{1b}[C")
+
+        #expect(zsh.isRunning)
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("exec\t") && $0.hasSuffix("\techo ab") } })
+        #expect(zsh.dump()?.buffer == "git status")
+        #expect(!zsh.printed.contains("parameter not set"))
+        #expect(!zsh.printed.contains("bad pattern"))
+    }
+
+    /// I2: the socket lives on a descriptor of ten or more, so `exec 3>file` never receives Smalti's messages.
+    @Test func socketAvoidsTheLowDescriptors() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        let file = zsh.work.appending(path: "three").path(percentEncoded: false)
+
+        zsh.type("exec 3>\(file)\r", settle: 0.4)
+        zsh.type("true\r", settle: 0.6)
+
+        #expect(((try? String(contentsOfFile: file, encoding: .utf8)) ?? "").isEmpty)
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("exec\t") && $0.hasSuffix("\ttrue") } })
+    }
+
+    /// I2: the shell says goodbye on exit, so Smalti forgets it even if a background child keeps the socket.
+    @Test func exitSendsBye() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("exit\r", settle: 0.6)
+
+        #expect(server.waitFor { $0.last == "bye" })
+    }
+
+    /// I5: a line too long to send still makes earlier answers stale.
+    @Test func overLongLineDiscardsTheLateSuggestion() throws {
+        let server = try FakeInputServer(mode: .slow) { fields in
+            fields.first == "line" && fields.count > 3 && fields[3] == "git st" ? ["suggest\t\(fields[1])\tatus"] : []
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("git st", settle: 0.1)
+        zsh.type("\u{1b}[200~" + String(repeating: "x", count: 2_500) + "\u{1b}[201~", settle: 2.5)
+
+        #expect(zsh.dump()?.ghost == "")
+    }
+
+    /// Minor: numeric fields are checked before zsh evaluates them.
+    @Test func answerFieldsAreNeverEvaluated() throws {
+        let marker = FileManager.default.temporaryDirectory.appending(path: "smalti-injected-\(UUID())")
+        let path = marker.path(percentEncoded: false)
+        let server = try FakeInputServer { fields in
+            fields.first == "line" ? ["suggest\ta[$(touch \(path))1]\tx"] : []
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("ls", settle: 0.5)
+
+        #expect(!FileManager.default.fileExists(atPath: path))
+    }
+
+    /// Minor: `vared` and `select` are not the prompt; their text never reaches Smalti.
+    @Test func varedIsNotReported() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("vared -c -p 'secret: ' v\r", settle: 0.5)
+        zsh.type("hunter2", settle: 0.4)
+
+        #expect(!server.received.contains { $0.contains("hunter2") }, "\(server.received.prefix(24).suffix(8))")
+    }
 }

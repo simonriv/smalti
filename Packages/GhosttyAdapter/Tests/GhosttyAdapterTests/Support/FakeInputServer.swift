@@ -95,7 +95,8 @@ final class FakeInputServer: @unchecked Sendable {
         if case .staleSeq = mode, fields.count > 1, let seq = Int(fields[1]) { fields[1] = String(seq - 1) }
         let answers = reply(fields)
         if case .slow = mode, !answers.isEmpty { Thread.sleep(forTimeInterval: 2) }
-        for answer in answers { send(answer + "\n", to: fd) }
+        // "RAW:" answers go out verbatim, without the newline (a partial answer).
+        for answer in answers { send(answer.hasPrefix("RAW:") ? String(answer.dropFirst(4)) : answer + "\n", to: fd) }
         return true
     }
 

@@ -126,4 +126,45 @@ struct ZshBindingsTests {
 
         #expect(zsh.dump()?.buffer == "git ch<user-tab>")
     }
+
+    // MARK: Block 3 review
+
+    /// I3: vi-mode users keep their own Tab.
+    @Test func viModeKeepsTheUsersTab() throws {
+        let server = try FakeInputServer(reply: Self.specs)
+        let zsh = try ZshHarness(
+            socket: server.path,
+            zshrc:
+                "bindkey -v\n_test_vtab() { BUFFER+='<vi-tab>'; CURSOR=${#BUFFER} }\nzle -N _test_vtab\nbindkey -M viins '^I' _test_vtab"
+        )
+        defer { zsh.close() }
+
+        zsh.type("ls \t")
+
+        #expect(zsh.dump()?.buffer == "ls <vi-tab>")
+    }
+
+    /// I4: with the channel off, ⌃R does what it did before.
+    @Test func ctrlRFallsBackWhenTheChannelIsOff() throws {
+        let server = try FakeInputServer(mode: .closesAfter(2))
+        let zsh = try ZshHarness(
+            socket: server.path, zshrc: "_test_r() { BUFFER+='<user-r>' }\nzle -N _test_r\nbindkey '^R' _test_r")
+        defer { zsh.close() }
+        zsh.type("abc", settle: 0.5)
+
+        zsh.type("\u{15}\u{12}")
+
+        #expect(zsh.dump()?.buffer == "<user-r>")
+    }
+
+    /// I4: vi's command mode keeps ⌃R as redo.
+    @Test func viCommandModeKeepsItsCtrlR() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path, zshrc: "bindkey -v")
+        defer { zsh.close() }
+
+        zsh.type("print -r -- $(bindkey -M vicmd '^R')\r", settle: 0.6)
+
+        #expect(zsh.printed.contains("redo"))
+    }
 }
