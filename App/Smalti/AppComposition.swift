@@ -224,8 +224,27 @@ final class AppComposition {
         window.controller.start(in: directory)
     }
 
-    /// ⇧⌘W: closes the window and its panes; the last window quits instead, which saves it.
+    /// ⇧⌘W: closes the window and its panes, after asking if something runs in it; the last window quits instead
+    /// (which asks about the whole app and saves it).
     private func closeWindow(_ composition: WindowComposition) {
+        guard compositions.count > 1 else {
+            NSApp.terminate(nil)
+            return
+        }
+        let busy = CloseGuard.busyPanes(composition.controller.set.workspaces.flatMap(\.panes))
+        guard
+            let question = CloseGuard.question(for: .window, busy: busy, settings: composition.controller.config.window)
+        else {
+            close(composition)
+            return
+        }
+        CloseConfirmation.ask(question, in: composition.window) { [weak self, weak composition] confirmed in
+            guard confirmed, let composition else { return }
+            self?.close(composition)
+        }
+    }
+
+    private func close(_ composition: WindowComposition) {
         guard var set = windowSet(), let engine else { return }
         guard CloseWindow(engine: engine).execute(composition.id, in: &set) == .closed else {
             NSApp.terminate(nil)
@@ -427,6 +446,22 @@ final class AppComposition {
             pluginSource: source,
             installDirectory: home.appending(path: "Library/Application Support/Smalti/claude-plugin"),
             runner: ShellCommandRunner(shell: ["/bin/zsh", "-lic"], environment: environment))
+    }
+
+    /// ⌘Q: asks in the front window when something runs in any window or workspace; `answer` gets the choice (true
+    /// at once when nothing runs).
+    func confirmQuit(_ answer: @escaping (Bool) -> Void) {
+        guard let windows = windowSet(), let front, let settings = controller?.config.window else {
+            answer(true)
+            return
+        }
+        let busy = CloseGuard.busyPanes(in: windows)
+        let count = CloseGuard.windowsWithBusyPanes(busy, in: windows)
+        guard let question = CloseGuard.question(for: .quit(windowCount: count), busy: busy, settings: settings) else {
+            answer(true)
+            return
+        }
+        CloseConfirmation.ask(question, in: front.window, then: answer)
     }
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.

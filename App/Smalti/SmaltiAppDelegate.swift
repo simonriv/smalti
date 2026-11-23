@@ -21,12 +21,19 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// The session saves now; the observatory's index gets up to a second to write what it has not saved yet.
+    /// F4.5: first asks, if something runs; a "Cancelar" leaves everything running.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        composition?.saveForQuit()
         guard let composition else { return .terminateNow }
-        Task {
-            await composition.persistObservatory()
-            sender.reply(toApplicationShouldTerminate: true)
+        composition.confirmQuit { confirmed in
+            guard confirmed else {
+                sender.reply(toApplicationShouldTerminate: false)
+                return
+            }
+            composition.saveForQuit()
+            Task {
+                await composition.persistObservatory()
+                sender.reply(toApplicationShouldTerminate: true)
+            }
         }
         return .terminateLater
     }

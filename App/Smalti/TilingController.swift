@@ -52,6 +52,8 @@ final class TilingController {
     var onViewCommand: ((CommandID) -> Void)?
     /// F4.5: commands about the app's windows (⌘N, ⇧⌘W, ⌘J across windows…) go to the app.
     var onAppCommand: ((CommandID) -> Void)?
+    /// F4.5: asks the user before closing a running program; `proceed` runs only if they confirm.
+    var onConfirmClose: ((CloseQuestion, _ proceed: @escaping () -> Void) -> Void)?
 
     /// What `onAppCommand` receives: they act on several windows or on the window itself.
     static let appCommands: Set<CommandID> = [
@@ -328,7 +330,24 @@ final class TilingController {
 
     private func closeFocusedPane() {
         guard let pane = set.active.focusedPane else { return }
-        close(pane)
+        let panes = set.active.panes.filter { $0.id == pane }
+        confirmClosing(.pane, panes) { [weak self] in self?.close(pane) }
+    }
+
+    /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
+    /// then publishes itself, since the question returns after `perform` did.
+    private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
+        let busy = CloseGuard.busyPanes(panes)
+        guard let question = CloseGuard.question(for: scope, busy: busy, settings: config.window),
+            let onConfirmClose
+        else {
+            close()
+            return
+        }
+        onConfirmClose(question) { [weak self] in
+            close()
+            self?.publish()
+        }
     }
 
     private func close(_ pane: PaneID) {
@@ -339,8 +358,19 @@ final class TilingController {
     /// The only workspace cannot close; a shortcut bound in config.toml can still ask, and the refusal leaves
     /// everything as it was (the palette does not offer the command then).
     private func closeActiveWorkspace() {
+        let workspace = set.active
+        guard set.workspaces.count > 1 else {
+            logger.debug("refused to close the last workspace")
+            return
+        }
+        confirmClosing(.workspace(name: workspace.name), workspace.panes) { [weak self] in
+            self?.closeWorkspace(workspace.id)
+        }
+    }
+
+    private func closeWorkspace(_ id: WorkspaceID) {
         do {
-            let closed = try CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+            let closed = try CloseWorkspace(engine: deps.engine).execute(id, in: &set)
             closed.forEach { openedAt[$0] = nil }
         } catch {
             switch error {

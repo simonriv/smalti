@@ -191,7 +191,7 @@
 #### Bloque 3 · Ventanas en la app
 - [x] T10 · `WindowComposition` (refactor; 64 pruebas de UI de F1–F4 iguales antes y después)
 - [x] T11 · Varias ventanas, pantalla completa, Dock y restauración (WindowTests 7/7; regresión de 8 clases en verde)
-- [ ] T12 · Confirmar antes de cerrar
+- [x] T12 · Confirmar antes de cerrar (CloseConfirmationTests 8/8; regresión de 8 clases en verde)
 #### Bloque 4 · Descubrimiento y terminal en la app
 - [ ] T13 · Menú de macOS, contextual y comandos de la app
 - [ ] T14 · Ayuda

@@ -176,6 +176,10 @@ final class WindowComposition {
             guard let self else { return }
             services.appCommand(command, self)
         }
+        controller.onConfirmClose = { [weak self] question, proceed in
+            guard let self else { return }
+            CloseConfirmation.ask(question, in: window) { confirmed in if confirmed { proceed() } }
+        }
         connectPalette()
         connectKeyboard()
     }
