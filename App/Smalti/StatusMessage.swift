@@ -35,6 +35,15 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }
 
+    /// The result line of installing or uninstalling the Claude Code integration.
+    static func integration(_ line: String) -> StatusMessage {
+        StatusMessage(text: line, isTransient: true)
+    }
+
+    /// Another instance of this build owns the socket.
+    static let agentSocketUnavailable = StatusMessage(
+        text: "Otra ventana de Smalti recibe ya los avisos de Claude; esta no mostrará su estado", isTransient: true)
+
     static func layoutSaveFailed(_ name: String, reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo guardar el layout “\(name)”: \(reason)", isTransient: true)
     }

@@ -26,10 +26,18 @@ final class TilingController {
         let transcripts: any PaneTranscripts
         let namedLayouts: any NamedLayouts
         let harnesses: HarnessRegistry
+        let agents: AgentDependencies
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
         /// Reloads the terminal engine's appearance ("Recargar configuración").
         let applyAppearance: (TerminalAppearance) throws(TerminalEngineError) -> Void
+    }
+
+    /// What agent events need from outside the tiling.
+    struct AgentDependencies {
+        let notifier: any Notifier
+        let integration: any HarnessIntegration
+        let isAppActive: () -> Bool
     }
 
     var onChange: ((TilingState) -> Void)?
@@ -85,6 +93,21 @@ final class TilingController {
             restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
         case .ask(let snapshot):
             onAsk(snapshot)
+        }
+    }
+
+    /// An agent's hook event, from the IPC socket.
+    func handle(_ event: AgentEvent) {
+        _ = HandleAgentEvent(notifier: deps.agents.notifier).execute(
+            event, in: &set, isAppActive: deps.agents.isAppActive())
+        publish()
+    }
+
+    private func runIntegration(_ command: IntegrationCommand.Type) {
+        let integration = deps.agents.integration
+        Task { [weak self] in
+            let line = await command.init(integration: integration).execute()
+            self?.report(.integration(line))
         }
     }
 
@@ -196,6 +219,8 @@ final class TilingController {
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
             .configReload: { [unowned self] in reloadConfig() },
+            .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
+            .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
         ]
         for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
@@ -326,7 +351,7 @@ final class TilingController {
         case .closeRequested: close(pane)
         default:
             guard let owner = set.workspace(containing: pane) else { return }
-            set = set.updating(owner) { $0.applying(event, to: pane) }
+            set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
         }
         publish()
     }
@@ -378,3 +403,13 @@ final class TilingController {
         onChange?(TilingState(set: set, config: config, theme: theme, message: status.showing, home: deps.home))
     }
 }
+
+/// Install and uninstall share one shape, so the palette runs either the same way.
+@MainActor
+protocol IntegrationCommand {
+    init(integration: any HarnessIntegration)
+    func execute() async -> String
+}
+
+extension InstallClaudeIntegration: IntegrationCommand {}
+extension UninstallClaudeIntegration: IntegrationCommand {}

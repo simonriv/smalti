@@ -103,4 +103,23 @@ struct OpenPaneTests {
 
         #expect(engine.openedSpecs.first?.environment["SMALTI_HISTORY_FILE"] == "/state/history/\(id).zsh_history")
     }
+
+    @Test func environmentCarriesSocketCliAndPath() {
+        let ipc = IPCEndpoints(
+            socket: URL(filePath: "/state/smalti.sock"), cli: URL(filePath: "/App.app/Contents/Resources/bin/smalti"),
+            inheritedPath: "/usr/bin:/bin")
+        let environment = PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())
+
+        #expect(environment["SMALTI_SOCKET"] == "/state/smalti.sock")
+        #expect(environment["SMALTI_CLI"] == "/App.app/Contents/Resources/bin/smalti")
+        #expect(environment["PATH"] == "/App.app/Contents/Resources/bin:/usr/bin:/bin")
+    }
+
+    @Test func withoutIPCThereIsNoSocketOrCli() {
+        let environment = PaneEnvironment(version: "1").variables(for: PaneID())
+
+        #expect(environment["SMALTI_SOCKET"] == nil)
+        #expect(environment["SMALTI_CLI"] == nil)
+        #expect(environment["PATH"] == nil)
+    }
 }

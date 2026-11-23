@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2F7A6887BBCCFE90DCDF359C /* IPCAdapter */; };
 		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
 		0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 6432A366F755335850ECF0B4 /* FileSessionAdapter */; };
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
@@ -42,6 +43,7 @@
 				CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */,
 				C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */,
 				81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */,
+				26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */,
 				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
 				0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */,
 			);
@@ -101,6 +103,7 @@
 				45270719A545F7E15F22D287 /* SmaltiCore */,
 				2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */,
 				1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */,
+				2F7A6887BBCCFE90DCDF359C /* IPCAdapter */,
 				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
 				6432A366F755335850ECF0B4 /* FileSessionAdapter */,
 			);
@@ -161,6 +164,7 @@
 				4A2381B11E94060630713172 /* XCLocalSwiftPackageReference "../Packages/SmaltiCore" */,
 				1ECFEDA9181CA1CF13B94C2F /* XCLocalSwiftPackageReference "../Packages/GhosttyAdapter" */,
 				B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */,
+				14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */,
 				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
 				595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */,
 			);
@@ -403,6 +407,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/IPCAdapter;
+		};
 		BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/ClaudeHarnessAdapter;
@@ -426,6 +434,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		2F7A6887BBCCFE90DCDF359C /* IPCAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = IPCAdapter;
+		};
 		D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ClaudeHarnessAdapter;

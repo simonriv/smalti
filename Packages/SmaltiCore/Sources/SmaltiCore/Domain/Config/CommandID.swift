@@ -17,6 +17,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let workspaceRename = CommandID(rawValue: "workspace.rename")
     public static let workspaceClose = CommandID(rawValue: "workspace.close")
     public static let configReload = CommandID(rawValue: "config.reload")
+    public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
+    public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
 
     /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }

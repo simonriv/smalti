@@ -2,6 +2,7 @@ import AppKit
 import ClaudeHarnessAdapter
 import FileSessionAdapter
 import GhosttyAdapter
+import IPCAdapter
 import OSLog
 import SmaltiCore
 import TOMLConfigAdapter
@@ -17,6 +18,7 @@ final class AppComposition {
     private var palette: CommandPaletteController?
     private var sessionKeeper: SessionKeeper?
     private var restoreScreen: RestoreController?
+    private var telemetry: UnixSocketTelemetry?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -88,17 +90,25 @@ final class AppComposition {
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
             userZdotdir: ProcessInfo.processInfo.environment["ZDOTDIR"])
         let archive = FileSessionArchive(directory: state)
-        let environment = PaneEnvironment(version: Self.version, files: PaneFileLocator(stateDirectory: state))
+        let socket = state.appending(path: "smalti.sock")
+        let environment = PaneEnvironment(
+            version: Self.version, files: PaneFileLocator(stateDirectory: state), ipc: Self.ipcEndpoints(socket: socket)
+        )
         let controller = TilingController(
             .init(
                 engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
                 namedLayouts: archive,
-                harnesses: harnesses, home: try homeDirectory(),
+                harnesses: harnesses,
+                agents: .init(
+                    notifier: LogNotifier(), integration: Self.claudeIntegration(),
+                    isAppActive: { NSApp.isActive }),
+                home: try homeDirectory(),
                 shellOverride: startup.settings.shellOverride,
                 applyAppearance: { [weak runtime] appearance throws(TerminalEngineError) in
                     try runtime?.apply(appearance)
                 }),
             initial: startup.initial)
+        listenForAgents(on: socket, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
         connect(controller, to: window, engine: engine)
@@ -156,9 +166,43 @@ final class AppComposition {
         [window.strip, window.paneGrid, window.statusBar].forEach { $0.isHidden = hidden }
     }
 
+    /// Hooks reach the app through `<state>/smalti.sock`. If another instance of this build owns it, this one runs
+    /// without agent states and says so.
+    private func listenForAgents(on socket: URL, controller: TilingController) {
+        do {
+            let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
+            self.telemetry = telemetry
+            let events = telemetry.events()
+            Task { [weak controller] in
+                for await event in events { controller?.handle(event) }
+            }
+        } catch {
+            logger.error("agent socket unavailable: \(String(describing: error), privacy: .public)")
+            controller.report(.agentSocketUnavailable)
+        }
+    }
+
+    private static func ipcEndpoints(socket: URL) -> IPCEndpoints? {
+        guard let cli = Bundle.main.resourceURL?.appending(path: "bin/smalti") else { return nil }
+        let path = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path)
+    }
+
+    /// `claude` is wherever the user's interactive zsh puts it; `SMALTI=1` keeps that shell out of tmux.
+    private static func claudeIntegration() -> ClaudePluginInstaller {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let source = Bundle.main.resourceURL?.appending(path: "claude-plugin") ?? home
+        let environment = ProcessInfo.processInfo.environment.merging(["SMALTI": "1"]) { _, smalti in smalti }
+        return ClaudePluginInstaller(
+            pluginSource: source,
+            installDirectory: home.appending(path: "Library/Application Support/Smalti/claude-plugin"),
+            runner: ShellCommandRunner(shell: ["/bin/zsh", "-lic"], environment: environment))
+    }
+
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
     func saveForQuit() {
         sessionKeeper?.saveForQuit()
+        telemetry?.stop()
     }
 
     private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {

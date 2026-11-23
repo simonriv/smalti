@@ -116,7 +116,10 @@ public enum CommandCatalog {
     private static func configurationCommands(_ context: Context) -> [Command] {
         [
             context.command(
-                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
+                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration),
+            context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration),
+            context.command(
+                .claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration),
         ]
     }
 }
