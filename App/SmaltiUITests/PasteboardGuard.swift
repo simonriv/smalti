@@ -51,21 +51,45 @@ class SmaltiUITestCase: XCTestCase {
     var outputFile: URL!  // Same: created per test.
     private var pasteboard: PasteboardGuard!  // Same: saved per test, restored in tearDown.
 
+    /// Subclasses whose tests each need their own launch (a fixture config) return false and call `launch(_:)`.
+    var launchesAtSetUp: Bool { true }
+
     override func setUp() async throws {
         continueAfterFailure = false
         pasteboard = PasteboardGuard()
         outputFile = FileManager.default.temporaryDirectory.appending(path: "smalti-uitest-\(UUID().uuidString)")
-        app = XCUIApplication.isolatedSmalti()
+        if launchesAtSetUp { launch(.isolatedSmalti()) }
+    }
+
+    override func tearDown() async throws {
+        if let app {
+            app.terminate()
+            try? FileManager.default.removeItem(at: app.configFile.deletingLastPathComponent())
+        }
+        pasteboard.restore()
+        try? FileManager.default.removeItem(at: outputFile)
+    }
+
+    /// Launches `app` (built by `isolatedSmalti`) and waits for its first shell.
+    func launch(_ app: XCUIApplication) {
+        self.app = app
         app.launchEnvironment["SMALTI_UITEST_OUT"] = outputFile.path(percentEncoded: false)
         app.launch()
         XCTAssertTrue(app.element("smalti.terminal").waitForExistence(timeout: 10))
         waitForShells(count: 1)
     }
 
-    override func tearDown() async throws {
-        app.terminate()
-        pasteboard.restore()
-        try? FileManager.default.removeItem(at: outputFile)
+    func openPalette() {
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.palette").waitForExistence(timeout: 5))
+    }
+
+    /// "Recargar configuración" from the palette, typed without spaces.
+    func reloadConfigFromPalette() {
+        openPalette()
+        app.typeText("recargar")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.palette").waitForNonExistence(timeout: 5))
     }
 
     func waitForOutput(_ expected: String, timeout: TimeInterval = 10) {
@@ -84,6 +108,12 @@ class SmaltiUITestCase: XCTestCase {
                 headers.count == count && headers.allElementsBoundByIndex.allSatisfy { $0.label == "zsh" }
             }, object: nil)
         wait(for: [ready], timeout: timeout)
+    }
+
+    func expect(_ element: XCUIElement, value: String, timeout: TimeInterval = 5) {
+        let matched = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (element.value as? String ?? "") == value }, object: nil)
+        wait(for: [matched], timeout: timeout)
     }
 
     func waitForPaneCount(_ count: Int, timeout: TimeInterval = 10) {

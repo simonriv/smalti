@@ -1,23 +1,8 @@
 import XCTest
 
 /// A5 (window part): the glass window matches the design tokens of docs/design/README.md.
-final class MainWindowTests: XCTestCase {
-    private var app: XCUIApplication!  // Assigned in setUp before every test; XCTest has no init-time setup.
-
-    override func setUpWithError() throws {
-        continueAfterFailure = false
-        app = XCUIApplication.isolatedSmalti()
-        app.launch()
-    }
-
-    override func tearDown() {
-        app.terminate()
-    }
-
+final class MainWindowTests: SmaltiUITestCase {
     private var window: XCUIElement { app.windows["smalti.window"] }
-    private func element(_ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any)[identifier].firstMatch
-    }
 
     func testWindowHasDesignSize() {
         XCTAssertTrue(window.waitForExistence(timeout: 5))
@@ -33,24 +18,24 @@ final class MainWindowTests: XCTestCase {
     }
 
     func testDragStripIs40PointsTall() {
-        let strip = element("smalti.dragStrip")
+        let strip = app.element("smalti.dragStrip")
         XCTAssertTrue(strip.waitForExistence(timeout: 5))
         XCTAssertEqual(strip.frame.height, 40)
     }
 
     func testPaneIsInsetByAreaPadding() {
-        let pane = element("smalti.pane")
-        let strip = element("smalti.dragStrip")
+        let pane = app.element("smalti.pane")
+        let strip = app.element("smalti.dragStrip")
         XCTAssertTrue(pane.waitForExistence(timeout: 5))
         XCTAssertEqual(pane.frame.minX - window.frame.minX, 10)
         XCTAssertEqual(pane.frame.minY - strip.frame.maxY, 10)
         XCTAssertEqual(window.frame.maxX - pane.frame.maxX, 10)
-        XCTAssertEqual(element("smalti.statusBar").frame.minY - pane.frame.maxY, 10)
+        XCTAssertEqual(app.element("smalti.statusBar").frame.minY - pane.frame.maxY, 10)
     }
 
     /// Main.dc.html footer: 28 pt, flush with the bottom of the window.
     func testStatusBarIs28PointsAtTheBottom() {
-        let statusBar = element("smalti.statusBar")
+        let statusBar = app.element("smalti.statusBar")
         XCTAssertTrue(statusBar.waitForExistence(timeout: 5))
         XCTAssertEqual(statusBar.frame.height, 28)
         XCTAssertEqual(statusBar.frame.maxY, window.frame.maxY)
