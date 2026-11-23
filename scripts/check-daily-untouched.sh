@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # F2 C1 (issue #6): runs a command (e.g. the UI suite) and fails if it disturbed the daily Smalti: the Release
-# instance from /Applications must keep its PID, and no file of its state directory may appear, change or vanish.
+# instance from /Applications must keep its PID, and no file of its state directory may appear, change or vanish,
+# except the ones the running daily Smalti rewrites by itself: its observatory index (every refresh while Claude Code
+# writes transcripts), its autosaved session and scrollback, and its own panes' history.
 # Usage: scripts/check-daily-untouched.sh <command…>. Exits 2 on misuse, 1 if the daily Smalti was disturbed,
 # otherwise with the command's own status. SMALTI_DAILY_STATE_DIR and SMALTI_DAILY_PID override the targets (tests).
 set -uo pipefail
@@ -8,9 +10,10 @@ set -uo pipefail
 state="${SMALTI_DAILY_STATE_DIR:-$HOME/Library/Application Support/Smalti}"
 pid="${SMALTI_DAILY_PID:-$(pgrep -f '^/Applications/Smalti.app/Contents/MacOS/Smalti' | head -1)}"
 [[ -n "$pid" ]] || { echo "open the daily Smalti (/Applications/Smalti.app) first"; exit 2; }
-listing() { # every file with its size and modification time, relative to the state directory, sorted
+listing() { # every file but the daily app's own periodic writes, with size and modification time, sorted
   [[ -d "$state" ]] || { echo absent; return; }
-  (cd "$state" && find . -type f -exec stat -f '%N %z %m' {} + | sed 's|^\./||' | sort)
+  (cd "$state" && find . -type f -exec stat -f '%N %z %m' {} + | sed 's|^\./||' \
+    | grep -vE '^(observatory/index\.json|session\.json|scrollback/[^ ]+|history/[^ ]+) ' | sort)
 }
 before="$(listing)"
 
