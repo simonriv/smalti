@@ -75,10 +75,10 @@
 - [x] T2 · Pruebas y scripts que nunca tocan el Smalti diario
 - [x] T3 · Cierre del bloque 1 y PR de la Parte A (revisión: 2 importantes y 6 menores corregidos; XCUITest 38/38 con el diario intacto)
 #### Bloque 2 · Dominio de la persistencia (`feature/f2-persistence`)
-- [ ] T4 · Instantánea, árbol serializable y tipos del agente
-- [ ] T5 · `RestorePlan` y selección por defecto
-- [ ] T6 · Frases de fecha y nombres de layout
-- [ ] T7 · Puertos y casos de uso de persistencia
+- [x] T4 · Instantánea, árbol serializable y tipos del agente
+- [x] T5 · `RestorePlan` y selección por defecto
+- [x] T6 · Frases de fecha y nombres de layout
+- [x] T7 · Puertos y casos de uso de persistencia (revisión del bloque 2: 2 importantes y 6 menores corregidos)
 #### Bloque 3 · Adaptadores de persistencia
 - [ ] T8 · `FileSessionAdapter`
 - [ ] T9 · Exportar scrollback y leer la línea de comandos
