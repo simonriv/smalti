@@ -104,6 +104,17 @@ struct InputSessionTests {
                 == CompletionResult(items: [], hasGenerators: false))
     }
 
+    @Test func generatorsReceiveTheWordsOfTheCommand() async {
+        let generator = GeneratorID(spec: "git", path: ["checkout"], ordinal: 0)
+        let git = CompletionSpec(
+            name: ["git"], subcommands: [CompletionSpec(name: ["checkout"], args: [ArgSpec(generators: [generator])])])
+        let completions = FakeCompletionProvider(specs: [git])
+
+        _ = await session(completions: completions).generated(for: line("git checkout -r ma"), directory: "/repo")
+
+        #expect(await completions.generateRequests.first?.tokens == ["git", "checkout", "-r", "ma"])
+    }
+
     @Test func generatedItemsAreRankedByPrefix() async {
         let generator = GeneratorID(spec: "npm", path: ["run"], ordinal: 0)
         let npm = CompletionSpec(

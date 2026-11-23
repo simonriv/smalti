@@ -153,7 +153,7 @@
 #### Bloque 2 · Adaptadores
 - [x] T6 · `FileCommandHistory` (JSONL)
 - [x] T7 · `ProjectContextAdapter`
-- [ ] T8 · `FigCompletionAdapter` y vendoring
+- [x] T8 · `FigCompletionAdapter` y vendoring
 - [ ] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
 #### Bloque 3 · Canal con zsh
 - [ ] T10 · `InputSocketServer`

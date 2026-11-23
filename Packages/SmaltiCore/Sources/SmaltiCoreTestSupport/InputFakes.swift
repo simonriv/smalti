@@ -80,6 +80,7 @@ public actor FakeCompletionProvider: CompletionProvider {
     private let failing: Set<GeneratorID>
     private let pathEntries: [Suggestion]
     public private(set) var pathRequests: [PathRequest] = []
+    public private(set) var generateRequests: [(generator: GeneratorID, tokens: [String])] = []
 
     public init(
         specs: [CompletionSpec] = [], generated: [GeneratorID: [Suggestion]] = [:], failing: Set<GeneratorID> = [],
@@ -95,9 +96,10 @@ public actor FakeCompletionProvider: CompletionProvider {
 
     public func spec(for command: String) async -> CompletionSpec? { specs[command] }
 
-    public func generate(_ generator: GeneratorID, in directory: String) async throws(CompletionError)
+    public func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
         -> [Suggestion]
     {
+        generateRequests.append((generator, tokens))
         if failing.contains(generator) { throw CompletionError(command: generator.spec, cause: "fake failure") }
         return generated[generator] ?? []
     }

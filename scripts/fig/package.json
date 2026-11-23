@@ -1,0 +1,8 @@
+{
+  "name": "smalti-fig-specs",
+  "private": true,
+  "description": "Pins the Fig autocomplete specs Smalti vendors (scripts/fig/vendor_specs.py).",
+  "devDependencies": {
+    "@withfig/autocomplete": "2.692.3"
+  }
+}

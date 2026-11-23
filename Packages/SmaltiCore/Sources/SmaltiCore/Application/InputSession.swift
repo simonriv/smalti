@@ -113,10 +113,11 @@ public actor InputSession {
     /// The generators' suggestions for the word at the cursor, ranked; a failing generator adds nothing.
     public func generated(for line: InputLine, directory: String) async -> [Suggestion] {
         guard case .known(let found) = await lookup(line), let target = found else { return [] }
+        let tokens = line.currentCommand.map(\.text)
         var items: [Suggestion] = []
         for generator in Self.generators(of: target) {
             do {
-                items += try await ports.completions.generate(generator, in: directory)
+                items += try await ports.completions.generate(generator, tokens: tokens, in: directory)
             } catch {
                 lastCompletionError = error
             }

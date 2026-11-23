@@ -41,7 +41,9 @@ public protocol CompletionProvider: Sendable {
     /// The commands that have a spec, user specs included.
     var commands: [String] { get async }
     func spec(for command: String) async -> CompletionSpec?
-    func generate(_ generator: GeneratorID, in directory: String) async throws(CompletionError) -> [Suggestion]
+    /// Runs a generator for the words typed so far (`tokens`, the last one possibly partial) in `directory`.
+    func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
+        -> [Suggestion]
     /// Entries of the directory named by `prefix` (relative to `directory`), folders with a trailing `/`.
     func paths(matching prefix: String, in directory: String, foldersOnly: Bool) async -> [Suggestion]
 }
