@@ -75,6 +75,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)
     }
 
+    /// F4.5 ⌘,: the template could not be written where the config lives.
+    static func configTemplateFailed(_ path: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo crear \(path)", isTransient: true)
+    }
+
     static func unreadableSession(_ reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
     }

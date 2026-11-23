@@ -11,7 +11,6 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         for name in InheritedEnvironment.agentSessionVariables(in: ProcessInfo.processInfo.environment) {
             unsetenv(name)
         }
-        NSApp.mainMenu = AppMenu.make()
         let composition = AppComposition()
         composition.showMainWindow()
         self.composition = composition

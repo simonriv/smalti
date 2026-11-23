@@ -28,7 +28,9 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
         }
         do {
-            views[pane] = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+            let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+            view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
+            views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.
             try? FileManager.default.removeItem(at: restoreFile(for: pane))
@@ -143,6 +145,9 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     }
 
     // MARK: - F4.5
+
+    /// The terminal's menu for a right click or ⌃click on `pane`; nil shows none. The app builds it.
+    public var contextMenu: ((PaneID) -> NSMenu?)?
 
     public func perform(_ action: TerminalAction, in pane: PaneID) {
         guard let view = views[pane] else { return }

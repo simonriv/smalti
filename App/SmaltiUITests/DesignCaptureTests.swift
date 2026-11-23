@@ -179,6 +179,19 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    /// F4.5: each menu of the bar open, captured alone (mockup-menu.png).
+    func testCaptureMenus() throws {
+        launch(.isolatedSmalti())
+        let bar = app.menuBars.firstMatch.children(matching: .menuBarItem).allElementsBoundByIndex.dropFirst()
+        for (index, item) in bar.enumerated() {
+            item.click()
+            let menu = item.children(matching: .menu).firstMatch
+            XCTAssertTrue(menu.waitForExistence(timeout: 5))
+            try save(menu.screenshot(), as: "f45-menu-\(index + 1).png")
+            app.typeKey(.escape, modifierFlags: [])
+        }
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

@@ -339,10 +339,29 @@ final class GhosttySurfaceView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
+        // ⌃click is macOS's right click: the menu, unless the program in the terminal takes the mouse.
+        if event.modifierFlags.contains(.control), showContextMenu(for: event) { return }
         mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_LEFT, event)
     }
+
+    /// F4.5: set by the engine; the app builds the menu (Copiar, Pegar, Buscar…).
+    var contextMenuProvider: (() -> NSMenu?)?
+
+    /// Shows the terminal's menu unless the program captures the mouse (vim, htop with mouse on): then the click is
+    /// the program's, as before. True when the menu was shown.
+    private func showContextMenu(for event: NSEvent) -> Bool {
+        guard let surface, !ghostty_surface_mouse_captured(surface), let menu = contextMenuProvider?() else {
+            return false
+        }
+        window?.makeFirstResponder(self)
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
+        return true
+    }
     override func mouseUp(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, event) }
-    override func rightMouseDown(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_RIGHT, event) }
+    override func rightMouseDown(with event: NSEvent) {
+        if showContextMenu(for: event) { return }
+        mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_RIGHT, event)
+    }
     override func rightMouseUp(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_RIGHT, event) }
     override func otherMouseDown(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_MIDDLE, event) }
     override func otherMouseUp(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_MIDDLE, event) }

@@ -52,6 +52,13 @@ public struct Menu: Equatable, Sendable {
 
 public struct MenuBar: Equatable, Sendable {
     public let menus: [Menu]
+
+    public init(menus: [Menu]) {
+        self.menus = menus
+    }
+
+    /// No menus yet (before the first window exists).
+    public static let empty = MenuBar(menus: [])
 }
 
 /// What the menus reflect besides the keymap: the front window's workspaces and the toggles that are on.

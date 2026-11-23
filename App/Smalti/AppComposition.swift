@@ -29,6 +29,9 @@ final class AppComposition {
     private var controllerDependencies: TilingController.Dependencies?
     private var configStore: TOMLConfigStore?
     private var restorePreferences: (any RestorePreferenceStore)?
+    private var configFile: URL?
+    private var mainMenu: MainMenu?
+    private let secureInput = SecureInput()
     private var stateDirectoryForTests: String?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
@@ -136,6 +139,7 @@ final class AppComposition {
             })
         controllerDependencies = dependencies
         configStore = startup.store
+        configFile = startup.settings.configFile
         restorePreferences = archive
         let (controller, visibility) = makeController(dependencies, initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
@@ -148,6 +152,7 @@ final class AppComposition {
         self.engine = engine
         sessionKeeper = keeper
         let composition = makeComposition(controller, visibility: visibility, engine: engine)
+        installMenus(engine)
         switch LoadLastSession(archive: archive, preferences: archive).execute() {
         case .startFresh:
             controller.start()
@@ -216,6 +221,7 @@ final class AppComposition {
     }
 
     private func windowsChanged() {
+        mainMenu?.refresh()
         guard let set = windowSet() else { return }
         sessionKeeper?.changed(set)
         input?.keepOnly(Set(set.allPanes.map(\.id)))
@@ -236,6 +242,12 @@ final class AppComposition {
             // The engine's appearance is the app's: one window applies it, the others follow the file.
             compositions.first?.controller.reloadConfig()
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
+            mainMenu?.refresh()
+        case .appAbout: showAbout()
+        case .configOpen: openConfig()
+        case .secureInputToggle:
+            secureInput.toggle()
+            mainMenu?.refresh()
         default: break
         }
     }
@@ -330,6 +342,90 @@ final class AppComposition {
         beginSaving(keepingPreviousSession: false)
     }
 
+    // MARK: - Menus and app commands (F4.5)
+
+    private func installMenus(_ engine: GhosttyTerminalEngine) {
+        let menu = MainMenu(
+            model: { [weak self] in self?.menuBar() ?? .empty },
+            perform: { [weak self] command in self?.performFromMenu(command) })
+        menu.install()
+        mainMenu = menu
+        engine.contextMenu = { [weak self] pane in self?.contextMenu(for: pane) }
+    }
+
+    private func menuBar() -> MenuBar {
+        guard let controller else { return .empty }
+        let commands = CommandCatalog.commands(
+            for: controller.set, keymap: controller.config.keys, layouts: .standard,
+            savedLayouts: controller.savedLayouts())
+        let checked: Set<CommandID> = secureInput.isOn ? [.secureInputToggle] : []
+        return MenuModel.bar(
+            keymap: controller.config.keys, commands: commands,
+            state: MenuState(workspaces: controller.set, checked: checked))
+    }
+
+    /// A menu item acts on the window in front; with none (all closed while quitting), only ⌘N makes sense.
+    private func performFromMenu(_ command: CommandID) {
+        guard let front else {
+            if command == .windowNew { openWindow(from: nil) }
+            return
+        }
+        front.controller.perform(command)
+    }
+
+    /// Right click on a pane: its window comes forward, the pane takes the focus, then the item runs.
+    private func contextMenu(for pane: PaneID) -> NSMenu? {
+        guard let owner = composition(containing: pane) else { return nil }
+        let menu = NSMenu()
+        let keymap = owner.controller.config.keys
+        for item in MenuModel.contextMenu(keymap: keymap) {
+            guard !item.isSeparator, let command = item.command else {
+                menu.addItem(.separator())
+                continue
+            }
+            let shortcut = item.chord.flatMap(KeyEquivalent.init)
+            let nsItem = ClosureMenuItem(title: item.title, keyEquivalent: shortcut?.key ?? "") { [weak owner] in
+                owner?.controller.focus(pane)
+                owner?.controller.perform(command)
+            }
+            nsItem.keyEquivalentModifierMask = shortcut?.modifiers ?? []
+            nsItem.allowsAutomaticKeyEquivalentLocalization = false
+            menu.addItem(nsItem)
+        }
+        return menu
+    }
+
+    /// "Acerca de Smalti": the standard panel with the version, the commit and the credits.
+    private func showAbout() {
+        let info = Bundle.main.infoDictionary
+        let commit = info?["SmaltiGitCommit"] as? String ?? "?"
+        let credits = NSAttributedString(
+            string: "libghostty v1.4.0 (MIT) · Inter (OFL) · JetBrains Mono (OFL) · specs de Fig (ISC)",
+            attributes: [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)])
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationVersion: "\(Self.version) (\(commit))", .version: "", .credits: credits,
+        ])
+        NSApp.activate()
+    }
+
+    /// ⌘,: the TOML in the user's editor; written first from the commented template when there is none.
+    private func openConfig() {
+        guard let file = configFile else { return }
+        let path = file.path(percentEncoded: false)
+        if !FileManager.default.fileExists(atPath: path) {
+            do {
+                try FileManager.default.createDirectory(
+                    at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try ConfigTemplate.text(defaults: .defaults).write(to: file, atomically: true, encoding: .utf8)
+            } catch {
+                logger.error("could not write the config template: \(String(describing: error), privacy: .public)")
+                controller?.report(.configTemplateFailed(path))
+                return
+            }
+        }
+        URLOpener.open(file)
+    }
+
     /// The Dock's menu: "Nueva ventana".
     func dockMenu() -> NSMenu {
         let menu = NSMenu()
@@ -348,7 +444,10 @@ final class AppComposition {
                 self?.restoreChosen(choice, snapshot: snapshot, in: asking)
             },
             appCommand: { [weak self] command, composition in self?.perform(command, from: composition) },
-            becameFront: { [weak self] composition in self?.frontID = composition.id },
+            becameFront: { [weak self] composition in
+                self?.frontID = composition.id
+                self?.mainMenu?.refresh()
+            },
             completionMenu: { [weak self] in self?.completionMenu },
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
@@ -521,6 +620,7 @@ final class AppComposition {
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
     func saveForQuit() {
+        secureInput.releaseAll()
         windowsChanged()
         sessionKeeper?.saveForQuit()
         telemetry?.stop()

@@ -193,7 +193,7 @@
 - [x] T11 · Varias ventanas, pantalla completa, Dock y restauración (WindowTests 7/7; regresión de 8 clases en verde)
 - [x] T12 · Confirmar antes de cerrar (CloseConfirmationTests 8/8; regresión de 8 clases en verde)
 #### Bloque 4 · Descubrimiento y terminal en la app
-- [ ] T13 · Menú de macOS, contextual y comandos de la app
+- [x] T13 · Menú de macOS, contextual y comandos de la app (MenuTests 8/8; capturas f45-menu-*)
 - [ ] T14 · Ayuda
 - [ ] T15 · Buscar en el scrollback
 - [ ] T16 · Feedback, registros y funciones básicas del terminal
