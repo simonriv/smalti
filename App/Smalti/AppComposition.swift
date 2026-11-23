@@ -2,10 +2,12 @@ import AppKit
 import ClaudeHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
+import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import IPCAdapter
 import OllamaAdapter
+import ProjectContextAdapter
 import UserNotificationsAdapter
 import OSLog
 import SmaltiCore
@@ -24,6 +26,7 @@ final class AppComposition {
     private var restoreScreen: RestoreController?
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
+    private var input: InputCoordinator?
     private var transcripts: ClaudeTranscripts?
     private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
@@ -107,9 +110,16 @@ final class AppComposition {
         let archive = FileSessionArchive(directory: state)
         let socket = SocketLocation.socketFile(
             stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
+        let inputSettings = startup.initial.config.input
+        let inputSocket =
+            inputSettings.isEnabled
+            ? SocketLocation.socketFile(
+                named: "input", stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
+            : nil
         let environment = PaneEnvironment(
-            version: Self.version, files: PaneFileLocator(stateDirectory: state), ipc: Self.ipcEndpoints(socket: socket)
-        )
+            version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
+            files: PaneFileLocator(stateDirectory: state),
+            ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
         let controller = TilingController(
             .init(
                 engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
@@ -125,6 +135,7 @@ final class AppComposition {
                 }),
             initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
+        if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
         startObservatory(startup, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
@@ -260,12 +271,37 @@ final class AppComposition {
         }
     }
 
-    private static func ipcEndpoints(socket: URL) -> IPCEndpoints? {
+    /// F4: the input session over its adapters, and the socket every pane's zsh connects to. User specs live next
+    /// to the config file (`~/.config/smalti/completions`), so UI tests with a temporary config never read the real
+    /// ones.
+    private func startInput(on socket: URL, settings: InputSettings, startup: Startup, engine: GhosttyTerminalEngine) {
+        let state = startup.settings.stateDirectory
+        let ports = InputSession.Ports(
+            history: FileCommandHistory(
+                file: state.appending(path: "input/history.jsonl"), limit: settings.historyLimit),
+            project: FileProjectContext(),
+            completions: FigSpecs(
+                user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
+                runner: GeneratorRunner(timeout: settings.generatorTimeout)),
+            predictor: HeuristicPredictor())
+        let session = InputSession(ports: ports, settings: settings, clock: { .now })
+        let coordinator = InputCoordinator(session: session, provider: engine) { [weak self] pane in
+            self?.controller?.set.workspaces.lazy.flatMap(\.panes).first { $0.id == pane }?.workingDirectory.path
+        }
+        do {
+            try coordinator.start(socketFile: socket)
+            input = coordinator
+        } catch {
+            logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    private static func ipcEndpoints(socket: URL, inputSocket: URL?) -> IPCEndpoints? {
         guard let cli = Bundle.main.resourceURL?.appending(path: "bin/smalti"),
             FileManager.default.isExecutableFile(atPath: cli.path(percentEncoded: false))
         else { return nil }
         let path = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
-        return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path)
+        return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path, inputSocket: inputSocket)
     }
 
     /// `claude` is wherever the user's interactive zsh puts it; `SMALTI=1` keeps that shell out of tmux.

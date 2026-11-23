@@ -132,6 +132,13 @@ struct OpenPaneTests {
         #expect(PaneEnvironment(version: "1", ipc: ipc).variables(for: PaneID())["SMALTI_INPUT_SOCKET"] == nil)
     }
 
+    @Test func ghostColorTravelsWithTheExtraVariables() {
+        let environment = PaneEnvironment(version: "1", extra: ["SMALTI_GHOST_COLOR": "#5f6672"]).variables(
+            for: PaneID())
+
+        #expect(environment["SMALTI_GHOST_COLOR"] == "#5f6672")
+    }
+
     @Test func withoutIPCThereIsNoSocketOrCli() {
         let environment = PaneEnvironment(version: "1").variables(for: PaneID())
 

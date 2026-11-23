@@ -84,6 +84,9 @@ public struct TextTokens: Equatable, Sendable {
     public let primary: RGBAColor
     public let title: RGBAColor
     public let secondary: RGBAColor
+    /// F4's prediction after the cursor (`Main.dc.html`). About 3:1 on the glass: an accepted exception to the 4.5:1
+    /// rule until F5's "Proteger legibilidad", because it is a hint nobody has to read to use the terminal.
+    public let ghostText: RGBAColor
 }
 
 public struct TerminalAppearance: Equatable, Sendable {

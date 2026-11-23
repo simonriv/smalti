@@ -19,6 +19,7 @@ private let obsidianPrimaryText = rgb(0xd7dae0)
 private let obsidianTitleText = rgb(0xe6e9ef)
 /// Minimum for small text over the glass (docs/design/README.md); status bar and empty hint use it too.
 private let obsidianSecondaryText = rgb(0x8b919c)
+private let obsidianGhostText = rgb(0x5f6672)
 /// Status dot before agents have a state (F2 colors it).
 private let obsidianNeutralDot = rgb(0x565c68)
 /// Inactive workspace names and pane directories (Main.dc.html).
@@ -43,7 +44,7 @@ extension Theme {
         chrome: ChromeTokens(topStripHeight: 40, hairlineWidth: 1),
         text: TextTokens(
             interfaceFontFamily: "Inter", primary: obsidianPrimaryText, title: obsidianTitleText,
-            secondary: obsidianSecondaryText),
+            secondary: obsidianSecondaryText, ghostText: obsidianGhostText),
         accent: obsidianAccent,
         terminal: TerminalAppearance(
             fontFamily: monospacedFontFamily,

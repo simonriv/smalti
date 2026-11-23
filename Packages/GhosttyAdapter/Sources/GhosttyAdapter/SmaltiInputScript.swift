@@ -75,7 +75,7 @@ enum SmaltiInputScript {
                 _smalti_input_ghost=$1
                 POSTDISPLAY=$1
                 region_highlight=("${(@)region_highlight:#*memo=smalti}")
-                [[ -n $1 ]] && region_highlight+=("${#BUFFER} $(( ${#BUFFER} + ${#1} )) fg=#5f6672 memo=smalti")
+                [[ -n $1 ]] && region_highlight+=("${#BUFFER} $(( ${#BUFFER} + ${#1} )) fg=${SMALTI_GHOST_COLOR:-#5f6672} memo=smalti")
             }
 
             # Only the shell's own prompt takes part: from `precmd` to `preexec`. `vared` and `select` read lines
