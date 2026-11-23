@@ -46,6 +46,17 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "c18-restore.png")
     }
 
+    /// F3 Task 0: the palette after arrowing to its last row (the selection used to sit below the clipped edge).
+    func testCapturePaletteLastRowSelected() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        openPalette()
+        let rows = app.elements("smalti.paletteRow").count
+        for _ in 1..<rows { app.typeKey(.downArrow, modifierFlags: []) }
+
+        try save(app.windows.firstMatch.screenshot(), as: "palette-last-row.png")
+    }
+
     func testCaptureAgentStatus() throws {
         let app = XCUIApplication.isolatedSmalti()
         launch(app)

@@ -93,11 +93,18 @@ final class CommandPaletteTests: SmaltiUITestCase {
 
     // MARK: - The selected row stays in view (F3 Task 0)
 
+    /// Accessibility frames are rounded to half points; a row flush with the list edge can land half a point out.
+    private static let subpixelTolerance = 0.5
+
     func testArrowDownKeepsSelectedRowInsideTheList() {
         openPalette()
-        let count = app.elements("smalti.paletteRow").count
+        let rows = app.elements("smalti.paletteRow")
+        let count = rows.count
+        XCTAssertGreaterThan(count, 1)
+        XCTAssertFalse(
+            isInsideTheList(rows.element(boundBy: count - 1)), "the list does not overflow: nothing to prove")
 
-        for _ in 1..<max(count, 1) {
+        for _ in 1..<count {
             app.typeKey(.downArrow, modifierFlags: [])
             assertSelectedRowIsInsideTheList()
         }
@@ -111,26 +118,33 @@ final class CommandPaletteTests: SmaltiUITestCase {
         assertSelectedRowIsInsideTheList()
     }
 
-    func testArrowDownPastTheEndRevealsFirstRow() {
+    func testArrowDownPastTheEndRevealsFirstRowAndItsGroup() {
         openPalette()
+        let firstTitle = app.elements("smalti.paletteRow").firstMatch.label
         app.typeKey(.upArrow, modifierFlags: [])
 
         app.typeKey(.downArrow, modifierFlags: [])
 
+        XCTAssertEqual(selectedRow.label, firstTitle)
         assertSelectedRowIsInsideTheList()
-        assertInsideTheList(app.staticTexts["TILING"])
+        XCTAssertTrue(isInsideTheList(app.elements("smalti.paletteGroup").firstMatch))
+    }
+
+    private var selectedRow: XCUIElement {
+        app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
+    }
+
+    private func isInsideTheList(_ element: XCUIElement) -> Bool {
+        let tolerance = -Self.subpixelTolerance
+        return app.element("smalti.palette.list").frame.insetBy(dx: tolerance, dy: tolerance).contains(element.frame)
     }
 
     private func assertSelectedRowIsInsideTheList(file: StaticString = #filePath, line: UInt = #line) {
-        let selected = app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
+        let selected = selectedRow
         XCTAssertTrue(selected.waitForExistence(timeout: 2), "no selected row", file: file, line: line)
-        assertInsideTheList(selected, file: file, line: line)
-    }
-
-    private func assertInsideTheList(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let list = app.element("smalti.palette.list").frame
         XCTAssertTrue(
-            list.insetBy(dx: -0.5, dy: -0.5).contains(element.frame),
-            "\(element.label) at \(element.frame) is not inside the list \(list)", file: file, line: line)
+            isInsideTheList(selected),
+            "\(selected.label) at \(selected.frame) is not inside the list \(app.element("smalti.palette.list").frame)",
+            file: file, line: line)
     }
 }
