@@ -147,7 +147,7 @@
 #### Bloque 1 · Dominio
 - [x] T1 · Línea de comando y protocolo del canal
 - [x] T2 · Historial, filtro de secretos y búsqueda ⌃R
-- [ ] T3 · Predicción heurística
+- [x] T3 · Predicción heurística
 - [ ] T4 · Specs, motor de completions y menú
 - [ ] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
 #### Bloque 2 · Adaptadores
