@@ -42,6 +42,7 @@ final class GhosttySurfaceView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.textArea)
         setAccessibilityIdentifier("smalti.terminal")
+        registerForDraggedTypes([.fileURL])
         surface = Self.makeSurface(app: app, view: self, spec: spec)
         guard surface != nil else {
             throw .surfaceCreationFailed(
@@ -210,6 +211,31 @@ final class GhosttySurfaceView: NSView {
             config.env_var_count = buffer.count
             return ghostty_surface_new(app, &config)
         }
+    }
+
+    // MARK: - Dropped files
+
+    /// Pastes the dropped files' paths (bracketed when the program asked for it); the clipboard is not touched.
+    func paste(dropped urls: [URL]) {
+        let text = DroppedFiles.pasteText(for: urls)
+        guard let surface, !text.isEmpty else { return }
+        ghostty_surface_text(surface, text, UInt(text.utf8.count))
+    }
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        Self.fileURLs(in: sender).isEmpty ? [] : .copy
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let urls = Self.fileURLs(in: sender)
+        guard !urls.isEmpty else { return false }
+        paste(dropped: urls)
+        return true
+    }
+
+    private static func fileURLs(in drag: any NSDraggingInfo) -> [URL] {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        return drag.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
     }
 
     // MARK: - Accessibility
