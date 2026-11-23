@@ -4,6 +4,12 @@ import XCTest
 final class MainWindowTests: SmaltiUITestCase {
     private var window: XCUIElement { app.windows["smalti.window"] }
 
+    /// F2 part A: every UI test launch keeps its sessions in a temporary state directory, never the user's.
+    func testLaunchUsesIsolatedStateDirectory() {
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        XCTAssertEqual(window.value as? String, app.stateDirectory.path(percentEncoded: false))
+    }
+
     func testWindowHasDesignSize() {
         XCTAssertTrue(window.waitForExistence(timeout: 5))
         XCTAssertEqual(window.frame.size, CGSize(width: 1328, height: 820))

@@ -30,6 +30,10 @@ final class AppComposition {
         let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
         self.window = window
+        // Development builds state their state directory so UI tests can check they never use the user's.
+        if AppIdentity.current.isDevelopment {
+            window.setAccessibilityValue(startup.settings.stateDirectory.path(percentEncoded: false))
+        }
         applyGlass(startup.theme, to: window)
         do {
             try start(startup, in: window)

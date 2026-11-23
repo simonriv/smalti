@@ -86,7 +86,9 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `swift test --package-path Packages/SmaltiCore`: dominio y casos de uso.
 - `swift test --package-path Packages/GhosttyAdapter`: adaptador de libghostty (requiere GhosttyKit construido).
 - `swift test --package-path Packages/TOMLConfigAdapter`: adaptador de configuración TOML.
-- `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app (`build/Build/Products/Debug/Smalti.app`).
+- `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app de desarrollo `build/Build/Products/Debug/Smalti Dev.app` (`dev.simonriv.smalti.dev`, estado propio); el Release (`Smalti.app`, `dev.simonriv.smalti`) es el diario.
+- `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
+- `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.
 - `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
 - `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter`: formato.
 - `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
