@@ -7,6 +7,8 @@ import SmaltiCore
 /// system does not give comes back `.unavailable`, never 0.
 @MainActor
 public final class DarwinSystemMetrics: SystemMetrics {
+    /// Each `mach_host_self()` call adds a reference to the port; it is asked for once and kept.
+    private let host = mach_host_self()
     private var previousTicks: CPUTicks?
     private lazy var machineName = DarwinSystemMetrics.readMachineName()
     private let memoryTotal = DarwinSystemMetrics.sysctlUInt64("hw.memsize") ?? 0
@@ -14,13 +16,13 @@ public final class DarwinSystemMetrics: SystemMetrics {
     public init() {}
 
     public func sample(agentProcesses: [Int32]) -> SystemSample {
-        let ticks = Self.cpuTicks()
+        let ticks = Self.cpuTicks(host: host)
         var cpu: Double?
         if let previous = previousTicks, let ticks { cpu = CPUTicks.usage(previous: previous, current: ticks) }
         previousTicks = ticks ?? previousTicks
         return SystemSample(
             cpu: Self.reading(cpu), gpu: Self.reading(Self.gpuUtilization()),
-            memoryUsed: Self.reading(Self.memoryUsed()),
+            memoryUsed: Self.reading(Self.memoryUsed(host: host)),
             memoryTotal: memoryTotal, agentsMemory: Self.reading(Self.footprint(of: agentProcesses)),
             pressure: Self.sysctlInt32("kern.memorystatus_vm_pressure_level").map(MemoryReader.pressure)
                 ?? .unavailable,
@@ -33,11 +35,11 @@ public final class DarwinSystemMetrics: SystemMetrics {
 
     // MARK: - CPU
 
-    private static func cpuTicks() -> CPUTicks? {
+    private static func cpuTicks(host: host_t) -> CPUTicks? {
         var count: natural_t = 0
         var info: processor_info_array_t?
         var infoCount: mach_msg_type_number_t = 0
-        guard host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &count, &info, &infoCount) == KERN_SUCCESS,
+        guard host_processor_info(host, PROCESSOR_CPU_LOAD_INFO, &count, &info, &infoCount) == KERN_SUCCESS,
             let info
         else { return nil }
         defer {
@@ -74,13 +76,13 @@ public final class DarwinSystemMetrics: SystemMetrics {
 
     // MARK: - Memory
 
-    private static func memoryUsed() -> UInt64? {
+    private static func memoryUsed(host: host_t) -> UInt64? {
         var statistics = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
         let result = withUnsafeMutablePointer(to: &statistics) { pointer in
             // vm_statistics64 is a plain C struct of integer_t-sized fields; the kernel fills `count` of them.
             pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+                host_statistics64(host, HOST_VM_INFO64, $0, &count)
             }
         }
         guard result == KERN_SUCCESS else { return nil }

@@ -49,9 +49,27 @@ struct MessageOwnersTests {
     }
 
     @Test func sourcesComeBeforeDerivedSessions() {
-        let order = MessageOwners.sourcesFirst(["fork", "a", "b"], isDerived: { $0 == "fork" })
+        let sources = ["fork": ["a"]]
 
-        #expect(order == ["a", "b", "fork"])
+        let order = MessageOwners.sourcesFirst(["fork", "a", "b"], session: { $0 }, sources: { sources[$0] ?? [] })
+
+        #expect(order == ["a", "fork", "b"])
+    }
+
+    @Test func chainedForksFollowTheirChain() {
+        let sources = ["f2": ["f1"], "f1": ["s"]]
+
+        let order = MessageOwners.sourcesFirst(["f2", "f1", "s"], session: { $0 }, sources: { sources[$0] ?? [] })
+
+        #expect(order == ["s", "f1", "f2"])
+    }
+
+    @Test func sourcesOutsideTheBatchAndCyclesKeepTheOrder() {
+        let sources = ["a": ["gone"], "x": ["y"], "y": ["x"]]
+
+        let order = MessageOwners.sourcesFirst(["a", "x", "y"], session: { $0 }, sources: { sources[$0] ?? [] })
+
+        #expect(order == ["a", "x", "y"])
     }
 
     @Test func ownersRoundTripThroughJSON() throws {

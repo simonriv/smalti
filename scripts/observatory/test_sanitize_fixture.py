@@ -58,6 +58,12 @@ class Sanitize(unittest.TestCase):
                   "sessions": [{"type": "claude_code_session", "id": "source", "via": "fork"}]}
         self.assertEqual(clean(record), record)
 
+    def test_scan_ignores_accents_and_case(self):
+        with self.assertRaises(PersonalDataError):
+            scan('{"text": "SIMON dijo"}', markers=["Simón"])
+        with self.assertRaises(PersonalDataError):
+            scan('{"text": "contexto de Simón"}', markers=["simon"])
+
     def test_scan_rejects_personal_markers(self):
         with self.assertRaises(PersonalDataError):
             scan('{"text": "contexto de Simón"}', markers=["Simón"])

@@ -73,6 +73,18 @@ class Oracle(unittest.TestCase):
         sessions = summarize(self.projects.parent, global_dedupe=True)["sessions"]
         self.assertEqual((sessions["source"]["output"], sessions["0fork"]["output"]), (100, 5))
 
+    def test_chained_forks_keep_their_own_tokens(self):
+        def derived(source):
+            return {"type": "derived-from", "sessions": [{"type": "claude_code_session", "id": source, "via": "fork"}]}
+        self.write("s.jsonl", [assistant("s1", "2026-11-18T10:00:00Z", output=1)])
+        self.write("a-f1.jsonl", [derived("s"), assistant("s1", "2026-11-18T10:00:00Z", output=1),
+                                  assistant("f1", "2026-11-18T10:01:00Z", output=10)])
+        self.write("0-f2.jsonl", [derived("a-f1"), assistant("s1", "2026-11-18T10:00:00Z", output=1),
+                                  assistant("f1", "2026-11-18T10:01:00Z", output=10),
+                                  assistant("f2", "2026-11-18T10:02:00Z", output=100)])
+        sessions = summarize(self.projects.parent, global_dedupe=True)["sessions"]
+        self.assertEqual({k: v["output"] for k, v in sessions.items()}, {"s": 1, "a-f1": 10, "0-f2": 100})
+
     def test_unreadable_line_is_skipped(self):
         path = self.projects / "s1.jsonl"
         path.write_text(json.dumps(assistant("a", "2026-11-18T10:00:00Z")) + "\n{broken\n")

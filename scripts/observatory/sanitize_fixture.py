@@ -13,6 +13,7 @@ Usage: sanitize_fixture.py <in.jsonl> <out.jsonl> --work <dir> --home <dir> --ma
 import argparse
 import json
 import sys
+import unicodedata
 
 REDACTED = "<redacted>"
 KEPT_TYPES = {"assistant", "user", "system"}
@@ -89,10 +90,16 @@ def sanitize_line(line, work, home):
     return rewrite(json.dumps(cleaned, ensure_ascii=False), work, home)
 
 
+def folded(text):
+    """Lowercase without accents, so "Simón", "SIMON" and "simon" all match."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).lower()
+
+
 def scan(text, markers):
-    lowered = text.lower()
+    haystack = folded(text)
     for marker in markers:
-        if marker.lower() in lowered:
+        if folded(marker) in haystack:
             raise PersonalDataError(f"personal marker still present: {marker!r}")
 
 

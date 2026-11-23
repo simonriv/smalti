@@ -11,6 +11,12 @@ struct TranscriptIndex: Codable {
         let sessionID: String
         let isSubagent: Bool
         var derivedFrom: [String] = []
+
+        /// A file read again from the start names its sources again: they are kept once.
+        static func merging(_ known: [String], _ new: [String]) -> [String] {
+            known
+                + new.filter { !known.contains($0) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        }
     }
 
     static let formatVersion = 1

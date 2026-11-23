@@ -226,4 +226,57 @@ struct ClaudeTranscriptsTests {
 
         #expect(try await sessions(home.transcripts()).isEmpty)
     }
+
+    private func writeForkChain(_ home: TranscriptHome) throws {
+        let derived = { (source: String) in
+            #"{"type":"derived-from","sessionId":"x","sessions":[{"type":"claude_code_session","id":"\#(source)","via":"fork"}]}"#
+        }
+        try home.write([TranscriptHome.reply("s1", output: 1)], session: "s")
+        try home.write(
+            [derived("s"), TranscriptHome.reply("s1", output: 1), TranscriptHome.reply("f1", output: 10)], session: "f1"
+        )
+        try home.write(
+            [
+                derived("f1"), TranscriptHome.reply("s1", output: 1), TranscriptHome.reply("f1", output: 10),
+                TranscriptHome.reply("f2", output: 100),
+            ],
+            session: "f2")
+        for (session, age) in [("s", 300.0), ("f1", 200), ("f2", 100)] {
+            try FileManager.default.setAttributes(
+                [.modificationDate: TranscriptHome.now.addingTimeInterval(-age)],
+                ofItemAtPath: home.file(session: session).path(percentEncoded: false))
+        }
+    }
+
+    @Test func chainedForksKeepTheirOwnTokens() async throws {
+        let home = try TranscriptHome()
+        try writeForkChain(home)
+
+        let found = try await sessions(home.transcripts())
+
+        #expect(found.mapValues(\.total.output) == ["s": 1, "f1": 10, "f2": 100])
+    }
+
+    @Test func chainedForksKeepTheirOwnTokensWhenReadInSteps() async throws {
+        let home = try TranscriptHome()
+        try writeForkChain(home)
+        let transcripts = home.transcripts(budget: .zero)
+
+        _ = try await transcripts.activity(since: since)
+        let found = try await sessions(transcripts)
+
+        #expect(found.mapValues(\.total.output) == ["s": 1, "f1": 10, "f2": 100])
+    }
+
+    @Test func failingIndexWriteIsCounted() async throws {
+        let home = try TranscriptHome()
+        try home.write([TranscriptHome.reply("m1")])
+        // The index's folder is a file: the write cannot succeed.
+        try Data().write(to: home.root.appending(path: "state"))
+
+        let transcripts = home.transcripts()
+        _ = try await transcripts.activity(since: since)
+
+        #expect(await transcripts.indexWriteFailures == 1)
+    }
 }

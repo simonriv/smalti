@@ -14,16 +14,38 @@ public struct OllamaLocalModels: LocalModels {
         self.session = session
     }
 
+    /// Both listings are asked at once, so the card waits 500 ms at most.
     public func current() async -> LocalModelsReport {
-        guard let loaded = await models(at: "api/ps").map({ $0.map(\.model) }) else { return .unavailable }
+        async let running = models(at: "api/ps")
+        async let pulled = models(at: "api/tags")
+        guard let loaded = await running?.map(\.model) else { return .unavailable }
         let names = Set(loaded.map(\.name))
-        let onDisk = (await models(at: "api/tags") ?? []).map(\.model).filter { !names.contains($0.name) }
+        let onDisk = (await pulled ?? []).map(\.model).filter { !names.contains($0.name) }
         return .available(loaded: loaded, onDisk: onDisk)
     }
 
+    /// One malformed entry is skipped, not allowed to hide every model.
     private struct Listing: Decodable {
         let models: [Entry]
+
+        private enum CodingKeys: String, CodingKey { case models }
+
+        init(from decoder: any Decoder) throws {
+            var list = try decoder.container(keyedBy: CodingKeys.self).nestedUnkeyedContainer(forKey: .models)
+            var entries: [Entry] = []
+            while !list.isAtEnd {
+                if let entry = try? list.decode(Entry.self) {
+                    entries.append(entry)
+                } else {
+                    _ = try list.decode(Skipped.self)
+                }
+            }
+            models = entries
+        }
     }
+
+    /// Consumes an entry that does not decode, so the list can go on.
+    private struct Skipped: Decodable {}
 
     private struct Entry: Decodable {
         struct Details: Decodable {

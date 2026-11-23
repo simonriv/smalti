@@ -23,7 +23,7 @@ struct DarwinProcessProbe: ProcessProbe {
 
 /// `LiveAgents` from `~/.claude/sessions/<pid>.json`. Only `*.json` files are opened: the `*.key` files beside them
 /// are messaging keys and are never read. A PID counts as Claude only while it is alive and started when the file
-/// says (`procStart`), so a reused PID never passes for a running session.
+/// says (`procStart`), so a reused PID never passes for a running session; a file that cannot prove it is left out.
 public struct ClaudeSessionRegistry: LiveAgents {
     private let sessions: URL
     private let processes: any ProcessProbe
@@ -50,21 +50,18 @@ public struct ClaudeSessionRegistry: LiveAgents {
         guard let data = try? Data(contentsOf: file),
             let record = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
             let pid = (record["pid"] as? NSNumber)?.int32Value, let session = record["sessionId"] as? String,
-            !session.isEmpty, isRunning(pid, procStart: record["procStart"] as? String)
+            !session.isEmpty, let startedAt = (record["startedAt"] as? NSNumber)?.doubleValue,
+            let procStart = (record["procStart"] as? String).flatMap(Self.processStart),
+            isRunning(pid, since: procStart)
         else { return nil }
-        let startedAt = (record["startedAt"] as? NSNumber).map {
-            Date(timeIntervalSince1970: $0.doubleValue / Self.millisecondsPerSecond)
-        }
         return RunningAgent(
             pid: pid, sessionID: session, cwd: record["cwd"] as? String ?? "",
             status: record["status"] as? String ?? "",
-            startedAt: startedAt ?? Date())
+            startedAt: Date(timeIntervalSince1970: startedAt / Self.millisecondsPerSecond))
     }
 
-    private func isRunning(_ pid: Int32, procStart: String?) -> Bool {
-        guard pid > 0, processes.isAlive(pid) else { return false }
-        guard let procStart, let expected = Self.processStart(procStart) else { return true }
-        guard let actual = processes.startTime(of: pid) else { return false }
+    private func isRunning(_ pid: Int32, since expected: Date) -> Bool {
+        guard pid > 0, processes.isAlive(pid), let actual = processes.startTime(of: pid) else { return false }
         return abs(actual.timeIntervalSince(expected)) < Self.startTolerance
     }
 

@@ -49,20 +49,37 @@ def tokens(usage):
     }
 
 
-def is_derived(path):
+def sources_of(path):
+    """Sessions this transcript was forked from (`derived-from` records)."""
+    found = []
     for line in path.read_text(errors="replace").splitlines():
-        if '"derived-from"' in line:
-            try:
-                return json.loads(line).get("type") == "derived-from"
-            except json.JSONDecodeError:
-                continue
-    return False
+        if '"derived-from"' not in line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("type") == "derived-from":
+            found += [entry.get("id") for entry in record.get("sessions") or [] if isinstance(entry, dict)]
+    return found
+
+
+def sources_first(paths):
+    """Each transcript after the ones it was forked from, up the whole chain; otherwise in path order."""
+    pending = sorted(paths)
+    sources = {path: set(sources_of(path)) for path in pending}
+    ordered = []
+    while pending:
+        waiting = {path.stem for path in pending}
+        ready = next((path for path in pending if not (sources[path] & waiting) - {path.stem}), pending[0])
+        pending.remove(ready)
+        ordered.append(ready)
+    return ordered
 
 
 def transcript_files(projects):
     """(session id, path) for every main and subagent transcript: sources before the sessions derived from them."""
-    mains = sorted(projects.glob("*/*.jsonl"), key=lambda path: (is_derived(path), str(path)))
-    for path in mains:
+    for path in sources_first(projects.glob("*/*.jsonl")):
         yield path.stem, path
     for path in sorted(projects.glob("*/*/subagents/*.jsonl")):
         yield path.parent.parent.name, path

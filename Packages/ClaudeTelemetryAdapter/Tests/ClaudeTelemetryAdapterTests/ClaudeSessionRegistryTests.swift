@@ -74,12 +74,28 @@ struct ClaudeSessionRegistryTests {
         #expect(await registry.running().count == 1)
     }
 
-    @Test func missingProcStartTrustsTheLivePid() async throws {
+    @Test func missingProcStartCannotProveTheSession() async throws {
         let registry = ClaudeSessionRegistry(
             claudeHome: try home(["101.json": session(pid: 101, procStart: nil)]),
             processes: FakeProcesses(alive: [101]))
 
-        #expect(await registry.running().count == 1)
+        #expect(await registry.running().isEmpty)
+    }
+
+    @Test func unreadableProcStartCannotProveTheSession() async throws {
+        let registry = ClaudeSessionRegistry(
+            claudeHome: try home(["101.json": session(pid: 101, procStart: "yesterday")]),
+            processes: FakeProcesses(alive: [101], starts: [101: started]))
+
+        #expect(await registry.running().isEmpty)
+    }
+
+    @Test func missingStartedAtIsSkipped() async throws {
+        let text = #"{"pid":101,"sessionId":"s1","cwd":"/w","status":"busy","procStart":"Mon Nov 23 04:35:02 2026"}"#
+        let registry = ClaudeSessionRegistry(
+            claudeHome: try home(["101.json": text]), processes: FakeProcesses(alive: [101], starts: [101: started]))
+
+        #expect(await registry.running().isEmpty)
     }
 
     @Test func unreadableJsonIsSkipped() async throws {

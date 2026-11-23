@@ -157,4 +157,31 @@ struct OllamaLocalModelsTests {
                 ]),
                 session: session))
     }
+
+    @Test func entryWithoutSizeIsSkippedNotFatal() async {
+        let ps = #"{"models":[{"name":"broken"},{"name":"qwen3.5:9b","size":10}]}"#
+
+        let report = await models([
+            "/api/ps": .init(status: 200, body: ps), "/api/tags": .init(status: 200, body: #"{"models":[]}"#),
+        ])
+
+        guard case .available(let loaded, _) = report else {
+            Issue.record("a single bad entry must not hide Ollama")
+            return
+        }
+        #expect(loaded.map(\.name) == ["qwen3.5:9b"])
+    }
+
+    @Test func bothListingsAreAskedAtOnce() async {
+        let clock = ContinuousClock()
+
+        let elapsed = await clock.measure {
+            _ = await models([
+                "/api/ps": .init(status: 200, body: Self.ps, delay: .milliseconds(350)),
+                "/api/tags": .init(status: 200, body: Self.tags, delay: .milliseconds(350)),
+            ])
+        }
+
+        #expect(elapsed < .milliseconds(650))
+    }
 }

@@ -60,3 +60,10 @@ struct TranscriptLineTranslatorTests {
         #expect(records.count == 1)
     }
 }
+
+@Suite("TranscriptIndex")
+struct TranscriptIndexTests {
+    @Test func sourcesReadAgainAreKeptOnce() {
+        #expect(TranscriptIndex.FileEntry.merging(["s"], ["s", "t", "t"]) == ["s", "t"])
+    }
+}

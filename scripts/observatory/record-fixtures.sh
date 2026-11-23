@@ -15,6 +15,9 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/smalti-rec.XXXXXX")"
 work="$(cd "$work" && pwd -P)"
 model="claude-haiku-5-5"
 statuses="$work/statuses.txt"; : > "$statuses"
+# Compared without case or accents (sanitize_fixture.scan): any of these left in a fixture stops the recording.
+markers=(--marker "Simón" --marker "Rivera" --marker "Agudelo" --marker "simonriv" --marker "srivera"
+  --marker "Protección" --marker "xolken" --marker "@gmail" --marker "Bello" --marker "Medellín")
 
 run() { # run <dir> <prompt> <claude args…>: a clean-environment claude -p in <dir>, JSON result on stdout.
   # The prompt goes right after -p: --allowedTools takes every following word as a tool name.
@@ -61,14 +64,12 @@ for pair in "a:$a" "a:$f" "b:$b" "c:$c"; do
   source_dir="$HOME/.claude/projects/$(encode "$work/$dir")"
   target_dir="$projects/-fixture-work-$dir"; mkdir -p "$target_dir"
   python3 -I "$here/sanitize_fixture.py" "$source_dir/$id.jsonl" "$target_dir/$id.jsonl" \
-    --work "$work" --home "$HOME" --marker "Simón" --marker "simonriv" --marker "srivera" --marker "Protección" \
-    --marker "xolken" --marker "@gmail"
+    --work "$work" --home "$HOME" "${markers[@]}"
   if [[ -d "$source_dir/$id/subagents" ]]; then
     mkdir -p "$target_dir/$id/subagents"
     for sub in "$source_dir/$id/subagents/"*.jsonl; do
       python3 -I "$here/sanitize_fixture.py" "$sub" "$target_dir/$id/subagents/$(basename "$sub")" \
-        --work "$work" --home "$HOME" --marker "Simón" --marker "simonriv" --marker "srivera" --marker "Protección" \
-        --marker "xolken" --marker "@gmail"
+        --work "$work" --home "$HOME" "${markers[@]}"
     done
   fi
 done

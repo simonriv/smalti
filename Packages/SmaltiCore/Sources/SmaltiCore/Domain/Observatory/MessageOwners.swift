@@ -21,8 +21,21 @@ public struct MessageOwners: Codable, Equatable, Sendable {
         owners = owners.filter { $0.value != session }
     }
 
-    /// The same items with every derived one after the others, each group in its original order.
-    public static func sourcesFirst<Item>(_ items: [Item], isDerived: (Item) -> Bool) -> [Item] {
-        items.filter { !isDerived($0) } + items.filter(isDerived)
+    /// The same items, each after the items of the sessions it was forked from (a chain `s ← f1 ← f2` reads `s`,
+    /// `f1`, `f2`); otherwise in their original order. Sources outside the batch and cycles change nothing.
+    public static func sourcesFirst<Item>(
+        _ items: [Item], session: (Item) -> String, sources: (Item) -> [String]
+    ) -> [Item] {
+        var pending = items
+        var placed: [Item] = []
+        while !pending.isEmpty {
+            let waiting = Set(pending.map(session))
+            let ready =
+                pending.firstIndex { item in
+                    sources(item).allSatisfy { !waiting.contains($0) || $0 == session(item) }
+                } ?? 0
+            placed.append(pending.remove(at: ready))
+        }
+        return placed
     }
 }
