@@ -132,4 +132,4 @@
 - [x] T13 · Presentación, teclado y ⌘K
 - [x] T14 · UI tests de datos, aislamiento y capturas (revisión del bloque 3: 1 crítico, 6 importantes y 8 menores corregidos)
 #### Bloque 4 · Cierre
-- [ ] T15 · Mediciones, checklist, revisión final, mutación y PR
+- [x] T15 · Mediciones (C10 1,3 s / 11 ms / 53 MB; C11 ⚠️ 1 tick de 17,3 ms, igual que en reposo), checklist (`docs/specs/F3-checklist.md`), revisión final (5 importantes y 9 menores corregidos), mutación 100 %, XCUITest 71/71 con el diario intacto

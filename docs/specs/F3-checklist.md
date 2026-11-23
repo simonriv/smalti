@@ -20,9 +20,11 @@
 | C12 | ✅ con desviaciones | `DesignCaptureTests.testCaptureObservatory` y `testCaptureStatusAndHeader`, a demanda, superpuestas al 50 % sobre los tableros renderizados con Chrome: `F3-assets/c12-observatory-overlay.png` y `c12-status-header-overlay.png`. Ver "Desviaciones del diseño" |
 | C13 | ✅ | Guardas de `SmaltiCore` y de `DarwinMetricsAdapter` (IOKit). `ClaudeSessionRegistryTests.keyFilesAreNeverRead`: un `*.key` con un JSON de sesión viva válido no aparece |
 | C14 | ✅ | `isolatedSmalti()` pasa `-SmaltiShellCommand "/bin/zsh -f"`, `-SmaltiConfigPath`, `-SmaltiStatePath`, `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales; `PasteboardGuard`; suite completa con `scripts/check-daily-untouched.sh`. El PID del diario siguió vivo en todas las corridas; los cambios de su estado fueron solo su guardado periódico de 5 minutos, porque esta sesión corría en un panel del diario |
-| C15 | (al cierre) | Mutación de `SmaltiCore` |
+| C15 | ✅ | `scripts/mutation/mutate.py --package Packages/SmaltiCore` sobre el código final: 604 mutantes, 516 muertos, 0 sobrevivientes, 88 que no compilan: **100 %** (mínimo 80 %). Una corrida previa sobre el código revisado dejó sobrevivientes en el pico del informe, `isLive` y el reparto de memoria; se mataron con pruebas nuevas, y dos mutantes equivalentes se resolvieron borrando código muerto |
 
-Pruebas: SmaltiCore 677, GhosttyAdapter 121, TOMLConfigAdapter 66, FileSessionAdapter 17, ClaudeHarnessAdapter 20, IPCAdapter 24, UserNotificationsAdapter 7, ClaudeTelemetryAdapter 42, OllamaAdapter 11, DarwinMetricsAdapter 13; Python: oráculo y saneador OK, mutador OK; XCUITest 71 + 4 capturas y 1 medición a demanda.
+Pruebas al cierre: SmaltiCore 688, GhosttyAdapter 121, TOMLConfigAdapter 66, FileSessionAdapter 17, ClaudeHarnessAdapter 20, IPCAdapter 24, UserNotificationsAdapter 7, ClaudeTelemetryAdapter 46, OllamaAdapter 11, DarwinMetricsAdapter 14; Python: oráculo y saneador OK, mutador OK; XCUITest 71/71 + 4 capturas y 1 medición a demanda, con el Smalti diario intacto.
+
+Revisiones: bloque 0 (5 menores), bloque 1 (5 importantes, 7 menores), bloque 2 (2 importantes, 9 menores), bloque 3 (1 crítico, 6 importantes, 8 menores), revisión final de la rama (5 importantes, 9 menores): todo corregido o decidido en el PR.
 
 ## Desviaciones del diseño
 
@@ -31,7 +33,8 @@ Pruebas: SmaltiCore 677, GhosttyAdapter 121, TOMLConfigAdapter 66, FileSessionAd
 | Sin filtros por harness ("Todas", "Claude Code", "OpenCode", "Locales") ni fila de OpenCode | F6 (decisión de la spec) |
 | Sin tok/s de Ollama | Su API no lo da sin generar (decisión de la spec) |
 | "descargado hace 2 días" en lugar de "última vez hace 2 días" | Ollama solo guarda la fecha de descarga |
-| En las filas detenidas, "hace 5 min" se trunca en la columna Vida de 76 pt | El tablero solo muestra "hace 3h", que cabe |
+| La columna Vida usa la forma corta "hace 22m" / "hace 3h" / "hace 2d" | "hace 22 min" no cabe en los 76 pt del tablero |
+| Con un modelo sin precio, la nota de costo dice "estimado · sin precio para N modelo(s)" en lugar de "incluido en tu plan" | La tarjeta es de una línea y el aviso tiene que leerse |
 | El vidrio del Observatorio es el de la ventana (0,62); el tablero dibuja 0,72 | Un solo vidrio por ventana |
 | La curva de CPU necesita dos muestras antes de dibujarse | Es una diferencia entre dos lecturas de ticks |
 | La tabla muestra hasta 5 filas antes de desplazarse; el tablero tiene 4 | Los datos del fixture tienen 6 sesiones |
