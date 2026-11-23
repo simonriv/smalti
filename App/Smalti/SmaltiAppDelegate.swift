@@ -1,4 +1,5 @@
 import AppKit
+import SmaltiCore
 
 @MainActor
 final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
@@ -6,6 +7,10 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
     private let latencyProbe = LatencyProbe()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Before any pane starts: panes inherit this process's environment.
+        for name in InheritedEnvironment.agentSessionVariables(in: ProcessInfo.processInfo.environment) {
+            unsetenv(name)
+        }
         NSApp.mainMenu = AppMenu.make()
         let composition = AppComposition()
         composition.showMainWindow()
