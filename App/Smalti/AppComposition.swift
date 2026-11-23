@@ -16,6 +16,7 @@ final class AppComposition {
     private var controller: TilingController?
     private var palette: CommandPaletteController?
     private var sessionKeeper: SessionKeeper?
+    private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
 
@@ -105,11 +106,47 @@ final class AppComposition {
         sessionKeeper = keeper
         window.contentView?.layoutSubtreeIfNeeded()
         let choice = LoadLastSession(archive: archive, preferences: archive).execute()
-        controller.start(from: choice) { [weak controller] snapshot in
-            // The resume screen arrives in T14; until then, asking restores everything.
-            controller?.restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
+        controller.start(from: choice) { [weak self] snapshot in
+            self?.ask(snapshot, preferences: archive, in: window)
         }
-        keeper.start(with: controller.set)
+        // While the resume screen asks, nothing is saved: quitting there keeps the last session.
+        if restoreScreen == nil { keeper.start(with: controller.set) }
+    }
+
+    /// "Retomar donde quedaste": shown instead of the strip and the panes until the user chooses.
+    private func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore, in window: SmaltiWindow) {
+        guard let controller, let content = window.contentView else { return }
+        let listing = RestoreController.Content(
+            snapshot: snapshot,
+            workspaces: ResumeListing.workspaces(
+                in: snapshot, home: controller.home, harnesses: HarnessRegistry([ClaudeHarness()])),
+            closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
+        let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
+            [weak self] choice in self?.finishAsking(choice, snapshot: snapshot, in: window)
+        }
+        screen.view.frame = content.bounds
+        screen.view.autoresizingMask = [.width, .height]
+        content.addSubview(screen.view)
+        setTilingHidden(true, in: window)
+        window.makeFirstResponder(screen.view)
+        restoreScreen = screen
+    }
+
+    private func finishAsking(_ choice: RestoreChoice, snapshot: SessionSnapshot, in window: SmaltiWindow) {
+        guard let controller else { return }
+        restoreScreen?.view.removeFromSuperview()
+        restoreScreen = nil
+        setTilingHidden(false, in: window)
+        switch choice {
+        case .restore(let selection): controller.restore(snapshot, mode: .full, selection: selection)
+        case .layoutsOnly: controller.restore(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
+        case .startClean: controller.start()
+        }
+        sessionKeeper?.start(with: controller.set)
+    }
+
+    private func setTilingHidden(_ hidden: Bool, in window: SmaltiWindow) {
+        [window.strip, window.paneGrid, window.statusBar].forEach { $0.isHidden = hidden }
     }
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
@@ -163,7 +200,10 @@ final class AppComposition {
     private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
         let router = KeyRouter(
             keymap: { [weak controller] in controller?.config.keys ?? .standard },
-            allowing: { [weak self] in self?.palette?.isOpen == true ? [.paletteOpen] : nil },
+            allowing: { [weak self] in
+                if self?.restoreScreen != nil { return [] }
+                return self?.palette?.isOpen == true ? [.paletteOpen] : nil
+            },
             perform: { [weak controller] command in controller?.perform(command) })
         window.routeKey = { router.route($0, composing: $1) }
     }

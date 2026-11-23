@@ -15,6 +15,36 @@ public struct Theme: Equatable, Sendable {
     public let palette: PaletteTokens
     public let motion: MotionTokens
     public let emptyState: EmptyStateTokens
+    public let resume: ResumeTokens
+    public let agent: AgentStatusTokens
+}
+
+/// The agent state colours, always the same (docs/design/README.md): green working, amber waiting, red failed,
+/// a hollow grey circle when stopped.
+public struct AgentStatusTokens: Equatable, Sendable {
+    public let working: RGBAColor
+    public let waiting: RGBAColor
+    public let failed: RGBAColor
+    public let stopped: RGBAColor
+}
+
+/// How a status dot is drawn.
+public enum StatusDotStyle: Equatable, Sendable {
+    case filled(RGBAColor)
+    case hollow(RGBAColor)
+}
+
+extension Theme {
+    /// A pane or workspace without agents keeps the neutral dot of F1.
+    public func statusDot(for kind: AgentStateKind?) -> StatusDotStyle {
+        switch kind {
+        case .working: .filled(agent.working)
+        case .waiting: .filled(agent.waiting)
+        case .failed: .filled(agent.failed)
+        case .stopped: .hollow(agent.stopped)
+        case nil: .filled(strip.dot)
+        }
+    }
 }
 
 public struct WindowTokens: Equatable, Sendable {
@@ -196,6 +226,49 @@ public struct EmptyStateTokens: Equatable, Sendable {
     public let text: RGBAColor
 }
 
+/// "Retomar donde quedaste" (Reanudar.dc.html, left column). The primary button is the accent.
+public struct ResumeTokens: Equatable, Sendable {
+    /// The board's left column: the window minus its 420 pt session list (F6).
+    public let contentWidth: Double
+    public let paddingVertical: Double
+    public let paddingHorizontal: Double
+    public let blockGap: Double
+    public let titleFontSize: Double
+    public let titleGap: Double
+    public let subtitleFontSize: Double
+    public let subtitleText: RGBAColor
+    public let sectionPadding: Double
+    public let sectionRowGap: Double
+    public let headerGap: Double
+    public let workspaceFontSize: Double
+    public let summaryFontSize: Double
+    public let rowPaddingVertical: Double
+    public let rowPaddingHorizontal: Double
+    public let rowGap: Double
+    public let rowCornerRadius: Double
+    public let rowFontSize: Double
+    public let rowSelected: RGBAColor
+    public let checkboxSize: Double
+    public let tagFontSize: Double
+    public let tagPaddingVertical: Double
+    public let tagPaddingHorizontal: Double
+    public let agentTag: RGBAColor
+    public let agentTagText: RGBAColor
+    public let programTag: RGBAColor
+    public let programTagText: RGBAColor
+    public let finishedText: RGBAColor
+    public let codeFontSize: Double
+    public let buttonHeight: Double
+    public let buttonPaddingHorizontal: Double
+    public let buttonCornerRadius: Double
+    public let buttonFontSize: Double
+    public let buttonGap: Double
+    public let primaryButtonText: RGBAColor
+    public let secondaryButtonBorder: RGBAColor
+    public let tertiaryButtonText: RGBAColor
+    public let hintFontSize: Double
+}
+
 public struct MotionTokens: Equatable, Sendable {
     /// Seconds a pane takes to move to its new place; disabled by "Reducir movimiento".
     public let rearrangeDuration: Double
@@ -220,6 +293,6 @@ extension Theme {
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
             focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
-            motion: motion, emptyState: emptyState)
+            motion: motion, emptyState: emptyState, resume: resume, agent: agent)
     }
 }

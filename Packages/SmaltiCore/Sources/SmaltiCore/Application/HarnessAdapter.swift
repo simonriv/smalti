@@ -1,6 +1,8 @@
 /// Port: what Smalti needs from a coding-agent CLI. F2 resumes Claude Code; F6 adds detection and listing.
 public protocol HarnessAdapter: Sendable {
     var harness: HarnessID { get }
+    /// Shown in the interface ("Claude Code").
+    var displayName: String { get }
     /// The shell command that resumes `agent` (e.g. `claude --resume 7f3a`).
     func resumeCommand(for agent: AgentSnapshot) -> String
 }

@@ -1,5 +1,5 @@
 // The only file with literal design tokens. Sources: docs/design/README.md, Apariencia.dc.html, Main.dc.html and
-// Paleta.dc.html.
+// Paleta.dc.html and Reanudar.dc.html.
 
 private func rgb(_ value: UInt32) -> RGBAColor {
     RGBAColor(
@@ -87,5 +87,18 @@ extension Theme {
             listPaddingBottom: 8, rowPadding: 12, shadowOffsetY: 40, shadowBlur: 100, shadowOpacity: 0.55,
             markerFontSize: 11.5, footerGap: 16),
         motion: MotionTokens(rearrangeDuration: 0.15),
-        emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText))
+        emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: obsidianSecondaryText),
+        resume: ResumeTokens(
+            contentWidth: 908, paddingVertical: 28, paddingHorizontal: 32, blockGap: 18, titleFontSize: 20,
+            titleGap: 6, subtitleFontSize: 12.5, subtitleText: obsidianMutedText, sectionPadding: 10,
+            sectionRowGap: 2, headerGap: 10, workspaceFontSize: 13, summaryFontSize: 11.5, rowPaddingVertical: 9,
+            rowPaddingHorizontal: 12, rowGap: 12, rowCornerRadius: 9, rowFontSize: 13, rowSelected: white(0.03),
+            checkboxSize: 16, tagFontSize: 10.5, tagPaddingVertical: 2, tagPaddingHorizontal: 7,
+            agentTag: RGBAColor(red: 217, green: 119, blue: 87, alpha: 0.16), agentTagText: rgb(0xf0a98f),
+            programTag: white(0.07), programTagText: rgb(0xc3c7cf), finishedText: obsidianMutedText,
+            codeFontSize: 11.5, buttonHeight: 36, buttonPaddingHorizontal: 16, buttonCornerRadius: 8,
+            buttonFontSize: 13, buttonGap: 10, primaryButtonText: rgb(0x0d0f15), secondaryButtonBorder: white(0.12),
+            tertiaryButtonText: obsidianMutedText, hintFontSize: 11.5),
+        agent: AgentStatusTokens(
+            working: rgb(0x9ece6a), waiting: rgb(0xe0af68), failed: rgb(0xf7768e), stopped: rgb(0x6b717c)))
 }

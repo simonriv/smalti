@@ -180,14 +180,31 @@ private final class AddWorkspaceButton: NSView {
 /// Status dot. Neutral in F1; F2 colors it by agent state (working, waiting, error, stopped).
 @MainActor
 final class StatusDot: NSView {
-    init(diameter: Double, color: RGBAColor) {
+    convenience init(diameter: Double, color: RGBAColor) {
+        self.init(diameter: diameter, style: .filled(color))
+    }
+
+    init(diameter: Double, style: StatusDotStyle) {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = diameter / 2
-        layer?.backgroundColor = color.nsColor.cgColor
         NSLayoutConstraint.activate([
             widthAnchor.constraint(equalToConstant: diameter), heightAnchor.constraint(equalToConstant: diameter),
         ])
+        render(style)
+    }
+
+    /// Filled for working, waiting and failed; a hollow ring for a stopped agent.
+    func render(_ style: StatusDotStyle) {
+        switch style {
+        case .filled(let color):
+            layer?.backgroundColor = color.nsColor.cgColor
+            layer?.borderWidth = 0
+        case .hollow(let color):
+            layer?.backgroundColor = nil
+            layer?.borderWidth = 1
+            layer?.borderColor = color.nsColor.cgColor
+        }
     }
 
     @available(*, unavailable, message: "Built in code only")

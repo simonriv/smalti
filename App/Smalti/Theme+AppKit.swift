@@ -17,6 +17,13 @@ extension Theme {
             ?? .systemFont(ofSize: size, weight: Self.systemWeight(weight))
     }
 
+    /// The monospaced family of the boards (`.code`), at `size`.
+    @MainActor
+    func monospacedFont(size: Double) -> NSFont {
+        Self.font(family: kbd.fontFamily, size: size, weight: 400)
+            ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+    }
+
     @MainActor
     var kbdFont: NSFont {
         Self.font(family: kbd.fontFamily, size: kbd.fontSize, weight: 400)

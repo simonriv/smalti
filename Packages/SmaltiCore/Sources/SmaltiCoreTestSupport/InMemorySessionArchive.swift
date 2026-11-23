@@ -78,6 +78,7 @@ public final class FakeScrollbackSource: ScrollbackSource {
 /// Resumes with `fake --resume <id>`, posing as Claude.
 public struct FakeHarnessAdapter: HarnessAdapter {
     public let harness = HarnessID.claude
+    public let displayName = "Fake"
     public static let binary = "fake"
 
     public init() {}

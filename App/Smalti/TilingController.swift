@@ -60,6 +60,8 @@ final class TilingController {
 
     var theme: Theme { Theme.obsidian.applying(config.appearance) }
 
+    var home: WorkingDirectory { deps.home }
+
     var geometry: LayoutGeometry {
         LayoutGeometry(area: area(), gap: theme.panel.gap, minimumPaneSize: LayoutGeometry.standardMinimumPaneSize)
     }

@@ -22,6 +22,7 @@ struct PersistenceContractTests {
 struct HarnessRegistryTests {
     struct Other: HarnessAdapter {
         let harness = HarnessID.claude
+        let displayName = "Other"
         func resumeCommand(for agent: AgentSnapshot) -> String { "other" }
     }
 
