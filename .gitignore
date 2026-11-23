@@ -17,3 +17,4 @@ scripts/observatory/markers.local
 
 # F4: Fig specs are vendored from here
 scripts/fig/node_modules/
+scripts/input-bench/.build/
