@@ -187,7 +187,7 @@
 - [x] T6 · Feedback, plantilla del TOML y versión (0.4.5 y commit en el Info.plist)
 - [x] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra (config del motor solo con `keybind = clear` y entrada segura automática)
 - [x] T8 · FileSessionAdapter: sesión v2 (lee v1 y v2, guarda v2, aparta versiones desconocidas)
-- [ ] T9 · DiagnosticsAdapter
+- [x] T9 · DiagnosticsAdapter (OSLogStore del proceso, privados redactados, guarda de logs públicos)
 #### Bloque 3 · Ventanas en la app
 - [ ] T10 · `WindowComposition` (refactor)
 - [ ] T11 · Varias ventanas, pantalla completa, Dock y restauración
