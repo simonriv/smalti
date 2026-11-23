@@ -15,4 +15,12 @@ final class ChildEnvironmentTests: SmaltiUITestCase {
         // Nil when the runner cannot reach a tmux server; the check is then done from the shell (see progress.md).
         if let clientsBefore { XCTAssertEqual(TmuxClients.count(), clientsBefore) }
     }
+
+    /// Fail-closed guard: even if a login shell ever started in a test, `$TMUX` is set, so a `.zshrc` that attaches
+    /// only when `$TMUX` is empty (Simón's does) never joins his `tmux main`.
+    func testIsolatedShellsSeeTheTmuxGuard() {
+        app.typeText("<<<${TMUX:+guarded}>>\"$SMALTI_UITEST_OUT\"\n")
+
+        waitForOutput("guarded\n")
+    }
 }

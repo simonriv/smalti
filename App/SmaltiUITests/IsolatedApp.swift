@@ -4,6 +4,8 @@ import XCTest
 extension XCUIApplication {
     /// The only shell UI tests may run: it reads no startup files.
     static let isolatedShell = "/bin/zsh -f"
+    /// Non-empty `$TMUX` for every shell the tests start; it names no real tmux socket.
+    static let tmuxGuard = "smalti-ui-tests-isolation"
 
     /// Smalti launched with a config file of its own, in a per-launch temporary directory, so tests never read or
     /// write the user's `~/.config/smalti/config.toml`. Without `config` the file does not exist and the defaults
@@ -14,6 +16,9 @@ extension XCUIApplication {
             shell != nil || config?.contains("command = \"\(isolatedShell)\"") == true,
             "a launch without -SmaltiShellCommand needs a config whose shell is \(isolatedShell)")
         let app = XCUIApplication()
+        // Fail closed: if a login shell ever started (a fixture that stops parsing falls back to it), a `.zshrc`
+        // that attaches to tmux only when `$TMUX` is empty, as the user's does, stays out of `tmux main`.
+        app.launchEnvironment["TMUX"] = tmuxGuard
         let file = isolatedConfigFile
         app.launchArguments += ["-SmaltiConfigPath", file.path(percentEncoded: false)]
         if let shell { app.launchArguments += ["-SmaltiShellCommand", shell] }
