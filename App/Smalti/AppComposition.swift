@@ -7,7 +7,7 @@ import TOMLConfigAdapter
 /// Composition root: the only place that builds infrastructure and wires it to the UI.
 @MainActor
 final class AppComposition {
-    private let logger = Logger(subsystem: "dev.simonriv.smalti", category: "engine")
+    private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "engine")
     private var window: SmaltiWindow?
     private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
@@ -39,8 +39,11 @@ final class AppComposition {
     }
 
     private static func readStartup() -> Startup {
+        let home = FileManager.default.homeDirectoryForCurrentUser
         let settings = LaunchSettings(
-            arguments: launchArguments(), home: FileManager.default.homeDirectoryForCurrentUser)
+            arguments: launchArguments(), home: home,
+            defaultStateDirectory: AppIdentity.current.defaultStateDirectory(home: home))
+        createStateDirectory(settings.stateDirectory)
         let store = TOMLConfigStore(file: settings.configFile)
         let initial = ReloadConfig(store: store).execute()
         return Startup(
@@ -50,8 +53,19 @@ final class AppComposition {
 
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     private static func launchArguments() -> [String: String] {
-        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey]
+        let keys = [LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey]
         return keys.reduce(into: [:]) { arguments, key in arguments[key] = UserDefaults.standard.string(forKey: key) }
+    }
+
+    /// Owner-only (0700): it will hold scrollback and the IPC socket. A failure is logged; saving reports it later.
+    private static func createStateDirectory(_ directory: URL) {
+        do {
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        } catch {
+            Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
+                .error("could not create the state directory \(directory.path(percentEncoded: false)): \(error)")
+        }
     }
 
     private func start(_ startup: Startup, in window: SmaltiWindow) throws(TerminalEngineError) {
