@@ -99,6 +99,6 @@
 - [x] T21 · Estado en cabecera, borde y franja
 - [x] T22 · Notificaciones y salto ⌘J
 - [x] T23 · Arrastrar imágenes
-- [x] T24 · UI tests del estado y la atención (escritos; ejecución pendiente: XCUITest no inicia en esta sesión) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
+- [x] T24 · UI tests del estado y la atención (ejecutados al cierre: 53/53) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
 #### Bloque 7 · Cierre
-- [ ] T25 · Mediciones, checklist, revisión final, mutación y PR
+- [x] T25 · Mediciones (C6: 0,27–0,52 s), checklist (`docs/specs/F2-checklist.md`), revisión final (1 crítico, 3 importantes y 9 menores corregidos), mutación 94,7 % con los 19 sobrevivientes muertos, XCUITest 53/53 con el diario intacto

@@ -8,6 +8,10 @@ enum SessionState {
         let directory: String
         var agentSessionID: String?
         var relaunch: [String]?
+        var title: String?
+        var process: String?
+        var lines = 0
+        var commands = 0
     }
 
     struct Workspace {
@@ -43,10 +47,14 @@ enum SessionState {
 
     private static func json(_ pane: Pane) -> [String: Any] {
         var json: [String: Any] = [
-            "id": pane.id.uuidString, "workingDirectory": pane.directory, "scrollbackLines": 0, "commandCount": 0,
+            "id": pane.id.uuidString, "workingDirectory": pane.directory, "scrollbackLines": pane.lines,
+            "commandCount": pane.commands,
         ]
+        if let process = pane.process { json["processName"] = process }
         if let session = pane.agentSessionID {
-            json["agent"] = ["harness": "claude", "sessionID": session, "lastState": "waiting"]
+            var agent: [String: Any] = ["harness": "claude", "sessionID": session, "lastState": "waiting"]
+            if let title = pane.title { agent["title"] = title }
+            json["agent"] = agent
         }
         if let relaunch = pane.relaunch { json["relaunch"] = ["arguments": relaunch] }
         return json

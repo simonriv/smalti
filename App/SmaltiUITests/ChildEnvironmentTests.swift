@@ -39,7 +39,8 @@ final class ChildEnvironmentTests: SmaltiUITestCase {
             .split(separator: "|").map(String.init)
         XCTAssertEqual(fields.count, 3)
         XCTAssertNotNil(UUID(uuidString: fields[0]))
-        XCTAssertEqual(fields[1], "smalti.sock")
+        // In the state directory, or a short private temporary path when the runner's container makes it too long.
+        XCTAssertTrue(fields[1] == "smalti.sock" || (fields[1].hasPrefix("smalti-") && fields[1].hasSuffix(".sock")))
         XCTAssertEqual(fields[2], "bin/smalti")
     }
 }
