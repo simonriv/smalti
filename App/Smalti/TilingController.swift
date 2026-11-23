@@ -110,9 +110,12 @@ final class TilingController {
     }
 
     /// A click on a notification: show its pane (switching workspace); if it is gone, only the app comes forward.
-    func activate(_ pane: PaneID) {
-        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return }
+    /// False when the pane no longer exists.
+    @discardableResult
+    func activate(_ pane: PaneID) -> Bool {
+        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return false }
         publish()
+        return true
     }
 
     private func jumpToWaitingAgent() {

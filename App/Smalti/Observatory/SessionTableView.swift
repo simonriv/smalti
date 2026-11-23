@@ -6,7 +6,7 @@ import SmaltiCore
 @MainActor
 final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate {
     private let theme: Theme
-    private let table = NSTableView()
+    private let table = KeylessTable()
     private let scroll = NSScrollView()
     private var rows: [ObservatoryReport.Row] = []
     private var selectedID: String?
@@ -29,6 +29,8 @@ final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate
         table.addTableColumn(column)
         table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         table.headerView = nil
+        // `.automatic` resolves to `.inset`, whose side padding would shift rows away from the header's columns.
+        table.style = .plain
         table.backgroundColor = .clear
         table.intercellSpacing = .zero
         table.rowHeight = theme.observatory.rowHeight
@@ -56,11 +58,16 @@ final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
 
+    /// Reloads only what changed, and scrolls only when the selection moves, so a refresh every 2 s never pulls
+    /// the list back while the user scrolls through it.
     func show(_ rows: [ObservatoryReport.Row], selected: String?) {
-        self.rows = rows
-        selectedID = selected
-        table.reloadData()
-        if let index = rows.firstIndex(where: { $0.id == selected }) { table.scrollRowToVisible(index) }
+        let selectionMoved = selected != selectedID
+        if rows != self.rows || selectionMoved {
+            self.rows = rows
+            selectedID = selected
+            table.reloadData()
+        }
+        if selectionMoved, let index = rows.firstIndex(where: { $0.id == selected }) { table.scrollRowToVisible(index) }
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
@@ -74,10 +81,18 @@ final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate
         return view
     }
 
+    /// A click selects through the controller, after this callback returns (a reload inside it would re-enter).
     func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool {
-        onSelect?(rows[row].id)
+        let id = rows[row].id
+        DispatchQueue.main.async { [weak self] in self?.onSelect?(id) }
         return false
     }
+}
+
+/// The table never takes the keyboard: ↑↓, ↵ and esc stay with the observatory after a click on a row.
+@MainActor
+private final class KeylessTable: NSTableView {
+    override var acceptsFirstResponder: Bool { false }
 }
 
 /// One line of the table (or its header), laid out on the column template.
@@ -137,7 +152,7 @@ private final class TableRowView: NSView {
         let text = ObservatoryText.label(
             ObservatoryTexts.state(state), size: theme.observatory.rowFontSize, color: color, theme: theme)
         let stack = NSStackView(views: [dot, text])
-        stack.spacing = 7
+        stack.spacing = theme.observatory.spacing.stateDot
         return stack
     }
 
@@ -158,7 +173,7 @@ private final class TableRowView: NSView {
             ObservatoryFormat.percent(value), size: theme.observatory.rowFontSize,
             color: load.isHigh ? theme.agent.waiting : theme.text.primary, theme: theme)
         let stack = NSStackView(views: [bar, text])
-        stack.spacing = 8
+        stack.spacing = theme.observatory.spacing.contextBar
         return stack
     }
 
@@ -198,7 +213,7 @@ private final class TableRowView: NSView {
             theme.focus.glow.nsColor.setFill()
             bounds.fill()
             theme.accent.nsColor.setFill()
-            NSRect(x: 0, y: 0, width: 2, height: bounds.height).fill()
+            NSRect(x: 0, y: 0, width: tokens.spacing.selectionBar, height: bounds.height).fill()
         }
         if !isFirst {
             tokens.rowBorder.nsColor.setFill()

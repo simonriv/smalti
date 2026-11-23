@@ -6,7 +6,8 @@ import SmaltiCore
 final class ObservatoryCard: NSView {
     let content = NSStackView()
 
-    init(theme: Theme, spacing: Double) {
+    /// `holdsContent: false` gives the bare card (the table fills it edge to edge, with no padded stack).
+    init(theme: Theme, spacing: Double, holdsContent: Bool = true) {
         super.init(frame: .zero)
         let tokens = theme.observatory
         wantsLayer = true
@@ -17,6 +18,7 @@ final class ObservatoryCard: NSView {
         content.orientation = .vertical
         content.alignment = .leading
         content.spacing = spacing
+        guard holdsContent else { return }
         content.translatesAutoresizingMaskIntoConstraints = false
         addSubview(content)
         NSLayoutConstraint.activate([
@@ -30,18 +32,15 @@ final class ObservatoryCard: NSView {
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
 
-    /// A new card filling `host` edge to edge: the observatory's panels hold a card instead of being one.
-    static func filling(_ host: NSView, theme: Theme, spacing: Double) -> ObservatoryCard {
-        let card = ObservatoryCard(theme: theme, spacing: spacing)
-        card.translatesAutoresizingMaskIntoConstraints = false
-        host.addSubview(card)
+    /// Pins this card to `host`'s edges: the observatory's panels hold a card instead of being one.
+    func fill(_ host: NSView) {
+        translatesAutoresizingMaskIntoConstraints = false
+        host.addSubview(self)
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: host.topAnchor),
-            card.bottomAnchor.constraint(equalTo: host.bottomAnchor),
-            card.leadingAnchor.constraint(equalTo: host.leadingAnchor),
-            card.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            topAnchor.constraint(equalTo: host.topAnchor), bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            trailingAnchor.constraint(equalTo: host.trailingAnchor),
         ])
-        return card
     }
 }
 
@@ -64,7 +63,8 @@ enum ObservatoryText {
         return field
     }
 
-    /// 10.5 px, uppercase, tracking 0.06 em, secondary color ("SESIONES ACTIVAS").
+    /// The board's section labels are uppercase with tracking; the text stays as written in the code (readable
+    /// identifiers and accessibility), and only its display is uppercased.
     static func caption(_ text: String, theme: Theme) -> NSTextField {
         let tokens = theme.observatory
         let font = theme.interfaceFont(size: tokens.labelSize)

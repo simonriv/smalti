@@ -74,8 +74,7 @@ final class ObservatoryView: NSView {
 
     private func layoutBody() -> NSView {
         let tokens = theme.observatory
-        let tableCard = ObservatoryCard(theme: theme, spacing: 0)
-        tableCard.content.removeFromSuperview()
+        let tableCard = ObservatoryCard(theme: theme, spacing: 0, holdsContent: false)
         table.translatesAutoresizingMaskIntoConstraints = false
         tableCard.addSubview(table)
         NSLayoutConstraint.activate([
@@ -150,6 +149,12 @@ final class ObservatoryView: NSView {
             body.trailingAnchor.constraint(equalTo: trailingAnchor),
             body.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+    }
+
+    /// Before the first snapshot: the cards say they are reading, everything else stays empty.
+    func showReading(period current: ObservatoryPeriod) {
+        period.show(current.title)
+        cards.showReading()
     }
 
     func show(_ report: ObservatoryReport, snapshot: ObservatorySnapshot, period current: ObservatoryPeriod) {

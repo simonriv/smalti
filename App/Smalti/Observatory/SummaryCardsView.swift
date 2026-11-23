@@ -32,9 +32,11 @@ final class SummaryCardsView: NSStackView {
 
     private func makeCard(title: String, identifier: String) -> Card {
         let tokens = theme.observatory
-        let card = ObservatoryCard(theme: theme, spacing: 6)
+        let card = ObservatoryCard(theme: theme, spacing: tokens.spacing.cardStack)
         let value = ObservatoryText.number("", size: tokens.valueSize, color: theme.text.title, theme: theme)
         let note = ObservatoryText.label("", size: tokens.noteSize, color: theme.text.secondary, theme: theme)
+        // A long note ("… · sin precio para 1 modelo") truncates instead of widening its card: the four stay equal.
+        note.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         card.content.setViews([ObservatoryText.caption(title, theme: theme), value, note], in: .leading)
         card.setAccessibilityElement(true)
         card.setAccessibilityRole(.group)
@@ -46,7 +48,7 @@ final class SummaryCardsView: NSStackView {
         guard cards.count == Self.titles.count else { return }
         set(cards[0], value: String(summary.active), note: sessionsNote(summary))
         guard summary.isComplete else {
-            cards.dropFirst().forEach { set($0, value: "—", note: NSAttributedString(string: Self.reading)) }
+            cards.dropFirst().forEach { set($0, value: "—", note: plain(Self.reading)) }
             return
         }
         set(cards[1], value: ObservatoryFormat.count(summary.input), note: plain(ObservatoryTexts.cache(summary)))
@@ -54,6 +56,10 @@ final class SummaryCardsView: NSStackView {
             cards[2], value: ObservatoryFormat.count(summary.output),
             note: plain(ObservatoryTexts.peak(summary, timeZone: timeZone)))
         set(cards[3], value: ObservatoryFormat.usd(summary.cost.usd), note: plain(ObservatoryTexts.cost(summary)))
+    }
+
+    func showReading() {
+        cards.forEach { set($0, value: "—", note: plain(Self.reading)) }
     }
 
     private func set(_ card: Card, value: String, note: NSAttributedString) {

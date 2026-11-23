@@ -261,6 +261,10 @@
 "{\"type\": \"user\", \"timestamp\": \"2026-11-18T15:00:02Z\", \"sessionId\": \"tools-session\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"toolu_2\", \"content\": \"ok\"}]}, \"toolUseResult\": {\"structuredPatch\": [{\"oldStart\": 1, \"lines\": [\" a\", \"-b\", \"-c\", \"+d\", \"+e\", \"+f\"]}]}}",
 "{\"type\": \"system\", \"subtype\": \"compact_boundary\", \"timestamp\": \"2026-11-18T15:10:00Z\", \"sessionId\": \"tools-session\", \"compactMetadata\": {\"trigger\": \"auto\", \"preTokens\": 967809, \"postTokens\": 57813}}",
 "{\"type\": \"attachment\", \"redacted\": true}"
+],
+"projects/-fixture-work-x/unpriced-session.jsonl": [
+"{\"type\": \"assistant\", \"timestamp\": \"2026-11-18T15:00:00Z\", \"sessionId\": \"unpriced-session\", \"isSidechain\": false, \"cwd\": \"/fixture/work/x\", \"message\": {\"id\": \"unpriced-1\", \"model\": \"claude-unknown-9\", \"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"usage\": {\"input_tokens\": 10, \"output_tokens\": 11, \"cache_read_input_tokens\": 0, \"cache_creation_input_tokens\": 0, \"cache_creation\": {\"ephemeral_5m_input_tokens\": 0, \"ephemeral_1h_input_tokens\": 0}}}}",
+"{\"type\": \"assistant\", \"timestamp\": \"2026-11-18T15:00:05Z\", \"sessionId\": \"unpriced-session\", \"isSidechain\": false, \"cwd\": \"/fixture/work/x\", \"message\": {\"id\": \"unpriced-2\", \"model\": \"<synthetic>\", \"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"usage\": {\"input_tokens\": 0, \"output_tokens\": 0, \"cache_read_input_tokens\": 0, \"cache_creation_input_tokens\": 0, \"cache_creation\": {\"ephemeral_5m_input_tokens\": 0, \"ephemeral_1h_input_tokens\": 0}}}}"
 ]
 }
 }

@@ -51,11 +51,17 @@ final class ObservatoryRefresher {
             }
         }
         refreshLoop = Task { [weak self] in
-            while !Task.isCancelled, let self {
-                self.refreshNow()
-                try? await Task.sleep(for: self.isObservatoryOpen ? Self.openInterval : Self.closedInterval)
+            while !Task.isCancelled {
+                guard let interval = self?.refreshAndNextInterval() else { return }
+                try? await Task.sleep(for: interval)
             }
         }
+    }
+
+    /// Refreshes and says how long to wait, so the loop holds no reference to `self` while it sleeps.
+    private func refreshAndNextInterval() -> Duration {
+        refreshNow()
+        return isObservatoryOpen ? Self.openInterval : Self.closedInterval
     }
 
     func stop() {

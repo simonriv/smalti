@@ -202,6 +202,7 @@ final class AppComposition {
                 NSApp.activate()
                 if self?.window?.isMiniaturized == true { self?.window?.deminiaturize(nil) }
                 self?.window?.makeKeyAndOrderFront(nil)
+                self?.observatoryScreen?.dismiss()
                 self?.controller?.activate(pane)
             },
             onDenied: { [weak self] in self?.controller?.report(.notificationsDisabled) })
@@ -345,9 +346,8 @@ final class AppComposition {
                 },
                 didClose: { [weak self, weak controller] pane in
                     guard let controller else { return }
-                    if let pane {
-                        controller.activate(pane)
-                    } else {
+                    // A pane that closed meanwhile cannot be activated: the focused one gets the keyboard back.
+                    if pane.map(controller.activate) != true {
                         self?.focusKeyboard(on: controller.set.active.focusedPane)
                     }
                 },
@@ -381,8 +381,11 @@ final class AppComposition {
     }
 
     /// Keystrokes go to the focused pane's terminal.
+    /// The palette and the observatory own the keyboard while open: a publish (a hook, the minute tick) must not
+    /// hand it back to a terminal they cover.
     private func focusKeyboard(on pane: PaneID?) {
-        guard palette?.isOpen != true, let window, let pane, let view = engine?.view(for: pane),
+        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, let window, let pane,
+            let view = engine?.view(for: pane),
             window.firstResponder !== view
         else { return }
         window.makeFirstResponder(view)

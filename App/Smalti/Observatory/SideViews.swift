@@ -4,14 +4,15 @@ import SmaltiCore
 /// "Modelos locales · Ollama": loaded models first, then those on disk, or why there are none.
 @MainActor
 final class LocalModelsView: NSView {
-    private var card: ObservatoryCard?
-    private var content: NSStackView { card?.content ?? NSStackView() }
+    private let card: ObservatoryCard
+    private var content: NSStackView { card.content }
     private let theme: Theme
 
     init(theme: Theme) {
         self.theme = theme
+        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.localModels)
         super.init(frame: .zero)
-        card = ObservatoryCard.filling(self, theme: theme, spacing: 10)
+        card.fill(self)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.observatory.localModels")
@@ -56,7 +57,7 @@ final class LocalModelsView: NSView {
         let stack = NSStackView(views: [top, detail])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 4
+        stack.spacing = theme.observatory.spacing.modelLines
         top.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         return stack
     }
@@ -78,8 +79,8 @@ final class LocalModelsView: NSView {
 /// "Sistema · <Mac>": CPU and GPU curves, unified memory and its split, and where the data comes from.
 @MainActor
 final class SystemView: NSView {
-    private var card: ObservatoryCard?
-    private var content: NSStackView { card?.content ?? NSStackView() }
+    private let card: ObservatoryCard
+    private var content: NSStackView { card.content }
     private let theme: Theme
     private let title: NSTextField
     private let cpuValue: NSTextField
@@ -94,6 +95,7 @@ final class SystemView: NSView {
 
     init(theme: Theme) {
         self.theme = theme
+        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.system)
         let tokens = theme.observatory
         title = ObservatoryText.caption("Sistema", theme: theme)
         cpuValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
@@ -101,7 +103,7 @@ final class SystemView: NSView {
         memoryValue = ObservatoryText.number("", size: tokens.systemRowSize, color: theme.text.primary, theme: theme)
         split = ObservatoryText.label("", size: tokens.footnoteSize, color: theme.text.secondary, theme: theme)
         super.init(frame: .zero)
-        card = ObservatoryCard.filling(self, theme: theme, spacing: 14)
+        card.fill(self)
         let footnote = ObservatoryText.label(
             Self.footnote, size: tokens.footnoteSize, color: theme.text.secondary, theme: theme)
         footnote.lineBreakMode = .byWordWrapping
@@ -141,7 +143,7 @@ final class SystemView: NSView {
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
+        stack.spacing = theme.observatory.spacing.systemGroup
         views.first?.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         return stack
     }

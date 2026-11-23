@@ -393,4 +393,23 @@ public struct ObservatoryTokens: Equatable, Sendable {
     public let systemRowSize: Double
     /// Fade in and out, unless "Reducir movimiento".
     public let fadeDuration: Double
+    /// Spacings and sizes of the board's inline styles (`gap: 6px`, `gap: 7px`, …).
+    public let spacing: ObservatorySpacing
+}
+
+public struct ObservatorySpacing: Equatable, Sendable {
+    public let cardStack: Double
+    public let stateDot: Double
+    public let contextBar: Double
+    public let selectionBar: Double
+    public let detailColumns: Double
+    public let detailStack: Double
+    /// Activity column against chart column (`minmax(0, 1.2fr) minmax(0, 1fr)`).
+    public let detailRatio: Double
+    public let activityColumns: Double
+    public let chartLabelSize: Double
+    public let localModels: Double
+    public let modelLines: Double
+    public let system: Double
+    public let systemGroup: Double
 }

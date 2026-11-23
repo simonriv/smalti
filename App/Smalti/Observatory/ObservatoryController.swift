@@ -34,6 +34,15 @@ final class ObservatoryController {
         isOpen ? close(focusing: nil) : open(theme: theme)
     }
 
+    /// Closes without moving the focus: whoever dismisses it (a notification click) focuses a pane itself.
+    func dismiss() {
+        guard let view else { return }
+        self.view = nil
+        remove(view)
+        actions.setTilingHidden(false)
+        actions.openChanged(false)
+    }
+
     func cyclePeriod() {
         guard isOpen else { return }
         period = period.next
@@ -65,16 +74,32 @@ final class ObservatoryController {
     }
 
     private func close(focusing pane: PaneID?) {
-        guard let view else { return }
-        self.view = nil
-        view.removeFromSuperview()
-        actions.setTilingHidden(false)
-        actions.openChanged(false)
+        guard isOpen else { return }
+        dismiss()
         actions.didClose(pane)
     }
 
+    /// The same 150 ms fade as opening, then gone.
+    private func remove(_ view: NSView) {
+        guard let duration = theme?.observatory.fadeDuration, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        else {
+            view.removeFromSuperview()
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            view.animator().alphaValue = 0
+        } completionHandler: {
+            view.removeFromSuperview()
+        }
+    }
+
     private func render() {
-        guard let view, let snapshot else { return }
+        guard let view else { return }
+        guard let snapshot else {
+            view.showReading(period: period)
+            return
+        }
         let report = ObservatoryReport.make(
             snapshot, period: period, selection: selection, calendar: .autoupdatingCurrent)
         self.report = report

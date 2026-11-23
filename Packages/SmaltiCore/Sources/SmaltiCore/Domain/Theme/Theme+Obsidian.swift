@@ -120,5 +120,9 @@ extension Theme {
             sparklineHeight: 34, sparklineWidth: 1.4, cpu: rgb(0x7dcfff), gpu: rgb(0xbb9af7),
             memoryModel: rgb(0xbb9af7),
             memoryRest: rgb(0x6b717c), memoryTrack: white(0.07), memoryBarHeight: 8, separator: white(0.05),
-            footnoteSize: 11, modelNameSize: 13, systemRowSize: 12, fadeDuration: 0.15))
+            footnoteSize: 11, modelNameSize: 13, systemRowSize: 12, fadeDuration: 0.15,
+            spacing: ObservatorySpacing(
+                cardStack: 6, stateDot: 7, contextBar: 8, selectionBar: 2, detailColumns: 18, detailStack: 8,
+                detailRatio: 1.2, activityColumns: 10, chartLabelSize: 10, localModels: 10, modelLines: 4, system: 14,
+                systemGroup: 6)))
 }

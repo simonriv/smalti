@@ -4,8 +4,8 @@ import SmaltiCore
 /// The card under the table: the selected session's latest tools, and its output per minute over the last hour.
 @MainActor
 final class DetailView: NSView {
-    private var card: ObservatoryCard?
-    private var content: NSStackView { card?.content ?? NSStackView() }
+    private let card: ObservatoryCard
+    private var content: NSStackView { card.content }
     private let theme: Theme
     private let activityTitle: NSTextField
     private let activityRows = NSStackView()
@@ -18,16 +18,17 @@ final class DetailView: NSView {
 
     init(theme: Theme) {
         self.theme = theme
+        card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.detailStack)
         let tokens = theme.observatory
         activityTitle = ObservatoryText.caption("Actividad", theme: theme)
         compaction = ObservatoryText.label("", size: tokens.noteSize, color: theme.text.secondary, theme: theme)
         empty = ObservatoryText.label(Self.noActivity, size: tokens.noteSize, color: theme.text.secondary, theme: theme)
         super.init(frame: .zero)
-        card = ObservatoryCard.filling(self, theme: theme, spacing: 8)
+        card.fill(self)
         content.orientation = .horizontal
         content.alignment = .top
         content.distribution = .fill
-        content.spacing = 18
+        content.spacing = tokens.spacing.detailColumns
         activityRows.orientation = .vertical
         activityRows.alignment = .leading
         activityRows.spacing = tokens.activityRowGap
@@ -42,7 +43,7 @@ final class DetailView: NSView {
             [ObservatoryText.caption("Tokens por minuto · última hora", theme: theme), chart, empty, compaction],
             identifier: "smalti.observatory.output")
         content.setViews([left, right], in: .leading)
-        left.widthAnchor.constraint(equalTo: right.widthAnchor, multiplier: 1.2).isActive = true
+        left.widthAnchor.constraint(equalTo: right.widthAnchor, multiplier: tokens.spacing.detailRatio).isActive = true
         chart.widthAnchor.constraint(equalTo: right.widthAnchor).isActive = true
     }
 
@@ -50,7 +51,7 @@ final class DetailView: NSView {
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 8
+        stack.spacing = theme.observatory.spacing.detailStack
         stack.setAccessibilityElement(true)
         stack.setAccessibilityRole(.group)
         stack.setAccessibilityIdentifier(identifier)
@@ -87,7 +88,7 @@ final class DetailView: NSView {
         if let peak {
             style.peak = (
                 tokens.chartPeakRadius, ObservatoryTexts.chartPeak(peak, timeZone: timeZone),
-                theme.interfaceFont(size: 10), theme.header.directory
+                theme.interfaceFont(size: tokens.spacing.chartLabelSize), theme.header.directory
             )
         }
         return style
@@ -109,7 +110,7 @@ final class DetailView: NSView {
         name.widthAnchor.constraint(equalToConstant: tokens.activityToolWidth).isActive = true
         summary.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let line = NSStackView(views: [time, name, summary, outcome])
-        line.spacing = 10
+        line.spacing = tokens.spacing.activityColumns
         return line
     }
 
