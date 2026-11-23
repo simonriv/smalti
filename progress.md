@@ -95,10 +95,10 @@
 - [x] T18 · `IPCAdapter` y CLI `smalti`
 - [x] T19 · Plugin de Claude Code e instalador (revisión del bloque 5: 2 importantes y 7 menores corregidos; hook `PreToolUse` añadido)
 #### Bloque 6 · Estado y atención en la app
-- [ ] T20 · Entorno de paneles y cableado del IPC
-- [ ] T21 · Estado en cabecera, borde y franja
-- [ ] T22 · Notificaciones y salto ⌘J
-- [ ] T23 · Arrastrar imágenes
-- [ ] T24 · UI tests del estado y la atención
+- [x] T20 · Entorno de paneles y cableado del IPC
+- [x] T21 · Estado en cabecera, borde y franja
+- [x] T22 · Notificaciones y salto ⌘J
+- [x] T23 · Arrastrar imágenes
+- [x] T24 · UI tests del estado y la atención (escritos; ejecución pendiente: XCUITest no inicia en esta sesión) · revisión del bloque 6: 1 crítico, 2 importantes y 6 menores corregidos
 #### Bloque 7 · Cierre
 - [ ] T25 · Mediciones, checklist, revisión final, mutación y PR
