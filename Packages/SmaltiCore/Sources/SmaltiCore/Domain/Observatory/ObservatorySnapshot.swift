@@ -45,7 +45,7 @@ public enum LocalModelsReport: Equatable, Sendable {
 }
 
 /// A reading that may not be possible without privileges: shown as "no disponible", never as 0.
-public enum Measurement<Value: Equatable & Sendable>: Equatable, Sendable {
+public enum Reading<Value: Equatable & Sendable>: Equatable, Sendable {
     case value(Value)
     case unavailable
 
@@ -60,17 +60,17 @@ public enum MemoryPressure: String, Equatable, Sendable {
 }
 
 public struct SystemSample: Equatable, Sendable {
-    public var cpu: Measurement<Double>
-    public var gpu: Measurement<Double>
-    public var memoryUsed: Measurement<UInt64>
+    public var cpu: Reading<Double>
+    public var gpu: Reading<Double>
+    public var memoryUsed: Reading<UInt64>
     public var memoryTotal: UInt64
-    public var agentsMemory: Measurement<UInt64>
-    public var pressure: Measurement<MemoryPressure>
+    public var agentsMemory: Reading<UInt64>
+    public var pressure: Reading<MemoryPressure>
     public var machineName: String
 
     public init(
-        cpu: Measurement<Double>, gpu: Measurement<Double>, memoryUsed: Measurement<UInt64>, memoryTotal: UInt64,
-        agentsMemory: Measurement<UInt64>, pressure: Measurement<MemoryPressure>, machineName: String
+        cpu: Reading<Double>, gpu: Reading<Double>, memoryUsed: Reading<UInt64>, memoryTotal: UInt64,
+        agentsMemory: Reading<UInt64>, pressure: Reading<MemoryPressure>, machineName: String
     ) {
         self.cpu = cpu
         self.gpu = gpu

@@ -29,7 +29,7 @@ public struct SystemFigures: Equatable, Sendable {
             shares: shares(system, model: model))
     }
 
-    private static func percent(_ value: Measurement<Double>) -> String {
+    private static func percent(_ value: Reading<Double>) -> String {
         value.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? StatusFigures.unavailable
     }
 
