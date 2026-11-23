@@ -37,7 +37,9 @@ struct CommandCoverageGuardTests {
         #expect(Self.swiftName("terminal.selectAll") == "terminalSelectAll")
     }
 
-    @Test func everyStandardCommandHasAnActionInTheApp() throws {
+    /// Runs inside the repository only: mutation testing copies this package alone, without the app.
+    @Test(.enabled(if: FileManager.default.fileExists(atPath: controller.path(percentEncoded: false))))
+    func everyStandardCommandHasAnActionInTheApp() throws {
         let source = try String(contentsOf: Self.controller, encoding: .utf8)
 
         let missing = CommandID.allStandard.filter { !Self.isFamily($0) }.filter {
