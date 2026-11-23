@@ -16,7 +16,7 @@
 | B8 | ⚠️ parcial, aceptado por Simón | Ver "Rendimiento". Escribir no bloquea el hilo principal más de 16 ms con 4 ni con 9 superficies. Pendiente: cada reacomodo bloquea 18–21 ms (más de un fotograma de 16 ms); la GPU en reposo queda en ~26 % frente al 3 % de Ghostty (issue #5, a F5); y "sin fotogramas en blanco" no tiene evidencia directa más allá del diseño (el contenido se congela durante el reacomodo), sin captura fotograma a fotograma |
 | B9 | ✅ automatizado | `WorkspaceTests.testWorkspaceSwitchKeepsProcessesAlive`: `sleep 4; <<<listo>…` termina mientras otro workspace está visible (archivo marcador en lugar de `say`) |
 | B10 | ✅ con desviaciones | Capturas superpuestas al 50 % sobre los tableros renderizados con Chrome a 1440 × 900: `b10-dwindle-overlay.png`, `b10-columns-overlay.png`, `b10-master-overlay.png`, `b10-palette-overlay.png`. Bordes, cabeceras, franja, barra de estado y paleta coinciden a 1–2 px |
-| B11 | ⏳ teclado físico | Con entrada sintetizada: ⌥ nunca forma atajo (`KeyRoutingTests`, `KeyChordTranslatorTests`), ⇧⌘0 → igualar en el layout Latin American; falta la lista manual con teclado físico (abajo) |
+| B11 | ✅ automatizado (prueba física aplazada por Simón) | Con entrada sintetizada: ⌥ nunca forma atajo (`KeyRoutingTests`, `KeyChordTranslatorTests`), ⇧⌘0 → igualar en el layout Latin American; la lista con teclado físico (abajo) queda para el uso con la app terminada |
 | B12 | ✅ | `ImportGuardTests` (SmaltiCore) y `TOMLAdapterGuardTests`: solo `TOMLConfigAdapter` importa TOMLDecoder; la guarda comprueba que escanea `App/` |
 | B13 | ✅ con nota | `ChildEnvironmentTests`: `$SMALTI` = 1 en dos paneles; `ConfigTests.testShellComesFromTheConfigFile`: `$SMALTI` = 1 con el shell de `[shell] command`. Hoy el `.zshrc` de Simón no mira `$SMALTI` (solo `$TMUX` y `$SSH_CONNECTION`): para que los paneles normales no se enganchen a `tmux main` hay que añadir `-z "$SMALTI"` a esa condición. En las pruebas la protección es doble: `zsh -f` no lee `.zshrc` y cada lanzamiento aislado lleva `$TMUX` no vacío (`testIsolatedShellsSeeTheTmuxGuard`), así que ni un shell de login caería en `tmux main`; la comparación de `tmux list-clients` es una guarda de regresión |
 | B14 | ✅ | `TilingTests.testHeaderShowsForegroundProcess`: la cabecera dice `cat` y vuelve a `zsh` |
@@ -65,7 +65,7 @@ Build Release, MacBook Air M4. Salida continua simulada (~50 líneas/s por panel
 | El router de teclado actúa en la ventana, no en cada panel | No depende del primer respondedor; intercepta antes del menú y de la superficie |
 | Inter se registra en tiempo de ejecución (`CTFontManager`) en lugar de `ATSApplicationFontsPath` | Equivalente y deja el fallo en el log |
 
-## Pendiente para Simón (teclado físico, B11)
+## Lista con teclado físico (B11, aplazada hasta la app terminada)
 
 1. En un panel, con el layout Latin American: ⌥Q (`@`), ⌥1 (`|`), ⌥3 (`#`) y ⌥+teclas varias llegan al shell y a Claude Code.
 2. `´` + vocal y `¨` + `u` componen; durante la composición ⌘1 no cambia de panel.
