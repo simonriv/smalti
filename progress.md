@@ -174,4 +174,28 @@
 - [x] Aprobada (`docs/specs/F4.5-ayuda-ventanas.md`, 2026-11-23): enfoque A de ventanas, menú y ayuda desde el `Keymap`, búsqueda de libghostty, sesión v2
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F4.5-ayuda-ventanas.md`)
+- [x] Plan de implementación (`docs/plans/F4.5-ayuda-ventanas.md`)
+
+### Tareas
+#### Bloque 1 · Dominio y verificación
+- [ ] T1 · Verificar la API de libghostty v1.4.0
+- [ ] T2 · Ids nuevos, varios atajos por comando y teclas con nombre
+- [ ] T3 · Ventanas y sesión v2
+- [ ] T4 · Acciones del terminal, tamaño de letra y confirmar cierre
+- [ ] T5 · Catálogo, ayuda y modelo del menú
+#### Bloque 2 · Adaptadores
+- [ ] T6 · Feedback, plantilla del TOML y versión
+- [ ] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra
+- [ ] T8 · FileSessionAdapter: sesión v2
+- [ ] T9 · DiagnosticsAdapter
+#### Bloque 3 · Ventanas en la app
+- [ ] T10 · `WindowComposition` (refactor)
+- [ ] T11 · Varias ventanas, pantalla completa, Dock y restauración
+- [ ] T12 · Confirmar antes de cerrar
+#### Bloque 4 · Descubrimiento y terminal en la app
+- [ ] T13 · Menú de macOS, contextual y comandos de la app
+- [ ] T14 · Ayuda
+- [ ] T15 · Buscar en el scrollback
+- [ ] T16 · Feedback, registros y funciones básicas del terminal
+#### Bloque 5 · Cierre
+- [ ] T17 · Checklist, revisión final, mutación, PR y despliegue
