@@ -1,6 +1,6 @@
 # F4 · Input inteligente — Spec
 
-Estado: aprobada · 2026-11-23 · Roadmap: `docs/ROADMAP.md#f4--input-inteligente`
+Estado: aprobada · 2026-11-23 · enmienda 1 (2026-11-23, ver "Enmiendas") · Roadmap: `docs/ROADMAP.md#f4--input-inteligente`
 Diseño: `docs/design/Main.dc.html` (texto fantasma, menú de completions y línea de ayuda del panel derecho), adaptado al prompt en línea (ver "Decisiones de Simón"). ⌃R reutiliza la paleta de `docs/design/Paleta.dc.html`. Maquetas aprobadas en el brainstorming: `F4-assets/mockup-input.png` y `F4-assets/mockup-history.png`.
 
 ## Objetivo
@@ -17,7 +17,7 @@ El anti-objetivo manda sobre todo lo demás: **F4 fracasa si una tecla llega dis
 | Aspecto del input | **En línea (opción 2):** el prompt es el del usuario; fantasma en `#5f6672` como el tablero; el menú del tablero se ancla bajo el cursor (encima si no cabe) con la línea de ayuda "Tab completar · → aceptar sugerencia · ⌃R historial" dentro | Caja fija abajo con bloques por comando (tablero tal cual): exige editor propio |
 | ⌃R | **Paleta centrada sobre el panel, como ⌘K**, con ámbito "Este directorio" / "Todos", estado del último exit, recencia y veces | Lista en línea estilo fzf: menos contexto por fila |
 | Historial de partida | **Vacío: aprende solo de lo que se ejecuta en Smalti.** `~/.zsh_history` nunca se importa; solo se lee, en solo lectura, para el benchmark | Importar una vez: sin directorio ni exit, ensucia la predicción por directorio |
-| Plugins del usuario (zsh-autosuggestions, fzf ⌃R, `bindkey '^I' expand-or-complete`) | **En los paneles de Smalti, Smalti toma el control**: apaga zsh-autosuggestions, ⌃R abre su paleta, Tab usa specs de Fig si hay una para el comando y si no cae en el widget que el usuario tenía en Tab. Ningún archivo del usuario se toca; fuera de Smalti todo sigue igual | Convivir alimentando a zsh-autosuggestions: F4 dependería de un plugin del usuario y no se podría probar sin él |
+| Plugins del usuario | **Enmienda 1:** Simón quitó de su shell zsh-autosuggestions, zsh-syntax-highlighting, fzf, starship y tmux (respaldo en `shell-configuration/respaldo-2026-11-23`). En los paneles de Smalti, ⌃R abre su paleta y Tab usa specs de Fig si hay una para el comando y si no cae en el widget que el usuario tenga en Tab. No hay desmontaje de plugins: si alguno vuelve y choca, se trata entonces | Toma de control completa de autosuggestions, syntax-highlighting y fzf (versión aprobada antes de la enmienda): código y fixtures para plugins que ya no están |
 | Pruebas | `-SmaltiShellCommand "/bin/zsh -d"` con un `ZDOTDIR` temporal vacío en lugar de `zsh -f` (que no carga la integración, así que no habría OSC 133 ni widgets). Igual de aislado: no lee `~/.zshrc` ni engancha a tmux | — |
 | Ayuda y pantalla completa | Fuera de F4: nueva entrada "F4.5 · Ayuda y ventana" en el roadmap (vista de ayuda con todos los atajos, pantalla completa nativa, y lo que se sume) | Meterlo en F4: mezcla fases |
 
@@ -46,7 +46,7 @@ En la máquina de Simón (solo lectura de `~/.zshrc`): zsh 5.9, zsh-autosuggesti
 3. Predicción heurística en texto fantasma, también con la línea vacía.
 4. Menú de completions con Tab desde specs de Fig, con generadores.
 5. ⌃R: búsqueda difusa en paleta.
-6. Toma de control de zsh-autosuggestions, ⌃R y Tab dentro de los paneles de Smalti.
+6. ⌃R y Tab de Smalti dentro de sus paneles, con caída al widget de Tab del usuario.
 7. Filtro de secretos en el dominio, listo para F7.
 8. Benchmark de 50.000 entradas y pruebas de que los programas que no son el shell no ven nada.
 
@@ -95,27 +95,23 @@ En la máquina de Simón (solo lectura de `~/.zshrc`): zsh 5.9, zsh-autosuggesti
 - **Escritura que nunca cuelga ni mata el shell:** una sola función de envío que (1) comprueba con `zselect -t 0 -w $fd` que se puede escribir y, si no, descarta el mensaje (solo importa el último `line`); (2) escribe con `setopt localoptions localtraps; trap '' PIPE`; (3) si `print` falla, desregistra el `zle -F`, cierra el fd, borra el fantasma y desactiva F4 en ese shell sin mensaje. Del lado de Smalti, el servidor lee en un hilo propio que nunca depende del hilo principal.
 - Mensajes, uno por línea, campos separados por tab y escapados (`\t`, `\n`, `\\`):
   - zsh → Smalti: `hello <pane>`, `line <seq> <cursor> <buffer>` (solo si cambió), `exec <seq> <command>` (en `preexec`), `done <seq> <exit>` (en `precmd`), `complete <seq> <cursor> <buffer>`, `history <seq> <buffer>`, `bye`.
-  - Smalti → zsh: `specs <comando>…`, `suggest <seq> <texto>` (el resto de la línea en fantasma; vacío borra), `edit <seq> <buffer> <cursor>` (reemplaza la línea tras elegir en un menú), `run <seq>` (ejecuta tras ⌘↩ en ⌃R), `fallback <seq>` (Tab sin candidatos: zsh llama al widget guardado).
+  - Smalti → zsh: `specs <comando>…`, `suggest <seq> <texto>` (el resto de la línea en fantasma; vacío borra), `edit <seq> <cursor> <buffer>` (reemplaza la línea tras elegir en un menú; mismo orden de campos que `line`), `run <seq>` (ejecuta tras ⌘↩ en ⌃R), `fallback <seq>` (Tab sin candidatos: zsh llama al widget guardado).
   - zsh descarta toda respuesta cuyo `seq` no sea el del último mensaje que envió: un `edit` tardío nunca pisa lo que se escribió después.
 - **Directorio:** el del panel por OSC 7 (`pane.workingDirectory`, ya existente), en el momento del mensaje; vale para predicción, generadores, `ProjectContext` y el historial (`exec`).
 - El historial respeta lo que zsh no guardaría: `HIST_IGNORE_SPACE` y `HISTORY_IGNORE` (como el hook de F2), y lo que marque el filtro de secretos **(Claude)**.
 - Duración: Smalti la mide entre `exec` y `done`.
 
-### Toma de control dentro de Smalti
+### ⌃R, Tab y → dentro de Smalti (enmienda 1)
 
-Resultado exigido (C7); el mecanismo exacto lo fija el constructor contra las fixtures:
-
-- **Orden:** el hook de `precmd` de Smalti se registra en `.zshenv`, así que en el primer prompt corre **antes** que los de los plugins. Por eso se reubica al final de `precmd_functions` en cada `precmd` y hace la toma de control cuando ya corrieron los arranques de los plugins (en la práctica, el segundo paso del primer prompt o el primero en que `_zsh_autosuggest_start` ya no esté); se repite si un plugin vuelve a enlazar.
-- **zsh-autosuggestions:** no basta con apagarlo. Se quitan sus hooks (`_zsh_autosuggest_start`, `_zsh_autosuggest_bind_widgets` en `precmd`) y se restauran los widgets originales que guardó (`autosuggest-orig-*`), para que sus envoltorios no borren ni acepten el fantasma de Smalti. Tras instalarse, Smalti comprueba que ningún widget enlazado es un envoltorio de autosuggestions; si queda alguno, F4 se desactiva en ese shell y lo anota en el log.
-- **`zle-line-pre-redraw`:** con `add-zle-hook-widget`, nunca con `zle -N zle-line-pre-redraw` (eso borraría el de zsh-syntax-highlighting). El hook de Smalti queda el último, para añadir la entrada `memo=smalti` del fantasma después de que zsh-syntax-highlighting reescriba `region_highlight`.
-- ⌃R: `bindkey '^R' smalti-history` en `emacs`, `viins` y `vicmd`, sustituyendo a fzf.
+- **Orden:** el hook de `precmd` de Smalti se registra en `.zshenv`; los enlaces de teclas se instalan en el primer `precmd`, después de `.zshrc`, para guardar el widget que el usuario dejó en Tab y en →.
+- **`zle-line-pre-redraw`:** con `add-zle-hook-widget`, nunca con `zle -N zle-line-pre-redraw` (eso borraría el hook de cualquier otro).
+- ⌃R: `bindkey '^R' smalti-history` en `emacs`, `viins` y `vicmd`.
 - Tab: se guarda el widget que el usuario tenía en `^I` (ver "Tab" abajo).
 - →: `smalti-accept` acepta el fantasma si el cursor está al final y hay fantasma; si no, ejecuta el widget que había en → (`forward-char` por defecto). Igual para `end-of-line` (⌃E).
-- Las pruebas usan copias versionadas de zsh-autosuggestions, zsh-syntax-highlighting y del `key-bindings.zsh` de fzf (MIT), de las versiones de Homebrew de hoy, como fixtures; no las del sistema.
 
 ### Tab y el menú de completions **(Claude)**
 
-- zsh decide sin esperar con la lista de `specs`: si el comando de la palabra actual no tiene spec, o la palabra termina en `**` (fzf), o la lista aún no llegó, Tab ejecuta **en el acto** el widget guardado del usuario.
+- zsh decide sin esperar con la lista de `specs`: si el comando de la palabra actual no tiene spec o la lista aún no llegó, Tab ejecuta **en el acto** el widget guardado del usuario.
 - Con spec, zsh envía `complete` y vuelve; nunca espera. Si Smalti contesta `fallback` (sin candidatos), zsh ejecuta el widget guardado. Si no contesta en 300 ms, no pasa nada (el siguiente Tab lo reintenta).
 - Archivos y carpetas (`template` de Fig) los completa el menú de Smalti, con la ruta relativa al directorio del panel.
 - Un solo candidato se inserta directamente, sin menú, como zsh. Un prefijo común a todos se inserta antes de abrir el menú.
@@ -207,7 +203,7 @@ Ninguno usa ⌥.
 | C4 | Detección del prompt: sí en el prompt, escribiendo y en PS2; no durante un comando, en `read`, en pantalla alternativa y con el proceso terminado | Prueba de integración de `GhosttyAdapter` (la del spike, convertida en prueba de verdad) |
 | C5 | El shell nunca espera a Smalti ni muere por él: sin socket, con un servidor lento (responde a 2 s), con uno que **nunca lee** (búfer lleno), con uno que **cierra a mitad** (SIGPIPE) y con uno que responde `seq` viejos, escribir y ejecutar sigue igual, no queda fantasma viejo y, tras desactivarse, `yes \| head -1` sigue terminando normal | Pruebas de integración de zsh real (`zsh -d -i` con ZDOTDIR temporal, un servidor de pruebas por caso) |
 | C6 | Canal: escape de tab, salto y barra; `seq` viejos descartados; `exec`/`done` dan comando, directorio, exit y duración; `HIST_IGNORE_SPACE`, `HISTORY_IGNORE` y secretos no entran al historial | Pruebas de dominio del protocolo + integración con zsh real |
-| C7 | Toma de control: con las copias fixture de zsh-autosuggestions, zsh-syntax-highlighting y fzf cargadas por `.zshrc`, en Smalti solo hay un fantasma (el de Smalti), ⌃R abre la paleta y Tab sin spec ejecuta el widget anterior; sin Smalti, los tres funcionan como antes | Integración con zsh real |
+| C7 | Enlaces (enmienda 1): con un `.zshrc` que enlaza `^I` a `expand-or-complete`, en Smalti ⌃R abre la paleta, Tab sin spec ejecuta ese widget y → al final acepta el fantasma; sin `SMALTI_INPUT_SOCKET` los enlaces quedan como los dejó el `.zshrc` | Integración con zsh real |
 | C8 | Completions: subcomandos, opciones, valores y argumentos de `git`, `npm` y `swift` con fixtures; archivos y carpetas; generador de ramas de git en un repo temporal; timeout de generador sin colgar el menú; spec propia del usuario con prioridad | Pruebas de dominio + del adaptador |
 | C9 | Predicción: frecuencia/recencia por directorio, secuencias, scripts y objetivos del proyecto, recuperación tras un exit ≠ 0; límites con 0, 1 y 100.000 entradas, empates y cambio de día/zona (`America/Bogota`) | Pruebas de dominio |
 | C10 | ⌃R: orden difuso, ámbito, ↩ inserta, ⌘↩ ejecuta, esc deja la línea como estaba | Dominio + XCUITest |
@@ -222,8 +218,7 @@ Ninguno usa ⌥.
 
 | Riesgo | Efecto | Mitigación |
 | --- | --- | --- |
-| zsh-autosuggestions cambia su forma de apagarse entre versiones | Dos fantasmas a la vez | Fixture de la versión de Homebrew actual; la toma de control comprueba tras instalarse que `POSTDISPLAY` solo lo escribe Smalti y, si no, se apaga a sí misma y lo anota en el log |
-| zsh-syntax-highlighting o starship pisan `region_highlight` o el redibujado | Fantasma sin color o parpadeo | Se añade después de ellos en `zle-line-pre-redraw`; C7 lo prueba con las fixtures |
+| El usuario vuelve a instalar un plugin que escribe `POSTDISPLAY` o enlaza → (zsh-autosuggestions) | Dos fantasmas o fantasma borrado | Fuera de F4 tras la enmienda 1; se trata si ocurre, con su prueba |
 | Specs de Fig sin mantenimiento (última versión 2025-05) | Opciones nuevas de herramientas que faltan | Specs propias del usuario con prioridad; el subconjunto se puede regenerar |
 | Generadores lentos o con efectos | Menú lento o comandos inesperados | Solo los de specs incluidas o del usuario; timeout, caché y entorno mínimo; nunca en el camino del fantasma |
 | `zle -F` y `zsocket` con fd que se cierra a mitad | Shell muerto por SIGPIPE (verificado) o colgado escribiendo | Función de envío única con `zselect -w` y `trap '' PIPE` local; desactivación sin mensaje; C5 cubre los cinco casos |
@@ -238,7 +233,7 @@ Ninguno usa ⌥.
 
 ## Decisiones para aprobar con esta spec
 
-1. zsh edita y Smalti sugiere; input en línea; ⌃R en paleta; historial desde cero; toma de control de plugins en los paneles de Smalti; pruebas con `zsh -d` y ZDOTDIR temporal; ayuda y pantalla completa a F4.5 (Simón).
+1. zsh edita y Smalti sugiere; input en línea; ⌃R en paleta; historial desde cero; ⌃R y Tab de Smalti en sus paneles (enmienda 1: sin desmontaje de plugins); pruebas con `zsh -d` y ZDOTDIR temporal; ayuda y pantalla completa a F4.5 (Simón).
 2. Canal por socket con hook en `zle-line-pre-redraw` (vía `add-zle-hook-widget`), respuestas asíncronas con `zle -F -w`, escritura con `zselect -w` y SIGPIPE ignorado solo al escribir; fantasma pintado por zsh; capa AppKit solo para menús; directorio del panel por OSC 7.
 3. Detección del prompt por `needs_confirm_quit` + `process_exited`, con `confirm-close-surface = true`.
 4. Specs de Fig con JavaScriptCore; subconjunto curado de 36 comandos (sin `claude` ni `gcloud`) con sus `loadSpec`, versionado en el repo; specs propias en `~/.config/smalti/completions/`; generadores con timeout 1 s y caché 30 s.
@@ -250,3 +245,7 @@ Ninguno usa ⌥.
 7. Token `ghostText` `#5f6672` con excepción de contraste hasta F5.
 8. Claves `[input]` en el TOML y los atajos de la tabla.
 9. Puertos `CommandHistory` y `ProjectContext` nuevos; paquetes `FigCompletionAdapter` y `ProjectContextAdapter`.
+
+## Enmiendas
+
+1. **2026-11-23 · Sin toma de control de plugins (Simón).** Simón limpió su configuración de shell (respaldo en `~/Projects/shell-configuration/respaldo-2026-11-23`): ya no hay zsh-autosuggestions, zsh-syntax-highlighting, fzf, starship ni tmux. Se elimina el desmontaje de plugins y sus fixtures; quedan ⌃R, Tab con caída al widget del usuario y →. C7 cambia en consecuencia. Si un plugin vuelve y choca, se trata entonces.

@@ -121,7 +121,7 @@
 | `Packages/FigCompletionAdapter/` (nuevo) | JavaScriptCore, specs vendorizadas, generadores |
 | `scripts/fig/{package.json,vendor-specs.py,test_vendor_specs.py,commands.txt}` | Vendoring |
 | `Packages/GhosttyAdapter/Sources/GhosttyAdapter/{PromptState.swift,GhosttyConfigText.swift,GhosttyTerminalEngine.swift,SmaltiZshEnv.swift,SmaltiInputScript.swift}` | Prompt, config, cadena de zsh, script de F4 |
-| `Packages/GhosttyAdapter/Tests/GhosttyAdapterTests/{PromptStateTests,ZshChannelTests,ZshTakeoverTests}.swift` + `Fixtures/zsh-plugins/` | zsh real |
+| `Packages/GhosttyAdapter/Tests/GhosttyAdapterTests/{PromptStateTests,ZshChannelTests,ZshBindingsTests}.swift` | zsh real |
 | `Packages/IPCAdapter/Sources/IPCAdapter/InputSocketServer.swift` | Servidor del canal |
 | `App/Smalti/Input/{InputCoordinator,CompletionMenuController,CompletionMenuView,HistoryPaletteController,HistoryRowView}.swift` | Cableado y capas |
 | `App/SmaltiUITests/{InputTests,InputIsolationTests}.swift`, `Fixtures/byte-recorder.sh` | E2E |
@@ -436,33 +436,23 @@
 - [ ] **Step 2–4:** Rojo → implementar → verde (`kb-progress run zsh -- swift test --package-path Packages/GhosttyAdapter --filter Zsh`).
 - [ ] **Step 5:** Commit `feat(ghostty): add the zsh input channel with ghost text`.
 
-### Task 12: Toma de control y Tab
+### Task 12: ⌃R, Tab y enlaces (enmienda 1 de la spec)
 
 **Files:**
-- Create: `Tests/GhosttyAdapterTests/Fixtures/zsh-plugins/{zsh-autosuggestions.zsh,zsh-syntax-highlighting/…,fzf-key-bindings.zsh,LICENSES.md,VERSIONS.md}` (copiados de Homebrew con su versión), `Tests/GhosttyAdapterTests/ZshTakeoverTests.swift`
+- Create: `Tests/GhosttyAdapterTests/ZshBindingsTests.swift`
 - Modify: `SmaltiInputScript.swift`
 
 **Interfaces:**
-- Produces:
-  - `_smalti_input_takeover`: el hook de `precmd` se reubica al final de `precmd_functions` en cada `precmd` y actúa cuando `_zsh_autosuggest_start` ya no está en `precmd_functions`. Entonces:
-    - quita `_zsh_autosuggest_bind_widgets` de `precmd`;
-    - restaura cada widget `autosuggest-orig-*` sobre su nombre;
-    - comprueba que ningún widget enlazado es `_zsh_autosuggest_*`; si queda alguno, desactiva F4 y lo anota con `print -u2` solo con `SMALTI_INPUT_DEBUG`;
+- Produces (instalados en el primer `precmd`, después de `.zshrc`):
   - `bindkey '^R' smalti-history` en `emacs`, `viins` y `vicmd`;
-  - `smalti-complete` en `^I`, que guarda el widget anterior de `^I` en `_smalti_input_tab_fallback`. Ejecuta el anterior en el acto si:
-    - el comando no está en la lista de `specs`;
-    - la palabra termina en `**`;
-    - la lista no llegó.
-    Si no, envía `complete`. `fallback` ejecuta el anterior.
+  - `smalti-complete` en `^I`, que guarda el widget anterior de `^I` en `_smalti_input_tab_fallback`. Ejecuta el anterior en el acto si el comando no está en la lista de `specs` o la lista no llegó; si no, envía `complete`. `fallback` ejecuta el anterior.
   - `smalti-history`: envía `history`; `edit` y `run` aplican el resultado.
 
-- [ ] **Step 1: Pruebas que fallan** (`.zshrc` de prueba que carga las fixtures como el de Simón, más un `bindkey '^I' expand-or-complete`):
-  - `onlySmaltiGhostWithAutosuggestionsLoaded` (tras escribir: `POSTDISPLAY` = la sugerencia del servidor de pruebas, nunca la de autosuggestions);
-  - `autosuggestionWrappersAreRestored`, `syntaxHighlightingStillHighlights` (sus entradas siguen en `region_highlight` junto a `memo=smalti`);
-  - `ctrlROpensSmaltiNotFzf` (llega `history` al servidor), `tabWithoutSpecRunsUserWidget` (se ejecuta `expand-or-complete`, sin mensaje `complete`), `tabWithDoubleStarRunsUserWidget`, `tabWithSpecSendsComplete`, `fallbackReplyRunsUserWidget`;
-  - `withoutSmaltiPluginsBehaveAsBefore` (mismo `.zshrc` sin `SMALTI_INPUT_SOCKET`: autosuggestions pinta y ⌃R es de fzf).
+- [ ] **Step 1: Pruebas que fallan** (`.zshrc` de prueba con `bindkey '^I' expand-or-complete`):
+  - `ctrlRSendsHistory` (llega `history` al servidor), `tabWithoutSpecRunsUserWidget` (se ejecuta `expand-or-complete`, sin mensaje `complete`), `tabBeforeSpecsArriveRunsUserWidget`, `tabWithSpecSendsComplete`, `fallbackReplyRunsUserWidget`, `editAndRunApplyTheChosenCommand`;
+  - `withoutSocketBindingsStayAsZshrcLeftThem` (mismo `.zshrc` sin `SMALTI_INPUT_SOCKET`: `^I` sigue en `expand-or-complete` y `^R` en el de zsh).
 - [ ] **Step 2–4:** Rojo → implementar → verde.
-- [ ] **Step 5:** Commit `feat(ghostty): take over autosuggestions, Ctrl-R and Tab inside Smalti panes`.
+- [ ] **Step 5:** Commit `feat(ghostty): bind Ctrl-R and Tab to Smalti inside its panes`.
 - [ ] **Step 6: Cierre del bloque 3:** revisión del bloque; correcciones; `progress.md`.
 
 ---
