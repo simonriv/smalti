@@ -7,7 +7,8 @@ struct SocketTransport: EventTransport {
         let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw .unreachable("socket") }
         defer { close(fd) }
-        var seconds = timeval(tv_sec: 0, tv_usec: Int32(timeout.components.attoseconds / 1_000_000_000_000))
+        let parts = timeout.components
+        var seconds = timeval(tv_sec: Int(parts.seconds), tv_usec: Int32(parts.attoseconds / 1_000_000_000_000))
         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &seconds, socklen_t(MemoryLayout<timeval>.size))
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &seconds, socklen_t(MemoryLayout<timeval>.size))
         // An app that closes early must not kill the hook with SIGPIPE.

@@ -4,6 +4,8 @@ import Foundation
 public enum AgentHook: String, CaseIterable, Sendable {
     case sessionStart = "SessionStart"
     case userPromptSubmit = "UserPromptSubmit"
+    /// After an approved permission, the tool starts: the agent works again.
+    case preToolUse = "PreToolUse"
     case postToolUse = "PostToolUse"
     case permissionRequest = "PermissionRequest"
     case notification = "Notification"
@@ -22,10 +24,12 @@ public struct AgentEvent: Equatable, Sendable {
     /// What it asks permission for, summarised (`pnpm db:migrate`).
     public let toolSummary: String?
     public let message: String?
+    /// Why a session started (`startup`, `resume`, `clear`, `compact`).
+    public let source: String?
 
     public init(
         pane: PaneID, hook: AgentHook, at: Date, sessionID: String?, prompt: String? = nil, toolSummary: String? = nil,
-        message: String? = nil
+        message: String? = nil, source: String? = nil
     ) {
         self.pane = pane
         self.hook = hook
@@ -34,7 +38,11 @@ public struct AgentEvent: Equatable, Sendable {
         self.prompt = prompt
         self.toolSummary = toolSummary
         self.message = message
+        self.source = source
     }
+
+    /// A session start from compacting the context, mid-turn: it changes nothing about what the agent is doing.
+    var isCompaction: Bool { hook == .sessionStart && source == "compact" }
 }
 
 /// Why the user should look at an agent now.

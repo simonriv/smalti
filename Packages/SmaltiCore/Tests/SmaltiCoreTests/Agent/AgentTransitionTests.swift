@@ -118,6 +118,33 @@ struct AgentTransitionTests {
         #expect(transition.attention == .failure("API error 529"))
     }
 
+    @Test func notificationKeepsAFailedAgentFailed() {
+        let failed = started().applying(event(.stopFailure, at: 8, message: "API error 529")).session
+
+        let transition = failed.applying(event(.notification, at: 68, message: "Claude is waiting for your input"))
+
+        #expect(transition.session.state == .failed(since: t0.addingTimeInterval(8), message: "API error 529"))
+        #expect(transition.attention == nil)
+    }
+
+    @Test func preToolUseAfterAnApprovedPermissionIsWorkingAgain() {
+        let asking = started().applying(event(.permissionRequest, at: 3, tool: "pnpm test")).session
+
+        let transition = asking.applying(event(.preToolUse, at: 5))
+
+        #expect(transition.session.state == .working)
+        #expect(transition.attention == nil)
+    }
+
+    @Test func compactionSessionStartKeepsTheCurrentState() {
+        let base = Pane(id: pane, workingDirectory: SessionFixtures.directory("/tmp"))
+        let working = base.applying(event(.userPromptSubmit, prompt: "x")).0
+        let compact = AgentEvent(
+            pane: pane, hook: .sessionStart, at: t0.addingTimeInterval(9), sessionID: "s1", source: "compact")
+
+        #expect(working.applying(compact).0.agent?.state == .working)
+    }
+
     @Test func sessionEndStops() {
         let transition = started().applying(event(.sessionEnd, at: 50))
 

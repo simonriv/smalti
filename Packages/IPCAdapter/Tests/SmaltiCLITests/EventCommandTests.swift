@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import SmaltiIPCProtocol
 import Testing
@@ -61,6 +62,21 @@ struct EventCommandTests {
         #expect(ContinuousClock.now - started < .seconds(1))
     }
 
+    /// An app that accepts but never answers cannot hold a hook past the timeout, whatever its length.
+    @Test(.timeLimit(.minutes(1)))
+    func silentServerIsLeftAfterTheTimeout() throws {
+        let path = "/tmp/smalti-silent-\(UUID().uuidString.prefix(8)).sock"
+        let listener = try #require(SilentListener(path: path))
+        defer { listener.close() }
+        let started = ContinuousClock.now
+
+        try? SocketTransport().send(Data("{}\n".utf8), to: path, timeout: .seconds(1))
+
+        let elapsed = ContinuousClock.now - started
+        #expect(elapsed >= .milliseconds(900))
+        #expect(elapsed < .seconds(2))
+    }
+
     @Test func oversizedInputIsDroppedQuietly() {
         let transport = RecordingTransport()
         let huge = String(repeating: "a", count: IPCLimits.maxMessageBytes + 1)
@@ -103,5 +119,34 @@ struct EventCommandTests {
     @Test func unknownUsageIsAnError() {
         #expect(run(["otra-cosa"]) == 64)
         #expect(run(["event"]) == 64)
+    }
+}
+
+/// Listens and accepts nothing: connections queue in the backlog and never get an answer.
+final class SilentListener {
+    private let fd: Int32
+    private let path: String
+
+    init?(path: String) {
+        self.path = path
+        fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        withUnsafeMutableBytes(of: &address.sun_path) { buffer in
+            _ = path.utf8CString.withUnsafeBytes {
+                buffer.copyMemory(from: UnsafeRawBufferPointer(rebasing: $0.prefix(buffer.count - 1)))
+            }
+        }
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        guard bound == 0, listen(fd, 4) == 0 else { return nil }
+    }
+
+    func close() {
+        Darwin.close(fd)
+        unlink(path)
     }
 }

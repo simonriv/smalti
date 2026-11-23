@@ -93,6 +93,40 @@ struct UnixSocketTelemetryTests {
         #expect(await response(SocketClient.request(pane: pane.description, hook: "Stop"))?.ok == true)
     }
 
+    @Test func requestWrittenInPiecesWithoutANewlineIsRead() async throws {
+        let telemetry = try server()
+        defer { telemetry.stop() }
+        var line = SocketClient.request(pane: pane.description, hook: "Stop")
+        line.removeLast()
+        let path = self.path
+        let pieces = [line.prefix(10), line.dropFirst(10)].map { Data($0) }
+
+        let answer = await Task.detached { SocketClient.send(pieces: pieces, to: path) }.value
+
+        #expect(answer.flatMap { try? IPCCodec.decodeResponse($0) }?.ok == true)
+    }
+
+    @Test func aSilentClientDoesNotHoldUpOthers() async throws {
+        let telemetry = try server()
+        defer { telemetry.stop() }
+        let path = self.path
+        let silent = Task.detached { SocketClient.holdOpenSilently(path, for: .milliseconds(900)) }
+        try await Task.sleep(for: .milliseconds(50))
+        let started = ContinuousClock.now
+
+        let answer = await response(SocketClient.request(pane: pane.description, hook: "Stop"))
+
+        #expect(answer?.ok == true)
+        #expect(ContinuousClock.now - started < .milliseconds(400))
+        await silent.value
+    }
+
+    @Test func pathLongerThanASocketAddressIsRefused() {
+        let long = URL(filePath: "/tmp/" + String(repeating: "x", count: 120) + ".sock")
+
+        #expect(throws: IPCError.self) { _ = try UnixSocketTelemetry(socketFile: long, clock: { .now }) }
+    }
+
     @Test func socketFileIs0600() throws {
         let telemetry = try server()
         defer { telemetry.stop() }

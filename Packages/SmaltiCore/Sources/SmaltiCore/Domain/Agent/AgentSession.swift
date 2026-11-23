@@ -36,7 +36,7 @@ public struct AgentSession: Equatable, Sendable {
         case .userPromptSubmit:
             next.state = .working
             if next.title == nil { next.title = event.prompt.flatMap(Self.title(from:)) }
-        case .postToolUse:
+        case .preToolUse, .postToolUse:
             next.state = .working
         case .permissionRequest:
             let summary = event.toolSummary ?? ""
@@ -58,9 +58,12 @@ public struct AgentSession: Equatable, Sendable {
     }
 
     /// A notification while already waiting (Claude's 60 s idle reminder after a stop, or the one that comes with a
-    /// permission request) changes nothing: the user was already told.
+    /// permission request) or failed changes nothing: the user was already told, and a reminder is no recovery.
     private func notified(_ event: AgentEvent) -> AgentTransition {
-        if case .waiting = state { return AgentTransition(session: self, attention: nil) }
+        switch state {
+        case .waiting, .failed: return AgentTransition(session: self, attention: nil)
+        case .working, .stopped: break
+        }
         var next = self
         let message = event.message ?? ""
         next.state = .waiting(since: event.at, reason: .attention(message))

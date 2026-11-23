@@ -181,7 +181,7 @@ smalti.sock                  socket IPC (Parte C)
 #### Plugin de Claude Code
 
 - Empaquetado en `Contents/Resources/claude-plugin/` como marketplace local `smalti` con un plugin `smalti`. Cada hook ejecuta `"${SMALTI_CLI:-true}" event <Hook>`: fuera de Smalti la variable no existe y el hook ejecuta `true`, así que no hace nada.
-- Hooks: `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure` y `SessionEnd`. Respecto al roadmap se añaden `UserPromptSubmit` (sin él, el panel no vuelve a verde al escribir un prompt nuevo), `PermissionRequest` (da el comando concreto para la notificación), `StopFailure` (estado de error) y `SessionEnd` (detenido). Los cuatro existen en Claude Code 2.1.330.
+- Hooks: `SessionStart`, `UserPromptSubmit`, `PreToolUse` (añadido en la revisión del bloque 5: un permiso aprobado vuelve a verde al empezar la herramienta, no al terminar), `PostToolUse`, `PermissionRequest`, `Notification`, `Stop`, `StopFailure` y `SessionEnd`. Respecto al roadmap se añaden `UserPromptSubmit` (sin él, el panel no vuelve a verde al escribir un prompt nuevo), `PermissionRequest` (da el comando concreto para la notificación), `StopFailure` (estado de error) y `SessionEnd` (detenido). Los cuatro existen en Claude Code 2.1.330.
 - **Instalar** (⌘K "Instalar integración con Claude Code"): copia el plugin a `~/Library/Application Support/Smalti/claude-plugin/`, una ruta común a los dos builds y fuera del bundle. El plugin es igual para los dos builds (cada hook enruta por el `SMALTI_CLI` del panel que lanzó a Claude), así que instalarlo desde "Smalti Dev" no rompe el diario, y borrar el estado de Dev no lo toca. Las pruebas usan un `claude` falso y nunca llegan a esa ruta. Después ejecuta `claude plugin marketplace add <ruta>` y `claude plugin install smalti@smalti`. **Desinstalar**: `claude plugin uninstall smalti@smalti` y `claude plugin marketplace remove smalti`. El resultado, o el error con la salida de `claude`, va a la barra de estado. Si `claude` no está en el `PATH` del login shell, se dice así.
 - El plugin pasa `claude plugin validate` en una prueba.
 
@@ -195,9 +195,9 @@ smalti.sock                  socket IPC (Parte C)
 | --- | --- | --- |
 | `SessionStart` | crea la sesión (id, `startedAt`); `.waiting(.turnFinished)`: Claude espera tu prompt, y al restaurar 3 sesiones las 3 esperan de verdad. Cuenta en los contadores y en ⌘J. Un quinto estado "inactivo" rompería el código de 4 estados del diseño | no |
 | `UserPromptSubmit` | `.working`; si no hay título, el prompt (primera línea, 80 caracteres) | no |
-| `PostToolUse` | `.working` | no |
+| `PreToolUse`, `PostToolUse` | `.working` | no |
 | `PermissionRequest` | `.waiting(.permission("pnpm db:migrate …"))` | sí |
-| `Notification` | `.waiting(.attention(mensaje))`; si ya estaba esperando, no cambia `since` ni notifica otra vez (evita el aviso de inactividad de 60 s tras un `Stop`) | sí, salvo duplicado |
+| `Notification` (solo `permission_prompt`, `idle_prompt` y `elicitation_dialog`) | `.waiting(.attention(mensaje))`; si ya estaba esperando o en error, no cambia ni notifica otra vez (evita el aviso de inactividad de 60 s tras un `Stop` o un `StopFailure`) | sí, salvo duplicado |
 | `Stop` | `.waiting(.turnFinished)` | sí, si el panel no está a la vista |
 | `StopFailure` | `.failed(mensaje)` | sí |
 | `SessionEnd` | `.stopped` | no |
@@ -300,7 +300,7 @@ smalti.sock                  socket IPC (Parte C)
    - "Saltar al agente que espera" e "Instalar/Desinstalar integración con Claude Code".
 2. Atajos ⌘J (saltar) y ⌘L (solo layouts en Retomar).
 3. Insignia "dev" en el Dock para el build Debug.
-4. Hooks añadidos al roadmap: `UserPromptSubmit`, `PermissionRequest`, `StopFailure` y `SessionEnd`.
+4. Hooks añadidos al roadmap: `UserPromptSubmit`, `PermissionRequest`, `StopFailure` y `SessionEnd`; `PreToolUse` se añadió en la revisión del bloque 5 (ver la tabla de transiciones).
 5. Procesos relanzables desmarcados por defecto en Retomar.
 6. "Siempre restaurar" en `preferences.json` hasta F5.
 7. Un Claude recién arrancado o reanudado aparece en ámbar ("te espera") sin notificación.

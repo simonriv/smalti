@@ -20,7 +20,7 @@ public enum HookPayloadTranslator {
         return AgentEvent(
             pane: PaneID(rawValue: uuid), hook: hook, at: date, sessionID: fields["session_id"] as? String,
             prompt: fields["prompt"] as? String, toolSummary: toolSummary(fields),
-            message: fields["message"] as? String ?? fields["error"] as? String)
+            message: fields["message"] as? String ?? fields["error"] as? String, source: fields["source"] as? String)
     }
 
     /// `pnpm db:migrate` for a shell command; `Edit /a/b.ts` for a file tool; the tool name otherwise.

@@ -73,6 +73,15 @@ struct ClaudePluginInstallerTests {
         #expect(Set(hooks.keys) == Set(AgentHook.allCases.map(\.rawValue)))
     }
 
+    /// Only notifications that mean "Claude needs you"; an `auth_success` must not turn a pane amber.
+    @Test func notificationHookFiltersItsTypes() throws {
+        let file = Self.pluginSource.appending(path: "plugins/smalti/hooks/hooks.json")
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]
+        let entry = ((json?["hooks"] as? [String: [[String: Any]]])?["Notification"])?.first
+
+        #expect(entry?["matcher"] as? String == "permission_prompt|idle_prompt|elicitation_dialog")
+    }
+
     @Test func hookIsNoOpOutsideSmalti() async throws {
         let runner = ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: ["PATH": "/usr/bin:/bin"])
 
@@ -128,6 +137,45 @@ struct ClaudePluginInstallerTests {
         try await installer().uninstall()
 
         #expect(recorded == ["plugin uninstall smalti@smalti", "plugin marketplace remove smalti"])
+    }
+
+    @Test func uninstallStillRemovesTheMarketplaceWhenThePluginIsGone() async {
+        await #expect(throws: IntegrationError.self) {
+            try await installer(failOn: "plugin uninstall smalti@smalti").uninstall()
+        }
+
+        #expect(recorded.last == "plugin marketplace remove smalti")
+    }
+
+    @Test func aShellThatCannotStartIsNotReportedAsMissingClaude() async {
+        let runner = ShellCommandRunner(shell: ["/no/such/shell", "-c"], environment: [:])
+        let broken = ClaudePluginInstaller(
+            pluginSource: Self.pluginSource, installDirectory: installDirectory, runner: runner)
+
+        await #expect(
+            throws: IntegrationError.commandFailed(command: "/no/such/shell", output: "the shell could not start")
+        ) {
+            try await broken.install()
+        }
+    }
+
+    @Test func aCommandThatNeverEndsIsStopped() async {
+        let runner = ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: [:], timeout: .milliseconds(300))
+        let started = ContinuousClock.now
+
+        let result = await runner.runScript("sleep 30")
+
+        #expect(result.status != 0)
+        #expect(ContinuousClock.now - started < .seconds(5))
+    }
+
+    @Test func failureReportsTheLastLineOfOutput() async {
+        await #expect(
+            throws: IntegrationError.commandFailed(
+                command: "claude plugin install smalti@smalti", output: "boom\ndetalle")
+        ) {
+            try await installer(failOn: "plugin install smalti@smalti").install()
+        }
     }
 
     @Test func missingClaudeIsReported() async {

@@ -1,6 +1,9 @@
 import Foundation
 
 public struct CommandResult: Equatable, Sendable {
+    /// `launchFailed` when the shell itself could not start.
+    public static let launchFailed: Int32 = -1
+
     public let status: Int32
     /// Standard output and error, as printed.
     public let output: String
@@ -8,6 +11,8 @@ public struct CommandResult: Equatable, Sendable {
 
 /// Runs a command; the installer depends on this, not on `Process`, so tests can point it at a fake `claude`.
 public protocol CommandRunner: Sendable {
+    /// What starts the commands, for error messages (e.g. `/bin/zsh`).
+    var launcher: String { get }
     func run(_ arguments: [String]) async -> CommandResult
 }
 
@@ -17,11 +22,16 @@ public struct ShellCommandRunner: CommandRunner {
     /// The shell and its flags, e.g. `["/bin/zsh", "-lic"]`; the command is its last argument.
     let shell: [String]
     let environment: [String: String]
+    /// A command still running after this is stopped (an rc file that starts a daemon would block forever).
+    let timeout: Duration
 
-    public init(shell: [String], environment: [String: String]) {
+    public init(shell: [String], environment: [String: String], timeout: Duration = .seconds(120)) {
         self.shell = shell
         self.environment = environment
+        self.timeout = timeout
     }
+
+    public var launcher: String { shell.first ?? "" }
 
     public func run(_ arguments: [String]) async -> CommandResult {
         await runScript(arguments.map(Self.quoted).joined(separator: " "))
@@ -31,10 +41,12 @@ public struct ShellCommandRunner: CommandRunner {
     public func runScript(_ script: String) async -> CommandResult {
         let shell = self.shell
         let environment = self.environment
-        return await Task.detached { Self.execute(shell + [script], environment: environment) }.value
+        let timeout = self.timeout
+        return await Task.detached { Self.execute(shell + [script], environment: environment, timeout: timeout) }.value
     }
 
-    private static func execute(_ command: [String], environment: [String: String]) -> CommandResult {
+    private static func execute(_ command: [String], environment: [String: String], timeout: Duration) -> CommandResult
+    {
         let process = Process()
         process.executableURL = URL(filePath: command[0])
         process.arguments = Array(command.dropFirst())
@@ -46,10 +58,17 @@ public struct ShellCommandRunner: CommandRunner {
         do {
             try process.run()
         } catch {
-            return CommandResult(status: 127, output: String(describing: error))
+            return CommandResult(status: CommandResult.launchFailed, output: String(describing: error))
         }
+        let watchdog = DispatchWorkItem { [process] in if process.isRunning { process.terminate() } }
+        let parts = timeout.components
+        DispatchQueue.global().asyncAfter(
+            deadline: .now() + .seconds(Int(parts.seconds)) + .nanoseconds(Int(parts.attoseconds / 1_000_000_000)),
+            execute: watchdog)
+        // Stops waiting on output a terminated command's descendants may keep open.
         let data = output.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        watchdog.cancel()
         let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         return CommandResult(status: process.terminationStatus, output: text)
     }

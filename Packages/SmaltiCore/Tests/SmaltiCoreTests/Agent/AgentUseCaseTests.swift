@@ -140,7 +140,7 @@ struct AgentUseCaseTests {
 
         #expect(
             await InstallClaudeIntegration(integration: integration).execute()
-                == "Falló `claude plugin install smalti@smalti`: boom")
+                == "Falló `claude plugin install smalti@smalti`: more")
     }
 
     @Test func uninstallReportsSuccess() async {

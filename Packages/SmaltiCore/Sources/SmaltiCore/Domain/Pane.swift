@@ -28,6 +28,7 @@ public struct Pane: Equatable, Sendable {
 
     /// An agent event: starts the agent if the event names a session, then applies it.
     public func applying(_ event: AgentEvent) -> (Pane, AttentionReason?) {
+        if event.isCompaction, agent != nil { return (self, nil) }
         let current = event.hook == .sessionStart ? restarted(from: event) : agent ?? AgentSession.start(from: event)
         guard let current else { return (self, nil) }
         let transition = current.applying(event)

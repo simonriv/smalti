@@ -2,10 +2,12 @@ import Darwin
 import Foundation
 import SmaltiCore
 import SmaltiIPCProtocol
+import Synchronization
 
 /// `TelemetrySource` over a Unix socket (`<state>/smalti.sock`, 0600): one JSON request per connection from the
 /// `smalti` CLI, answered with `{"ok":…}`. A bad request is refused without stopping the server. A socket file left
-/// by a crashed instance is replaced; one a live instance answers on is never touched (`socketInUse`).
+/// by a crashed instance is replaced; one a live instance answers on is never touched (`socketInUse`). Two instances
+/// of the same build starting in the same instant could both see the file as stale; that window is accepted.
 @MainActor
 public final class UnixSocketTelemetry: TelemetrySource {
     private let path: String
@@ -25,7 +27,6 @@ public final class UnixSocketTelemetry: TelemetrySource {
     /// Stops listening and removes the socket file.
     public func stop() {
         listener.stop()
-        unlink(path)
         stream.continuation.finish()
     }
 
@@ -50,28 +51,55 @@ private final class SocketListener: @unchecked Sendable {
     /// A client that sends nothing for this long is dropped.
     private static let readTimeoutSeconds = 1
     private let fd: Int32
+    private let path: String
     private let source: DispatchSourceRead
     private let queue = DispatchQueue(label: "dev.simonriv.smalti.ipc")
+    /// Each connection is served on its own, so a client that says nothing cannot hold up the others.
+    private let connections = DispatchQueue(label: "dev.simonriv.smalti.ipc.connections", attributes: .concurrent)
+    private let stopped = Mutex(false)
 
     init(path: String, handle: @escaping @Sendable (Data) -> IPCResponse) throws(IPCError) {
+        guard path.utf8.count < MemoryLayout.size(ofValue: sockaddr_un().sun_path) else {
+            throw .socketFailed(operation: "path longer than a socket address", path: path, code: ENAMETOOLONG)
+        }
         try Self.claim(path)
+        self.path = path
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw .socketFailed(operation: "socket", path: path, code: errno) }
+        // Accepted connections inherit it: a client that hangs up never raises SIGPIPE in the app.
+        var on: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
         do {
             try Self.bind(fd, to: path)
         } catch {
             close(fd)
+            unlink(path)
             throw error
         }
         source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
         let listening = fd
-        source.setEventHandler { Self.serve(accept(listening, nil, nil), handle: handle) }
+        let connections = self.connections
+        source.setEventHandler {
+            let client = accept(listening, nil, nil)
+            connections.async { Self.serve(client, handle: handle) }
+        }
         source.setCancelHandler { close(listening) }
         source.resume()
     }
 
+    deinit {
+        stop()
+    }
+
+    /// Stops listening and removes the socket file, once.
     func stop() {
+        let wasStopped = stopped.withLock { done in
+            defer { done = true }
+            return done
+        }
+        guard !wasStopped else { return }
         source.cancel()
+        unlink(path)
     }
 
     /// Fails if a live instance answers on `path`; removes a stale file otherwise.

@@ -43,6 +43,10 @@ struct HookPayloadTranslatorTests {
         #expect(try translate("StopFailure", #"{"error":"API error 529"}"#).message == "API error 529")
     }
 
+    @Test func sessionStartSourceIsKept() throws {
+        #expect(try translate("SessionStart", #"{"session_id":"s1","source":"compact"}"#).source == "compact")
+    }
+
     @Test func unknownFieldsAreIgnored() throws {
         let event = try translate("Stop", #"{"session_id":"s1","nuevo_campo":{"x":1},"transcript_path":"/t"}"#)
 

@@ -96,8 +96,9 @@ enum IntegrationErrorText {
     static func describe(_ error: IntegrationError) -> String {
         switch error {
         case .harnessMissing(let binary): "No se encontró `\(binary)` en el PATH del shell de inicio"
+        // The last line: a login shell's own output (rc files) comes first, the command's error last.
         case .commandFailed(let command, let output):
-            "Falló `\(command)`: \(output.split(separator: "\n").first.map(String.init) ?? "")"
+            "Falló `\(command)`: \(output.split(separator: "\n").last.map(String.init) ?? "")"
         }
     }
 }

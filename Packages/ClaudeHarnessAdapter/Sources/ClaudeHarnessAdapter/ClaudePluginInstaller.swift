@@ -29,9 +29,17 @@ public final class ClaudePluginInstaller: HarnessIntegration {
         try await claude(["plugin", "install", Self.plugin])
     }
 
+    /// Both steps run even if the first fails (the plugin may already be gone); the first failure is reported.
     public func uninstall() async throws(IntegrationError) {
-        try await claude(["plugin", "uninstall", Self.plugin])
-        try await claude(["plugin", "marketplace", "remove", Self.marketplace])
+        var failure: IntegrationError?
+        for step in [["plugin", "uninstall", Self.plugin], ["plugin", "marketplace", "remove", Self.marketplace]] {
+            do {
+                try await claude(step)
+            } catch {
+                failure = failure ?? error
+            }
+        }
+        if let failure { throw failure }
     }
 
     public var isInstalled: Bool {
@@ -43,6 +51,9 @@ public final class ClaudePluginInstaller: HarnessIntegration {
 
     private func claude(_ arguments: [String]) async throws(IntegrationError) {
         let result = await runner.run(["claude"] + arguments)
+        if result.status == CommandResult.launchFailed {
+            throw .commandFailed(command: runner.launcher, output: "the shell could not start")
+        }
         if result.status == Self.commandNotFound { throw .harnessMissing(binary: "claude") }
         guard result.status == 0 else {
             throw .commandFailed(command: (["claude"] + arguments).joined(separator: " "), output: result.output)
