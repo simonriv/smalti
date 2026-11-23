@@ -24,7 +24,7 @@
 | B16 | ✅ | `GhosttyConfigTextTests` (`keybind = clear` + ⌘C/⌘V) y `TilingTests.testCmdKAndCmd1ReachSmaltiNotTheTerminal` |
 | B17 | ✅ | `PasteboardGuard` en todas las UI tests: todas las clases heredan de `SmaltiUITestCase`, que lo guarda en `setUp` y lo restaura en `tearDown` (`CommandPaletteTests` y `MainWindowTests` no lo hacían antes de la ronda final); comprobado con texto + HTML en el portapapeles antes de las suites: vuelven intactos |
 
-Pruebas al cierre: `SmaltiCore` 300, `GhosttyAdapter` 73, `TOMLConfigAdapter` 55, XCUITest 30 (MainWindow 5, TerminalPane 8, Tiling 6, Workspace 2, ChildEnvironment 1, CommandPalette 8).
+Pruebas al cierre (tras la ronda final de revisión): `SmaltiCore` 315, `GhosttyAdapter` 76, `TOMLConfigAdapter` 55, XCUITest 34 (MainWindow 5, TerminalPane 8, Tiling 6, Workspace 2, ChildEnvironment 1, CommandPalette 8, Config 4).
 
 ## Rendimiento (B8)
 
