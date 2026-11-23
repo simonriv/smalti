@@ -61,6 +61,7 @@ final class DesignCaptureTests: SmaltiUITestCase {
         XCTAssertTrue(app.element("smalti.completionMenu").waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
         try save(app.windows.firstMatch.screenshot(), as: "f4-completion-menu.png")
+        try save(app.element("smalti.completionMenu").screenshot(), as: "f4-completion-menu-only.png")
 
         app.typeKey(.escape, modifierFlags: [])
         app.typeKey("u", modifierFlags: .control)
@@ -68,6 +69,7 @@ final class DesignCaptureTests: SmaltiUITestCase {
         XCTAssertTrue(app.element("smalti.historyPalette").waitForExistence(timeout: 5))
         Thread.sleep(forTimeInterval: 0.5)
         try save(app.windows.firstMatch.screenshot(), as: "f4-history-palette.png")
+        try save(app.element("smalti.historyPalette").screenshot(), as: "f4-history-palette-only.png")
     }
 
     /// F3 C12: the observatory over the bundled fixture, to lay over Observatorio.dc.html.

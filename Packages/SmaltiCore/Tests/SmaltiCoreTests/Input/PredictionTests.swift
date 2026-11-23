@@ -143,6 +143,33 @@ struct HeuristicPredictorTests {
         #expect(prediction == Prediction(suffix: "eckout -b feat/agent-monitor"))
     }
 
+    // F4 C9 limits: one entry, 100,000 entries, and local midnight in America/Bogota.
+    @Test func singleEntryIsPredicted() {
+        let prediction = predictor.predict(context("ma", entries: [historyEntry("make build", at: 29 * day)]))
+
+        #expect(prediction == Prediction(suffix: "ke build"))
+    }
+
+    @Test func hundredThousandEntriesStillPredictTheMostUsed() {
+        let entries = (0..<100_000).map { index in
+            historyEntry(index % 4 == 0 ? "swift test" : "swift build \(index)", at: 29 * day + Double(index) / 10)
+        }
+
+        #expect(predictor.predict(context("swift ", entries: entries)) == Prediction(suffix: "test"))
+    }
+
+    /// Recency decays continuously: a command run a minute before midnight in Bogotá (UTC−5) is not "yesterday's".
+    @Test func midnightInBogotaDoesNotResetRecency() {
+        let midnight = 30 * day + 5 * 3_600
+        let entries = [
+            historyEntry("npm run dev", at: midnight - 60), historyEntry("npm run lint", at: midnight - 120),
+        ]
+
+        let prediction = predictor.predict(context("npm run ", entries: entries, now: midnight + 60))
+
+        #expect(prediction == Prediction(suffix: "dev"))
+    }
+
     @Test func predictorPrefersTheHigherScore() {
         #expect(predictor.predict(context("git ", entries: history)) == Prediction(suffix: "status"))
     }

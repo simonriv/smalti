@@ -43,6 +43,16 @@ struct FigSpecsTests {
         #expect(git.subcommands.first { $0.name.contains("checkout") }?.description?.isEmpty == false)
     }
 
+    /// F4 C8: the bundled `swift` spec gives `swift test` and its `--filter` and `--skip-build` options.
+    @Test func swiftTestHasFilterAndSkipBuildOptions() async throws {
+        let swift = try #require(await specs().spec(for: "swift"))
+        let test = try #require(swift.subcommands.first { $0.name.contains("test") })
+
+        let options = Set(test.options.flatMap(\.names))
+
+        #expect(options.isSuperset(of: ["--filter", "--skip-build"]))
+    }
+
     @Test func npmRunArgumentHasScriptGenerator() async throws {
         let npm = await specs().spec(for: "npm")
 
