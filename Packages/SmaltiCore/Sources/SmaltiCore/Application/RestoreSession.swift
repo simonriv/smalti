@@ -39,13 +39,15 @@ public struct RestoreSession {
 
     public func execute(_ plan: RestorePlan, savedAt: Date, home: WorkingDirectory) -> RestoreResult {
         var failures: [String] = []
-        let workspaces = plan.workspaces.compactMap { planned in
-            let built = restore(planned, savedAt: savedAt, home: home)
-            failures += built.failures
-            return built.workspace
+        var built: [(planIndex: Int, workspace: Workspace)] = []
+        for (index, planned) in plan.workspaces.enumerated() {
+            let restored = restore(planned, savedAt: savedAt, home: home)
+            failures += restored.failures
+            if let workspace = restored.workspace { built.append((index, workspace)) }
         }
+        let workspaces = built.map(\.workspace)
         guard let first = workspaces.first else { return RestoreResult(set: nil, failures: failures) }
-        let active = workspaces[min(plan.activeIndex, workspaces.count - 1)]
+        let active = built.first { $0.planIndex == plan.activeIndex }?.workspace ?? first
         let set = workspaces.dropFirst().reduce(WorkspaceSet(first: first)) { $0.adding($1) }.activating(active.id)
         for workspace in workspaces where workspace.id != active.id {
             workspace.panes.forEach { deps.engine.hide($0.id) }
@@ -55,56 +57,69 @@ public struct RestoreSession {
 
     func hide(_ pane: PaneID) { deps.engine.hide(pane) }
 
-    /// One workspace, or `nil` when none of its panes could open.
+    /// One workspace, or `nil` when none of its panes could open. If the saved root could not be opened either,
+    /// the home directory becomes the workspace root.
     func restore(_ planned: PlannedWorkspace, savedAt: Date, home: WorkingDirectory)
         -> (workspace: Workspace?, failures: [String])
     {
         let root = (try? WorkingDirectory(path: planned.rootDirectory)) ?? home
-        let layout = LayoutCatalog.standard.strategyOrDefault(for: planned.layout)
-        var workspace = Workspace.empty(name: planned.name, rootDirectory: root, layout: layout)
+        var opened: [(planIndex: Int, pane: Pane)] = []
         var failures: [String] = []
-        let fallbacks = [root, home]
-        for pane in planned.panes {
-            let opened = open(pane, savedAt: savedAt, fallbacks: fallbacks)
-            failures += opened.failures
-            if let restored = opened.pane { workspace = workspace.adding(restored) }
+        var unreachable: Set<WorkingDirectory> = []
+        for (index, pane) in planned.panes.enumerated() {
+            let result = open(pane, savedAt: savedAt, fallbacks: [root, home])
+            failures += result.failures
+            unreachable.formUnion(result.unreachable)
+            if let restored = result.pane { opened.append((index, restored)) }
         }
-        guard !workspace.panes.isEmpty else { return (nil, failures) }
-        return (arrange(workspace, as: planned), failures)
+        guard !opened.isEmpty else { return (nil, failures) }
+        let workspaceRoot = unreachable.contains(root) ? home : root
+        let layout = LayoutCatalog.standard.strategyOrDefault(for: planned.layout)
+        let empty = Workspace.empty(name: planned.name, rootDirectory: workspaceRoot, layout: layout)
+        let workspace = opened.reduce(empty) { $0.adding($1.pane) }
+        return (arrange(workspace, as: planned, opened: opened), failures)
     }
 
-    private func arrange(_ workspace: Workspace, as planned: PlannedWorkspace) -> Workspace {
-        let ids = workspace.panes.map(\.id)
+    /// Saved ratios only when every planned pane opened; focus on the planned pane if it is there.
+    private func arrange(
+        _ workspace: Workspace, as planned: PlannedWorkspace, opened: [(planIndex: Int, pane: Pane)]
+    ) -> Workspace {
         var arranged = workspace
-        if let tree = planned.tree?.layoutTree(ids: ids) { arranged = arranged.withSavedTree(tree) }
-        if let index = planned.focusedIndex, ids.indices.contains(index) { arranged = arranged.focusing(ids[index]) }
+        if opened.count == planned.panes.count, let tree = planned.tree?.layoutTree(ids: opened.map(\.pane.id)) {
+            arranged = arranged.withSavedTree(tree)
+        }
+        if let focused = opened.first(where: { $0.planIndex == planned.focusedIndex }) {
+            arranged = arranged.focusing(focused.pane.id)
+        }
         return arranged
     }
 
     private func open(_ planned: PlannedPane, savedAt: Date, fallbacks: [WorkingDirectory])
-        -> (pane: Pane?, failures: [String])
+        -> (pane: Pane?, failures: [String], unreachable: Set<WorkingDirectory>)
     {
         let id = PaneID(rawValue: planned.id)
         let start = startup(for: planned)
-        var failures = start.failures
         let scrollback = planned.restoresScrollback ? deps.transcripts.scrollback(of: id) : nil
         let restoration =
             scrollback == nil && !planned.restoresHistory
             ? nil : PaneRestoration(scrollback: scrollback, restoresHistory: planned.restoresHistory, savedAt: savedAt)
         let saved = try? WorkingDirectory(path: planned.workingDirectory)
-        for directory in ([saved].compactMap { $0 } + fallbacks) {
+        var unreachable: Set<WorkingDirectory> = []
+        var lastError = "invalid directory"
+        for directory in ([saved].compactMap { $0 } + fallbacks) where !unreachable.contains(directory) {
             let spec = TerminalSessionSpec(
                 workingDirectory: directory, command: .loginShell, environment: deps.environment.variables(for: id),
                 restoration: restoration, initialInput: start.input)
             do {
                 try deps.engine.open(spec, as: id)
-                return (Pane(id: id, workingDirectory: directory).attaching(start.agent), failures)
+                return (Pane(id: id, workingDirectory: directory).attaching(start.agent), start.failures, unreachable)
             } catch {
-                continue
+                unreachable.insert(directory)
+                lastError = String(describing: error)
             }
         }
-        failures.append("\(planned.workingDirectory): no se pudo abrir el panel")
-        return (nil, failures)
+        let failure = "\(planned.workingDirectory): no se pudo abrir el panel (\(lastError))"
+        return (nil, start.failures + [failure], unreachable)
     }
 
     private func startup(for planned: PlannedPane) -> (input: String?, agent: AgentSession?, failures: [String]) {

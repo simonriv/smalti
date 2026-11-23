@@ -93,7 +93,8 @@ public struct RestorePlan: Equatable, Sendable {
         }
         let launch: PaneLaunch = pane.agent.map(PaneLaunch.resume) ?? pane.relaunch.map(PaneLaunch.relaunch) ?? .shell
         return PlannedPane(
-            id: pane.id, workingDirectory: pane.workingDirectory, restoresScrollback: launch == .shell,
+            id: pane.id, workingDirectory: pane.workingDirectory,
+            restoresScrollback: launch == .shell && pane.scrollbackLines > 0,
             restoresHistory: true, launch: launch)
     }
 }

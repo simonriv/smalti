@@ -28,8 +28,16 @@ public struct RelaunchCommand: Codable, Equatable, Sendable {
 
     private static let safeCharacters = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./=:@%+,")
 
+    /// Arguments with control characters cannot be typed into the shell safely (a newline would run a second
+    /// command), so such a command line is never offered for relaunch.
+    static func isTypeable(_ arguments: [String]) -> Bool {
+        !arguments.contains { $0.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) } }
+    }
+
     private static func quoted(_ argument: String) -> String {
-        guard argument.isEmpty || !argument.allSatisfy(safeCharacters.contains) else { return argument }
+        // zsh expands a word starting with `=` to a command path, so it is quoted too.
+        let isPlain = !argument.isEmpty && !argument.hasPrefix("=") && argument.allSatisfy(safeCharacters.contains)
+        guard !isPlain else { return argument }
         return "'" + argument.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }
@@ -68,6 +76,7 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         commandCount = pane.commandCount
         agent = pane.agent?.snapshot
         let canRelaunch = !pane.isAtShell && pane.agent == nil
-        relaunch = canRelaunch ? pane.foregroundCommandLine.map(RelaunchCommand.init(arguments:)) : nil
+        let commandLine = pane.foregroundCommandLine.flatMap { RelaunchCommand.isTypeable($0) ? $0 : nil }
+        relaunch = canRelaunch ? commandLine.map(RelaunchCommand.init(arguments:)) : nil
     }
 }

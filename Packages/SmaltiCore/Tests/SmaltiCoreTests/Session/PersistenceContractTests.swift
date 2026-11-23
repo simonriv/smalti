@@ -1,3 +1,4 @@
+import SmaltiCore
 import SmaltiCoreTestSupport
 import Testing
 
@@ -14,5 +15,20 @@ struct PersistenceContractTests {
 
     @Test func fakeHarnessSatisfiesContract() {
         HarnessAdapterContract.verify(FakeHarnessAdapter())
+    }
+}
+
+@Suite("HarnessRegistry")
+struct HarnessRegistryTests {
+    struct Other: HarnessAdapter {
+        let harness = HarnessID.claude
+        func resumeCommand(for agent: AgentSnapshot) -> String { "other" }
+    }
+
+    @Test func firstAdapterForAHarnessWins() {
+        let registry = HarnessRegistry([FakeHarnessAdapter(), Other()])
+        let agent = AgentSnapshot(harness: .claude, sessionID: "1", title: nil, lastState: .working)
+
+        #expect(registry.adapter(for: .claude)?.resumeCommand(for: agent) == "fake --resume 1")
     }
 }

@@ -1,10 +1,10 @@
+import Foundation
+
 /// What a pane runs when it opens.
 public enum TerminalCommand: Hashable, Sendable {
     case loginShell
     case custom(String)
 }
-
-import Foundation
 
 /// What a restored pane brings back before its shell starts.
 public struct PaneRestoration: Hashable, Sendable {

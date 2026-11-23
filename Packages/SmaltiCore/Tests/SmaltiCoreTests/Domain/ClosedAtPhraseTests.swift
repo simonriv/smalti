@@ -68,4 +68,12 @@ struct ClosedAtPhraseTests {
             RestoreBanner.text(savedAt: date("2026-01-05 07:03", in: bogota), calendar: bogota)
                 == "── restaurado · 5 ene 07:03 ──")
     }
+
+    @Test func oneMinuteBeforeMidnightIsLastNightRightAfterIt() {
+        #expect(phrase("2026-11-21 23:59", now: "2026-11-22 00:00") == "anoche a las 23:59")
+    }
+
+    @Test func lastNightAcrossTheEndOfAThirtyOneDayMonth() {
+        #expect(phrase("2026-12-31 20:15", now: "2027-01-01 09:00") == "anoche a las 20:15")
+    }
 }

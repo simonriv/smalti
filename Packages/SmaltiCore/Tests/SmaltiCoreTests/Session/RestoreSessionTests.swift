@@ -156,4 +156,47 @@ struct RestoreSessionTests {
         #expect(environment["SMALTI_HISTORY_FILE"] == "/state/history/\(id.uuidString).zsh_history")
         #expect(environment["SMALTI"] == "1")
     }
+
+    @Test func rootThatCannotOpenMakesHomeTheWorkspaceRoot() {
+        engine.failingDirectories = ["/Users/s/dev/borrada", "/Users/s/dev/solen"]
+
+        let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane("/Users/s/dev/borrada")])])
+
+        #expect(result.set?.active.rootDirectory.path == "/Users/s")
+    }
+
+    @Test func activeWorkspaceIsKeptWhenAnEarlierOneFailsToOpen() {
+        engine.failingDirectories = ["/Users/s/dev/solen", "/Users/s"]
+
+        let result = run(
+            [
+                SessionFixtures.workspace("solen", [SessionFixtures.pane()]),
+                SessionFixtures.workspace("rizaria", [SessionFixtures.pane("/tmp/r")]),
+                SessionFixtures.workspace("xolken", [SessionFixtures.pane("/tmp/x")]),
+            ], activeIndex: 1)
+
+        #expect(result.set?.active.name == "rizaria")
+    }
+
+    @Test func focusStaysOnThePlannedPaneWhenAnEarlierOneFails() {
+        engine.failingDirectories = ["/Users/s/dev/borrada", "/Users/s/dev/solen", "/Users/s"]
+        let focused = SessionFixtures.pane("/tmp/a")
+
+        let result = run(
+            [
+                SessionFixtures.workspace(
+                    "solen", [SessionFixtures.pane("/Users/s/dev/borrada"), focused, SessionFixtures.pane("/tmp/b")],
+                    focusedIndex: 1)
+            ])
+
+        #expect(result.set?.active.focusedPane == PaneID(rawValue: focused.id))
+    }
+
+    @Test func failureNamesTheEngineError() {
+        engine.failingDirectories = ["/Users/s/dev/solen", "/Users/s"]
+
+        let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
+
+        #expect(result.failures.first?.contains("no such directory") == true)
+    }
 }

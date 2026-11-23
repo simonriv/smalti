@@ -102,4 +102,16 @@ struct SessionSnapshotTests {
         #expect(!ShellNames.contains("claude"))
         #expect(!ShellNames.contains("zshrc"))
     }
+
+    @Test func relaunchQuotesArgumentsStartingWithEquals() {
+        #expect(RelaunchCommand(arguments: ["echo", "=foo"]).displayText == "echo '=foo'")
+    }
+
+    @Test func commandLineWithControlCharactersIsNotRelaunched() throws {
+        let tricky = try pane().applying(
+            .foregroundProcessChanged(ForegroundProcess(name: "node", commandLine: ["node", "-e", "a\nrm -rf x"])))
+        let set = WorkspaceSet(first: workspace("solen", panes: [tricky]))
+
+        #expect(SessionSnapshot.capture(set, scrollbackLines: [:], at: now).workspaces[0].panes[0].relaunch == nil)
+    }
 }

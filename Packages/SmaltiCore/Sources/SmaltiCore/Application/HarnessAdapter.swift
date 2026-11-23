@@ -5,7 +5,7 @@ public protocol HarnessAdapter: Sendable {
     func resumeCommand(for agent: AgentSnapshot) -> String
 }
 
-/// The known harness adapters, looked up by id (no switch per harness).
+/// The known harness adapters, looked up by id (no switch per harness). For a repeated id the first one wins.
 public struct HarnessRegistry: Sendable {
     private let adapters: [HarnessID: any HarnessAdapter]
 

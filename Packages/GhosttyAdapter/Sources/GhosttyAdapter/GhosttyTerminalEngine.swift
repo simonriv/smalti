@@ -12,7 +12,14 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         self.runtime = runtime
     }
 
+    /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
+    /// a restore can fall back to the workspace root or the home directory.
     public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
+        let path = spec.workingDirectory.path
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
+        }
         views[pane] = try GhosttySurfaceView(app: runtime.app, spec: spec)
     }
 

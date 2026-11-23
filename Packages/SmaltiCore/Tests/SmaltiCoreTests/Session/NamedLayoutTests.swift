@@ -110,4 +110,18 @@ struct NamedLayoutTests {
 
         #expect(engine.hiddenPanes == [visible.id])
     }
+
+    @Test func failedPaneInANamedLayoutRebuildsTheTree() throws {
+        let first = Pane(id: PaneID(), workingDirectory: SessionFixtures.directory("/tmp/ok"))
+        let lost = Pane(id: PaneID(), workingDirectory: SessionFixtures.directory("/tmp/borrada"))
+        let name = try saved([first, lost])
+        engine.failingDirectories = ["/tmp/borrada", "/Users/s/dev/solen", "/Users/s"]
+        var set = existingSet()
+
+        _ = try RestoreNamedLayout(layouts: layouts, restore: restore).execute(name, into: &set, home: home)
+
+        let ids = set.active.panes.map(\.id)
+        #expect(ids.count == 1)
+        #expect(set.active.tree == ColumnsLayout().tree(for: ids))
+    }
 }

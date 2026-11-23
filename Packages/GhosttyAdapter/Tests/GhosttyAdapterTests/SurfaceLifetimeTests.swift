@@ -44,6 +44,27 @@ struct SurfaceLifetimeTests {
         #expect(GhosttyRuntime.currentApp == nil)
     }
 
+    /// A restored pane whose directory was deleted must fail to open, so the core falls back to the root or home.
+    @Test func openingInAMissingDirectoryThrows() throws {
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let missing = TerminalSessionSpec(
+            workingDirectory: try WorkingDirectory(path: "/tmp/smalti-missing-\(UUID())"),
+            command: .custom("/bin/zsh -f"))
+
+        #expect(throws: TerminalEngineError.self) { try engine.open(missing, as: PaneID()) }
+    }
+
+    @Test func openingAFileInsteadOfADirectoryThrows() throws {
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let file = FileManager.default.temporaryDirectory.appending(path: "smalti-file-\(UUID())")
+        FileManager.default.createFile(atPath: file.path(percentEncoded: false), contents: Data())
+        let spec = TerminalSessionSpec(
+            workingDirectory: try WorkingDirectory(path: file.path(percentEncoded: false)),
+            command: .custom("/bin/zsh -f"))
+
+        #expect(throws: TerminalEngineError.self) { try engine.open(spec, as: PaneID()) }
+    }
+
     @Test func closeSurfaceWithLiveProcessRequestsClose() async throws {
         let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
         let pane = try engine.open(spec)

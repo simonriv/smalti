@@ -184,4 +184,16 @@ struct RestorePlanTests {
 
         #expect(plan.workspaces[0].layout == LayoutID(rawValue: "spiral"))
     }
+
+    @Test func shellPaneWithoutSavedLinesDoesNotRestoreScrollback() {
+        let stale = PaneSnapshot(
+            id: UUID(), workingDirectory: "/tmp", title: nil, processName: "vim", scrollbackLines: 0, commandCount: 0,
+            relaunch: nil, agent: nil)
+        let saved = snapshot([workspace("solen", [stale])])
+
+        let planned = onlyPane(RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved)))
+
+        #expect(planned?.restoresScrollback == false)
+        #expect(planned?.launch == .shell)
+    }
 }
