@@ -151,7 +151,7 @@
 - [x] T4 · Specs, motor de completions y menú
 - [x] T5 · Puertos, fakes, contratos, `InputSession` y `[input]`
 #### Bloque 2 · Adaptadores
-- [ ] T6 · `FileCommandHistory` (JSONL)
+- [x] T6 · `FileCommandHistory` (JSONL)
 - [ ] T7 · `ProjectContextAdapter`
 - [ ] T8 · `FigCompletionAdapter` y vendoring
 - [ ] T9 · Prompt, cadena de zsh y `-SmaltiUserZdotdir`
