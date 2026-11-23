@@ -57,6 +57,6 @@
 - [x] T16 · Paleta ⌘K
 - [x] T17 · UI tests de F1
 - [x] T18 · Mediciones y capturas (`docs/specs/F1-checklist.md`); paleta virtualizada (B7 21–32 ms); issue #5 GPU en reposo (heredado de F0, a F5)
-- [ ] Revisión final de la rama
-- [ ] Mutación ≥ 80 % en SmaltiCore y suites en verde
+- [x] Revisión final de la rama: 3 importantes y 10 menores corregidos (M9 sin cambio, decidido); re-revisión: N1 corregido (guarda TMUX)
+- [x] Mutación de SmaltiCore 99,2 % (2 sobrevivientes muertos con prueba nueva); SmaltiCore 317, GhosttyAdapter 76, TOMLConfigAdapter 55, XCUITest 35
 - [ ] PR a `develop` y PR `develop` → `main` (merge de Simón)

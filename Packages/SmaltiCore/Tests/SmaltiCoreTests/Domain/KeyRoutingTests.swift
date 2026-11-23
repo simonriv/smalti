@@ -55,4 +55,9 @@ struct KeyRoutingTests {
 
         #expect(decision == .passThrough)
     }
+
+    /// A plain press is not a repeat unless the system says so.
+    @Test func keyPressIsNotARepeatByDefault() throws {
+        #expect(!KeyPress(try chord("cmd+w")).isRepeat)
+    }
 }

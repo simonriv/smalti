@@ -67,6 +67,13 @@ struct CommandCatalogTests {
             ])
     }
 
+    /// Only layouts describe a state in effect; "Igualar tamaños" is an action, never "actual".
+    @Test func equalizeIsNeverMarkedCurrent() throws {
+        let equalize = try #require(commands(paneCount: 2).first { $0.id == .panesEqualize })
+
+        #expect(!equalize.isCurrent)
+    }
+
     @Test func commandsWithoutBoardIconHaveNone() {
         let commands = commands(paneCount: 1)
 
