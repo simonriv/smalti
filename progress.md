@@ -189,7 +189,7 @@
 - [x] T8 · FileSessionAdapter: sesión v2 (lee v1 y v2, guarda v2, aparta versiones desconocidas)
 - [x] T9 · DiagnosticsAdapter (OSLogStore del proceso, privados redactados, guarda de logs públicos)
 #### Bloque 3 · Ventanas en la app
-- [ ] T10 · `WindowComposition` (refactor)
+- [x] T10 · `WindowComposition` (refactor; 64 pruebas de UI de F1–F4 iguales antes y después)
 - [ ] T11 · Varias ventanas, pantalla completa, Dock y restauración
 - [ ] T12 · Confirmar antes de cerrar
 #### Bloque 4 · Descubrimiento y terminal en la app

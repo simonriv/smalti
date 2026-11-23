@@ -17,24 +17,20 @@ import TOMLConfigAdapter
 @MainActor
 final class AppComposition {
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "engine")
-    private var window: SmaltiWindow?
     private var runtime: GhosttyRuntime?
     private var engine: GhosttyTerminalEngine?
-    private var controller: TilingController?
-    private var palette: CommandPaletteController?
     private var sessionKeeper: SessionKeeper?
-    private var restoreScreen: RestoreController?
+    /// F4.5: the window and what is drawn in it.
+    private var front: WindowComposition?
+    private var controller: TilingController? { front?.controller }
     private var telemetry: UnixSocketTelemetry?
     private var observatory: ObservatoryRefresher?
     private var input: InputCoordinator?
     private var completionMenu: CompletionMenuController?
     private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
-    private var observatoryScreen: ObservatoryController?
     private let harnesses = HarnessRegistry([ClaudeHarness()])
     private static let persistTimeout: Duration = .seconds(1)
-    /// What the glass was last painted with, so a publish that does not change it repaints nothing.
-    private var appliedWindowTokens: WindowTokens?
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
     private struct Startup {
@@ -49,12 +45,10 @@ final class AppComposition {
         let startup = Self.readStartup()
         let window = SmaltiWindow(theme: startup.theme)
         window.makeKeyAndOrderFront(nil)
-        self.window = window
         // Development builds state their state directory so UI tests can check they never use the user's.
         if AppIdentity.current.isDevelopment {
             window.setAccessibilityValue(startup.settings.stateDirectory.path(percentEncoded: false))
         }
-        applyGlass(startup.theme, to: window)
         do {
             try start(startup, in: window)
         } catch {
@@ -141,18 +135,34 @@ final class AppComposition {
         startObservatory(startup, controller: controller)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
-        connect(controller, to: window, engine: engine)
         self.runtime = runtime
         self.engine = engine
-        self.controller = controller
         sessionKeeper = keeper
+        let composition = WindowComposition(window: window, controller: controller, services: windowServices(engine))
+        front = composition
         window.contentView?.layoutSubtreeIfNeeded()
         let choice = LoadLastSession(archive: archive, preferences: archive).execute()
-        controller.start(from: choice) { [weak self] snapshot in
-            self?.ask(snapshot, preferences: archive, in: window)
+        controller.start(from: choice) { [weak composition] snapshot in
+            composition?.ask(snapshot, preferences: archive)
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
-        if restoreScreen == nil { beginSaving(controller.set, keepingPreviousSession: false) }
+        if !composition.isAskingToRestore { beginSaving(controller.set, keepingPreviousSession: false) }
+    }
+
+    private func windowServices(_ engine: GhosttyTerminalEngine) -> WindowServices {
+        WindowServices(
+            engine: engine, harnesses: harnesses,
+            workspacesChanged: { [weak self] set in
+                self?.sessionKeeper?.changed(set)
+                self?.input?.keepOnly(Set(set.workspaces.flatMap { $0.panes.map(\.id) }))
+            },
+            restoreFinished: { [weak self] set, keepingPrevious in
+                self?.beginSaving(set, keepingPreviousSession: keepingPrevious)
+            },
+            completionMenu: { [weak self] in self?.completionMenu },
+            historyPalette: { [weak self] in self?.historyPalette },
+            openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
+            observatoryOpenChanged: { [weak self] isOpen in self?.observatory?.isObservatoryOpen = isOpen })
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's
@@ -160,50 +170,6 @@ final class AppComposition {
     private func beginSaving(_ set: WorkspaceSet, keepingPreviousSession: Bool) {
         guard telemetry != nil, let keeper = sessionKeeper else { return }
         keepingPreviousSession ? keeper.startKeepingPreviousSession(with: set) : keeper.start(with: set)
-    }
-
-    /// "Retomar donde quedaste": shown instead of the strip and the panes until the user chooses.
-    private func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore, in window: SmaltiWindow) {
-        guard let controller else { return }
-        guard let content = window.contentView else {
-            // Without a place to ask, restore what the defaults would: never start empty over a saved session.
-            controller.restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
-            return
-        }
-        let listing = RestoreController.Content(
-            snapshot: snapshot,
-            workspaces: ResumeListing.workspaces(
-                in: snapshot, home: controller.home, harnesses: harnesses),
-            closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
-        let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
-            [weak self] choice in self?.finishAsking(choice, snapshot: snapshot, in: window)
-        }
-        screen.view.frame = content.bounds
-        screen.view.autoresizingMask = [.width, .height]
-        content.addSubview(screen.view)
-        setTilingHidden(true, in: window)
-        window.makeFirstResponder(screen.view)
-        restoreScreen = screen
-    }
-
-    private func finishAsking(_ choice: RestoreChoice, snapshot: SessionSnapshot, in window: SmaltiWindow) {
-        guard let controller else { return }
-        restoreScreen?.view.removeFromSuperview()
-        restoreScreen = nil
-        setTilingHidden(false, in: window)
-        switch choice {
-        case .restore(let selection): controller.restore(snapshot, mode: .full, selection: selection)
-        case .layoutsOnly: controller.restore(snapshot, mode: .layoutsOnly, selection: .defaults(for: snapshot))
-        case .startClean:
-            controller.start()
-            beginSaving(controller.set, keepingPreviousSession: true)
-            return
-        }
-        beginSaving(controller.set, keepingPreviousSession: false)
-    }
-
-    private func setTilingHidden(_ hidden: Bool, in window: SmaltiWindow) {
-        [window.strip, window.paneGrid, window.statusBar].forEach { $0.isHidden = hidden }
     }
 
     /// macOS notifications; `-SmaltiNotificationLog <file>` writes them to a file instead (UI tests). A click shows the
@@ -215,10 +181,11 @@ final class AppComposition {
         return UserNotificationsNotifier(
             onActivate: { [weak self] pane in
                 NSApp.activate()
-                if self?.window?.isMiniaturized == true { self?.window?.deminiaturize(nil) }
-                self?.window?.makeKeyAndOrderFront(nil)
-                self?.observatoryScreen?.dismiss()
-                self?.controller?.activate(pane)
+                guard let front = self?.front else { return }
+                if front.window.isMiniaturized { front.window.deminiaturize(nil) }
+                front.window.makeKeyAndOrderFront(nil)
+                front.dismissObservatory()
+                front.controller.activate(pane)
             },
             onDenied: { [weak self] in self?.controller?.report(.notificationsDisabled) })
     }
@@ -243,10 +210,7 @@ final class AppComposition {
             observe: ObserveAgents(sources),
             callbacks: .init(
                 panes: { [weak controller] in controller.map { PaneAgent.all(in: $0.set) } ?? [] },
-                onSnapshot: { [weak self, weak controller] frame in
-                    controller?.show(frame)
-                    self?.observatoryScreen?.show(frame.snapshot)
-                },
+                onSnapshot: { [weak self] frame in self?.front?.show(frame) },
                 onError: { [weak controller] in controller?.report(.transcriptsUnreadable($0)) }))
         refresher.start()
         observatory = refresher
@@ -301,7 +265,7 @@ final class AppComposition {
                 context: (
                     theme: { [weak self] in self?.controller?.theme ?? startup.theme },
                     onOpen: { [weak self] in self?.completionMenu?.close() },
-                    returnFocus: { [weak self] pane in self?.focusKeyboard(on: pane) }
+                    returnFocus: { [weak self] pane in self?.front?.focusKeyboard(on: pane) }
                 ))
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
@@ -344,132 +308,6 @@ final class AppComposition {
             await group.next()
             group.cancelAll()
         }
-    }
-
-    private func connect(_ controller: TilingController, to window: SmaltiWindow, engine: GhosttyTerminalEngine) {
-        let grid = window.paneGrid
-        controller.area = { [weak grid] in grid?.area ?? .zero }
-        controller.onChange = { [weak self, weak window] state in
-            guard let window else { return }
-            self?.applyGlass(state.theme, to: window)
-            window.strip.render(state)
-            window.paneGrid.render(state) { engine.view(for: $0) }
-            window.statusBar.render(state)
-            self?.focusKeyboard(on: state.set.active.focusedPane)
-            self?.sessionKeeper?.changed(state.set)
-            self?.input?.keepOnly(Set(state.set.workspaces.flatMap { $0.panes.map(\.id) }))
-        }
-        controller.onObservatoryChange = { [weak window] state in
-            guard let window else { return }
-            window.paneGrid.render(state) { engine.view(for: $0) }
-            window.statusBar.render(state)
-        }
-        grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
-        window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
-        connectPalette(controller, to: window)
-        connectKeyboard(controller, to: window)
-    }
-
-    /// ⌘K and "Renombrar workspace…" open the palette; while it is open the panes dim and keep their processes.
-    private func connectPalette(_ controller: TilingController, to window: SmaltiWindow) {
-        let palette = CommandPaletteController(
-            window: window,
-            actions: .init(
-                search: { [weak controller] query in
-                    guard let controller else { return [] }
-                    return SearchCommands(layouts: .standard).execute(
-                        query, set: controller.set, keymap: controller.config.keys,
-                        savedLayouts: controller.savedLayouts())
-                },
-                perform: { [weak controller] command in controller?.perform(command) },
-                rename: { [weak controller] name in controller?.rename(to: name) },
-                currentWorkspaceName: { [weak controller] in controller?.set.active.name ?? "" }))
-        palette.onOpenChange = { [weak self, weak window, weak controller] isOpen in
-            guard let window, let controller else { return }
-            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
-            if !isOpen { self?.focusKeyboard(on: controller.set.active.focusedPane) }
-            // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
-            if isOpen { self?.completionMenu?.close() }
-        }
-        let screen = observatoryScreen(controller, in: window)
-        observatoryScreen = screen
-        controller.onViewCommand = { [weak self, weak palette, weak controller, weak screen] command in
-            guard let palette, let theme = controller?.theme else { return }
-            switch command {
-            case .workspaceRename: palette.beginRename(theme: theme)
-            case .observatoryToggle: screen?.toggle(theme: theme)
-            case .observatoryPeriod: screen?.cyclePeriod()
-            case .historySearch:
-                if let pane = controller?.set.active.focusedPane { self?.input?.openHistory(for: pane) }
-            default: palette.toggle(theme: theme)
-            }
-        }
-        self.palette = palette
-    }
-
-    /// ⌘⇧A: the observatory over the window; the panes stay alive and get the focus back when it closes.
-    private func observatoryScreen(_ controller: TilingController, in window: SmaltiWindow) -> ObservatoryController {
-        ObservatoryController(
-            window: window,
-            actions: .init(
-                setTilingHidden: { [weak self, weak window] hidden in
-                    guard let window else { return }
-                    self?.setTilingHidden(hidden, in: window)
-                },
-                didClose: { [weak self, weak controller] pane in
-                    guard let controller else { return }
-                    // A pane that closed meanwhile cannot be activated: the focused one gets the keyboard back.
-                    if pane.map(controller.activate) != true {
-                        self?.focusKeyboard(on: controller.set.active.focusedPane)
-                    }
-                },
-                openChanged: { [weak self] isOpen in
-                    self?.observatory?.isObservatoryOpen = isOpen
-                    if isOpen { self?.completionMenu?.close() }
-                }))
-    }
-
-    private func connectKeyboard(_ controller: TilingController, to window: SmaltiWindow) {
-        let router = KeyRouter(
-            keymap: { [weak controller] in controller?.config.keys ?? .standard },
-            context: { [weak self] in self?.keyContext ?? .unrestricted },
-            perform: { [weak controller] command in controller?.perform(command) })
-        // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
-        window.routeKey = { [weak self] event, composing in
-            guard self?.restoreScreen == nil else { return false }
-            if !composing, self?.completionMenu?.handle(event) == true { return true }
-            if self?.historyPalette?.handle(event) == true { return true }
-            return router.route(event, composing: composing)
-        }
-    }
-
-    /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
-    /// reaches the terminal while the observatory is closed.
-    private var keyContext: KeyContext {
-        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen]) }
-        // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
-        if historyPalette?.isOpen == true { return .overlay(allowing: []) }
-        if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
-        return KeyContext(passingThrough: [.observatoryPeriod])
-    }
-
-    /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.
-    private func applyGlass(_ theme: Theme, to window: SmaltiWindow) {
-        guard theme.window != appliedWindowTokens else { return }
-        window.applyGlass(theme)
-        appliedWindowTokens = theme.window
-    }
-
-    /// Keystrokes go to the focused pane's terminal.
-    /// The palette and the observatory own the keyboard while open: a publish (a hook, the minute tick) must not
-    /// hand it back to a terminal they cover.
-    private func focusKeyboard(on pane: PaneID?) {
-        guard palette?.isOpen != true, observatoryScreen?.isOpen != true, historyPalette?.isOpen != true,
-            let window, let pane,
-            let view = engine?.view(for: pane),
-            window.firstResponder !== view
-        else { return }
-        window.makeFirstResponder(view)
     }
 
     /// `configFile` lives in this build's state directory, so a development build never rewrites the daily one's.
