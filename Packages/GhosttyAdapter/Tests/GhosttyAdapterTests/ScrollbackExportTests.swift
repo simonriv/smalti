@@ -67,6 +67,20 @@ struct ScrollbackExportTests {
         #expect(ScrollbackExporter.lastExportedFile.map { FileManager.default.fileExists(atPath: $0) } == false)
     }
 
+    @Test func discardRemovesOnlyTheFileAndItsFolderWhenEmpty() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "smalti-discard-\(UUID())")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let screen = folder.appending(path: "screen.txt")
+        let neighbour = folder.appending(path: "otro.txt")
+        try Data("x".utf8).write(to: screen)
+        try Data("y".utf8).write(to: neighbour)
+
+        ScrollbackExporter.discard(screen.path(percentEncoded: false))
+
+        #expect(!FileManager.default.fileExists(atPath: screen.path(percentEncoded: false)))
+        #expect(FileManager.default.fileExists(atPath: neighbour.path(percentEncoded: false)))
+    }
+
     @Test func unknownPaneIsUnavailable() {
         #expect(throws: ScrollbackError.self) { try engine.scrollback(of: PaneID(), lastLines: 10) }
     }

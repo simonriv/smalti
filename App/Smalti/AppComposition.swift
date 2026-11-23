@@ -96,6 +96,7 @@ final class AppComposition {
                 }),
             initial: startup.initial)
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
+        keeper.onFailure = { [weak controller] reason in controller?.report(.sessionSaveFailed(reason)) }
         connect(controller, to: window, engine: engine)
         self.runtime = runtime
         self.engine = engine

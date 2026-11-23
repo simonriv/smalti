@@ -84,6 +84,12 @@ final class TilingController {
         publish()
     }
 
+    /// A message from outside the tiling use cases (e.g. a failed session save).
+    func report(_ message: StatusMessage) {
+        show(message)
+        publish()
+    }
+
     func rename(to name: String) {
         RenameWorkspace().execute(name, in: &set)
         publish()

@@ -60,7 +60,7 @@ struct PaneHistoryTests {
     @Test func commandsGoToThePaneFileAndTheSharedOne() throws {
         _ = try runZsh("echo uno\necho dos\n", restoresHistory: false)
 
-        #expect(lines(of: paneFile) == ["echo uno", "echo dos"])
+        #expect((try? String(contentsOf: paneFile, encoding: .utf8)) == "echo uno\necho dos\n")
         #expect(lines(of: shared).contains("echo dos"))
     }
 
@@ -80,6 +80,39 @@ struct PaneHistoryTests {
         let output = try runZsh("print -r -- ULTIMO=$history[$((HISTCMD-1))]\n", restoresHistory: false)
 
         #expect(output.contains("ULTIMO=echo compartido"))
+    }
+
+    @Test func spaceIgnoredCommandsStayOutOfThePaneFile() throws {
+        try Data("setopt HIST_IGNORE_SPACE\n".utf8).write(to: userDirectory.appending(path: ".zshenv"))
+
+        _ = try runZsh(" export TOKEN=secreto\necho visible\n", restoresHistory: false)
+
+        #expect(lines(of: paneFile) == ["echo visible"])
+    }
+
+    @Test func historyIgnorePatternIsRespected() throws {
+        try Data("HISTORY_IGNORE='(ls|pwd)'\n".utf8).write(to: userDirectory.appending(path: ".zshenv"))
+
+        _ = try runZsh("pwd\necho visible\n", restoresHistory: false)
+
+        #expect(lines(of: paneFile) == ["echo visible"])
+    }
+
+    @Test func multiLineCommandComesBackAsOneEntry() throws {
+        _ = try runZsh("for i in 1 2; do\necho $i\ndone\n", restoresHistory: false)
+
+        let output = try runZsh("print -r -- \"<${history[$((HISTCMD-1))]}>\"\n", restoresHistory: true)
+
+        #expect(output.replacingOccurrences(of: "\r", with: "").contains("<for i in 1 2; do\necho $i\ndone>"))
+    }
+
+    @Test func zshrcThatResetsPrecmdStillRecordsHistory() throws {
+        let zshrc = try String(contentsOf: userDirectory.appending(path: ".zshrc"), encoding: .utf8)
+        try Data((zshrc + "\nprecmd_functions=()\n").utf8).write(to: userDirectory.appending(path: ".zshrc"))
+
+        _ = try runZsh("echo uno\n", restoresHistory: false)
+
+        #expect(lines(of: paneFile) == ["echo uno"])
     }
 
     @Test func userZshrcStillLoads() throws {

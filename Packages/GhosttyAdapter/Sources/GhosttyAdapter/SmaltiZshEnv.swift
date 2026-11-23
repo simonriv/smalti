@@ -21,23 +21,31 @@ enum SmaltiZshEnv {
         'builtin' 'unset' '_smalti_file'
 
         if [[ -o interactive && -n "$SMALTI_HISTORY_FILE" ]]; then
-            _smalti_history_init() {
+            # Copies each command the way zsh would keep it: not what HIST_IGNORE_SPACE or HISTORY_IGNORE leave out,
+            # and with zsh's history-file continuation (backslash + newline) so a multi-line command stays one entry.
+            _smalti_add_history() {
+                'builtin' 'local' nl=$'\n'
+                'builtin' 'local' line="${1%%$nl}"
+                [[ -o histignorespace && "$line" == ' '* ]] && 'builtin' 'return' 0
+                [[ -n "$HISTORY_IGNORE" && "$line" == ${~HISTORY_IGNORE} ]] && 'builtin' 'return' 0
+                [[ -d "${SMALTI_HISTORY_FILE:h}" ]] || 'command' 'mkdir' -p -m 700 "${SMALTI_HISTORY_FILE:h}"
+                'builtin' 'print' -r -- "${line//$nl/\\$nl}" >> "$SMALTI_HISTORY_FILE"
+                'builtin' 'return' 0
+            }
+            # Restoring waits for the first prompt, after the user's files have loaded their own history.
+            _smalti_restore_history() {
                 builtin emulate -L zsh
-                precmd_functions=(${precmd_functions:#_smalti_history_init})
+                precmd_functions=(${precmd_functions:#_smalti_restore_history})
                 if [[ -n "$SMALTI_RESTORE_HISTORY" && -r "$SMALTI_HISTORY_FILE" ]]; then
                     builtin fc -R "$SMALTI_HISTORY_FILE"
                 fi
                 builtin unset SMALTI_RESTORE_HISTORY
-                zshaddhistory_functions+=(_smalti_add_history)
             }
-            _smalti_add_history() {
-                builtin emulate -L zsh
-                [[ -d "${SMALTI_HISTORY_FILE:h}" ]] || command mkdir -p -m 700 "${SMALTI_HISTORY_FILE:h}"
-                builtin print -r -- "${1%%$'\n'}" >> "$SMALTI_HISTORY_FILE"
-                builtin return 0
-            }
-            builtin typeset -ag precmd_functions zshaddhistory_functions
-            precmd_functions+=(_smalti_history_init)
+            # Registered here, not at the first prompt, so a .zshrc that resets precmd_functions keeps recording.
+            # Such a .zshrc does drop the restore hook; the pane then starts with the shared history only.
+            'builtin' 'typeset' -ag precmd_functions zshaddhistory_functions
+            zshaddhistory_functions+=(_smalti_add_history)
+            precmd_functions+=(_smalti_restore_history)
         fi
         """#
 

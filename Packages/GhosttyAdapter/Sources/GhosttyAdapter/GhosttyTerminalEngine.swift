@@ -26,7 +26,13 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
         }
-        views[pane] = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+        do {
+            views[pane] = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+        } catch {
+            // The launcher never ran, so nobody else removes the saved scrollback.
+            try? FileManager.default.removeItem(at: restoreFile(for: pane))
+            throw error
+        }
     }
 
     /// Where a restored pane's saved scrollback waits for its launcher (owner-only, removed once printed).
@@ -49,7 +55,8 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         var command = spec.command
         if let scrollback = restoration.scrollback, writeRestoreFile(scrollback, for: pane) {
             environment[RestoreLauncher.fileVariable] = restoreFile(for: pane).path(percentEncoded: false)
-            command = .custom(RestoreLauncher.command(shell: spec.command, banner: banner(restoration.savedAt)))
+            environment[RestoreLauncher.bannerVariable] = banner(restoration.savedAt)
+            command = .custom(RestoreLauncher.command(shell: spec.command))
         }
         return TerminalSessionSpec(
             workingDirectory: spec.workingDirectory, command: command, environment: environment,

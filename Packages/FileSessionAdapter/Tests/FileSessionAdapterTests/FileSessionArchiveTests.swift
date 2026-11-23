@@ -126,6 +126,22 @@ struct FileSessionArchiveTests {
         #expect(archive.scrollback(of: orphan) == nil)
     }
 
+    @Test func forgetTrimsLongPaneHistoriesToTheirLastLines() throws {
+        let archive = FileSessionArchive(directory: directory)
+        let pane = PaneID()
+        let files = PaneFileLocator(stateDirectory: directory)
+        try FileManager.default.createDirectory(at: files.historyDirectory, withIntermediateDirectories: true)
+        let history = (1...10_005).map { "echo \($0)" }.joined(separator: "\n") + "\n"
+        try Data(history.utf8).write(to: files.historyFile(for: pane))
+
+        archive.forget(allExcept: [pane])
+
+        let kept = try String(contentsOf: files.historyFile(for: pane), encoding: .utf8).split(separator: "\n")
+        #expect(kept.count == FileSessionArchive.historyLineLimit)
+        #expect(kept.first == "echo 6")
+        #expect(kept.last == "echo 10005")
+    }
+
     @Test func preferenceIsStoredInPreferencesJSON() throws {
         let archive = FileSessionArchive(directory: directory)
 

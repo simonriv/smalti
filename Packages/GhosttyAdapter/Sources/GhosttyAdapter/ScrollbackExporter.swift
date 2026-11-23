@@ -30,7 +30,7 @@ enum ScrollbackExporter {
         _ = ghostty_surface_binding_action(surface, action, UInt(action.utf8.count))
         let path = pending.withLock { $0.removeValue(forKey: address) ?? nil }
         guard let path else { return nil }
-        defer { remove(path) }
+        defer { discard(path) }
         return try? String(contentsOfFile: path, encoding: .utf8)
     }
 
@@ -49,11 +49,12 @@ enum ScrollbackExporter {
         return String(decoding: UnsafeRawBufferPointer(start: bytes, count: Int(text.text_len)), as: UTF8.self)
     }
 
-    /// libghostty keeps the temporary directory for the app to open; remove the file and its directory.
-    private static func remove(_ path: String) {
+    /// libghostty keeps its temporary directory for the app to open. Removes the file and then that directory only
+    /// if it is now empty (`rmdir` never deletes contents, whatever path a future libghostty hands over).
+    static func discard(_ path: String) {
         lastExportedFile = path
         let file = URL(filePath: path)
         try? FileManager.default.removeItem(at: file)
-        try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+        _ = rmdir(file.deletingLastPathComponent().path(percentEncoded: false))
     }
 }

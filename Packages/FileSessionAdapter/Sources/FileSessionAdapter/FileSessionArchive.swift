@@ -90,10 +90,23 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
         return Scrollback(text: text, format: marker == Self.vtMarker ? .vt : .plain)
     }
 
+    /// A pane's own history keeps at most this many lines; zsh only ever appends to it.
+    public static let historyLineLimit = 10_000
+
     public func forget(allExcept panes: Set<PaneID>) {
         let keep = Set(panes.map(\.description))
         prune(scrollbackDirectory, keeping: keep, suffix: ".lzfse")
         prune(files.historyDirectory, keeping: keep, suffix: ".zsh_history")
+        panes.forEach { trimHistory(of: $0) }
+    }
+
+    private func trimHistory(of pane: PaneID) {
+        let file = files.historyFile(for: pane)
+        guard let text = try? String(contentsOf: file, encoding: .utf8) else { return }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).dropLast()
+        guard lines.count > Self.historyLineLimit else { return }
+        let kept = lines.suffix(Self.historyLineLimit).joined(separator: "\n") + "\n"
+        try? AtomicFile.write(Data(kept.utf8), to: file)
     }
 
     /// First byte of a stored scrollback: its format.

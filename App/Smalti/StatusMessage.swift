@@ -30,6 +30,11 @@ struct StatusMessage: Equatable {
         return StatusMessage(text: short.summary, isTransient: false)
     }
 
+    /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.
+    static func sessionSaveFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
+    }
+
     static func engineFailure(_ error: TerminalEngineError) -> StatusMessage {
         StatusMessage(text: EngineErrorText.describe(error), isTransient: true)
     }
