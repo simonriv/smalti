@@ -16,7 +16,6 @@ public enum SmaltiMessage: Equatable, Sendable {
     case specs([String])
     case suggest(seq: Int, String)
     case edit(seq: Int, InputLine)
-    case run(seq: Int)
     case fallback(seq: Int)
 }
 
@@ -57,7 +56,6 @@ public enum InputProtocol {
         case .specs(let commands): join("specs", commands.joined(separator: " "))
         case .suggest(let seq, let text): join("suggest", String(seq), text)
         case .edit(let seq, let line): join("edit", String(seq), String(line.cursor), line.text)
-        case .run(let seq): join("run", String(seq))
         case .fallback(let seq): join("fallback", String(seq))
         }
     }

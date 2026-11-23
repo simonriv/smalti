@@ -74,8 +74,7 @@ struct InputProtocolTests {
                 == "edit\t5\t13\tgit checkout ")
     }
 
-    @Test func encodesRunAndFallback() {
-        #expect(InputProtocol.encode(SmaltiMessage.run(seq: 6)) == "run\t6")
+    @Test func encodesFallback() {
         #expect(InputProtocol.encode(SmaltiMessage.fallback(seq: 7)) == "fallback\t7")
     }
 

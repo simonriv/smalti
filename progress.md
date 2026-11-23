@@ -158,7 +158,7 @@
 #### Bloque 3 · Canal con zsh
 - [x] T10 · `InputSocketServer`
 - [x] T11 · Script de zsh: canal, fantasma y aceptar
-- [ ] T12 · ⌃R, Tab y enlaces (enmienda 1: sin toma de control de plugins)
+- [x] T12 · ⌃R, Tab y enlaces (enmienda 1: sin toma de control de plugins)
 #### Bloque 4 · App
 - [ ] T13 · `InputCoordinator` y composición
 - [ ] T14 · Menú de completions

@@ -14,7 +14,7 @@ enum SmaltiInputScript {
             typeset -g _smalti_input_exec=0 _smalti_input_have_specs=0
             typeset -ga _smalti_input_specs
             typeset -g _smalti_input_right=forward-char _smalti_input_end=end-of-line
-            typeset -g _smalti_input_tab=expand-or-complete
+            typeset -g _smalti_input_tab=expand-or-complete _smalti_input_enter=accept-line
 
             _smalti_input_escape() {
                 local text=${1//\\/\\\\}
@@ -118,11 +118,6 @@ enum SmaltiInputScript {
                         CURSOR=$fields[3]
                         _smalti_input_paint ""
                         ;;
-                    run)
-                        (( fields[2] == _smalti_input_seq )) || return 0
-                        _smalti_input_paint ""
-                        zle accept-line
-                        ;;
                     fallback)
                         (( fields[2] == _smalti_input_seq )) || return 0
                         zle $_smalti_input_tab
@@ -130,22 +125,29 @@ enum SmaltiInputScript {
                 esac
             }
 
-            # `zle -F -w` handler: reads every answer waiting on the socket; an error or EOF disables the channel.
-            _smalti_input_receive() {
-                local fd=$1 line
-                if [[ -n $2 ]]; then
-                    _smalti_input_disable
-                    return 0
-                fi
-                while :; do
-                    if ! IFS= read -r -u $fd line; then
+            # Applies every answer already waiting on the socket, without blocking; EOF disables the channel.
+            _smalti_input_drain() {
+                local line
+                while [[ -n $_smalti_input_fd ]] && zselect -t 0 -r $_smalti_input_fd 2>/dev/null; do
+                    if ! IFS= read -r -u $_smalti_input_fd line; then
                         _smalti_input_disable
                         return 0
                     fi
                     _smalti_input_apply "$line"
-                    zselect -t 0 -r $fd 2>/dev/null || break
                 done
+            }
+
+            # `zle -F -w` handler (widget handlers get no error argument: a failed read tells instead).
+            _smalti_input_receive() {
+                _smalti_input_drain
                 zle -R
+            }
+
+            # Enter: first the answers already waiting (⌘↩ in Smalti's palette sends `edit` and then Return, and
+            # Return may be read first), then whatever Enter did before.
+            smalti-accept-line() {
+                _smalti_input_drain
+                zle $_smalti_input_enter
             }
 
             # → and ⌃E accept the ghost at the end of the line; otherwise they do what they did before.
@@ -165,6 +167,40 @@ enum SmaltiInputScript {
                 else
                     zle $_smalti_input_end
                 fi
+            }
+
+            # The command of the word being completed: the first word after the last `;`, `|`, `&` or newline
+            # before the cursor; empty while the cursor is still on that command's name.
+            _smalti_input_command() {
+                local -a words
+                words=(${(z)LBUFFER})
+                local index=${#words} start=1
+                while (( index > 0 )); do
+                    [[ $words[index] == (';'|'|'|'||'|'&'|'&&'|$'\n') ]] && { start=$(( index + 1 )); break }
+                    (( index-- ))
+                done
+                REPLY=
+                (( ${#words} >= start )) || return 0
+                [[ ${#words} -gt $start || $LBUFFER == *[[:space:]] ]] && REPLY=$words[start]
+            }
+
+            # Tab: Smalti's menu when it has a spec for the command; the user's own Tab otherwise, right away.
+            smalti-complete() {
+                _smalti_input_command
+                if [[ -z $_smalti_input_fd || -z $REPLY ]] || (( ! _smalti_input_have_specs )) \
+                    || (( ! ${_smalti_input_specs[(Ie)$REPLY]} )); then
+                    zle $_smalti_input_tab
+                    return
+                fi
+                _smalti_input_escape "$BUFFER"
+                _smalti_input_send "complete"$'\t'$(( ++_smalti_input_seq ))$'\t'$CURSOR$'\t'$REPLY
+            }
+
+            # ⌃R: Smalti's history palette, searching for what is on the line.
+            smalti-history() {
+                [[ -n $_smalti_input_fd ]] || return 0
+                _smalti_input_escape "$BUFFER"
+                _smalti_input_send "history"$'\t'$(( ++_smalti_input_seq ))$'\t'$REPLY
             }
 
             _smalti_input_preexec() {
@@ -197,6 +233,9 @@ enum SmaltiInputScript {
                 zle -N _smalti_input_receive
                 zle -N smalti-accept
                 zle -N smalti-accept-end
+                zle -N smalti-complete
+                zle -N smalti-history
+                zle -N smalti-accept-line
                 zle -N _smalti_input_redraw
                 zle -N _smalti_input_line_init
                 zle -N _smalti_input_line_finish
@@ -208,11 +247,17 @@ enum SmaltiInputScript {
                 _smalti_input_previous '^[[C' forward-char; _smalti_input_right=$REPLY
                 _smalti_input_previous '^E' end-of-line; _smalti_input_end=$REPLY
                 _smalti_input_previous '^I' expand-or-complete; _smalti_input_tab=$REPLY
+                _smalti_input_previous '^M' accept-line; _smalti_input_enter=$REPLY
                 local keymap
                 for keymap in emacs viins; do
                     bindkey -M $keymap '^[[C' smalti-accept
                     bindkey -M $keymap '^[OC' smalti-accept
                     bindkey -M $keymap '^E' smalti-accept-end
+                    bindkey -M $keymap '^I' smalti-complete
+                done
+                for keymap in emacs viins vicmd; do
+                    bindkey -M $keymap '^R' smalti-history
+                    bindkey -M $keymap '^M' smalti-accept-line
                 done
                 preexec_functions+=(_smalti_input_preexec)
                 precmd_functions+=(_smalti_input_precmd)
