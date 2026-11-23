@@ -197,6 +197,17 @@ struct CommandCatalogTests {
         [CommandGroup.tiling, .panes, .workspaces, .configuration].firstIndex(of: group) ?? 0
     }
 
+    @Test func paletteListsOpenObservatory() {
+        let commands = CommandCatalog.commands(
+            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+
+        let open = commands.first { $0.id == .observatoryToggle }
+        #expect(open?.title == "Abrir observatorio")
+        #expect(open?.group == .workspaces)
+        #expect(open?.shortcut?.display == "⇧⌘A")
+        #expect(!commands.contains { $0.id == .observatoryPeriod })
+    }
+
     @Test func jumpCommandIsInPalette() {
         let commands = CommandCatalog.commands(
             for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)

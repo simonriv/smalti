@@ -86,7 +86,8 @@ final class PaneGridView: NSView {
             container.removeFromSuperview()
         }
         let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
-        let context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now)
+        var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now)
+        context.agentDetails = state.observatory?.paneDetails ?? [:]
         for pane in workspace.panes.map(\.id) {
             let container = containers[pane] ?? newContainer(for: pane, at: frames[pane])
             if let view = views(pane) { container.embed(view) }

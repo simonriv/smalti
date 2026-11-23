@@ -13,6 +13,8 @@ struct TilingState {
     let message: StatusMessage?
     /// Directories show relative to it (`~/dev/xolken`).
     let home: WorkingDirectory
+    /// The observatory's latest refresh (F3): status-bar figures and the agents' model and context.
+    var observatory: ObservatoryFrame?
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -41,6 +43,9 @@ final class TilingController {
     }
 
     var onChange: ((TilingState) -> Void)?
+    /// A new observatory snapshot: only the status bar and the headers repaint, nothing is saved.
+    var onObservatoryChange: ((TilingState) -> Void)?
+    private(set) var observatory: ObservatoryFrame?
     /// Supplies the pane area of the grid; the views own geometry.
     var area: () -> Rect = { .zero }
     /// Commands that open UI instead of changing tiling (the palette, the rename prompt) go to the views.
@@ -105,9 +110,12 @@ final class TilingController {
     }
 
     /// A click on a notification: show its pane (switching workspace); if it is gone, only the app comes forward.
-    func activate(_ pane: PaneID) {
-        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return }
+    /// False when the pane no longer exists.
+    @discardableResult
+    func activate(_ pane: PaneID) -> Bool {
+        guard ActivatePane(engine: deps.engine).execute(pane, in: &set) else { return false }
         publish()
+        return true
     }
 
     private func jumpToWaitingAgent() {
@@ -211,7 +219,9 @@ final class TilingController {
 
     // MARK: - Commands
 
-    private static let viewCommands: Set<CommandID> = [.paletteOpen, .workspaceRename]
+    private static let viewCommands: Set<CommandID> = [
+        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod,
+    ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
         if let action = fixedActions[command] { return action }
@@ -420,8 +430,18 @@ final class TilingController {
     }
 
     private func publish() {
-        onChange?(TilingState(set: set, config: config, theme: theme, message: status.showing, home: deps.home))
+        onChange?(state)
         keepMinutesFresh()
+    }
+
+    private var state: TilingState {
+        TilingState(
+            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory)
+    }
+
+    func show(_ frame: ObservatoryFrame) {
+        observatory = frame
+        onObservatoryChange?(state)
     }
 
     /// "te espera · 2m" and a working agent's lifetime count minutes: while any agent runs, waits or failed, the
@@ -438,10 +458,7 @@ final class TilingController {
                 while !Task.isCancelled {
                     try? await Task.sleep(for: Self.minute)
                     guard !Task.isCancelled, let self else { return }
-                    self.onChange?(
-                        TilingState(
-                            set: self.set, config: self.config, theme: self.theme, message: self.status.showing,
-                            home: self.deps.home))
+                    self.onChange?(self.state)
                 }
             } : nil
     }

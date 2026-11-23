@@ -20,9 +20,15 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         latencyProbe?.start()
     }
 
+    /// The session saves now; the observatory's index gets up to a second to write what it has not saved yet.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         composition?.saveForQuit()
-        return .terminateNow
+        guard let composition else { return .terminateNow }
+        Task {
+            await composition.persistObservatory()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

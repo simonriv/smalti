@@ -1,3 +1,5 @@
+import Foundation
+
 /// Finds where a key is written in the raw TOML text, so semantic errors can name a line even though the TOML
 /// library only reports lines for syntax errors.
 ///
@@ -26,11 +28,30 @@ enum TOMLKeyLocator {
         text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
     }
 
-    /// `name` for `[name]` or `[[name]]`, ignoring a trailing comment.
+    /// `name` for `[name]` or `[[name]]`, ignoring a trailing comment. Quoted segments are unquoted and may hold
+    /// dots or brackets (`[observatory.models."qwen3.5:9b[1m]"]` → `observatory.models.qwen3.5:9b[1m]`), the same
+    /// dotted name `TOMLSection` builds.
     private static func tableHeader(in line: Substring) -> String? {
         guard line.hasPrefix("[") else { return nil }
-        let name = line.drop { $0 == "[" }.prefix { $0 != "]" }
-        return String(name.trimmingWhitespace())
+        var segments: [String] = []
+        var current = ""
+        var quote: Character?
+        for character in line.drop(while: { $0 == "[" }) {
+            if let open = quote {
+                if character == open { quote = nil } else { current.append(character) }
+            } else if character == "\"" || character == "'" {
+                quote = character
+            } else if character == "]" {
+                break
+            } else if character == "." {
+                segments.append(current.trimmingCharacters(in: .whitespaces))
+                current = ""
+            } else {
+                current.append(character)
+            }
+        }
+        segments.append(current.trimmingCharacters(in: .whitespaces))
+        return segments.joined(separator: ".")
     }
 
     /// The key of `key = value`, unquoted, or `nil` for comments and blank lines.

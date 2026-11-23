@@ -134,10 +134,22 @@ final class CommandPaletteTests: SmaltiUITestCase {
         app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
     }
 
+    /// Polls for up to a second: the clip view scrolls with a short system animation, and the accessibility snapshot
+    /// can land halfway through it.
     private func isInsideTheList(_ element: XCUIElement) -> Bool {
         let tolerance = -Self.subpixelTolerance
-        return app.element("smalti.palette.list").frame.insetBy(dx: tolerance, dy: tolerance).contains(element.frame)
+        let deadline = Date().addingTimeInterval(Self.settleTimeout)
+        repeat {
+            if app.element("smalti.palette.list").frame.insetBy(dx: tolerance, dy: tolerance).contains(element.frame) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(Self.settlePoll))
+        } while Date() < deadline
+        return false
     }
+
+    private static let settleTimeout: TimeInterval = 1
+    private static let settlePoll: TimeInterval = 0.05
 
     private func assertSelectedRowIsInsideTheList(file: StaticString = #filePath, line: UInt = #line) {
         let selected = selectedRow

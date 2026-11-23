@@ -37,21 +37,24 @@ struct KeyRoutingTests {
     /// While the palette is open only ⌘K (to close it) runs; other shortcuts must not act behind it.
     @Test func restrictedRoutingSwallowsOtherShortcuts() throws {
         let decision = KeyRouting.decide(
-            KeyPress(try chord("cmd+w"), isRepeat: false), keymap: .standard, allowing: [.paletteOpen])
+            KeyPress(try chord("cmd+w"), isRepeat: false), keymap: .standard,
+            context: KeyContext(allowing: [.paletteOpen]))
 
         #expect(decision == .swallow)
     }
 
     @Test func restrictedRoutingStillPerformsAllowedShortcuts() throws {
         let decision = KeyRouting.decide(
-            KeyPress(try chord("cmd+k"), isRepeat: false), keymap: .standard, allowing: [.paletteOpen])
+            KeyPress(try chord("cmd+k"), isRepeat: false), keymap: .standard,
+            context: KeyContext(allowing: [.paletteOpen]))
 
         #expect(decision == .perform(.paletteOpen))
     }
 
     @Test func restrictedRoutingLetsTypingThrough() throws {
         let decision = KeyRouting.decide(
-            KeyPress(try chord("cmd+y"), isRepeat: false), keymap: .standard, allowing: [.paletteOpen])
+            KeyPress(try chord("cmd+y"), isRepeat: false), keymap: .standard,
+            context: KeyContext(allowing: [.paletteOpen]))
 
         #expect(decision == .passThrough)
     }
@@ -59,5 +62,19 @@ struct KeyRoutingTests {
     /// A plain press is not a repeat unless the system says so.
     @Test func keyPressIsNotARepeatByDefault() throws {
         #expect(!KeyPress(try chord("cmd+w")).isRepeat)
+    }
+
+    /// ⌘P cycles the observatory's period only while it is open; closed, the terminal gets the key.
+    @Test func inactiveCommandPassesThroughToTheTerminal() throws {
+        let decision = KeyRouting.decide(
+            KeyPress(try chord("cmd+p")), keymap: .standard, context: KeyContext(passingThrough: [.observatoryPeriod]))
+
+        #expect(decision == .passThrough)
+    }
+
+    @Test func activeCommandIsPerformed() throws {
+        let decision = KeyRouting.decide(KeyPress(try chord("cmd+p")), keymap: .standard, context: .unrestricted)
+
+        #expect(decision == .perform(.observatoryPeriod))
     }
 }

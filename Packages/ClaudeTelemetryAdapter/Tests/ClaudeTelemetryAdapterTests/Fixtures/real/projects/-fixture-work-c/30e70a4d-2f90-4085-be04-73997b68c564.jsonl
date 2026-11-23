@@ -1,0 +1,56 @@
+{"type": "session-owner", "redacted": true}
+{"type": "queue-operation", "redacted": true}
+{"type": "queue-operation", "redacted": true}
+{"type": "user", "timestamp": "2026-11-23T05:58:44.427Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "31c421de-a937-467f-a480-a11d93ef2d1f", "parentUuid": null, "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "atis-latch", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "last-prompt", "redacted": true}
+{"type": "session-owner", "redacted": true}
+{"type": "atis-latch", "redacted": true}
+{"type": "api-request-shape", "redacted": true}
+{"type": "api-request-blob", "redacted": true}
+{"type": "api-request-blob", "redacted": true}
+{"type": "api-request", "redacted": true}
+{"type": "last-prompt", "redacted": true}
+{"type": "session-owner", "redacted": true}
+{"type": "atis-latch", "redacted": true}
+{"type": "tools-used", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "assistant", "timestamp": "2026-11-23T05:58:47.411Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "fd0596b4-40cf-4172-b1af-0cddb86fcd0c", "parentUuid": "a558994f-d35e-4826-8514-bc2d68d7c711", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"id": "msg_011ChKM7LU9xLESjzcU7M1kc", "model": "claude-haiku-5-5", "usage": {"input_tokens": 2, "cache_creation_input_tokens": 7340, "cache_read_input_tokens": 9449, "output_tokens": 206, "output_tokens_details": {"thinking_tokens": 0}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 7340, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 206, "cache_read_input_tokens": 9449, "cache_creation_input_tokens": 7340, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 7340}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "tool_use", "role": "assistant", "content": [{"type": "tool_use", "id": "toolu_01BLBZCGQY5Q6NjV2pgQDzZr", "name": "Agent", "input": {"description": "Contar archivos .txt", "subagent_type": "general-purpose", "prompt": "En el directorio /fixture/work/c, lista los archivos .txt (ls). Responde únicamente con el número de archivos .txt encontrados, sin nada más."}, "caller": {"type": "direct"}}]}}
+{"type": "user", "timestamp": "2026-11-23T05:58:47.425Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "ef88ead3-60c9-4b53-8ce5-6f10870ddede", "parentUuid": "fd0596b4-40cf-4172-b1af-0cddb86fcd0c", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_01BLBZCGQY5Q6NjV2pgQDzZr", "content": "Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: a83a716973cc0ff1d (int"}]}}
+{"type": "attachment", "redacted": true}
+{"type": "attachment", "redacted": true}
+{"type": "api-request-blob", "redacted": true}
+{"type": "api-request", "redacted": true}
+{"type": "last-prompt", "redacted": true}
+{"type": "session-owner", "redacted": true}
+{"type": "atis-latch", "redacted": true}
+{"type": "tools-used", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "assistant", "timestamp": "2026-11-23T05:58:48.864Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "714982f2-235c-4415-9904-2ad7c13e92d5", "parentUuid": "a8671b1e-6158-4b94-8374-f3a906419f5c", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"id": "msg_011ChKM7YaRAFbBsHgnH7cG9", "model": "claude-haiku-5-5", "usage": {"input_tokens": 2, "cache_creation_input_tokens": 643, "cache_read_input_tokens": 16789, "output_tokens": 126, "output_tokens_details": {"thinking_tokens": 89}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 643, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 126, "cache_read_input_tokens": 16789, "cache_creation_input_tokens": 643, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 643}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "end_turn", "role": "assistant", "content": [{"type": "thinking", "thinking": ""}]}}
+{"type": "assistant", "timestamp": "2026-11-23T05:58:49.029Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "daa81c8b-c622-417f-9bd4-5b1bf64da1e0", "parentUuid": "714982f2-235c-4415-9904-2ad7c13e92d5", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"id": "msg_011ChKM7YaRAFbBsHgnH7cG9", "model": "claude-haiku-5-5", "usage": {"input_tokens": 2, "cache_creation_input_tokens": 643, "cache_read_input_tokens": 16789, "output_tokens": 126, "output_tokens_details": {"thinking_tokens": 89}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 643, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 126, "cache_read_input_tokens": 16789, "cache_creation_input_tokens": 643, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 643}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "end_turn", "role": "assistant", "content": [{"type": "text", "text": "El subagente está contando los archivos .txt en segundo plano. Te responderé con el número cuando termine."}]}}
+{"type": "data-flow-records", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "queue-operation", "redacted": true}
+{"type": "queue-operation", "redacted": true}
+{"type": "user", "timestamp": "2026-11-23T05:58:57.307Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "f061737d-c314-4f4f-ab36-91f1358b4365", "parentUuid": "daa81c8b-c622-417f-9bd4-5b1bf64da1e0", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:57.307Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "f717c751-7b77-45fb-a7ad-5610d973cddf", "parentUuid": "f061737d-c314-4f4f-ab36-91f1358b4365", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "api-request-blob", "redacted": true}
+{"type": "api-request", "redacted": true}
+{"type": "data-flow-records", "redacted": true}
+{"type": "assistant", "timestamp": "2026-11-23T05:58:58.941Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "ed30ac96-6694-40be-bbd4-4811ad1f8bee", "parentUuid": "f717c751-7b77-45fb-a7ad-5610d973cddf", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"id": "msg_011ChKM8GjwwtqDPToy9Mc9j", "model": "claude-haiku-5-5", "usage": {"input_tokens": 4, "cache_creation_input_tokens": 775, "cache_read_input_tokens": 17432, "output_tokens": 227, "output_tokens_details": {"thinking_tokens": 174}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 775, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 4, "output_tokens": 227, "cache_read_input_tokens": 17432, "cache_creation_input_tokens": 775, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 775}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "end_turn", "role": "assistant", "content": [{"type": "thinking", "thinking": ""}]}}
+{"type": "assistant", "timestamp": "2026-11-23T05:58:59.168Z", "sessionId": "30e70a4d-2f90-4085-be04-73997b68c564", "uuid": "204f79d2-f679-4e83-8bb6-cd8c446f66d1", "parentUuid": "ed30ac96-6694-40be-bbd4-4811ad1f8bee", "isSidechain": false, "cwd": "/fixture/work/c", "version": "2.1.330", "message": {"id": "msg_011ChKM8GjwwtqDPToy9Mc9j", "model": "claude-haiku-5-5", "usage": {"input_tokens": 4, "cache_creation_input_tokens": 775, "cache_read_input_tokens": 17432, "output_tokens": 227, "output_tokens_details": {"thinking_tokens": 174}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 775, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 4, "output_tokens": 227, "cache_read_input_tokens": 17432, "cache_creation_input_tokens": 775, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 775}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "end_turn", "role": "assistant", "content": [{"type": "text", "text": "0\n\nNota: el subagente no pudo verificar el resultado con un listado directo, porque el permiso de Bash fue denegado en un segundo intento."}]}}
+{"type": "last-prompt", "redacted": true}
+{"type": "cost-state", "redacted": true}

@@ -40,6 +40,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: line, isTransient: true)
     }
 
+    /// The observatory could not read Claude's transcripts; it keeps showing what it read before.
+    static func transcriptsUnreadable(_ message: String) -> StatusMessage {
+        StatusMessage(text: message, isTransient: true)
+    }
+
     static let nobodyWaiting = StatusMessage(text: "Ningún agente te espera", isTransient: true)
 
     static let notificationsDisabled = StatusMessage(

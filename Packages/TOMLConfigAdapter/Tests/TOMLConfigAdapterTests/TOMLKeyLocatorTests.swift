@@ -50,4 +50,17 @@ struct TOMLKeyLocatorTests {
 
         #expect(line == nil)
     }
+
+    @Test func findsTableHeaderWithQuotedSegments() {
+        let text = "[observatory]\n\n[observatory.models.\"claude-opus-5-5\"]\ninput = 1\n"
+
+        #expect(TOMLKeyLocator.line(of: "claude-opus-5-5", inTable: "observatory.models", text: text) == 3)
+        #expect(TOMLKeyLocator.line(of: "input", inTable: "observatory.models.claude-opus-5-5", text: text) == 4)
+    }
+
+    @Test func quotedSegmentMayContainDotsAndBrackets() {
+        let text = "[observatory.models.\"qwen3.5:9b[1m]\"]  # local\ncontext = 1\n"
+
+        #expect(TOMLKeyLocator.line(of: "context", inTable: "observatory.models.qwen3.5:9b[1m]", text: text) == 2)
+    }
 }

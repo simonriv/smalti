@@ -1,0 +1,39 @@
+{
+  "sessions": {
+    "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b": {
+      "cacheRead": 12620,
+      "cacheWrite1h": 4160,
+      "cacheWrite5m": 0,
+      "input": 2,
+      "output": 5
+    },
+    "30e70a4d-2f90-4085-be04-73997b68c564": {
+      "cacheRead": 82812,
+      "cacheWrite1h": 8758,
+      "cacheWrite5m": 5594,
+      "input": 16,
+      "output": 2049
+    },
+    "401a63e1-c076-45fe-9f09-432da1c8cfa6": {
+      "cacheRead": 9449,
+      "cacheWrite1h": 7292,
+      "cacheWrite5m": 0,
+      "input": 2,
+      "output": 4
+    },
+    "7b1f7b2a-0c81-4aa0-8229-85de52add2e8": {
+      "cacheRead": 94481,
+      "cacheWrite1h": 7862,
+      "cacheWrite5m": 0,
+      "input": 12,
+      "output": 327
+    }
+  },
+  "total": {
+    "cacheRead": 199362,
+    "cacheWrite1h": 28072,
+    "cacheWrite5m": 5594,
+    "input": 32,
+    "output": 2385
+  }
+}

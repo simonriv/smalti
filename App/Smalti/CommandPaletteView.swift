@@ -10,8 +10,8 @@ final class CommandPaletteView: NSView {
     private let list = NSStackView()
     private let scroll = NSScrollView()
     private var scrollHeight: NSLayoutConstraint?
-    /// The row `reveal` scrolls to once the list has settled; only the latest request counts.
-    private var pendingReveal: NSView?
+    /// The row the list keeps in view while its frames settle; only the latest one counts.
+    private weak var revealedRow: NSView?
     /// Under the list; hidden with it so the field and the footer never show a doubled line.
     private let listSeparator = NSView()
     private var navigateHint: NSView?
@@ -45,25 +45,34 @@ final class CommandPaletteView: NSView {
 
     /// Scrolls the list just enough to show `row` whole, with its group label when it opens a group. The window of
     /// built rows counts rows only, while group labels take height too, so the selection can sit below the clipped
-    /// edge without this. It runs on the next turn of the main loop: rows were just rebuilt, and the stack view and
-    /// the clip view settle their frames in a later layout pass than this one.
+    /// edge without this. Rows were just rebuilt and their frames settle in later layout passes, so the row is kept
+    /// and shown again whenever the list changes size, until another row is revealed.
     func reveal(_ row: NSView) {
-        pendingReveal = row
-        DispatchQueue.main.async { [weak self] in self?.revealPending() }
+        revealedRow = row
+        showRevealedRow()
+        DispatchQueue.main.async { [weak self] in self?.showRevealedRow() }
     }
 
-    private func revealPending() {
-        // The rows may have been replaced (rename mode) before this turn ran; a detached row has no frame to show.
-        guard let row = pendingReveal, let document = scroll.documentView, row.isDescendant(of: document) else {
-            pendingReveal = nil
+    private func showRevealedRow() {
+        // The rows may have been replaced (rename mode); a detached row has no frame to show.
+        guard let row = revealedRow, let document = scroll.documentView, row.isDescendant(of: document) else { return }
+        window?.layoutIfNeeded()
+        // The first row needs no frame at all: the list goes back to its top. Right after a wrap from the last row,
+        // the rebuilt stack's frames can still be one row off, and that row would hide the top again.
+        if opensTheList(row) {
+            scroll.contentView.scroll(to: .zero)
+            scroll.reflectScrolledClipView(scroll.contentView)
             return
         }
-        pendingReveal = nil
-        window?.layoutIfNeeded()
         var target = row.convert(row.bounds, to: document)
         if let label = groupLabel(above: row) { target = target.union(label.convert(label.bounds, to: document)) }
         scroll.contentView.scrollToVisible(target)
         scroll.reflectScrolledClipView(scroll.contentView)
+    }
+
+    private func opensTheList(_ row: NSView) -> Bool {
+        let views = list.arrangedSubviews
+        return views.first === row || (views.first is CommandGroupLabel && views.dropFirst().first === row)
     }
 
     private func groupLabel(above row: NSView) -> NSView? {
@@ -153,6 +162,12 @@ final class CommandPaletteView: NSView {
             right: palette.listPaddingHorizontal)
         let document = FlippedView()
         document.translatesAutoresizingMaskIntoConstraints = false
+        document.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            forName: NSView.frameDidChangeNotification, object: document, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showRevealedRow() }
+        }
         list.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(list)
         pin(list, to: document)

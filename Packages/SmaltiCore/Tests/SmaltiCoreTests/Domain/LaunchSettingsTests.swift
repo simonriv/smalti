@@ -54,4 +54,31 @@ struct LaunchSettingsTests {
 
         #expect(settings.stateDirectory == defaultState)
     }
+
+    @Test func claudeHomeArgumentWins() {
+        let settings = LaunchSettings(
+            arguments: ["SmaltiClaudeHome": "/tmp/claude", "CLAUDE_CONFIG_DIR": "/other"], home: home,
+            defaultStateDirectory: defaultState)
+
+        #expect(settings.claudeHome == URL(filePath: "/tmp/claude"))
+    }
+
+    @Test func claudeHomeFallsBackToConfigDirThenHome() {
+        let withConfigDir = LaunchSettings(
+            arguments: ["CLAUDE_CONFIG_DIR": "/Users/simon/.claude-alt"], home: home,
+            defaultStateDirectory: defaultState)
+        let plain = LaunchSettings(arguments: [:], home: home, defaultStateDirectory: defaultState)
+
+        #expect(withConfigDir.claudeHome == URL(filePath: "/Users/simon/.claude-alt"))
+        #expect(plain.claudeHome == URL(filePath: "/Users/simon/.claude"))
+    }
+
+    @Test func ollamaURLArgumentWins() {
+        let custom = LaunchSettings(
+            arguments: ["SmaltiOllamaURL": "http://127.0.0.1:1"], home: home, defaultStateDirectory: defaultState)
+        let plain = LaunchSettings(arguments: [:], home: home, defaultStateDirectory: defaultState)
+
+        #expect(custom.ollamaURL == URL(string: "http://127.0.0.1:1"))
+        #expect(plain.ollamaURL == URL(string: "http://127.0.0.1:11434"))
+    }
 }
