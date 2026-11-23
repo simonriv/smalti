@@ -15,7 +15,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 ## Convenciones del roadmap
 
-- **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Si es de uso real, dice cuántos días seguidos.
+- **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
 - **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0 y F1.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
@@ -37,8 +37,8 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 - **Objetivo:** trabajar con 3 sesiones de Claude en una sola ventana mejor que con los splits de Ghostty.
 - **Entregables:** árbol de splits (`LayoutTree`); layouts Dwindle, Columnas y Maestro + pila; foco, intercambio y tamaño por teclado; igualar tamaños; workspaces en la franja superior; cabecera de panel; barra de estado; configuración TOML en `~/.config/smalti/`; paleta ⌘K básica.
-- **Criterio de cierre:** 5 días laborales seguidos con 3 sesiones de Claude en Smalti, sin volver a Ghostty por una función que falte. Cada vez que se vuelva, se registra como issue. Además, la suite de dominio y los criterios de `docs/specs/F1-tiling.md` en verde.
-- **Dependencias:** F0 cerrado (motor y esqueleto hexagonal). ~~Requisito de entrada: una semana usando cmux~~ descartado por Simón (2026-11-22); lo que falte sale en los 5 días de uso del criterio de cierre.
+- **Criterio de cierre:** la suite de dominio y los criterios de `docs/specs/F1-tiling.md` en verde. ~~5 días laborales con 3 sesiones de Claude en Smalti~~ aplazado al uso con la app terminada (Simón, 2026-11-22).
+- **Dependencias:** F0 cerrado (motor y esqueleto hexagonal). ~~Requisito de entrada: una semana usando cmux~~ descartado por Simón (2026-11-22).
 
 ## F2 · Persistencia e integración con Claude Code
 
@@ -57,8 +57,8 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - Builds de desarrollo separados del Smalti diario: bundle ID `dev.simonriv.smalti.dev`, nombre de proceso y datos propios, para que las pruebas y los scripts de medición nunca cierren la instancia en uso (decidido por Simón, 2026-11-22).
 - **Criterio de cierre**
   - Al reabrir, layout, directorios y scrollback vuelven en menos de 5 s, medido desde el lanzamiento hasta que el último panel es interactivo, con 3 workspaces y 6 paneles.
-  - En una semana de uso, todo `Notification` de Claude produce estado ámbar y notificación de macOS (lo verifica un log de eventos contra la UI).
-  - Después, 30 días seguidos como terminal diaria: criterio de éxito global del proyecto.
+  - Todo `Notification` de Claude produce estado ámbar y notificación de macOS: una prueba reproduce un log de eventos de hooks grabado y lo compara contra la UI.
+  - ~~30 días seguidos como terminal diaria~~: pasa a ser el criterio de éxito global con la app terminada (tras F7).
 - **Dependencias:** F1 (workspaces, `LayoutTree` serializable, cabecera y barra de estado). Introduce el puerto `HarnessAdapter` (solo Claude), `TelemetrySource` (hooks), `Notifier` y el IPC.
 
 ## F3 · Observatorio (⌘⇧A)
@@ -86,7 +86,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 - **Objetivo:** retomar sesiones de cualquier harness y aprobar los diffs de Claude en Neovim.
 - **Entregables:** adaptadores `HarnessAdapter` de Codex, Gemini CLI, Antigravity y OpenCode (`detect`, `captureSessionId`, `listSessions`, `resumeCommand`); respaldo "continuar la última del directorio"; buscador de sesiones del disco filtrable por harness; `EditorBridge` con Neovim por socket; instalador de claudecode.nvim en NvChad; enlaces "Abrir en Neovim".
-- **Criterio de cierre:** una prueba de contrato compartida pasa para los 5 adaptadores sobre fixtures reales. Se retoma a mano una sesión real de cada harness. Un diff de Claude se acepta con `:w` y se rechaza con `:q`.
+- **Criterio de cierre:** una prueba de contrato compartida pasa para los 5 adaptadores sobre fixtures reales. Una prueba de integración retoma una sesión de fixture de cada harness con su comando real. Un diff de Claude se acepta con `:w` y se rechaza con `:q`.
 - **Dependencias:** F2 (puerto `HarnessAdapter` y adaptador de Claude como primera implementación). F3 suma la telemetría de OpenCode, pero no bloquea.
 
 ## F7 · Extras
