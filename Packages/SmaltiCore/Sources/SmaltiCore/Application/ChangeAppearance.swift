@@ -41,6 +41,7 @@ public final class ChangeAppearance {
     }
 
     public func saveNow() {
+        debouncer.cancel()
         do {
             try store.save(document)
         } catch {
@@ -50,6 +51,7 @@ public final class ChangeAppearance {
 
     /// The file changed outside the UI ("Recargar configuración"): show it, do not write it back.
     public func reload(_ document: AppearanceDocument) {
+        debouncer.cancel()
         self.document = document
     }
 }

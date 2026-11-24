@@ -8,6 +8,7 @@ public protocol PromptFacts: Sendable {
 public struct PromptQuery: Equatable, Sendable {
     public let directory: String
     public let runtimePaths: [RuntimeKind: String]
+    /// `$KUBECONFIG` as zsh sees it; `nil` means the default `~/.kube/config`.
     public let kubeconfig: String?
 
     public init(directory: String, runtimePaths: [RuntimeKind: String], kubeconfig: String?) {
@@ -68,4 +69,6 @@ public protocol AppearanceStore: AnyObject {
 /// Runs only the last action scheduled within its delay (the app waits `ChangeAppearance.saveDelay`).
 public protocol Debouncer: AnyObject {
     @MainActor func schedule(_ action: @escaping @MainActor () -> Void)
+    /// Drops the pending action, if any.
+    @MainActor func cancel()
 }

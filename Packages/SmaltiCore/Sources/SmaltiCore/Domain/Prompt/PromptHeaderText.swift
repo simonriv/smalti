@@ -23,8 +23,7 @@ public enum PromptHeaderText {
     private static func joined(_ texts: [String], _ segments: [PromptSegment]) -> String {
         zip(texts, segments).enumerated().map { index, pair in
             guard index > 0 else { return pair.0 }
-            let joinsBranch = pair.1.module == .gitStatus && segments[index - 1].module == .gitBranch
-            return (joinsBranch ? " " : separator) + pair.0
+            return (pair.1.attaches(to: segments[index - 1]) ? " " : separator) + pair.0
         }.joined()
     }
 }

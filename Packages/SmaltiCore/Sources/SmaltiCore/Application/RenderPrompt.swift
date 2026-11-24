@@ -8,17 +8,21 @@ public struct PromptEnvironment: Sendable {
     public let workspace: @MainActor (PaneID) -> WorkspaceID?
     public let home: String
     public let now: @Sendable () -> Date
+    /// The shell's zone for the clock module, so the full prompt agrees with the immediate `%D{%H:%M}`.
+    public let timeZone: TimeZone
 
     public init(
         settings: @escaping @MainActor () -> (PromptConfig, AppliedTheme),
         agents: @escaping @MainActor (PaneID) -> WaitingAgents,
-        workspace: @escaping @MainActor (PaneID) -> WorkspaceID?, home: String, now: @escaping @Sendable () -> Date
+        workspace: @escaping @MainActor (PaneID) -> WorkspaceID?, home: String, now: @escaping @Sendable () -> Date,
+        timeZone: TimeZone = .current
     ) {
         self.settings = settings
         self.agents = agents
         self.workspace = workspace
         self.home = home
         self.now = now
+        self.timeZone = timeZone
     }
 }
 
@@ -110,7 +114,7 @@ public final class RenderPrompt {
         context.lastExit = shell.context.exit
         context.duration = .milliseconds(shell.context.durationMilliseconds)
         context.now = environment.now()
-        context.timeZone = .current
+        context.timeZone = environment.timeZone
         context.agents = environment.agents(pane)
         return context
     }

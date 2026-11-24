@@ -9,7 +9,8 @@ struct PromptStylesTests {
     private let branch = PromptSegment(module: .gitBranch, icon: .branch, runs: [ColoredText("main", .ansi(5))])
     private let status = PromptSegment(
         module: .gitStatus, icon: nil,
-        runs: [ColoredText("●2", .ansi(3)), ColoredText(" ", .secondary), ColoredText("+1", .ansi(2))])
+        runs: [ColoredText("●2", .ansi(3)), ColoredText(" ", .secondary), ColoredText("+1", .ansi(2))],
+        attachesTo: .gitBranch)
     private let ok = SymbolSegment(symbol: .chevron, lastExit: 0)
 
     private func text(_ line: [StyledRun]) -> String {

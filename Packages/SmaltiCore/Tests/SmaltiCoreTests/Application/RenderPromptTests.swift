@@ -242,3 +242,28 @@ struct RenderPromptReviewTests {
         #expect(render.agentsChanged(in: workspace).isEmpty)
     }
 }
+
+/// Block 2 review (M4): the full prompt's clock uses the injected time zone, like the shell's `%D{%H:%M}`.
+@MainActor
+@Suite("RenderPrompt · time zone")
+struct RenderPromptTimeZoneTests {
+    @Test func timeUsesEnvironmentTimeZone() async throws {
+        var config = PromptConfig.standard
+        config.modules = [.time]
+        let bogota = try #require(TimeZone(identifier: "America/Bogota"))
+        let render = RenderPrompt(
+            facts: FakePromptFacts(),
+            environment: PromptEnvironment(
+                settings: { (config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
+                workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) },
+                timeZone: bogota))
+        let context = ShellContext(
+            pwd: "/tmp", exit: 0, durationMilliseconds: 0, awsProfile: nil, kubeconfig: nil, runtimePaths: [:])
+
+        guard case .prompt(_, let prompt) = await render.handle(context, seq: 1, pane: PaneID()) else {
+            Issue.record("no prompt")
+            return
+        }
+        #expect(prompt.values.values.contains("19:00"))
+    }
+}

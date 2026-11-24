@@ -27,11 +27,19 @@ public struct PromptSegment: Equatable, Sendable {
     public let module: PromptModuleID
     public let icon: PromptIcon?
     public let runs: [ColoredText]
+    /// The module it sits next to with a single space (git changes after the branch: "main ●2 +1").
+    public let attachesTo: PromptModuleID?
 
-    public init(module: PromptModuleID, icon: PromptIcon?, runs: [ColoredText]) {
+    public init(module: PromptModuleID, icon: PromptIcon?, runs: [ColoredText], attachesTo: PromptModuleID? = nil) {
         self.module = module
         self.icon = icon
         self.runs = runs
+        self.attachesTo = attachesTo
+    }
+
+    /// Whether it follows `previous` with a single space instead of the gap.
+    func attaches(to previous: PromptSegment) -> Bool {
+        attachesTo == previous.module
     }
 
     public var text: String { runs.map(\.text).joined() }

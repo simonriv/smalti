@@ -6,8 +6,9 @@ public enum DirectoryLabel {
     public static func label(directory: String, home: String, repoRoot: String?) -> String {
         let path = trimmed(directory)
         if let root = repoRoot.map(trimmed), let inside = relative(path, to: root) {
-            let name = root.split(separator: "/").last.map(String.init) ?? root
-            return inside.isEmpty ? name : name + "/" + inside
+            // A repository at the root has no name of its own: `/sub` (block 2 review, M8).
+            let name = root == "/" ? "" : root.split(separator: "/").last.map(String.init) ?? root
+            return inside.isEmpty ? (name.isEmpty ? "/" : name) : name + "/" + inside
         }
         return lastLevels(of: tilded(path, home: trimmed(home)))
     }

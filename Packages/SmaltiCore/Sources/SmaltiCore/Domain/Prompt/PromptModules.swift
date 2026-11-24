@@ -36,7 +36,7 @@ struct GitStatusModule: PromptModule {
         let runs = pieces.enumerated().map { index, piece in
             ColoredText(index == 0 ? piece.0 : " " + piece.0, piece.1)
         }
-        return PromptSegment(module: id, icon: nil, runs: runs)
+        return PromptSegment(module: id, icon: nil, runs: runs, attachesTo: .gitBranch)
     }
 }
 

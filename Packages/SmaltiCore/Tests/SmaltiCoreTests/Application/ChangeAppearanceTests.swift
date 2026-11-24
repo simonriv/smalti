@@ -114,3 +114,34 @@ struct ChangeAppearanceTests {
         }
     }
 }
+
+/// Block 2 review (M1): a reload or an immediate save cancels the pending write.
+@MainActor
+@Suite("ChangeAppearance · review")
+struct ChangeAppearanceReviewTests {
+    private let store = InMemoryAppearanceStore()
+    private let debouncer = ManualDebouncer()
+
+    @Test func reloadCancelsPendingSave() {
+        let change = ChangeAppearance(
+            document: AppearanceDocument(config: .defaults), store: store, debouncer: debouncer)
+        _ = change.apply { $0.appearance.blur = 10 }
+
+        change.reload(AppearanceDocument(config: .defaults))
+        debouncer.fire()
+
+        #expect(store.saved.isEmpty)
+    }
+
+    @Test func studioApplySavesOnce() {
+        let change = ChangeAppearance(
+            document: AppearanceDocument(config: .defaults), store: store, debouncer: debouncer)
+        let edit = EditPrompt(appearance: change)
+        edit.draft.symbol = .dollar
+
+        edit.apply()
+        debouncer.fire()
+
+        #expect(store.saved.count == 1)
+    }
+}

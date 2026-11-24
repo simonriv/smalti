@@ -9,8 +9,7 @@ public struct CleanStyle: PromptStyle {
         var context: [StyledRun] = []
         for (index, segment) in segments.enumerated() {
             if index > 0 {
-                let joinsBranch = segment.module == .gitStatus && segments[index - 1].module == .gitBranch
-                context.append(StyledRun(.text(joinsBranch ? " " : Self.gap), .secondary))
+                context.append(StyledRun(.text(segment.attaches(to: segments[index - 1]) ? " " : Self.gap), .secondary))
             }
             context += runs(of: segment)
         }

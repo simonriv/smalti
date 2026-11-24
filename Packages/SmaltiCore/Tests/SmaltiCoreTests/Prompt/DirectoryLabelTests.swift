@@ -43,3 +43,12 @@ struct DirectoryLabelTests {
         #expect(DirectoryLabel.label(directory: "/usr/local/bin/", home: home, repoRoot: nil) == "local/bin")
     }
 }
+
+@Suite("DirectoryLabel · review")
+struct DirectoryLabelReviewTests {
+    /// Block 2 review (M8): a repository at the root shows `/sub`, never `//sub`.
+    @Test func repositoryAtRootShowsSingleSlash() {
+        #expect(DirectoryLabel.label(directory: "/sub", home: "/Users/simon", repoRoot: "/") == "/sub")
+        #expect(DirectoryLabel.label(directory: "/", home: "/Users/simon", repoRoot: "/") == "/")
+    }
+}

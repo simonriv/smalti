@@ -26,6 +26,10 @@ public final class ManualDebouncer: Debouncer {
         pending = action
     }
 
+    public func cancel() {
+        pending = nil
+    }
+
     public func fire() {
         let action = pending
         pending = nil

@@ -6,7 +6,9 @@ import Testing
 public enum PromptFactsContract {
     public static func verify(_ make: () async -> any PromptFacts) async {
         let facts = await make()
-        let missing = PromptQuery(directory: "/nonexistent-\(UUID())", runtimePaths: [:], kubeconfig: nil)
+        // An explicit missing kubeconfig: `nil` means `~/.kube/config`, which a real machine may have.
+        let missing = PromptQuery(
+            directory: "/nonexistent-\(UUID())", runtimePaths: [:], kubeconfig: "/nonexistent-\(UUID())/config")
         #expect(await facts.facts(for: missing) == .none, "a missing directory has no repository, runtime or context")
     }
 }

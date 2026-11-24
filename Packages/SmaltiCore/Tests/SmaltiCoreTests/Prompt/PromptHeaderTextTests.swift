@@ -7,7 +7,7 @@ struct PromptHeaderTextTests {
     private let segments = [
         PromptSegment(module: .directory, icon: .folder, runs: [ColoredText("solen/apps/api", .accent)]),
         PromptSegment(module: .gitBranch, icon: .branch, runs: [ColoredText("feat/reminders", .ansi(5))]),
-        PromptSegment(module: .gitStatus, icon: nil, runs: [ColoredText("●2 +1", .ansi(3))]),
+        PromptSegment(module: .gitStatus, icon: nil, runs: [ColoredText("●2 +1", .ansi(3))], attachesTo: .gitBranch),
         PromptSegment(module: .runtime, icon: .node, runs: [ColoredText("22.11", .secondary)]),
     ]
 
