@@ -248,7 +248,7 @@
 
 ### Tareas
 #### Bloque 1 · Puerta y dominio
-- [ ] T1 · Puerta: arranque del CLI con `SmaltiCore` enlazado
+- [x] T1 · Puerta: arranque de `smalti event Stop` (50 corridas, release, `scripts/measure-cli-startup.sh`): base p50 3,33/3,28 ms; con `SmaltiCore` e ImageIO enlazados 3,50/3,53 ms (+0,2 ms, binario de 138 KB → 3,9 MB). `img` va dentro de `smalti`
 - [ ] T2 · `ImageFileKind`, `PointerWord` y `PreviewCandidates`
 - [ ] T3 · Config, ⌘Y, menú, ayuda y token del pie
 - [ ] T4 · `ImageGrid` y `KittyPlacement`
