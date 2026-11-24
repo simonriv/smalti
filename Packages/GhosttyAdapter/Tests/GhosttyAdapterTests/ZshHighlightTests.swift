@@ -317,4 +317,37 @@ struct ZshHighlightTests {
 
         #expect(smaltiEntries(zsh) == ["0 2 \(Self.blue)"])
     }
+
+    /// Final review (I2): ⌃R sends `history`, which moves zsh's `seq` past the line's; the line's highlight still
+    /// applies while the buffer is the one it was computed for.
+    @Test func highlightOfTheLineSurvivesHistoryRequest() throws {
+        let server = try FakeInputServer(reply: Self.styleOnly)
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("ls")
+        let lineSeq = try #require(
+            server.received.filter { $0.hasPrefix("line\t") }.compactMap { Int($0.split(separator: "\t")[1]) }.max())
+        zsh.type("\u{12}")
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("history\t") } })
+
+        server.push("highlight\t\(lineSeq)\t0,2,c")
+        zsh.type("")
+
+        #expect(smaltiEntries(zsh) == ["0 2 \(Self.blue)"])
+    }
+
+    @Test func highlightOfAnOldBufferIsStillDropped() throws {
+        let server = try FakeInputServer(reply: Self.styleOnly)
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("ls")
+        let lineSeq = try #require(
+            server.received.filter { $0.hasPrefix("line\t") }.compactMap { Int($0.split(separator: "\t")[1]) }.max())
+        zsh.type("x")
+
+        server.push("highlight\t\(lineSeq)\t0,2,c")
+        zsh.type("")
+
+        #expect(smaltiEntries(zsh).isEmpty)
+    }
 }

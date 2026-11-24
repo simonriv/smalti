@@ -30,6 +30,13 @@ final class ClaudeIntegrationStatus {
         check()
     }
 
+    /// An install or uninstall started: until it answers, ⌘K offers neither action, so it cannot be run twice.
+    func changeStarted() {
+        guard state != .unknown else { return }
+        state = .unknown
+        NotificationCenter.default.post(name: .claudeIntegrationChanged, object: self)
+    }
+
     private func check() {
         Task { [weak self, integration] in
             let state = await integration.installState

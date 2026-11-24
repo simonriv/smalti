@@ -44,6 +44,8 @@ public actor HighlightLine {
     private var cache: [String: Cached] = [:]
     private var inFlight: [String: Task<PathKind?, Never>] = [:]
     private var specCommands: Set<String>?
+    /// Commands whose spec failed to load: nothing more will come, so they no longer make an answer incomplete.
+    private var unavailableSpecs: Set<String> = []
 
     public init(paths: any PathFacts, completions: any CompletionProvider, timing: HighlightTiming = .standard) {
         self.paths = paths
@@ -84,7 +86,7 @@ public actor HighlightLine {
             asked.formUnion(names)
             for name in names {
                 let spec = loading ? await completions.spec(for: name) : await completions.loadedSpec(for: name)
-                if let spec { specs[name] = spec }
+                if let spec { specs[name] = spec } else if loading { unavailableSpecs.insert(name) }
             }
             plan = LineHighlighter.plan(for: text) { specs[$0] }
         }
@@ -96,7 +98,7 @@ public actor HighlightLine {
     private func commandsWithUnloadedSpec(_ names: [String]) async -> Bool {
         guard !names.isEmpty else { return false }
         if specCommands == nil { specCommands = Set(await completions.commands) }
-        return names.contains { specCommands?.contains($0) == true }
+        return names.contains { specCommands?.contains($0) == true && !unavailableSpecs.contains($0) }
     }
 
     // MARK: - Paths

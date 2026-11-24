@@ -189,6 +189,33 @@ extension HighlightLineTests {
     }
 }
 
+/// A command that is listed with a spec whose loading fails (`FigSpecs.failed`).
+private actor BrokenSpecProvider: CompletionProvider {
+    var commands: [String] { ["broken"] }
+    func spec(for command: String) async -> CompletionSpec? { nil }
+    func loadedSpec(for command: String) async -> CompletionSpec? { nil }
+    func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
+        -> [Suggestion]
+    { [] }
+    func paths(matching prefix: String, in directory: String, foldersOnly: Bool) async -> [Suggestion] { [] }
+}
+
+@Suite("HighlightLine · broken specs")
+struct HighlightLineBrokenSpecTests {
+    /// Final review (M1): once loading a spec failed, the line is complete; no follow-up on every keystroke.
+    @Test func failedSpecIsNotWaitedForAgain() async {
+        let subject = HighlightLine(paths: InMemoryPathFacts(), completions: BrokenSpecProvider())
+        let line = InputLine(text: "broken x", cursor: 8)
+        let first = await subject.firstAnswer(line, directory: "/w", home: "/h")
+        _ = await subject.completeAnswer(line, directory: "/w", home: "/h")
+
+        let again = await subject.firstAnswer(line, directory: "/w", home: "/h")
+
+        #expect(!first.isComplete)
+        #expect(again.isComplete)
+    }
+}
+
 @Suite("InMemoryPathFacts")
 struct InMemoryPathFactsTests {
     @Test func honoursPathFactsContract() async throws {

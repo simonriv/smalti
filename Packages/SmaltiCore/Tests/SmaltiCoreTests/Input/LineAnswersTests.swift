@@ -39,6 +39,7 @@ struct LineAnswersTests {
             request("git s"), pane: HistoryFixture.pane,
             channel: LineChannel(send: { outbox.messages.append($0) }, isLatest: { _ in true }))
 
+        try? await Task.sleep(for: .milliseconds(500))
         #expect(outbox.messages.first == .suggest(seq: 7, "tatus"))
         #expect(outbox.messages.contains { if case .highlight(7, _) = $0 { true } else { false } })
     }
@@ -68,4 +69,41 @@ struct LineAnswersTests {
 
         #expect(outbox.messages.filter { if case .highlight = $0 { true } else { false } }.count == 1)
     }
+
+    /// Final review (I1): the shell's message loop waits for `answer`; a highlight held up by a spec loading in
+    /// JavaScript must not hold the next line's ghost.
+    @Test func answerReturnsWithoutWaitingForTheHighlight() async {
+        let slowSpecs = HighlightLine(
+            paths: InMemoryPathFacts(), completions: SlowLoadedSpecs(delay: .milliseconds(400)))
+        let outbox = Outbox()
+        let answers = LineAnswers(session: await session(), highlighter: slowSpecs)
+        let start = ContinuousClock.now
+
+        await answers.answer(
+            request("git s"), pane: HistoryFixture.pane,
+            channel: LineChannel(send: { outbox.messages.append($0) }, isLatest: { _ in true }))
+
+        #expect(ContinuousClock.now - start < .milliseconds(200))
+        #expect(outbox.messages.first == .suggest(seq: 7, "tatus"))
+    }
+}
+
+/// A provider whose already-loaded lookups wait, as `FigSpecs` does while its actor evaluates another spec.
+private actor SlowLoadedSpecs: CompletionProvider {
+    let delay: Duration
+
+    init(delay: Duration) {
+        self.delay = delay
+    }
+
+    var commands: [String] { [] }
+    func spec(for command: String) async -> CompletionSpec? { nil }
+    func loadedSpec(for command: String) async -> CompletionSpec? {
+        try? await Task.sleep(for: delay)
+        return nil
+    }
+    func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
+        -> [Suggestion]
+    { [] }
+    func paths(matching prefix: String, in directory: String, foldersOnly: Bool) async -> [Suggestion] { [] }
 }

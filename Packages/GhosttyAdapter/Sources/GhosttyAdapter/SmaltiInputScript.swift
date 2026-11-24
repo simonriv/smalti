@@ -21,6 +21,9 @@ enum SmaltiInputScript {
             typeset -gA _smalti_hl_style
             typeset -ga _smalti_hl_spans
             typeset -g _smalti_hl_buffer=
+            # The `seq` and text of the last `line` sent: a `complete` or `history` moves `seq` without changing the
+            # line, and that line's highlight still applies to it.
+            typeset -g _smalti_input_line_seq= _smalti_input_line_text=
             typeset -gA _smalti_input_previous
 
             _smalti_input_escape() {
@@ -192,6 +195,8 @@ enum SmaltiInputScript {
                     _smalti_input_paint ""
                 fi
                 (( _smalti_input_seq++ ))
+                _smalti_input_line_seq=$_smalti_input_seq
+                _smalti_input_line_text=$BUFFER
                 _smalti_input_where
                 _smalti_input_escape "$BUFFER"
                 local message="line"$'\t'$_smalti_input_seq$'\t'$_smalti_input_pwd$'\t'$CURSOR$'\t'$_smalti_input_text
@@ -252,7 +257,10 @@ enum SmaltiInputScript {
                         _smalti_prompt_apply "$1"
                         ;;
                     highlight)
-                        _smalti_input_is_current "$fields[2]" || return 0
+                        if ! _smalti_input_is_current "$fields[2]"; then
+                            [[ $fields[2] == "$_smalti_input_line_seq" && $BUFFER == "$_smalti_input_line_text" ]] \
+                                || return 0
+                        fi
                         _smalti_hl_spans=(${(s: :)fields[3]})
                         _smalti_hl_buffer=$BUFFER
                         _smalti_hl_paint

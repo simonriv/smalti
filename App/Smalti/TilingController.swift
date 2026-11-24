@@ -162,6 +162,7 @@ final class TilingController {
     private func runIntegration(_ command: IntegrationCommand.Type) {
         let integration = deps.agents.integration
         let status = deps.agents.integrationStatus
+        status.changeStarted()
         Task { [weak self] in
             let line = await command.init(integration: integration).execute()
             self?.report(.integration(line))
