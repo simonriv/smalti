@@ -93,3 +93,37 @@ struct StarshipPresetTests {
         #expect(preset().table("nodejs")?.value("version_format") == .string("${major}.${minor}"))
     }
 }
+
+/// Block 2 review (I4, M7): text Starship would parse as format syntax is escaped, and the preset matches Smalti more.
+@Suite("StarshipPreset · review")
+struct StarshipPresetReviewTests {
+    private func preset(_ change: (inout PromptConfig) -> Void = { _ in }) -> StarshipPreset {
+        var config = PromptConfig.standard
+        change(&config)
+        var appearance = AppearanceSettings.obsidian
+        appearance.protectLegibility = false
+        return StarshipPreset.make(from: config, theme: ThemeCatalog.apply(appearance))
+    }
+
+    @Test func dollarSymbolIsEscaped() {
+        let character = preset { $0.symbol = .dollar }.table("character")
+
+        #expect(character?.value("success_symbol") == .string("[\\$](#7aa2f7)"))
+    }
+
+    @Test func noBlankLineBeforeThePrompt() {
+        #expect(preset().settings.first { $0.key == "add_newline" }?.value == .boolean(false))
+    }
+
+    @Test func cloudOrderMatchesSmalti() {
+        let names = preset { $0.modules = [.cloud] }.tables.map(\.name)
+
+        #expect(names == ["aws", "kubernetes", "character"])
+    }
+
+    @Test func gitStatusColorsEachCount() {
+        let format = preset().table("git_status")?.value("format")
+
+        #expect(format == .string("([$modified](#e0af68))( [$staged](#9ece6a)) "))
+    }
+}

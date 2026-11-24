@@ -24,7 +24,11 @@ extension GitStatusModule {
                 [
                     ("modified", .string("●${count}")), ("staged", .string("+${count}")),
                     ("style", .string(builder.style(.ansi(3)))),
-                    ("format", .string(builder.wrap("$modified$staged", .ansi(3), optional: true))),
+                    // Each count in its own color, as in Smalti: "●2" amber, "+1" green.
+                    (
+                        "format",
+                        .string("([$modified](\(builder.style(.ansi(3)))))( [$staged](\(builder.style(.ansi(2))))) ")
+                    ),
                 ])
         ]
     }
@@ -64,8 +68,8 @@ extension TimeModule {
 extension CloudModule {
     func starshipTables(using builder: StarshipBuilder) -> [StarshipTable] {
         [
-            builder.module("kubernetes", "k8s:$context", .ansi(6), extra: [("disabled", .boolean(false))]),
             builder.module("aws", "aws:$profile", .ansi(6)),
+            builder.module("kubernetes", "k8s:$context", .ansi(6), extra: [("disabled", .boolean(false))]),
         ]
     }
 }

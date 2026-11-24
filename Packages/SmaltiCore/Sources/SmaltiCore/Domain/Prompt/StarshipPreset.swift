@@ -4,6 +4,8 @@ public struct StarshipPreset: Equatable, Sendable {
     public let tables: [StarshipTable]
     /// Lines written as `#` comments at the top: what cannot be exported.
     public let comments: [String]
+    /// Top-level keys: no blank line before each prompt, as in Smalti.
+    public let settings: [StarshipEntry] = [StarshipEntry(key: "add_newline", value: .boolean(false))]
 
     public func table(_ name: String) -> StarshipTable? {
         tables.first { $0.name == name }
@@ -46,8 +48,8 @@ public struct StarshipBuilder {
         let character = table(
             "character",
             [
-                ("success_symbol", .string("[\(config.symbol.rawValue)](\(hex(.accent)))")),
-                ("error_symbol", .string("[\(config.symbol.rawValue)](\(hex(.failed)))")),
+                ("success_symbol", .string("[\(Self.literal(config.symbol.rawValue))](\(hex(.accent)))")),
+                ("error_symbol", .string("[\(Self.literal(config.symbol.rawValue))](\(hex(.failed)))")),
             ])
         guard config.style != .symbolOnly else {
             return StarshipPreset(format: "$character", tables: [character], comments: [])
@@ -64,6 +66,14 @@ public struct StarshipBuilder {
     }
 
     /// `symbol` is Starship's own variable; `icon` is written into the format.
+    /// Text inside a Starship format string: `$`, brackets, parentheses and `\\` are its syntax (block 2 review, I4).
+    static func literal(_ text: String) -> String {
+        text.reduce(into: "") { result, character in
+            if "\\$[]()".contains(character) { result.append("\\") }
+            result.append(character)
+        }
+    }
+
     func module(
         _ name: String, _ body: String, _ role: SegmentColor, symbol: PromptIcon? = nil, icon: PromptIcon? = nil,
         extra: [(String, StarshipValue)] = []
