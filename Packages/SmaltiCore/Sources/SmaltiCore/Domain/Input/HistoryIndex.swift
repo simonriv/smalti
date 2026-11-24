@@ -139,9 +139,14 @@ public struct HistoryIndex: Sendable {
 
     /// Drops evicted slots once they are half the storage, so eviction stays amortized O(1).
     private mutating func compactIfNeeded() {
-        guard head > 1024, head * 2 > entries.count else { return }
+        guard Self.shouldCompact(head: head, storage: entries.count) else { return }
         entries.removeFirst(head)
         pairs.removeFirst(head)
         head = 0
+    }
+
+    /// More than 1024 evicted slots, and over half the storage.
+    static func shouldCompact(head: Int, storage: Int) -> Bool {
+        head > 1024 && head * 2 > storage
     }
 }

@@ -155,9 +155,16 @@ def builds(package: Path, timeout: int) -> bool:
     return result is not None and result.returncode == 0
 
 
+def kill_strays(package: Path) -> None:
+    """Kills every process whose command line names `package`: swiftpm starts its test helper in a process group of
+    its own, so a helper a mutant hung outlives `swift test` and slows every later mutant."""
+    subprocess.run(["pkill", "-9", "-f", re.escape(str(package))], capture_output=True)
+
+
 def tests_pass(package: Path, timeout: int) -> bool | None:
     """True if the suite passes, False if it fails, None on timeout (counted as killed)."""
     result = run(["swift", "test", "--skip-build", "--package-path", str(package)], package, timeout)
+    kill_strays(package / ".build")
     return None if result is None else result.returncode == 0
 
 
