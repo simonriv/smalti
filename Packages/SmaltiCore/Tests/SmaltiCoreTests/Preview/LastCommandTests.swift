@@ -53,3 +53,65 @@ struct LastCommandTests {
         #expect(await session.lastCommand(in: pane) == nil)
     }
 }
+
+/// F4 behavior pinned before simplifying `start()` (block 2 mutation): what ran while the history loaded is kept,
+/// after what was loaded, and only once.
+@Suite("InputSession · commands while loading")
+struct CommandsWhileLoadingTests {
+    @Test func commandsRunWhileLoadingAreKeptWithTheLoadedOnes() async {
+        let history = HeldHistory(loaded: [
+            HistoryEntry(
+                command: "git status", directory: "/w", exit: 0, duration: 1, date: Date(timeIntervalSince1970: 1),
+                pane: HistoryFixture.pane)
+        ])
+        let session = InputSession(
+            ports: InputSession.Ports(
+                history: history, project: FakeProjectContext(), completions: FakeCompletionProvider(),
+                predictor: HeuristicPredictor()),
+            settings: .standard, clock: { Date(timeIntervalSince1970: 1_000_000) })
+        let starting = Task { await session.start() }
+        await history.waitUntilLoading()
+
+        await session.began("make build", pane: HistoryFixture.pane, directory: "/w")
+        await session.finished(pane: HistoryFixture.pane, exit: 0)
+        await history.release()
+        await starting.value
+        await session.began("make test", pane: HistoryFixture.pane, directory: "/w")
+        await session.finished(pane: HistoryFixture.pane, exit: 0)
+
+        let found = await session.search("", scope: .all).map(\.stats)
+        #expect(Set(found.map(\.command)) == ["git status", "make build", "make test"])
+        #expect(found.allSatisfy { $0.uses == 1 })
+    }
+}
+
+private actor HeldHistory: CommandHistory {
+    private let loaded: [HistoryEntry]
+    private var held: CheckedContinuation<Void, Never>?
+    private var loading: [CheckedContinuation<Void, Never>] = []
+    private var isLoading = false
+
+    init(loaded: [HistoryEntry]) {
+        self.loaded = loaded
+    }
+
+    func load() async throws(HistoryError) -> [HistoryEntry] {
+        isLoading = true
+        loading.forEach { $0.resume() }
+        loading = []
+        await withCheckedContinuation { held = $0 }
+        return loaded
+    }
+
+    func append(_ entry: HistoryEntry) async throws(HistoryError) {}
+
+    func waitUntilLoading() async {
+        guard !isLoading else { return }
+        await withCheckedContinuation { loading.append($0) }
+    }
+
+    func release() {
+        held?.resume()
+        held = nil
+    }
+}

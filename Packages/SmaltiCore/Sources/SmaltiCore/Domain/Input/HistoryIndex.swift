@@ -47,6 +47,9 @@ public struct HistoryIndex: Sendable {
 
     public var count: Int { entries.count - head }
 
+    /// The kept entries, oldest first.
+    var all: ArraySlice<HistoryEntry> { entries[head...] }
+
     public mutating func append(_ entry: HistoryEntry) {
         guard limit > 0 else { return }
         let pair = lastByPane[entry.pane].map { previous in
