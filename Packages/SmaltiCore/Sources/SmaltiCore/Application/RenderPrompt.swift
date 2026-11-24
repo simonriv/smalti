@@ -37,6 +37,10 @@ public final class RenderPrompt {
     /// The newest `context` of each shell still waiting for its facts: a slower, older answer is dropped, and `exec`
     /// or `forget` cancel it (block 2 review, I2).
     private var pending: [PaneID: Int] = [:]
+    /// "Solo símbolo": the last prompt context of each shell, for its pane header; it stays while a command runs.
+    private var lastShells: [PaneID: QuietShell] = [:]
+    /// Characters a pane header gives the context before trimming the directory from the left.
+    public static let headerMaxCharacters = 64
 
     private struct QuietShell {
         let seq: Int
@@ -58,8 +62,18 @@ public final class RenderPrompt {
         let found = await facts.facts(for: query)
         guard pending[pane] == seq else { return nil }
         pending[pane] = nil
-        quiet[pane] = QuietShell(seq: seq, context: context, facts: found)
+        let shell = QuietShell(seq: seq, context: context, facts: found)
+        quiet[pane] = shell
+        lastShells[pane] = shell
         return message(for: pane)
+    }
+
+    /// The pane header's text with "Solo símbolo"; `nil` with another style or before the shell's first prompt.
+    public func headerText(for pane: PaneID) -> String? {
+        let config = environment.settings().0
+        guard config.style == .symbolOnly, let shell = lastShells[pane] else { return nil }
+        let segments = PromptModules.segments(for: config, in: promptContext(shell, pane: pane))
+        return PromptHeaderText.text(for: segments, maxWidth: Self.headerMaxCharacters)
     }
 
     /// The prompts to re-send after an agent of `workspace` changed state, with each shell's last `seq`.
@@ -79,6 +93,7 @@ public final class RenderPrompt {
     public func forget(pane: PaneID) {
         quiet[pane] = nil
         pending[pane] = nil
+        lastShells[pane] = nil
     }
 
     /// The immediate prompt and the ghost color for every shell. With `source = "shell"` the immediate prompt is

@@ -43,6 +43,8 @@ public struct HeaderContext: Sendable {
     public let now: Date
     /// Model family and context load per agent session, from the observatory (F3); empty until it reports.
     public var agentDetails: [String: PaneAgentDetail] = [:]
+    /// F5 "Solo símbolo": the prompt's context per pane, shown instead of the directory.
+    public var promptHeaders: [PaneID: String] = [:]
 
     public init(keymap: Keymap, home: WorkingDirectory, now: Date) {
         self.keymap = keymap
@@ -76,8 +78,9 @@ public struct PaneHeaderContent: Equatable, Sendable {
     public init(_ pane: Pane, index: Int?, context: HeaderContext) {
         let agentDetail = pane.agent.flatMap { context.agentDetails[$0.sessionID] }
         let directory = pane.workingDirectory.abbreviated(home: context.home)
+        let shown = context.promptHeaders[pane.id] ?? agentDetail?.family.map { "\(directory) · \($0)" } ?? directory
         self.init(
-            process: pane.headerName, directory: agentDetail?.family.map { "\(directory) · \($0)" } ?? directory,
+            process: pane.headerName, directory: shown,
             status: pane.agent?.state.kind, detail: HeaderDetail.of(pane.agent, now: context.now),
             shortcut: index.flatMap { context.keymap.chord(for: .paneFocus($0))?.display } ?? "")
         if pane.agent?.state.kind == .working, let load = agentDetail?.context, load != .unavailable {

@@ -46,7 +46,8 @@ struct FilePromptFactsTests {
         var value = Date(timeIntervalSince1970: 100)
     }
 
-    private static let gitStatus = "/usr/bin/git --no-optional-locks status --porcelain=v2 --untracked-files=no"
+    private static let gitStatus =
+        "\(FilePromptFacts.git) --no-optional-locks status --porcelain=v2 --untracked-files=no"
     private let root = FileManager.default.temporaryDirectory.appending(path: "smalti-facts-\(UUID())")
 
     private func makeRepo(head: String = "ref: refs/heads/feat/reminders\n") throws -> String {
@@ -324,5 +325,59 @@ struct FilePromptFactsReviewTests {
             for: PromptQuery(directory: root.path(percentEncoded: false), runtimePaths: [:], kubeconfig: list))
 
         #expect(facts.kubeContext == "gke-west")
+    }
+}
+
+/// T17: the real `git` in a real repository, as the app runs it.
+@Suite("FilePromptFacts with git")
+struct FilePromptFactsGitTests {
+    private func shell(_ script: String, in directory: URL) throws {
+        let process = Process()
+        process.executableURL = URL(filePath: "/bin/sh")
+        process.arguments = ["-c", script]
+        process.currentDirectoryURL = directory
+        try process.run()
+        process.waitUntilExit()
+    }
+
+    @Test func modifiedFileIsCounted() async throws {
+        let repository = FileManager.default.temporaryDirectory.appending(path: "smalti-git-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: repository, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: repository) }
+        try shell(
+            "git init -q -b feat && echo a >f && git add f && git -c user.email=t@t -c user.name=t commit -qm i "
+                + "&& echo b >f", in: repository)
+
+        let facts = await FilePromptFacts().facts(
+            for: PromptQuery(directory: repository.path(percentEncoded: false), runtimePaths: [:], kubeconfig: nil))
+
+        #expect(facts.branch == "feat")
+        #expect(facts.changes == GitChanges(modified: 1, staged: 0))
+    }
+}
+
+/// T17: `/usr/bin/git` is xcrun's shim, which needs over a second the first time in a process and is killed at the
+/// 300 ms limit before it can cache anything: the prompt never had changes in the app. A real git comes first.
+@Suite("GitLocator")
+struct GitLocatorTests {
+    @Test func firstExecutableCandidateWins() {
+        let found = GitLocator.first(of: ["/a/git", "/b/git", "/usr/bin/git"]) {
+            $0 == "/b/git" || $0 == "/usr/bin/git"
+        }
+
+        #expect(found == "/b/git")
+    }
+
+    @Test func theShimIsTheLastResort() {
+        #expect(GitLocator.first(of: GitLocator.candidates) { _ in false } == "/usr/bin/git")
+        #expect(GitLocator.candidates.last == "/usr/bin/git")
+    }
+
+    @Test func homebrewAndDeveloperToolsComeBeforeTheShim() {
+        #expect(
+            GitLocator.candidates == [
+                "/opt/homebrew/bin/git", "/usr/local/bin/git", "/Library/Developer/CommandLineTools/usr/bin/git",
+                "/Applications/Xcode.app/Contents/Developer/usr/bin/git", "/usr/bin/git",
+            ])
     }
 }

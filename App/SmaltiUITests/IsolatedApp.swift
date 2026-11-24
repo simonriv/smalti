@@ -37,8 +37,11 @@ extension XCUIApplication {
     /// the user's `.zshrc` (tmux, plugins) nor their history is ever read.
     static let integratedShell = "/bin/zsh -d"
 
-    static func isolatedSmaltiWithIntegration() -> XCUIApplication {
+    /// F5: the shell keeps the `.zshrc`'s `p% ` prompt (`[prompt] source = "shell"`) unless `smaltiPrompt` is true,
+    /// so F4's tests read the prompt they were written for; PromptTests turn Smalti's on.
+    static func isolatedSmaltiWithIntegration(smaltiPrompt: Bool = false) -> XCUIApplication {
         let app = isolatedSmalti(shell: integratedShell)
+        if !smaltiPrompt { app.writeTheme("[prompt]\nsource = \"shell\"\n") }
         let zdotdir = app.configFile.deletingLastPathComponent().appending(path: "zdotdir")
         try? FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)
         try? Data("PS1='p%% '\n".utf8).write(to: zdotdir.appending(path: ".zshrc"))

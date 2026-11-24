@@ -274,3 +274,52 @@ struct RenderPromptTimeZoneTests {
         #expect(prompt.values.values.contains("19:00"))
     }
 }
+
+/// Spec F5, "Solo símbolo · contexto en la cabecera": the pane header shows the prompt's context.
+@MainActor
+@Suite("RenderPrompt header")
+struct RenderPromptHeaderTests {
+    private let pane = PaneID()
+
+    private func make(style: PromptStyleID) -> RenderPrompt {
+        var config = PromptConfig.standard
+        config.style = style
+        let facts = FakePromptFacts(
+            answers: ["/Users/simon/dev/solen": PromptFactsResult(repoRoot: "/Users/simon/dev/solen", branch: "main")])
+        let environment = PromptEnvironment(
+            settings: { (config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
+            workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) })
+        return RenderPrompt(facts: facts, environment: environment)
+    }
+
+    private let shell = ShellContext(
+        pwd: "/Users/simon/dev/solen", exit: 0, durationMilliseconds: 0, awsProfile: nil, kubeconfig: nil,
+        runtimePaths: [:])
+
+    @Test func symbolOnlyPutsTheContextInTheHeader() async {
+        let render = make(style: .symbolOnly)
+        _ = await render.handle(shell, seq: 1, pane: pane)
+
+        #expect(render.headerText(for: pane) == "solen · main")
+    }
+
+    @Test func otherStylesLeaveTheHeaderAlone() async {
+        let render = make(style: .clean)
+        _ = await render.handle(shell, seq: 1, pane: pane)
+
+        #expect(render.headerText(for: pane) == nil)
+    }
+
+    @Test func noContextYetMeansNoHeaderText() {
+        #expect(make(style: .symbolOnly).headerText(for: pane) == nil)
+    }
+
+    @Test func runningCommandKeepsTheLastContext() async {
+        let render = make(style: .symbolOnly)
+        _ = await render.handle(shell, seq: 1, pane: pane)
+
+        render.commandStarted(pane: pane)
+
+        #expect(render.headerText(for: pane) == "solen · main")
+    }
+}

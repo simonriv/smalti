@@ -10,7 +10,10 @@ public actor FilePromptFacts: PromptFacts {
     /// Prompts this close share one `git status` (block 3 review, I1): editing a file touches no git file, so no file
     /// date can say the answer is still good; time can.
     public static let changesWindow: TimeInterval = 1
-    private static let git = "/usr/bin/git"
+    /// A real git when there is one: `/usr/bin/git` is xcrun's shim, too slow the first time for the 300 ms limit (T17).
+    public static let git = GitLocator.first(of: GitLocator.candidates) {
+        FileManager.default.isExecutableFile(atPath: $0)
+    }
 
     private let runner: any CommandRunner
     private let clock: @Sendable () -> Date
@@ -104,6 +107,20 @@ struct RepositoryFiles {
 
 extension String {
     fileprivate var trimmingSlash: String { count > 1 && hasSuffix("/") ? String(dropLast()) : self }
+}
+
+/// Where git is (T17). `/usr/bin/git` is xcrun's shim: the first run in a process needs over a second to find the
+/// developer tools and, killed at the prompt's 300 ms limit, never caches them, so it comes last.
+public enum GitLocator {
+    public static let candidates = [
+        "/opt/homebrew/bin/git", "/usr/local/bin/git", "/Library/Developer/CommandLineTools/usr/bin/git",
+        "/Applications/Xcode.app/Contents/Developer/usr/bin/git", shim,
+    ]
+    private static let shim = "/usr/bin/git"
+
+    public static func first(of candidates: [String], isExecutable: (String) -> Bool) -> String {
+        candidates.first(where: isExecutable) ?? shim
+    }
 }
 
 /// `git status --porcelain=v2` lines: `1 XY …` and `2 XY …` (renames) count X ≠ `.` as staged and Y ≠ `.` as

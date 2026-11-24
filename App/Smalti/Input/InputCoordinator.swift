@@ -22,6 +22,10 @@ final class InputCoordinator {
     var onHistory: ((Request, String) -> Void)?
     /// Every new line of a pane, for an open menu to refilter or close.
     var onLine: ((PaneID, InputLine) -> Void)?
+    /// F5: the Smalti prompt; zsh's `context` gets its full prompt from it.
+    var renderPrompt: RenderPrompt?
+    /// F5: a pane's prompt context changed (its header shows it with "Solo símbolo").
+    var onPromptRendered: ((PaneID) -> Void)?
 
     private let session: InputSession
     private let provider: any TerminalViewProvider
@@ -105,14 +109,46 @@ final class InputCoordinator {
             if let older = connections[pane], older != connection { older.close() }
             panes[connection.id] = pane
             connections[pane] = connection
+            // F5: the shell paints Smalti's immediate prompt (and takes its answers) once it has the style.
+            if let style = renderPrompt?.styleMessage() { connection.send(style) }
         }
         guard let pane = panes[connection.id] else { return }
         if message == .bye { forget(connection, of: pane) }
         if let seq = Self.seq(of: message) { latestSeq[pane] = seq }
         if case .line(_, let line) = message { onLine?(pane, line) }
+        handlePrompt(message, pane: pane, connection: connection)
         let path = packet.directory ?? directory(pane) ?? Self.home
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
+    }
+
+    // MARK: - Prompt (F5)
+
+    private func handlePrompt(_ message: ShellMessage, pane: PaneID, connection: InputConnection) {
+        switch message {
+        case .context(let seq, let context):
+            Task { [weak self] in
+                guard let reply = await self?.renderPrompt?.handle(context, seq: seq, pane: pane) else { return }
+                connection.send(reply)
+                self?.onPromptRendered?(pane)
+            }
+        case .exec: renderPrompt?.commandStarted(pane: pane)
+        case .bye: renderPrompt?.forget(pane: pane)
+        default: break
+        }
+    }
+
+    /// An agent of `workspace` changed state: the shells quiet at their prompt get theirs again, unasked.
+    func agentsChanged(in workspace: WorkspaceID) {
+        for (pane, message) in renderPrompt?.agentsChanged(in: workspace) ?? [] {
+            connections[pane]?.send(message)
+        }
+    }
+
+    /// The theme or the prompt changed: every shell gets the new immediate prompt and ghost color.
+    func sendPromptStyle() {
+        guard let message = renderPrompt?.styleMessage() else { return }
+        connections.values.forEach { $0.send(message) }
     }
 
     /// Ends the connections of panes that no longer exist (closed panes or workspaces): a background job that

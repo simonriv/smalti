@@ -22,6 +22,8 @@ struct TilingState {
     let theme: Theme
     /// F5: how opaque "Proteger legibilidad" made each surface; `chrome` backs the strip and the status bar.
     let opacities: SurfaceOpacities
+    /// F5 "Solo símbolo": the prompt's context of the active workspace's panes, shown in their headers.
+    var promptHeaders: [PaneID: String] = [:]
     let message: StatusMessage?
     /// Directories show relative to it (`~/dev/xolken`).
     let home: WorkingDirectory
@@ -557,11 +559,21 @@ final class TilingController {
         keepMinutesFresh()
     }
 
+    /// F5 "Solo símbolo": each pane's prompt context, from the app's `RenderPrompt`.
+    var promptHeader: ((PaneID) -> String?)?
+
+    /// Something the views show changed outside this controller (a pane's prompt context).
+    func refresh() { publish() }
+
     private var state: TilingState {
-        TilingState(
+        var state = TilingState(
             set: set, config: config, theme: theme, opacities: applied.opacities, message: status.showing,
             home: deps.home, observatory: observatory,
             isSecureInput: isSecureInput, hoveredLink: hoveredLink)
+        if let promptHeader {
+            for pane in set.active.panes { state.promptHeaders[pane.id] = promptHeader(pane.id) }
+        }
+        return state
     }
 
     private var isSecureInput = false

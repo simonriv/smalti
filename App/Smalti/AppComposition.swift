@@ -21,6 +21,8 @@ final class AppComposition {
     private var runtime: GhosttyRuntime?
     /// F5: the one Appearance document every window's panel edits.
     private var appearance: AppearanceSession?
+    /// F5 "Solo símbolo": a pane's prompt context for its header (from `RenderPrompt`).
+    private var promptHeader: ((PaneID) -> String?)?
     private var engine: GhosttyTerminalEngine?
     private var sessionKeeper: SessionKeeper?
     /// F4.5: every window, in opening order, and the one in front (the last key window).
@@ -197,6 +199,7 @@ final class AppComposition {
     private func applyAppearance(_ document: AppearanceDocument) {
         compositions.forEach { $0.controller.adopt(document) }
         compositions.first?.controller.applyEngineAppearance()
+        input?.sendPromptStyle()
     }
 
     // MARK: - Windows (F4.5)
@@ -209,7 +212,9 @@ final class AppComposition {
         let agents = TilingController.AgentDependencies(
             notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
-        return (TilingController(dependencies.with(agents: agents), initial: initial), visibility)
+        let controller = TilingController(dependencies.with(agents: agents), initial: initial)
+        controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
+        return (controller, visibility)
     }
 
     /// A window for `controller`, cascaded from the front one, in front. Its controller has not opened panes yet.
@@ -279,7 +284,10 @@ final class AppComposition {
             let isReloaded = compositions.first?.controller.reloadConfig() ?? false
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
             // Block 4 review (C1): only a reload that loaded replaces the panel's document.
-            if isReloaded, let config = compositions.first?.controller.config { appearance?.reload(config) }
+            if isReloaded, let config = compositions.first?.controller.config {
+                appearance?.reload(config)
+                input?.sendPromptStyle()
+            }
             mainMenu?.refresh()
         case .appAbout: showAbout()
         case .feedbackReport:
@@ -665,6 +673,10 @@ final class AppComposition {
                     // The window that holds the pane applies it; the others ignore a pane they do not have.
                     self?.compositions.forEach { $0.controller.handle(event) }
                     self?.observatory?.agentEvent(event)
+                    // F5 "Agentes que esperan": the quiet prompts of the workspace show it without a keypress.
+                    if let workspace = self?.workspace(containing: event.pane)?.id {
+                        self?.input?.agentsChanged(in: workspace)
+                    }
                 }
             }
         } catch IPCError.socketInUse {
@@ -693,6 +705,7 @@ final class AppComposition {
             self?.composition(containing: pane)?.controller.set.workspaces.lazy.flatMap(\.panes)
                 .first { $0.id == pane }?.workingDirectory.path
         }
+        connectPrompt(coordinator, startup: startup)
         do {
             try coordinator.start(socketFile: socket)
             input = coordinator
@@ -709,6 +722,29 @@ final class AppComposition {
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    /// F5: zsh's `context` → `RenderPrompt` → `prompt`; agents that start waiting re-send it; "Solo símbolo" moves
+    /// the context to the pane header.
+    private func connectPrompt(_ coordinator: InputCoordinator, startup: Startup) {
+        let environment = PromptEnvironment(
+            settings: { [weak self] in
+                let config = self?.controller?.config ?? startup.initial.config
+                return (config.prompt, ThemeCatalog.apply(config.appearance))
+            },
+            agents: { [weak self] pane in
+                self?.workspace(containing: pane)?.waitingAgents(besides: pane) ?? WaitingAgents()
+            },
+            workspace: { [weak self] pane in self?.workspace(containing: pane)?.id },
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() })
+        let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
+        coordinator.renderPrompt = render
+        coordinator.onPromptRendered = { [weak self] pane in self?.composition(containing: pane)?.controller.refresh() }
+        promptHeader = { pane in render.headerText(for: pane) }
+    }
+
+    private func workspace(containing pane: PaneID) -> Workspace? {
+        composition(containing: pane)?.controller.set.workspaces.first { $0.panes.contains { $0.id == pane } }
     }
 
     private static func ipcEndpoints(socket: URL, inputSocket: URL?) -> IPCEndpoints? {
