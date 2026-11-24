@@ -8,7 +8,7 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F6 Multi-harness ──▶ F7 Extras
+F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
 ```
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
@@ -119,3 +119,14 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Entregables:** predicción con API propia (Anthropic, OpenAI, OpenRouter o compatible) y con `claude -p`; daemon `smaltid` dueño de los PTY (se decide en Swift o Rust al llegar); layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
 - **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Ningún secreto sale a una API; las pruebas del filtro lo cubren.
 - **Dependencias:** F4 (`PredictionProvider`) y F2 (persistencia). El daemon choca con que libghostty sea dueño del PTY (ver riesgos de F0) y necesita su propio spike.
+
+## F8 · Puertos y procesos
+
+- **Objetivo:** ver qué está escuchando y qué está consumiendo, y detenerlo, sin salir de Smalti ni abrir otra herramienta (idea de Simón, 2026-11-23).
+- **Entregables:**
+  - Panel de puertos en uso: puerto, protocolo, proceso, PID, directorio y, si lo lanzó un panel de Smalti, ese panel; detener un proceso (SIGTERM y, si no responde, SIGKILL con confirmación) y saltar al panel que lo lanzó.
+  - Vista de procesos nativa, un htop más bonito: CPU, memoria, árbol de procesos, filtro y orden, con el mismo estado codificado del resto de la app; detener y priorizar desde ahí.
+  - Todo con atajo y en ⌘K, sin botones fijos.
+- **Criterio de cierre:** por definir en su spec. Como mínimo, la lista de puertos coincide con `lsof -iTCP -sTCP:LISTEN -nP` en una prueba con puertos abiertos a propósito, y detener nunca toca procesos de otro usuario ni el propio Smalti.
+- **Diseño:** no hay tablero. La fase empieza con su maqueta para aprobar, en la línea del Observatorio.
+- **Dependencias:** F3 (puerto `SystemMetrics`, sin sudo) y F2 (relación panel ↔ proceso).

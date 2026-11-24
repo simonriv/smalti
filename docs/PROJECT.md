@@ -240,14 +240,14 @@ Estas decisiones están cerradas; cambiarlas exige volver a este documento.
 
 ## Fases propuestas
 
-Ocho fases; Smalti se vuelve la terminal diaria al cerrar la fase 2, y cada fase termina con una terminal usable. Es un borrador: Claude Code lo convierte en roadmap y specs.
+Nueve fases (más F4.5 y F5.5, intercaladas); Smalti se vuelve la terminal diaria al cerrar la fase 2, y cada fase termina con una terminal usable. Es un borrador: Claude Code lo convierte en roadmap y specs.
 
 ```text
 F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
+F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
 ```
 
 1. **F0 · Spike.** App Swift con ventana de vidrio sin botones, un panel libghostty y zsh.
@@ -267,6 +267,8 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
     - Cierre: se retoman sesiones de los 5 harnesses y los diffs de Claude se aprueban en Neovim.
 8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
+9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
+    - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
 
 ## Riesgos y preguntas abiertas
 
