@@ -90,7 +90,7 @@ final class PreviewTests: SmaltiUITestCase {
 
         let word = cellPoint(row: 1, column: 0)
         XCTAssertGreaterThan(card.frame.minY, word.y)
-        XCTAssertEqual(card.frame.width, 210, accuracy: 1)
+        XCTAssertGreaterThanOrEqual(card.frame.width, 210)
     }
 
     func testCardFlipsAboveAtBottomEdge() {
@@ -174,6 +174,20 @@ final class PreviewTests: SmaltiUITestCase {
         app.typeText("quick")
 
         XCTAssertTrue(app.staticTexts["Abrir en Quick Look"].waitForExistence(timeout: 5))
+    }
+
+    // MARK: - Capture
+
+    /// C4, on demand (`TEST_RUNNER_SMALTI_CAPTURE=1`): the card, to lay beside `Main.dc.html`'s. The PNG lands in
+    /// the runner's temporary directory, `smalti-captures/preview-card.png`.
+    func testCaptureCard() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["SMALTI_CAPTURE"] == "1", "captures run on demand")
+        showCard()
+        usleep(500_000)  // past the fade
+
+        let captures = FileManager.default.temporaryDirectory.appending(path: "smalti-captures")
+        try FileManager.default.createDirectory(at: captures, withIntermediateDirectories: true)
+        try card.screenshot().pngRepresentation.write(to: captures.appending(path: "preview-card.png"))
     }
 
     // MARK: - Helpers

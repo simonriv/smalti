@@ -41,11 +41,16 @@ final class PreviewCardView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    /// The card's size for its content: the board's width; the image box only when there is a thumbnail.
+    /// The card's size for its content: the board's width, wider when the caption needs it (on the board the caption
+    /// overflows the card; here the name, the size and "⌘Y para abrir" always show whole); the image box only when there
+    /// is a thumbnail.
     var cardSize: NSSize {
         let imageHeight = imageView.image == nil ? 0 : tokens.imageSize.height + tokens.gap
         let height = tokens.padding * 2 + imageHeight + caption.intrinsicContentSize.height
-        return NSSize(width: tokens.width, height: height)
+        let unbounded = NSSize(width: CGFloat.greatestFiniteMagnitude, height: caption.intrinsicContentSize.height)
+        let captionWidth = caption.sizeThatFits(unbounded).width
+        let width = max(tokens.width, (captionWidth + tokens.padding * 2).rounded(.up))
+        return NSSize(width: width, height: height)
     }
 
     func show(_ card: PreviewCard) {
@@ -74,8 +79,10 @@ final class PreviewCardView: NSView {
         let inner = bounds.insetBy(dx: tokens.padding, dy: tokens.padding)
         let captionHeight = caption.intrinsicContentSize.height
         caption.frame = NSRect(x: inner.minX, y: inner.minY, width: inner.width, height: captionHeight)
+        // The image box stays the board's (194 × 104), centered when the caption made the card wider.
+        let imageWidth = tokens.imageSize.width
         imageView.frame = NSRect(
-            x: inner.minX, y: inner.maxY - tokens.imageSize.height, width: inner.width,
+            x: inner.midX - imageWidth / 2, y: inner.maxY - tokens.imageSize.height, width: imageWidth,
             height: tokens.imageSize.height)
         imageView.isHidden = imageView.image == nil
         layer?.shadowPath = CGPath(

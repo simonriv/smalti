@@ -21,6 +21,7 @@ final class PreviewCoordinator {
     /// Each pointer word is numbered: an answer for an older one, which the async lookup can deliver late, is dropped.
     private var requests = 0
     private var monitor: Any?
+    private let timings = PreviewTimings()
     private var resignObserver: NSObjectProtocol?
 
     init(window: NSWindow, controller: TilingController, dependencies: Dependencies) {
@@ -29,8 +30,10 @@ final class PreviewCoordinator {
         self.dependencies = dependencies
         let scale = window.backingScaleFactor
         let box = controller.theme.previewCard.imageSize
+        let wait = TimerDebouncer(delay: PreviewUnderPointer.delay)
+        let debouncer: any Debouncer = timings.map { TimedDebouncer(wait, timings: $0) } ?? wait
         preview = PreviewUnderPointer(
-            ports: .init(files: dependencies.files, debouncer: TimerDebouncer(delay: PreviewUnderPointer.delay)),
+            ports: .init(files: dependencies.files, debouncer: debouncer),
             thumbnailSize: Size(width: box.width * scale, height: box.height * scale),
             show: { [weak self] card in self?.show(card) })
         watchForDismissal()
@@ -106,6 +109,7 @@ final class PreviewCoordinator {
             cardView = view
             view.appear(isMotionReduced: Motion.isReduced)
         }
+        timings?.cardShown()
     }
 
     /// The word's frame (top-left points of the terminal view) in the content view's coordinates.
