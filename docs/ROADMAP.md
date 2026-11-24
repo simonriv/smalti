@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5 y F5.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5 y F5.6.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -114,7 +114,9 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Correcciones de la paleta ⌘K** (Simón, 2026-11-24):
   - "Instalar integración con Claude" y "Desinstalar integración con Claude" salen a la vez; debe salir solo la que aplica según el estado (instalada o no). Pensado para cuando haya más integraciones (F6), que serán un menú propio.
   - El scroll con el trackpad o la rueda solo recorre parte de la lista y obliga a usar las flechas para ver todas las opciones; debe recorrerla entera.
-- **Criterio de cierre:** por definir en su spec.
+- **Iconos del prompt** (Simón, 2026-11-24): los de `SmaltiSymbols` (casa, rama, reloj…) se ven diminutos; pasan a la altura de las mayúsculas de JetBrains Mono o algo más, con lámina antes/después y capturas en los cuatro temas.
+- **Spec:** `docs/specs/F5.6-resaltado.md` (aprobada 2026-11-24).
+- **Criterio de cierre:** el resaltado llega en p99 < 16 ms de extremo a extremo sin empeorar el fantasma de F4 más de un 10 %; ⌘K muestra solo la acción de integración que aplica y su lista se recorre entera con trackpad o rueda; lámina antes/después de los iconos aprobada.
 - **Dependencias:** F4 (canal con zsh, specs de Fig, `region_highlight` con `memo=smalti`) y F5 (temas y colores de rol). Separada de F5.5: no comparte nada con las previews.
 
 ## F6 · Multi-harness y Neovim
