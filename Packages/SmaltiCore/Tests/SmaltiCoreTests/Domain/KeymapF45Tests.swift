@@ -6,6 +6,17 @@ import Testing
 struct KeymapF45Tests {
     private func chord(_ text: String) throws -> KeyChord { try KeyChord.parse(text) }
 
+    /// Mutation (F4.5): two keymaps are equal only when every chord goes to the same command.
+    @Test func keymapsDifferingInOneCommandOrOneChordAreNotEqual() throws {
+        let base = try Keymap.standard.overriding([try chord("cmd+t"): .paneNew])
+        let otherCommand = try Keymap.standard.overriding([try chord("cmd+t"): .workspaceNew])
+        let otherChord = try Keymap.standard.overriding([try chord("cmd+y"): .paneNew])
+
+        #expect(base != otherCommand)
+        #expect(base != otherChord)
+        #expect(base == (try Keymap.standard.overriding([try chord("cmd+t"): .paneNew])))
+    }
+
     @Test(arguments: [
         ("cmd+n", CommandID.windowNew), ("shift+cmd+w", .windowClose), ("ctrl+cmd+f", .windowFullscreen),
         ("cmd+m", .windowMinimize), ("cmd+?", .helpShow), ("cmd+,", .configOpen), ("cmd+c", .terminalCopy),

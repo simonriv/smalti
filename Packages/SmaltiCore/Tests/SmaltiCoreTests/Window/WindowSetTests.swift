@@ -134,4 +134,13 @@ struct AttentionAcrossWindowsTests {
 
         #expect(AttentionQueue.panes(in: set).first == oldest.id)
     }
+
+    /// Mutation (F4.5): each copy-with changes what it names.
+    @Test func windowStateCopiesChangeTheirValue() throws {
+        let state = try window([])
+        let other = try window([waiting(since: 1)]).workspaces
+
+        #expect(state.fullScreen(true).isFullScreen)
+        #expect(state.with(other).workspaces == other)
+    }
 }

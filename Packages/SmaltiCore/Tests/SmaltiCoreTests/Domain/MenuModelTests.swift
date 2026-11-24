@@ -32,6 +32,34 @@ struct MenuModelTests {
         bar.menus.first { $0.title == menu }?.items.flattened.first { $0.title == title }
     }
 
+    /// Mutation (F4.5): what each kind of item is, enabled and checked by default.
+    @Test func systemItemsSubmenusAndWorkspacesAreEnabledAndUnchecked() {
+        let menus = bar(workspaces: workspaces(2))
+
+        #expect(item("Ocultar Smalti", in: "Smalti", of: menus)?.isEnabled == true)
+        #expect(item("Ocultar Smalti", in: "Smalti", of: menus)?.isChecked == false)
+        #expect(item("Layout", in: "Ver", of: menus)?.isEnabled == true)
+        #expect(item("w1", in: "Ventana", of: menus)?.isEnabled == true)
+    }
+
+    @Test func everyContextMenuItemIsEnabled() {
+        let items = MenuModel.contextMenu(keymap: .standard).filter { !$0.isSeparator }
+
+        #expect(items.allSatisfy { $0.isEnabled })
+    }
+
+    @Test func onlyAnEmptyItemIsASeparator() {
+        let titled = MenuItem(title: "x", action: nil, chord: nil, isEnabled: true, children: [])
+        let untitledCommand = MenuItem(title: "", action: .command(.paneNew), chord: nil, isEnabled: true, children: [])
+        let untitledSubmenu = MenuItem(title: "", action: nil, chord: nil, isEnabled: true, children: [titled])
+
+        #expect(MenuItem.separator.isSeparator)
+        #expect(!MenuItem.separator.isEnabled)
+        #expect(!titled.isSeparator)
+        #expect(!untitledCommand.isSeparator)
+        #expect(!untitledSubmenu.isSeparator)
+    }
+
     /// Block 4 review: the app finds Edición, Ventana and Ayuda by identity, not by their titles.
     @Test func menusHaveIdentities() {
         #expect(bar().menus.map(\.id) == [.app, .file, .edit, .view, .window, .help])

@@ -52,4 +52,9 @@ struct SecureEntryTests {
         #expect(!toggled.toggledByUser().isOnByUser)
         #expect(toggled.toggledByUser().isRequested)
     }
+
+    /// Mutation (F4.5): until AppKit says Smalti is active, nothing is applied to the system.
+    @Test func notAppliedBeforeTheAppIsActivated() {
+        #expect(!SecureEntry().toggledByUser().isApplied)
+    }
 }

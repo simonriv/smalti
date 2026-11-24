@@ -105,4 +105,51 @@ struct WindowFrameTests {
 
         #expect(next.size == main.size)
     }
+
+    // Mutation (F4.5): the screen that shows more of a frame is the one with the larger overlapping area.
+
+    @Test func mostlyOnTheLeftScreenStaysThere() {
+        let frame = Rect(x: 400, y: 100, width: 1200, height: 600)
+
+        #expect(WindowFrame.fitted(frame, screens: [main, right], main: main).minX == 240)
+    }
+
+    @Test func mostlyOnTheLowerScreenStaysThere() {
+        let above = Rect(x: 0, y: 900, width: 1440, height: 900)
+        let frame = Rect(x: 100, y: 300, width: 800, height: 800)
+
+        #expect(
+            WindowFrame.fitted(frame, screens: [main, above], main: main)
+                == Rect(x: 100, y: 100, width: 800, height: 800))
+    }
+
+    @Test func largerAreaWinsOverAMoreElongatedOverlap() {
+        let raised = Rect(x: 1440, y: 800, width: 1920, height: 1080)
+        let frame = Rect(x: 940, y: 500, width: 800, height: 400)
+
+        #expect(
+            WindowFrame.fitted(frame, screens: [main, raised], main: main)
+                == Rect(x: 640, y: 500, width: 800, height: 400))
+    }
+
+    @Test func frameOffToTheSideOfTheOnlyScreenIsCentered() {
+        let away = Rect(x: 3000, y: 100, width: 800, height: 600)
+
+        #expect(WindowFrame.fitted(away, screens: [main], main: main) == Rect(x: 320, y: 150, width: 800, height: 600))
+    }
+
+    @Test func cascadePastOnlyTheRightEdgeStartsAgain() {
+        let front = Rect(x: 700, y: 300, width: 800, height: 500)
+
+        let next = WindowFrame.cascaded(from: front, size: Size(width: 800, height: 500), visible: main)
+
+        #expect(next == Rect(x: 24, y: 376, width: 800, height: 500))
+    }
+
+    @Test func frameAboveTheOnlyScreenIsCentered() {
+        let away = Rect(x: 100, y: 2000, width: 800, height: 600)
+
+        #expect(
+            WindowFrame.fitted(away, screens: [main], main: main) == Rect(x: 320, y: 150, width: 800, height: 600))
+    }
 }
