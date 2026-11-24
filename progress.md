@@ -265,4 +265,4 @@
 - [x] T12 · ⌘Y abre Quick Look
 - [x] T13 · Capturas, mediciones y reposo
 #### Bloque 5 · Cierre
-- [ ] T14 · Checklist, revisión final, mutación, PR y despliegue
+- [x] T14 · Checklist (`docs/specs/F5.5-checklist.md`), revisión final (3 importantes y 9 menores corregidos), mutación 100 %, XCUITest de la fase 79/79 + 22/22 y 12/12 tras los últimos cambios, versión 0.5.5
