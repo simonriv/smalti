@@ -127,3 +127,22 @@ struct StarshipPresetReviewTests {
         #expect(format == .string("([$modified](#e0af68))( [$staged](#9ece6a)) "))
     }
 }
+
+@Suite("StarshipPreset · notes")
+struct StarshipPresetNotesTests {
+    /// Block 2 review (M7): Starship cannot show the repository's name and two levels outside it at once.
+    @Test func directoryDifferenceIsNoted() {
+        let preset = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian))
+
+        #expect(preset.comments.contains { $0.hasPrefix("Directorio:") })
+    }
+
+    @Test func noDirectoryNoNote() {
+        var config = PromptConfig.standard
+        config.modules = [.time]
+
+        let preset = StarshipPreset.make(from: config, theme: ThemeCatalog.apply(.obsidian))
+
+        #expect(!preset.comments.contains { $0.hasPrefix("Directorio:") })
+    }
+}

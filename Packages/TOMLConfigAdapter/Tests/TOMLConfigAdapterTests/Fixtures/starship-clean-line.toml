@@ -1,0 +1,56 @@
+# Generado por Smalti (Estudio de prompt).
+# Directorio: Starship muestra dos niveles también dentro de un repositorio; Smalti lo muestra desde la raíz.
+# Agentes que esperan: solo existe dentro de Smalti; no tiene equivalente en Starship.
+
+add_newline = false
+format = "$directory$git_branch$git_status$nodejs$bun$python$golang$cmd_duration$line_break$character"
+
+[directory]
+style = "#7aa2f7"
+format = "[$path]($style) "
+truncation_length = 2
+truncate_to_repo = true
+
+[git_branch]
+symbol = ""
+style = "#bb9af7"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+modified = "●${count}"
+staged = "+${count}"
+style = "#e0af68"
+format = "([$modified](#e0af68))( [$staged](#9ece6a)) "
+
+[nodejs]
+symbol = ""
+style = "#8b919c"
+format = "[$symbol$version]($style) "
+version_format = "${major}.${minor}"
+
+[bun]
+symbol = ""
+style = "#8b919c"
+format = "[$symbol$version]($style) "
+version_format = "${major}.${minor}"
+
+[python]
+symbol = ""
+style = "#8b919c"
+format = "[$symbol$version]($style) "
+version_format = "${major}.${minor}"
+
+[golang]
+symbol = ""
+style = "#8b919c"
+format = "[$symbol$version]($style) "
+version_format = "${major}.${minor}"
+
+[cmd_duration]
+style = "#8b919c"
+format = "[$duration]($style) "
+min_time = 2000
+
+[character]
+success_symbol = "[›](#7aa2f7)"
+error_symbol = "[›](#f7768e)"

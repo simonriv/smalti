@@ -41,6 +41,8 @@ public struct StarshipBuilder {
     let config: PromptConfig
     let theme: Theme
 
+    private static let directoryComment =
+        "Directorio: Starship muestra dos niveles también dentro de un repositorio; Smalti lo muestra desde la raíz."
     private static let agentsComment =
         "Agentes que esperan: solo existe dentro de Smalti; no tiene equivalente en Starship."
 
@@ -57,7 +59,9 @@ public struct StarshipBuilder {
         let modules = config.modules.flatMap(tables(for:))
         let lineBreak = config.layout == .twoLines ? "$line_break" : ""
         let format = modules.map { "$" + $0.name }.joined() + lineBreak + "$character"
-        let comments = config.modules.contains(.agents) ? [Self.agentsComment] : []
+        let comments =
+            (config.modules.contains(.directory) ? [Self.directoryComment] : [])
+            + (config.modules.contains(.agents) ? [Self.agentsComment] : [])
         return StarshipPreset(format: format, tables: modules + [character], comments: comments)
     }
 
