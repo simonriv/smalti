@@ -72,3 +72,52 @@ public protocol Debouncer: AnyObject {
     /// Drops the pending action, if any.
     @MainActor func cancel()
 }
+
+extension AppearanceDocument {
+    /// This document's changes since `base`, applied over `external` (the file as someone edited it by hand): fields
+    /// the UI did not touch take the file's value, fields it did keep the UI's (spec F5, "Escritura atómica").
+    public func rebased(onto external: AppearanceDocument, from base: AppearanceDocument) -> AppearanceDocument {
+        var merged = external
+        merged.appearance = appearance.rebased(onto: external.appearance, from: base.appearance)
+        merged.buttons = pick(\.buttons, external, base)
+        merged.prompt = prompt.rebased(onto: external.prompt, from: base.prompt)
+        return merged
+    }
+
+    private func pick<Value: Equatable>(
+        _ field: KeyPath<AppearanceDocument, Value>, _ external: AppearanceDocument, _ base: AppearanceDocument
+    ) -> Value {
+        self[keyPath: field] != base[keyPath: field] ? self[keyPath: field] : external[keyPath: field]
+    }
+}
+
+extension AppearanceSettings {
+    fileprivate func rebased(onto external: AppearanceSettings, from base: AppearanceSettings) -> AppearanceSettings {
+        var merged = external
+        merged.theme = theme != base.theme ? theme : external.theme
+        merged.accent = accent != base.accent ? accent : external.accent
+        merged.glassOpacity = glassOpacity != base.glassOpacity ? glassOpacity : external.glassOpacity
+        merged.blur = blur != base.blur ? blur : external.blur
+        merged.fontFamily = fontFamily != base.fontFamily ? fontFamily : external.fontFamily
+        merged.fontSize = fontSize != base.fontSize ? fontSize : external.fontSize
+        merged.gap = gap != base.gap ? gap : external.gap
+        merged.radius = radius != base.radius ? radius : external.radius
+        merged.protectLegibility =
+            protectLegibility != base.protectLegibility ? protectLegibility : external.protectLegibility
+        merged.ansiOverrides = ansiOverrides != base.ansiOverrides ? ansiOverrides : external.ansiOverrides
+        return merged
+    }
+}
+
+extension PromptConfig {
+    fileprivate func rebased(onto external: PromptConfig, from base: PromptConfig) -> PromptConfig {
+        var merged = external
+        merged.source = source != base.source ? source : external.source
+        merged.style = style != base.style ? style : external.style
+        merged.layout = layout != base.layout ? layout : external.layout
+        merged.modules = modules != base.modules ? modules : external.modules
+        merged.icons = icons != base.icons ? icons : external.icons
+        merged.symbol = symbol != base.symbol ? symbol : external.symbol
+        return merged
+    }
+}
