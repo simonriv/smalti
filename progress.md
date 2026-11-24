@@ -236,3 +236,33 @@
 - [x] T19 · Capturas y comparación con los tableros (hallazgo: `SmaltiSymbols` sin nombre PostScript; revisión del bloque 5: 4 importantes y 9 menores corregidos; regresión 72/72)
 #### Bloque 6 · Cierre
 - [x] T20 · Checklist (`docs/specs/F5-checklist.md`), revisión final (4 importantes y 4 menores corregidos), mutación 99,5 %, XCUITest 191/191 con el diario intacto, C6 2,6 % al cierre, PR y despliegue 0.5.0
+
+## F5.5 · Previews
+
+### Spec
+- [x] Spike: libghostty v1.4.0 pinta imágenes kitty en un surface embebido sin cambios (`F5.5-assets/spike-kitty.png`)
+- [x] `docs/specs/F5.5-previews.md` aprobada (2026-11-24): miniatura al pasar el cursor, ⌘Y Quick Look, `smalti img`
+
+### Plan
+- [x] `docs/plans/F5.5-previews.md`: 14 tareas en 5 bloques
+
+### Tareas
+#### Bloque 1 · Puerta y dominio
+- [x] T1 · Puerta: arranque de `smalti event Stop` (50 corridas, release, `scripts/measure-cli-startup.sh`): base p50 3,33/3,28 ms; con `SmaltiCore` e ImageIO enlazados 3,50/3,53 ms (+0,2 ms, binario de 138 KB → 3,9 MB). `img` va dentro de `smalti`
+- [x] T2 · `ImageFileKind`, `PointerWord` y `PreviewCandidates`
+- [x] T3 · Config, ⌘Y, menú, ayuda y token del pie
+- [x] T4 · `ImageGrid` y `KittyPlacement`
+#### Bloque 2 · Casos de uso y adaptadores
+- [x] T5 · Puerto `ImageFiles`, `PreviewCard` y `PreviewUnderPointer`
+- [x] T6 · `ImageIOAdapter`
+- [x] T7 · Palabra bajo el ratón en `GhosttyAdapter`
+#### Bloque 3 · Config, CLI y kitty de terceros
+- [x] T8 · `[preview]` en `TOMLConfigAdapter`
+- [x] T9 · `ShowImageGrid` y `smalti img`
+- [x] T10 · Imágenes kitty de terceros y lista de render
+#### Bloque 4 · App
+- [x] T11 · Tarjeta de vista previa
+- [x] T12 · ⌘Y abre Quick Look
+- [x] T13 · Capturas, mediciones y reposo
+#### Bloque 5 · Cierre
+- [x] T14 · Checklist (`docs/specs/F5.5-checklist.md`), revisión final (3 importantes y 9 menores corregidos), mutación 100 %, XCUITest de la fase 79/79 + 22/22 y 12/12 tras los últimos cambios, versión 0.5.5

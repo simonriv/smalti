@@ -12,6 +12,8 @@ protocol TerminalViewProvider {
     func cursorCell(_ pane: PaneID) -> Rect?
     /// ⌘↩ in the history palette: Return typed into the pane after Smalti's `edit`.
     func pressReturn(_ pane: PaneID)
+    /// F5.5: the pane's next pointer move reports its word again, even an unchanged one.
+    func forgetPointerWord(in pane: PaneID)
 }
 
 extension GhosttyTerminalEngine: TerminalViewProvider {}

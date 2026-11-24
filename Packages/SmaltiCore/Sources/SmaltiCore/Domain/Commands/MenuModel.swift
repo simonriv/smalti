@@ -185,7 +185,8 @@ private struct Builder {
         return [
             item(.paletteOpen), item(.observatoryToggle), .separator, .submenu("Layout", layouts), item(.panesEqualize),
             .separator, item(.fontIncrease), item(.fontDecrease), item(.fontReset), .separator,
-            .submenu("Desplazamiento", scrolling.map { item($0) }), .separator, item(.windowFullscreen),
+            .submenu("Desplazamiento", scrolling.map { item($0) }), item(.previewQuickLook), .separator,
+            item(.windowFullscreen),
         ]
     }
 

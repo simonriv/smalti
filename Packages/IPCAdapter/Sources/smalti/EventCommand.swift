@@ -55,7 +55,8 @@ enum EventCommand {
             forward(hook: invocation.arguments[1], invocation, transport: transport)
             return 0
         default:
-            FileHandle.standardError.write(Data("uso: smalti event <Hook> | smalti --version\n".utf8))
+            FileHandle.standardError.write(
+                Data("uso: smalti event <Hook> | smalti img [carpeta | archivos…] | smalti --version\n".utf8))
             return usageError
         }
     }

@@ -43,9 +43,6 @@ public actor InputSession {
     private let clock: @Sendable () -> Date
     private var index: HistoryIndex
     private var hasStarted = false
-    private var isLoaded = false
-    /// Commands recorded before the history finished loading, to keep after the loaded ones.
-    private var recordedWhileLoading: [HistoryEntry] = []
     private var running: [PaneID: Running] = [:]
     private var previous: [PaneID: HistoryEntry] = [:]
     /// The last failure to read or write the history; the app reports it once.
@@ -77,9 +74,8 @@ public actor InputSession {
         } catch {
             lastError = error
         }
-        index = HistoryIndex(entries: loaded + recordedWhileLoading, limit: settings.historyLimit)
-        recordedWhileLoading = []
-        isLoaded = true
+        // Commands that ended while loading are already in the index: they stay after the loaded ones.
+        index = HistoryIndex(entries: loaded + index.all, limit: settings.historyLimit)
     }
 
     public var specCommands: [String] {
@@ -134,6 +130,13 @@ public actor InputSession {
         HistorySearch.search(query, scope: scope, in: index)
     }
 
+    /// The pane's command in flight, or else its last finished one (spec F5.5: where `ls shots/` listed); never one the
+    /// secret filter flags.
+    public func lastCommand(in pane: PaneID) -> String? {
+        let command = running[pane]?.command ?? previous[pane]?.command
+        return command.flatMap { SecretFilter.isSensitive($0) ? nil : $0 }
+    }
+
     /// RecordCommand, first half: zsh's `preexec`.
     public func began(_ command: String, pane: PaneID, directory: String) {
         running[pane] = Running(command: command, directory: directory, start: clock())
@@ -152,7 +155,6 @@ public actor InputSession {
             command: command.command, directory: command.directory, exit: exit,
             duration: now.timeIntervalSince(command.start), date: now, pane: pane)
         index.append(entry)
-        if !isLoaded { recordedWhileLoading.append(entry) }
         previous[pane] = entry
         do {
             try await ports.history.append(entry)

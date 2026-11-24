@@ -19,6 +19,21 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         self.userZdotdir = userZdotdir
     }
 
+    /// F5.5 `[preview] hover`: whether panes report the word under the pointer; applies to open panes at once.
+    public var reportsPointerWords = true {
+        didSet { views.values.forEach { $0.reportsPointerWords = reportsPointerWords } }
+    }
+
+    /// The terminal padding in points (the theme's `paddingX`/`paddingY`): where the cell grid starts.
+    public var gridPadding = Point(x: 0, y: 0) {
+        didSet { views.values.forEach { $0.gridPadding = gridPadding } }
+    }
+
+    /// F5.5: the pane's next pointer move reports its word even if it did not change (the card was hidden for a key).
+    public func forgetPointerWord(in pane: PaneID) {
+        views[pane]?.forgetPointerWord()
+    }
+
     /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
     /// a restore can fall back to the workspace root or the home directory.
     public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
@@ -31,6 +46,8 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
             view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
             view.exposesCellSize = exposesCellSize
+            view.reportsPointerWords = reportsPointerWords
+            view.gridPadding = gridPadding
             views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.

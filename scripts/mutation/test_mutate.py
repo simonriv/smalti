@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 
 from mutate import (
+    kill_strays,
+    run,
     Mutant,
     changed_sources,
     missing_sources_message,
@@ -168,3 +170,48 @@ class ChangedSources(unittest.TestCase):
 
         self.assertEqual(changed_sources([self.a], changed, self.root), [])
 
+
+
+class RunnerTimeout(unittest.TestCase):
+    """A hung test helper is a grandchild of `swift test`: on timeout the whole group goes, never an orphan."""
+
+    def test_timeout_kills_grandchildren(self):
+        import os
+        import time
+
+        with tempfile.TemporaryDirectory() as folder:
+            pid_file = Path(folder) / "grandchild.pid"
+            script = f"sleep 60 & echo $! > {pid_file}; wait"
+
+            result = run(["/bin/sh", "-c", script], Path(folder), timeout=1)
+
+            self.assertIsNone(result)
+            grandchild = int(pid_file.read_text())
+            time.sleep(0.2)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(grandchild, 0)
+
+
+class StrayHelpers(unittest.TestCase):
+    """swiftpm's test helper runs in a process group of its own: after a mutant, any process whose command line
+    names that mutation's package copy is killed, wherever it lives."""
+
+    def test_kill_strays_ends_processes_naming_the_package(self):
+        import os
+        import subprocess
+        import time
+
+        with tempfile.TemporaryDirectory() as folder:
+            marker = Path(folder) / "smalti-mutation-test" / "SmaltiCore"
+            stray = subprocess.Popen(
+                ["/bin/sh", "-c", f"exec -a 'helper {marker}' sleep 60"], start_new_session=True)
+            other = subprocess.Popen(["/bin/sleep", "60"], start_new_session=True)
+            time.sleep(0.2)
+
+            kill_strays(marker)
+            time.sleep(0.2)
+
+            self.assertIsNotNone(stray.poll())
+            self.assertIsNone(other.poll())
+            other.kill()
+            os.waitpid(other.pid, 0)

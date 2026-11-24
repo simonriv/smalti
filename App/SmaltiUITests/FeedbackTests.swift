@@ -50,7 +50,7 @@ final class FeedbackTests: SmaltiUITestCase {
         let url = try XCTUnwrap(URLComponents(string: opened().last ?? ""))
         XCTAssertEqual(url.path, "/simonriv/smalti/issues/new")
         let body = url.queryItems?.first { $0.name == "body" }?.value ?? ""
-        XCTAssertTrue(body.contains("Smalti 0.5.0 ("), body)
+        XCTAssertTrue(body.contains("Smalti 0.5.5 ("), body)
         XCTAssertEqual(url.queryItems?.first { $0.name == "labels" }?.value, "bug")
         XCTAssertTrue(savedLogs().isEmpty)
     }
@@ -89,6 +89,6 @@ final class FeedbackTests: SmaltiUITestCase {
         waitForOpened(1)
         let file = try XCTUnwrap(savedLogs().first)
         let text = try String(contentsOf: downloads.appending(path: file), encoding: .utf8)
-        XCTAssertTrue(text.hasPrefix("Smalti 0.5.0 ("), String(text.prefix(80)))
+        XCTAssertTrue(text.hasPrefix("Smalti 0.5.5 ("), String(text.prefix(80)))
     }
 }

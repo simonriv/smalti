@@ -18,6 +18,8 @@ public enum TerminalEvent: Equatable, Sendable {
     case linkHovered(String?)
     /// F4.5: the terminal asks for secure keyboard entry (a password prompt) or releases it.
     case secureInputRequested(Bool)
+    /// F5.5: the word under the mouse pointer changed; nil when the pointer is over no word or left the pane.
+    case pointerWordChanged(PointerWord?)
 }
 
 public struct CommandOutcome: Equatable, Sendable {

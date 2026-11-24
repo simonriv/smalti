@@ -82,7 +82,9 @@ public struct Pane: Equatable, Sendable {
         case .foregroundProcessChanged(let process):
             updated.processName = process.name
             updated.foregroundCommandLine = process.commandLine
-        case .bell, .closeRequested, .searchTotal, .searchSelected, .linkHovered, .secureInputRequested: break
+        case .bell, .closeRequested, .searchTotal, .searchSelected, .linkHovered, .secureInputRequested,
+            .pointerWordChanged:
+            break
         }
         return updated
     }
