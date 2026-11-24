@@ -33,7 +33,10 @@ struct LibghosttyF5ApiTests {
     }
 
     private func runtime(extraConfig: String, name: String) throws -> GhosttyRuntime {
-        let text = GhosttyConfigText.render(Theme.obsidian.terminal) + extraConfig
+        // Without the app's own icon map, so the plain runtime really has no mapping for U+E900.
+        let base = GhosttyConfigText.render(Theme.obsidian.terminal).split(separator: "\n")
+            .filter { !$0.hasPrefix("font-codepoint-map") }.joined(separator: "\n")
+        let text = base + "\n" + extraConfig
         let config = try GhosttyConfig.load(text: text, writingTo: work.appending(path: "\(name).conf"))
         return try GhosttyRuntime(config: config)
     }
