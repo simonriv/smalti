@@ -261,8 +261,8 @@
 - [x] T9 · `ShowImageGrid` y `smalti img`
 - [x] T10 · Imágenes kitty de terceros y lista de render
 #### Bloque 4 · App
-- [ ] T11 · Tarjeta de vista previa
-- [ ] T12 · ⌘Y abre Quick Look
-- [ ] T13 · Capturas, mediciones y reposo
+- [x] T11 · Tarjeta de vista previa
+- [x] T12 · ⌘Y abre Quick Look
+- [x] T13 · Capturas, mediciones y reposo
 #### Bloque 5 · Cierre
 - [ ] T14 · Checklist, revisión final, mutación, PR y despliegue
