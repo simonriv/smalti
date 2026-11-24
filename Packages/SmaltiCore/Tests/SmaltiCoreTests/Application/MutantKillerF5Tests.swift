@@ -101,6 +101,7 @@ struct MutantKillerF5Tests {
         let lines = PromptPreview.lines(config, context: context, theme: Theme.obsidian)
 
         #expect(lines.first?.map(\.text).joined() == "main ●2")
+        #expect(lines.first?.allSatisfy { !$0.text.isEmpty } == true)
     }
 
     @Test func starshipFormatsWrapOnlyGitStatusAsOptional() {
