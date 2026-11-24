@@ -79,7 +79,7 @@ final class FeedbackView: NSView {
         let choices = NSStackView(views: [bug, idea])
         choices.distribution = .fillEqually
         choices.spacing = tokens.choiceGap
-        logs.font = theme.interfaceFont(size: theme.palette.rowFontSize - 0.5)
+        logs.font = theme.interfaceFont(size: tokens.logsFontSize)
         logs.setAccessibilityIdentifier("smalti.feedbackLogs")
         let note = NSTextField(
             wrappingLabelWithString: "Se guardan en Descargas y se muestran en Finder; los arrastras tú al issue.")

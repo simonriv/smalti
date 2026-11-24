@@ -125,7 +125,7 @@ final class WindowComposition {
 
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
-        palette?.isOpen == true || observatoryScreen?.isOpen == true || services.historyPalette()?.isOpen == true
+        palette?.isOpen == true || observatoryScreen?.isOpen == true || hasHistoryPaletteOpen
             || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
     }
 
@@ -300,9 +300,10 @@ final class WindowComposition {
                 closeOverlays(keeping: .search)
                 if !search.isOpen { search.open(on: pane, theme: theme) }
                 search.navigate(command == .searchNext ? .next : .previous)
-            default:
+            case .paletteOpen:
                 closeOverlays(keeping: .palette)
                 palette.toggle(theme: theme)
+            default: break
             }
         }
         self.palette = palette
@@ -335,14 +336,28 @@ final class WindowComposition {
         // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
         window.routeKey = { [weak self] event, composing in
             guard let self, restoreScreen == nil else { return false }
-            if !composing, services.completionMenu()?.handle(event) == true { return true }
-            if services.historyPalette()?.handle(event) == true { return true }
+            // The Tab menu and the ⌃R palette are shared by every window: only their own window's keys are theirs.
+            if !composing, services.completionMenu()?.handle(event, in: window) == true { return true }
+            if hasHistoryPaletteOpen, services.historyPalette()?.handle(event) == true { return true }
             return router.route(event, composing: composing)
         }
     }
 
     /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
     /// reaches the terminal while the observatory is closed.
+    /// What the menu bar may do on this window: what its keyboard may, and on the resume screen only what does not
+    /// touch the workspaces it is about to replace.
+    var menuContext: KeyContext {
+        restoreScreen == nil ? keyContext : KeyContext(allowing: Self.allowedOnResumeScreen)
+    }
+
+    private static let allowedOnResumeScreen: Set<CommandID> = [.windowNew, .appAbout, .configOpen]
+
+    /// The ⌃R palette is open in this window (it is shared by all of them).
+    private var hasHistoryPaletteOpen: Bool {
+        services.historyPalette()?.isOpen(in: window) == true
+    }
+
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
@@ -352,7 +367,7 @@ final class WindowComposition {
             return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
         }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
-        if services.historyPalette()?.isOpen == true { return .overlay(allowing: []) }
+        if hasHistoryPaletteOpen { return .overlay(allowing: []) }
         if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
         return KeyContext(passingThrough: [.observatoryPeriod])
     }

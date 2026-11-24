@@ -5,7 +5,8 @@ import SmaltiCore
 /// `DiagnosticLog` over the unified log: this process's entries of one subsystem, since the app started. What the
 /// code logged as private stays redacted, and `info` and `debug` entries are not kept by the system, so notices,
 /// errors and faults are what comes out. After the heading, one line per entry: `fecha · categoría · nivel · mensaje`,
-/// with the date in local time. Not isolated to the main actor: reading and writing run on the caller's executor.
+/// with the date in local time, and the user's home folder written as ~ (the file goes into a public issue, and error
+/// descriptions carry working directories). Not isolated to the main actor: reading and writing run on the caller's executor.
 public final class OSLogDiagnostics: DiagnosticLog {
     private let subsystem: String
 
@@ -32,7 +33,10 @@ public final class OSLogDiagnostics: DiagnosticLog {
     private func entries() throws -> [String] {
         let store = try OSLogStore(scope: .currentProcessIdentifier)
         let predicate = NSPredicate(format: "subsystem == %@", subsystem)
-        return try store.getEntries(matching: predicate).compactMap { $0 as? OSLogEntryLog }.map(Self.line)
+        let home = NSHomeDirectory()
+        return try store.getEntries(matching: predicate).compactMap { $0 as? OSLogEntryLog }.map {
+            Self.line($0).replacingOccurrences(of: home, with: "~")
+        }
     }
 
     private static func line(_ entry: OSLogEntryLog) -> String {

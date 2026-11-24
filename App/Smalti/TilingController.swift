@@ -355,7 +355,7 @@ final class TilingController {
     /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
     /// then publishes itself, since the question returns after `perform` did.
     private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
-        let busy = CloseGuard.busyPanes(panes)
+        let busy = RunningPrograms(engine: deps.engine).busy(in: panes)
         guard let question = CloseGuard.question(for: scope, busy: busy, settings: config.window),
             let onConfirmClose
         else {

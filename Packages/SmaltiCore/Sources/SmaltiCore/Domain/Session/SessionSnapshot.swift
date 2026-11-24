@@ -70,12 +70,6 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
             frontIndex: set.windows.firstIndex { $0.id == set.frontID } ?? 0)
     }
 
-    /// A single window's workspaces, without a frame.
-    public static func capture(_ set: WorkspaceSet, scrollbackLines: [PaneID: Int], at date: Date) -> SessionSnapshot {
-        let window = WindowState(id: WindowID(), workspaces: set, frame: nil, isFullScreen: false)
-        return capture(WindowSet(first: window), scrollbackLines: scrollbackLines, at: date)
-    }
-
     private enum CodingKeys: String, CodingKey {
         case version, savedAt, windows, frontIndex
         case workspaces, activeIndex

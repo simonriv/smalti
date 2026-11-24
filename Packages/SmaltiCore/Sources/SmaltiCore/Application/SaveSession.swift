@@ -37,19 +37,6 @@ public struct SaveSession {
         return save(SessionSnapshot.capture(windows, scrollbackLines: lineCounts.compactMapValues { $0 }, at: date))
     }
 
-    /// A single window's workspaces, without a frame.
-    public func saveStructure(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
-        saveStructure(of: Self.window(set), at: date)
-    }
-
-    public func saveWithScrollback(of set: WorkspaceSet, at date: Date) -> SaveOutcome {
-        saveWithScrollback(of: Self.window(set), at: date)
-    }
-
-    private static func window(_ set: WorkspaceSet) -> WindowSet {
-        WindowSet(first: WindowState(id: WindowID(), workspaces: set, frame: nil, isFullScreen: false))
-    }
-
     /// Lines kept, or `nil` when the pane's scrollback could not be read or kept.
     private func keepScrollback(of pane: PaneID) -> Int? {
         do {

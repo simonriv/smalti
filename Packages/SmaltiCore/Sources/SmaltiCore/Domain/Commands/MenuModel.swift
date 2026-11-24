@@ -67,14 +67,17 @@ public struct MenuBar: Equatable, Sendable {
     public static let empty = MenuBar(menus: [])
 }
 
-/// What the menus reflect besides the keymap: the front window's workspaces and the toggles that are on.
+/// What the menus reflect besides the keymap: the front window's workspaces, the toggles that are on, and what its
+/// keyboard allows right now (an overlay, the resume screen): the menu never does what the keys would not.
 public struct MenuState: Sendable {
     public let workspaces: WorkspaceSet
     public let checked: Set<CommandID>
+    public let context: KeyContext
 
-    public init(workspaces: WorkspaceSet, checked: Set<CommandID>) {
+    public init(workspaces: WorkspaceSet, checked: Set<CommandID>, context: KeyContext = .unrestricted) {
         self.workspaces = workspaces
         self.checked = checked
+        self.context = context
     }
 }
 
@@ -82,8 +85,12 @@ public struct MenuState: Sendable {
 /// item shows its command's primary chord and is enabled when ⌘K would offer it.
 public enum MenuModel {
     public static func bar(keymap: Keymap, commands: [Command], state: MenuState) -> MenuBar {
+        let context = state.context
+        let offered = Set(commands.map(\.id)).union(alwaysAvailable).filter {
+            context.allowing?.contains($0) ?? true
+        }
         let builder = Builder(
-            keymap: keymap, available: Set(commands.map(\.id)).union(alwaysAvailable), checked: state.checked)
+            keymap: keymap, available: offered.subtracting(context.passingThrough), checked: state.checked)
         let workspaces = state.workspaces
         return MenuBar(menus: [
             Menu(id: .app, title: "Smalti", items: builder.app),
@@ -139,10 +146,11 @@ private struct Builder {
         return item
     }
 
+    /// A chord the TOML gave to one of Smalti's commands is that command's: the system item shows none.
     private func system(_ title: String, _ action: SystemMenuAction, _ chord: String? = nil) -> MenuItem {
-        MenuItem(
-            title: title, action: .system(action), chord: chord.flatMap { try? KeyChord.parse($0) }, isEnabled: true,
-            children: [])
+        let parsed = chord.flatMap { try? KeyChord.parse($0) }
+        let free = parsed.flatMap { keymap.command(for: $0) == nil ? $0 : nil }
+        return MenuItem(title: title, action: .system(action), chord: free, isEnabled: true, children: [])
     }
 
     var app: [MenuItem] {

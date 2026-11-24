@@ -49,7 +49,7 @@ public enum ConfigTemplate {
             #   context = 200000
 
             [keys]
-            # Un atajo por línea, del atajo al id del comando (los ids están en la ayuda, ⌘?):
+            # Un atajo por línea, del atajo al id del comando (la ayuda, ⌘?, muestra el id de cada acción al filtrar):
             # "cmd+t" = "pane.new"
             # Los atajos que escribas para un comando reemplazan los suyos por defecto; dos líneas para el mismo
             # comando le dan dos atajos. "none" suelta un atajo.

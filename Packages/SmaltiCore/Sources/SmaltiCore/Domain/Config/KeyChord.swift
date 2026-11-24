@@ -12,6 +12,8 @@ public enum KeyChordError: Error, Equatable, Sendable {
     /// Without ⌘, ⌃ or ⌥ the chord would be plain typing.
     case missingModifier(String)
     case missingKey(String)
+    /// ⇧ on a number or symbol is part of the character (⇧/ is ?): written in the TOML it would silently vanish.
+    case shiftOnSymbol(String)
 }
 
 /// A key plus modifiers. `key` is a single lowercase character or one of `KeyChord.namedKeys`.
@@ -33,7 +35,7 @@ public struct KeyChord: Hashable, Sendable {
         return !character.isLetter
     }
 
-    /// Parses `"cmd+opt+d"`, `"ctrl+1"`, `"shift+cmd+="` or `"cmd+opt+left"`.
+    /// Parses `"cmd+opt+d"`, `"ctrl+1"`, `"cmd+?"` or `"shift+cmd+left"`. ⇧ goes only with letters and named keys.
     public static func parse(_ text: String) throws(KeyChordError) -> KeyChord {
         let parts = text.lowercased().split(separator: "+", omittingEmptySubsequences: false).map(String.init)
         guard let key = parts.last, !key.isEmpty else { throw .missingKey(text) }
@@ -44,6 +46,7 @@ public struct KeyChord: Hashable, Sendable {
             guard modifiers.insert(modifier).inserted else { throw .duplicateModifier(name) }
         }
         guard !modifiers.isDisjoint(with: [.command, .control, .option]) else { throw .missingModifier(text) }
+        guard !(modifiers.contains(.shift) && isSymbol(key)) else { throw .shiftOnSymbol(text) }
         return KeyChord(key: key, modifiers: modifiers)
     }
 

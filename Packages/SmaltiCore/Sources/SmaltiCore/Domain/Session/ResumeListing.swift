@@ -60,12 +60,6 @@ public enum ResumeListing {
         }
     }
 
-    public static func workspaces(in snapshot: SessionSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry)
-        -> [ResumeWorkspace]
-    {
-        workspaces(snapshot.workspaces, home: home, harnesses: harnesses)
-    }
-
     private static func workspaces(
         _ saved: [WorkspaceSnapshot], home: WorkingDirectory, harnesses: HarnessRegistry
     ) -> [ResumeWorkspace] {

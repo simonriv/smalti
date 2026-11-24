@@ -288,7 +288,8 @@ final class AppComposition {
             NSApp.terminate(nil)
             return
         }
-        let busy = CloseGuard.busyPanes(composition.controller.set.workspaces.flatMap(\.panes))
+        guard let engine else { return }
+        let busy = RunningPrograms(engine: engine).busy(in: composition.controller.set.workspaces.flatMap(\.panes))
         guard
             let question = CloseGuard.question(for: .window, busy: busy, settings: composition.controller.config.window)
         else {
@@ -380,16 +381,15 @@ final class AppComposition {
 
     private func menuBar() -> MenuBar {
         guard let controller else { return .empty }
-        let all = CommandCatalog.commands(
+        let commands = CommandCatalog.commands(
             for: controller.set, keymap: controller.config.keys, layouts: .standard,
             savedLayouts: controller.savedLayouts())
-        // While an overlay covers the window, the menu must not act on the terminal or the panes behind it.
-        let commands = front?.hasOverlayOpen == true ? all.filter { ![.terminal, .panes].contains($0.group) } : all
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
             keymap: controller.config.keys, commands: commands,
-            state: MenuState(workspaces: controller.set, checked: checked))
+            state: MenuState(
+                workspaces: controller.set, checked: checked, context: front?.menuContext ?? .unrestricted))
     }
 
     /// A menu item acts on the window in front; with none (all closed while quitting), only ⌘N makes sense.
@@ -716,7 +716,7 @@ final class AppComposition {
             answer(false)
             return
         }
-        let busy = CloseGuard.busyPanes(in: windows)
+        let busy = engine.map { RunningPrograms(engine: $0).busy(in: windows) } ?? CloseGuard.busyPanes(in: windows)
         let count = CloseGuard.windowsWithBusyPanes(busy, in: windows)
         guard let question = CloseGuard.question(for: .quit(windowCount: count), busy: busy, settings: settings) else {
             answer(true)

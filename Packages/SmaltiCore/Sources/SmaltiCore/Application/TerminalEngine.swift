@@ -24,6 +24,9 @@ public protocol TerminalEngine: AnyObject {
     func endSearch(in pane: PaneID)
     /// The text on screen, for VoiceOver; empty for an unknown pane.
     func visibleText(of pane: PaneID) -> String
+    /// What runs in the pane's foreground now, read on demand (hidden panes stop reporting it); nil for an unknown
+    /// pane or when the engine cannot tell.
+    func foregroundProcess(of pane: PaneID) -> ForegroundProcess?
 }
 
 public enum TerminalEngineError: Error, Equatable, Sendable {

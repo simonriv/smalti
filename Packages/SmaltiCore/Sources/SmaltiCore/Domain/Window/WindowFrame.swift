@@ -6,20 +6,15 @@ public enum WindowFrame {
     /// How far a new window steps down and right from the front one.
     public static let cascadeStep = 24.0
 
-    /// A saved frame on the screen that shows most of it: kept, pulled down if its title bar is above the screen,
-    /// or shrunk into it if larger. When no screen shows enough of it (a monitor was unplugged), it is centered on
+    /// A saved frame on the screen that shows most of it: kept when it is whole on it, else moved the least to be
+    /// (shrunk first if larger). When no screen shows enough of it (a monitor was unplugged), it is centered on
     /// `main` with its size capped to it.
     public static func fitted(_ frame: Rect, screens: [Rect], main: Rect) -> Rect {
         let visible = screens.filter { isVisible(frame, on: $0) }
         guard let screen = visible.max(by: { overlap(frame, $0) < overlap(frame, $1) }) else {
             return centered(capped(frame.size, to: main), in: main)
         }
-        guard frame.size.width <= screen.size.width, frame.size.height <= screen.size.height else {
-            return inside(Rect(origin: frame.origin, size: capped(frame.size, to: screen)), screen)
-        }
-        guard frame.maxY > screen.maxY else { return frame }
-        return Rect(
-            x: frame.minX, y: screen.maxY - frame.size.height, width: frame.size.width, height: frame.size.height)
+        return inside(Rect(origin: frame.origin, size: capped(frame.size, to: screen)), screen)
     }
 
     private static func overlap(_ frame: Rect, _ screen: Rect) -> Double {
@@ -57,7 +52,7 @@ public enum WindowFrame {
             y: screen.minY + (screen.size.height - size.height) / 2, width: size.width, height: size.height)
     }
 
-    /// Moves `frame` the least needed to sit inside `screen`; it already fits by size.
+    /// Moves `frame` the least needed to sit inside `screen`; it already fits by size. A frame already inside stays.
     private static func inside(_ frame: Rect, _ screen: Rect) -> Rect {
         let x = min(max(frame.minX, screen.minX), screen.maxX - frame.size.width)
         let y = min(max(frame.minY, screen.minY), screen.maxY - frame.size.height)

@@ -7,11 +7,12 @@ public struct SearchProgress: Equatable, Sendable {
 
     public init() {}
 
-    /// "2 de 3", "Sin resultados", or nothing before the first count.
+    /// "2 de 3", "– de 3" until a match is selected, "Sin resultados", or nothing before the first count.
     public var text: String {
         guard let totalMatches else { return "" }
         guard totalMatches > 0 else { return "Sin resultados" }
-        return "\((selectedMatch ?? -1) + 1) de \(totalMatches)"
+        guard let selectedMatch else { return "– de \(totalMatches)" }
+        return "\(selectedMatch + 1) de \(totalMatches)"
     }
 
     /// A new total; `selectsFirstMatch` says whether to go to the first match now.

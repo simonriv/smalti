@@ -8,6 +8,9 @@ public struct HelpEntry: Equatable, Sendable {
     /// Every command the row stands for, so the help can prove it lists them all.
     public let covers: [CommandID]
 
+    /// The id `[keys]` takes in the TOML ("window.new"); nil for families and keys that are not Smalti's.
+    public var commandName: String? { command?.rawValue }
+
     public init(title: String, keys: String, command: CommandID?, covers: [CommandID]) {
         self.title = title
         self.keys = keys

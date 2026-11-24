@@ -71,6 +71,19 @@ struct HelpCatalogTests {
         #expect(filtered[0].entries.allSatisfy { $0.title.lowercased().contains("ventana") })
     }
 
+    /// Final review: `[keys]` needs the ids; the help shows them and finds them.
+    @Test func entriesCarryTheirCommandIdAndAreFoundByIt() {
+        #expect(entry("Nueva ventana")?.commandName == "window.new")
+
+        let found = HelpCatalog.filtered(sections, query: "window.new").flatMap(\.entries)
+
+        #expect(found.map(\.title) == ["Nueva ventana"])
+    }
+
+    @Test func helpMentionsConfirmClose() {
+        #expect(entry("No preguntar al cerrar con procesos")?.keys == "confirm_close = false")
+    }
+
     @Test func emptyQueryKeepsEverything() {
         #expect(HelpCatalog.filtered(sections, query: "  ") == sections)
     }

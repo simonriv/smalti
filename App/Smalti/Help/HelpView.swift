@@ -35,7 +35,11 @@ final class HelpView: NSView {
     }
 
     /// Two columns, balanced by rows; `selected` indexes the entries in reading order (left column first).
-    func show(_ sections: [HelpSection], selected: Int, maximumListHeight: Double) {
+    /// While filtering, each row also shows its command's id (what `[keys]` takes in the TOML).
+    private var showsCommandNames = false
+
+    func show(_ sections: [HelpSection], selected: Int, maximumListHeight: Double, showsCommandNames: Bool = false) {
+        self.showsCommandNames = showsCommandNames
         rows = []
         let split = Self.balancedSplit(sections)
         let views = [Array(sections[..<split]), Array(sections[split...])].map(column)
@@ -70,7 +74,7 @@ final class HelpView: NSView {
             views.append(CommandGroupLabel(text: section.title, theme: theme, identifier: "smalti.helpSection"))
             for entry in section.entries {
                 let index = rows.count
-                let row = HelpRowView(entry, theme: theme)
+                let row = HelpRowView(entry, theme: theme, showsCommandName: showsCommandNames)
                 row.onClick = { [weak self] in self?.onClickEntry?(index) }
                 rows.append(row)
                 views.append(row)
@@ -156,7 +160,7 @@ final class HelpRowView: NSView {
 
     private static let wordKeys: Set<String> = ["arrastrar", "clic derecho"]
 
-    init(_ entry: HelpEntry, theme: Theme) {
+    init(_ entry: HelpEntry, theme: Theme, showsCommandName: Bool) {
         self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
@@ -168,7 +172,8 @@ final class HelpRowView: NSView {
         title.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let row = NSStackView(views: [title, spacer, keys(entry.keys)])
+        let name = entry.commandName.flatMap { showsCommandName ? commandName($0) : nil }
+        let row = NSStackView(views: [title] + (name.map { [$0] } ?? []) + [spacer, keys(entry.keys)])
         row.edgeInsets = NSEdgeInsets(
             top: 0, left: theme.palette.rowPadding, bottom: 0, right: theme.palette.rowPadding)
         row.translatesAutoresizingMaskIntoConstraints = false
@@ -190,6 +195,14 @@ final class HelpRowView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         onClick?()
+    }
+
+    private func commandName(_ name: String) -> NSView {
+        let label = NSTextField(labelWithString: name)
+        label.font = theme.monospacedFont(size: theme.palette.footerFontSize)
+        label.textColor = theme.text.secondary.nsColor
+        label.setAccessibilityIdentifier("smalti.helpCommandName")
+        return label
     }
 
     private func keys(_ text: String) -> NSView {

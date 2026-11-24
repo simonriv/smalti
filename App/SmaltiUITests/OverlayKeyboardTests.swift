@@ -51,6 +51,32 @@ final class OverlayKeyboardTests: SmaltiUITestCase {
         XCTAssertFalse(terminalText.contains("no-debe-pegarse"))
     }
 
+    /// Final review: the menu follows the keyboard's rules; with the search bar open, the observatory is not offered.
+    func testMenuFollowsTheSearchBar() {
+        app.typeKey("f", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.search").waitForExistence(timeout: 5))
+
+        app.menuBars.menuBarItems["Ver"].click()
+
+        XCTAssertFalse(app.menuBars.menuItems["Observatorio"].isEnabled)
+        XCTAssertTrue(app.menuBars.menuItems["Paleta de comandos"].isEnabled)
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    /// Final review: `[keys]` needs the ids, and the help shows them while filtering.
+    func testHelpShowsCommandIdsWhileFiltering() {
+        app.typeKey("?", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.help").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.element("smalti.helpCommandName").exists)
+
+        app.typeText("window.new")
+
+        let name = app.elements("smalti.helpCommandName").firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertEqual(name.value as? String, "window.new")
+        XCTAssertEqual(app.elements("smalti.helpRow").count, 1)
+    }
+
     func testTheWindowMenuListsEveryWindow() {
         app.typeKey("n", modifierFlags: .command)
         waitForShells(count: 2)

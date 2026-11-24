@@ -250,4 +250,13 @@ struct ObsidianThemeTests {
         #expect(theme.agent.counterFontSize == 11.5)
         #expect(theme.agent.counterText == RGBAColor(red: 0x9a, green: 0xa0, blue: 0xab, alpha: 1))
     }
+
+    /// F4.5 (final review): the overlays' values that used to live in the views.
+    @Test func searchBarAndFeedbackTokensMatchTheMockups() {
+        #expect(theme.searchBar.width == 340)
+        #expect(theme.searchBar.height == 36)
+        #expect(theme.feedback.dotGap == 8)
+        #expect(theme.feedback.lineGap == 12)
+        #expect(theme.feedback.logsFontSize == 13)
+    }
 }

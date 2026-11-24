@@ -70,6 +70,8 @@ public struct FeedbackTokens: Equatable, Sendable {
     /// Between a choice's dot and its word, and between the box's lines.
     public let dotGap: Double
     public let lineGap: Double
+    /// "Adjuntar registros" (mockup-feedback.png: 13 px against the 13.5 px rows).
+    public let logsFontSize: Double
 
     public init(
         width: Double, topOffset: Double, padding: Double, titleFontSize: Double, choiceHeight: Double,
@@ -78,6 +80,7 @@ public struct FeedbackTokens: Equatable, Sendable {
         self.ideaDot = ideaDot
         dotGap = 8
         lineGap = 12
+        logsFontSize = 13
         self.width = width
         self.topOffset = topOffset
         self.padding = padding

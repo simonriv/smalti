@@ -65,6 +65,7 @@ final class TerminalBasicsTests: SmaltiUITestCase {
 
         let equal = XCTNSPredicateExpectation(
             predicate: NSPredicate { [app] _, _ in
+                // Safe: setUp launched `app` before this test and tearDown releases it after.
                 let panes = app!.elements("smalti.terminal").allElementsBoundByIndex
                 return panes.count == 2 && abs(panes[0].frame.width - panes[1].frame.width) < 2
                     && panes[0].frame.width != resized

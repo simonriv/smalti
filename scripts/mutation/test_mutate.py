@@ -4,7 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mutate import Mutant, mutants_for_line, mutants_for_source, missing_sources_message, source_files
+from mutate import (
+    Mutant,
+    changed_sources,
+    missing_sources_message,
+    mutants_for_line,
+    mutants_for_source,
+    source_files,
+)
 
 
 def replacements(line):
@@ -137,3 +144,27 @@ class MissingSources(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChangedSources(unittest.TestCase):
+    """--changed-since: during a phase only the sources the branch touched are mutated."""
+
+    def setUp(self):
+        self.root = Path("/repo")
+        self.package = self.root / "Packages/SmaltiCore"
+        self.a = self.package / "Sources/SmaltiCore/A.swift"
+        self.b = self.package / "Sources/SmaltiCore/Domain/B.swift"
+
+    def test_keeps_only_sources_named_by_git(self):
+        changed = ["Packages/SmaltiCore/Sources/SmaltiCore/Domain/B.swift", "App/Smalti/X.swift"]
+
+        self.assertEqual(changed_sources([self.a, self.b], changed, self.root), [self.b])
+
+    def test_nothing_changed_keeps_nothing(self):
+        self.assertEqual(changed_sources([self.a, self.b], [], self.root), [])
+
+    def test_a_test_file_change_does_not_select_a_source(self):
+        changed = ["Packages/SmaltiCore/Tests/SmaltiCoreTests/A.swift"]
+
+        self.assertEqual(changed_sources([self.a], changed, self.root), [])
+

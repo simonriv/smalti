@@ -380,6 +380,7 @@ struct TOMLConfigParserTests {
         ("hyper+k", "modificador desconocido: hyper"),
         ("cmd+space", "tecla desconocida: space"),
         ("cmd++", "falta la tecla; el + se escribe plus"),
+        ("shift+cmd+1", "⇧ no cuenta con números ni símbolos: escribe el carácter (cmd+? en vez de shift+cmd+/)"),
     ])
     func chordErrorIsTranslatedWithLine(chord: String, reason: String) {
         let error = error(parsing: "[keys]\n\n\"\(chord)\" = \"palette.open\"")

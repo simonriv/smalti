@@ -23,16 +23,25 @@ struct WindowFrameTests {
         #expect(fitted == main)
     }
 
-    @Test func framePartlyVisibleIsKept() {
+    /// Final review: a window that hangs off the screen comes back whole.
+    @Test func frameHangingOffTheScreenIsMovedInside() {
         let partly = Rect(x: 1000, y: 100, width: 800, height: 600)
 
-        #expect(WindowFrame.fitted(partly, screens: [main], main: main) == partly)
+        #expect(
+            WindowFrame.fitted(partly, screens: [main], main: main) == Rect(x: 640, y: 100, width: 800, height: 600))
+    }
+
+    @Test func frameAlreadyInsideIsKept() {
+        let inside = Rect(x: 100, y: 100, width: 800, height: 600)
+
+        #expect(WindowFrame.fitted(inside, screens: [main], main: main) == inside)
     }
 
     @Test func frameOnASecondScreenIsKeptWhileItExists() {
         let onRight = Rect(x: 1600, y: 100, width: 800, height: 600)
 
         #expect(WindowFrame.fitted(onRight, screens: [main, right], main: main) == onRight)
+        #expect(onRight.maxX <= right.maxX)
     }
 
     @Test func barelyVisibleSliverCountsAsLost() {
@@ -56,7 +65,8 @@ struct WindowFrameTests {
 
         let fitted = WindowFrame.fitted(tall, screens: [main, right], main: main)
 
-        #expect(fitted == Rect(x: 1340, y: 0, width: 800, height: 1000))
+        // Final review: it comes back whole on the screen that showed more of it.
+        #expect(fitted == Rect(x: 1440, y: 0, width: 800, height: 1000))
     }
 
     @Test func frameAboveTheTopIsPulledDownToKeepTheTitleBarReachable() {

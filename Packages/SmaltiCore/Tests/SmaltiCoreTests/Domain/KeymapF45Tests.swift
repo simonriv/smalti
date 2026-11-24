@@ -54,7 +54,7 @@ struct KeymapF45Tests {
     /// On Latin American `=` is ⇧0 and on US `+` is ⇧=: ⇧ belongs to the character, not to the chord.
     @Test(arguments: ["=", "?", "plus", "-", "0", ","])
     func shiftIsPartOfASymbolKey(_ key: String) throws {
-        #expect(try chord("shift+cmd+\(key)") == (try chord("cmd+\(key)")))
+        #expect(KeyChord(key: key, modifiers: [.shift, .command]) == (try chord("cmd+\(key)")))
     }
 
     @Test(arguments: ["a", "left", "pageup"])

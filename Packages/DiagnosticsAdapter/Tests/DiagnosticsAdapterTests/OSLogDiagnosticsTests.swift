@@ -48,6 +48,19 @@ struct OSLogDiagnosticsTests {
         #expect(try await !export().contains(marker))
     }
 
+    /// Final review: the file goes into a public issue; error descriptions carry working directories, so the user's
+    /// home shows as ~.
+    @Test func exportShowsTheHomeFolderAsTilde() async throws {
+        let marker = "carpeta-\(UUID().uuidString)"
+        let home = NSHomeDirectory()
+        Logger(subsystem: subsystem, category: "tests").error("cwd \(home + "/" + marker, privacy: .public)")
+
+        let text = try await export()
+
+        #expect(text.contains("~/\(marker)"))
+        #expect(!text.contains(home))
+    }
+
     /// Review Focus 5: what the code logs as private never reaches the exported file.
     @Test func exportedLogsKeepPrivateValuesRedacted() async throws {
         let secret = "sk-\(UUID().uuidString)"

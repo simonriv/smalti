@@ -177,6 +177,10 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     public func visibleText(of pane: PaneID) -> String {
         views[pane]?.visibleText ?? ""
     }
+
+    public func foregroundProcess(of pane: PaneID) -> SmaltiCore.ForegroundProcess? {
+        views[pane]?.currentForegroundProcess
+    }
 }
 
 extension GhosttyTerminalEngine: ScrollbackSource {

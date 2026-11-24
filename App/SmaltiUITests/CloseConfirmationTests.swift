@@ -113,6 +113,22 @@ final class CloseConfirmationTests: SmaltiUITestCase {
         sheet.buttons["Cancelar"].click()
     }
 
+    /// Final review (minor 2): a hidden pane stops watching its process, so a program that ended while hidden was
+    /// still counted; closing now asks the engine what runs.
+    func testQuitDoesNotCountAProgramThatEndedWhileHidden() {
+        app.run("sleep 3")
+        let header = app.element("smalti.paneHeader")
+        let running = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'sleep'"), object: header)
+        wait(for: [running], timeout: 10)
+        app.typeKey("n", modifierFlags: [.control, .command])
+        waitForShells(count: 1)
+        sleep(5)
+
+        app.typeKey("q", modifierFlags: .command)
+
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10), "⌘Q asked about a program that had ended")
+    }
+
     func testConfirmCloseFalseNeverAsks() {
         app.terminate()
         let relaunched = XCUIApplication.isolatedSmalti(config: "[window]\nconfirm_close = false\n")

@@ -71,6 +71,7 @@ enum TOMLKeysReader {
         case .unknownModifier(let name): "modificador desconocido: \(name)"
         case .unknownKey(let key): "tecla desconocida: \(key)"
         case .missingKey: "falta la tecla; el + se escribe plus"
+        case .shiftOnSymbol: "⇧ no cuenta con números ni símbolos: escribe el carácter (cmd+? en vez de shift+cmd+/)"
         }
     }
 }

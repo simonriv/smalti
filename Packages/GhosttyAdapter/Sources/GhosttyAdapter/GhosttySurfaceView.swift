@@ -17,6 +17,9 @@ final class GhosttySurfaceView: NSView {
     /// What libghostty was last told about focus (`ghostty_surface_set_focus`).
     private(set) var hasEngineFocus = false
     private var foregroundPoll: Timer?
+    /// While VoiceOver runs and this terminal has the keyboard, new output is announced (F4.5 C14).
+    private var voiceOverWatch: Timer?
+    private var screenText = VisibleTextWatch()
     private var processNames = ProcessNameTracker()
     /// Last code from SHOW_CHILD_EXITED; `.exited` carries it even when it comes from `close_surface_cb`.
     private var lastExitCode: Int?
@@ -59,6 +62,7 @@ final class GhosttySurfaceView: NSView {
     /// Frees the surface (and with it the PTY and child process) and ends the event stream.
     func shutDown() {
         stopForegroundPoll()
+        stopVoiceOverWatch()
         GhosttyRuntime.unregister(self)
         if let surface { ghostty_surface_free(surface) }
         surface = nil
@@ -119,6 +123,7 @@ final class GhosttySurfaceView: NSView {
         isVisible = false
         setEngineFocus(false)
         stopForegroundPoll()
+        stopVoiceOverWatch()
     }
 
     var isPollingForegroundProcess: Bool { foregroundPoll != nil }
@@ -139,6 +144,14 @@ final class GhosttySurfaceView: NSView {
     }
 
     private static let foregroundPollInterval: TimeInterval = 1
+
+    /// Read now, whether the surface is visible or not (closing asks; hidden surfaces do not poll).
+    var currentForegroundProcess: SmaltiCore.ForegroundProcess? {
+        guard let surface, let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface)),
+            let name = ForegroundProcess.name(ofProcessGroup: pid)
+        else { return nil }
+        return SmaltiCore.ForegroundProcess(name: name, commandLine: ProcessArguments.of(pid: pid))
+    }
 
     private func refreshForegroundProcess() {
         guard let surface else { return }
@@ -264,14 +277,47 @@ final class GhosttySurfaceView: NSView {
 
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
-        if result { setEngineFocus(true) }
+        if result {
+            setEngineFocus(true)
+            startVoiceOverWatch()
+        }
         return result
     }
 
     override func resignFirstResponder() -> Bool {
         let result = super.resignFirstResponder()
-        if result { setEngineFocus(false) }
+        if result {
+            setEngineFocus(false)
+            stopVoiceOverWatch()
+        }
         return result
+    }
+
+    private func startVoiceOverWatch() {
+        guard voiceOverWatch == nil else { return }
+        let timer = Timer(timeInterval: VisibleTextWatch.interval, repeats: true) { [weak self] _ in
+            // Main thread: the timer is scheduled on the main run loop below.
+            MainActor.assumeIsolated { self?.announceNewOutput() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        voiceOverWatch = timer
+    }
+
+    private func stopVoiceOverWatch() {
+        voiceOverWatch?.invalidate()
+        voiceOverWatch = nil
+        screenText.forget()
+    }
+
+    /// Reads the screen only while VoiceOver is running: nobody else listens for the announcement.
+    private func announceNewOutput() {
+        guard NSWorkspace.shared.isVoiceOverEnabled, let surface else {
+            screenText.forget()
+            return
+        }
+        if screenText.hasChanged(ScrollbackExporter.visibleText(surface)) {
+            NSAccessibility.post(element: self, notification: .valueChanged)
+        }
     }
 
     /// Main thread.

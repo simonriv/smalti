@@ -19,6 +19,7 @@ public enum TerminalEngineActionsContract {
         let unknown = PaneID()
         drive(engine, unknown)
         #expect(engine.visibleText(of: unknown).isEmpty)
+        #expect(engine.foregroundProcess(of: unknown) == nil)
     }
 
     private static func closedPaneIsIgnored(_ engine: any TerminalEngine) throws {
@@ -30,6 +31,7 @@ public enum TerminalEngineActionsContract {
         engine.close(pane)
         drive(engine, pane)
         #expect(engine.visibleText(of: pane).isEmpty)
+        #expect(engine.foregroundProcess(of: pane) == nil)
     }
 
     private static func drive(_ engine: any TerminalEngine, _ pane: PaneID) {

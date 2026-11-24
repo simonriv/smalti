@@ -18,12 +18,15 @@ public enum HelpCatalog {
         ]
     }
 
-    /// Entries whose title fuzzy-matches `query`; sections left empty are dropped. A blank query keeps everything.
+    /// Entries whose title fuzzy-matches `query`, or whose command id contains it; sections left empty are dropped. A
+    /// blank query keeps everything.
     public static func filtered(_ sections: [HelpSection], query: String) -> [HelpSection] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return sections }
         return sections.compactMap { section in
-            let kept = section.entries.filter { fuzzyScore(trimmed, in: $0.title) != nil }
+            let kept = section.entries.filter {
+                fuzzyScore(trimmed, in: $0.title) != nil || $0.commandName?.contains(trimmed.lowercased()) == true
+            }
             return kept.isEmpty ? nil : HelpSection(title: section.title, entries: kept)
         }
     }
@@ -99,6 +102,11 @@ private struct Rows {
             + [CommandID.helpShow, .configOpen].map(titled)
             + [entry(.configReload, "Recargar configuración")]
             + [CommandID.feedbackReport, .logsShow, .appAbout].map(titled)
+            + [
+                HelpEntry(
+                    title: "No preguntar al cerrar con procesos", keys: "confirm_close = false", command: nil,
+                    covers: [])
+            ]
     }
 
     private func titled(_ id: CommandID) -> HelpEntry {

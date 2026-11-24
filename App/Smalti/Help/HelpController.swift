@@ -85,7 +85,9 @@ final class HelpController: NSObject, NSTextFieldDelegate {
         let sections = HelpCatalog.filtered(HelpCatalog.sections(keymap: keymap()), query: view.field.stringValue)
         entries = Self.readingOrder(sections)
         selected = min(selected, max(entries.count - 1, 0))
-        view.show(sections, selected: selected, maximumListHeight: maximumListHeight)
+        view.show(
+            sections, selected: selected, maximumListHeight: maximumListHeight,
+            showsCommandNames: !view.field.stringValue.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
     /// The entries in the order the view numbers them: left column, then right (`HelpView` balances by rows).

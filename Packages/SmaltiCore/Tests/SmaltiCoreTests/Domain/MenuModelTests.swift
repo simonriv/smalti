@@ -18,13 +18,14 @@ struct MenuModelTests {
         return all.dropFirst().reduce(WorkspaceSet(first: all[0])) { $0.adding($1) }
     }
 
-    private func bar(keymap: Keymap = .standard, workspaces set: WorkspaceSet? = nil, checked: Set<CommandID> = [])
-        -> MenuBar
-    {
+    private func bar(
+        keymap: Keymap = .standard, workspaces set: WorkspaceSet? = nil, checked: Set<CommandID> = [],
+        context: KeyContext = .unrestricted
+    ) -> MenuBar {
         let set = set ?? workspaces()
         return MenuModel.bar(
             keymap: keymap, commands: CommandCatalog.commands(for: set, keymap: keymap, layouts: .standard),
-            state: MenuState(workspaces: set, checked: checked))
+            state: MenuState(workspaces: set, checked: checked, context: context))
     }
 
     private func item(_ title: String, in menu: String, of bar: MenuBar) -> MenuItem? {
@@ -134,6 +135,23 @@ struct MenuModelTests {
         #expect(item("Entrada de teclado segura", in: "Smalti", of: bar())?.isChecked == false)
         #expect(
             item("Entrada de teclado segura", in: "Smalti", of: bar(checked: [.secureInputToggle]))?.isChecked == true)
+    }
+
+    /// Final review: the menu follows the same rules as the keyboard (an overlay, the resume screen).
+    @Test func itemsTheKeyContextDoesNotAllowAreDisabled() {
+        let resume = bar(context: KeyContext(allowing: [.windowNew]))
+
+        #expect(item("Nueva ventana", in: "Archivo", of: resume)?.isEnabled == true)
+        #expect(item("Nuevo panel", in: "Archivo", of: resume)?.isEnabled == false)
+        #expect(item("Cerrar ventana", in: "Archivo", of: resume)?.isEnabled == false)
+        #expect(item("Paleta de comandos", in: "Ver", of: resume)?.isEnabled == false)
+    }
+
+    @Test func aSystemChordReboundInTheTOMLLeavesTheSystemItem() throws {
+        let keymap = try Keymap.standard.overriding([try KeyChord.parse("cmd+h"): .helpShow])
+
+        #expect(item("Ocultar Smalti", in: "Smalti", of: bar(keymap: keymap))?.chord == nil)
+        #expect(item("Salir de Smalti", in: "Smalti", of: bar(keymap: keymap))?.chord == (try KeyChord.parse("cmd+q")))
     }
 
     @Test func contextMenuMatchesSpec() {
