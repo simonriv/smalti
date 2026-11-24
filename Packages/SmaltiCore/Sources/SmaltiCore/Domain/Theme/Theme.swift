@@ -15,7 +15,7 @@ public struct Theme: Equatable, Sendable {
     public internal(set) var palette: PaletteTokens
     public let motion: MotionTokens
     public let emptyState: EmptyStateTokens
-    public let resume: ResumeTokens
+    public internal(set) var resume: ResumeTokens
     public let agent: AgentStatusTokens
     public internal(set) var observatory: ObservatoryTokens
     public let inputMenu: InputMenuTokens
@@ -360,7 +360,7 @@ public struct ResumeTokens: Equatable, Sendable {
     public let buttonCornerRadius: Double
     public let buttonFontSize: Double
     public let buttonGap: Double
-    public let primaryButtonText: RGBAColor
+    public internal(set) var primaryButtonText: RGBAColor
     public let secondaryButtonBorder: RGBAColor
     public let tertiaryButtonText: RGBAColor
     public let hintFontSize: Double

@@ -91,31 +91,35 @@ struct ThemeApplyingTests {
         #expect(applied.theme.accent == hex("#3b5bdb"))
     }
 
-    @Test func overrideAppliesToItsTheme() {
-        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: [2: hex("#00ff00")]] })
+    @Test func overrideAppliesToItsTheme() throws {
+        let overrides = try ANSIOverrides([2: hex("#00ff00")])
+        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: overrides] })
 
         #expect(applied.theme.terminal.palette[2] == hex("#00ff00"))
     }
 
-    @Test func overrideOfOtherThemeIsIgnored() {
+    @Test func overrideOfOtherThemeIsIgnored() throws {
+        let overrides = try ANSIOverrides([1: hex("#ff0000")])
         let applied = ThemeCatalog.apply(
             settings {
                 $0.protectLegibility = false
-                $0.ansiOverrides = [.bosque: [1: hex("#ff0000")]]
+                $0.ansiOverrides = [.bosque: overrides]
             })
 
         #expect(applied.theme.terminal.palette == Theme.obsidian.terminal.palette)
     }
 
-    @Test func unreachableOverrideIsAdjustedAndCounted() {
-        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: [1: hex("#15161e")]] })
+    @Test func unreachableOverrideIsAdjustedAndCounted() throws {
+        let overrides = try ANSIOverrides([1: hex("#15161e")])
+        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: overrides] })
 
         #expect(applied.adjustedColorCount == 1)
         #expect(ContrastRatio.between(applied.theme.terminal.palette[1], panelGround(applied)) >= 4.5)
     }
 
-    @Test func unreachableOverrideDoesNotForceOpaquePanel() {
-        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: [1: hex("#15161e")]] })
+    @Test func unreachableOverrideDoesNotForceOpaquePanel() throws {
+        let overrides = try ANSIOverrides([1: hex("#15161e")])
+        let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: overrides] })
 
         #expect(applied.opacities.panel == 0.66)
     }
@@ -247,5 +251,44 @@ struct LegibilityC2Tests {
         let theme = applied(id, glass: 0.62).theme
 
         #expect(theme.observatory.cardBackground == theme.panel.background)
+    }
+}
+
+/// Block 1 review (M2, M5): the user's higher glass is kept as is, and text on accent-filled buttons follows the
+/// effective accent.
+@Suite("ThemeCatalog.apply · review")
+struct ThemeApplyingReviewTests {
+    private func hex(_ value: String) -> RGBAColor {
+        (try? RGBAColor(hex: value)) ?? RGBAColor(red: 0, green: 0, blue: 0, alpha: 1)
+    }
+
+    @Test func protectionKeepsDesignPanelWhenGlassIsAlmostOpaque() {
+        var appearance = AppearanceSettings.obsidian
+        appearance.glassOpacity = 0.95
+
+        let applied = ThemeCatalog.apply(appearance)
+
+        #expect(applied.theme.panel.background.alpha == 0.34)
+        #expect(applied.theme.window.background.alpha == 0.95)
+    }
+
+    @Test func lightAccentOnNieblaGetsDarkButtonText() {
+        var appearance = AppearanceSettings.obsidian
+        appearance.theme = .niebla
+        appearance.accent = hex("#ffe066")
+
+        let theme = ThemeCatalog.apply(appearance).theme
+
+        #expect(theme.resume.primaryButtonText == theme.text.primary)
+    }
+
+    @Test(arguments: ThemeID.allCases)
+    func themeAccentKeepsDesignButtonText(_ id: ThemeID) {
+        var appearance = AppearanceSettings.obsidian
+        appearance.theme = id
+
+        let theme = ThemeCatalog.apply(appearance).theme
+
+        #expect(theme.resume.primaryButtonText == ThemeCatalog.theme(id).resume.primaryButtonText)
     }
 }

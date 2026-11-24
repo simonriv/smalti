@@ -22,17 +22,24 @@ public enum ThemeCatalog {
     public static func apply(_ appearance: AppearanceSettings) -> AppliedTheme {
         let id = appearance.theme
         var theme = theme(id).applying(appearance)
-        let overrides = appearance.ansiOverrides[id] ?? [:]
-        // The TOML reader rejects indices outside 0–15; anything else keeps the theme's palette.
-        theme.terminal.palette =
-            (try? ANSIPalette(base: theme.terminal.palette, overrides: overrides).colors)
-            ?? theme.terminal.palette
+        let overrides = appearance.ansiOverrides[id] ?? .none
+        theme.terminal.palette = ANSIPalette(base: theme.terminal.palette, overrides: overrides).colors
+        theme.resume.primaryButtonText = textOnAccent(theme)
         guard appearance.protectLegibility else {
             let opacities = SurfaceOpacities(
                 panel: theme.panel.background.alpha, chrome: 0, overlay: theme.palette.background.alpha)
             return AppliedTheme(theme: theme, opacities: opacities, adjustedColorCount: 0)
         }
         return Protection(theme: theme, id: id).applied()
+    }
+
+    /// The design's text on accent-filled buttons, or the theme's text color when a TOML accent makes it unreadable
+    /// (block 1 review, M5): whichever contrasts more with the effective accent.
+    private static func textOnAccent(_ theme: Theme) -> RGBAColor {
+        let design = theme.resume.primaryButtonText
+        let text = theme.text.primary
+        let isDesignBetter = ContrastRatio.between(design, theme.accent) >= ContrastRatio.between(text, theme.accent)
+        return isDesignBetter ? design : text
     }
 
     fileprivate static func chromaticANSI(of theme: Theme, id: ThemeID) -> [RGBAColor] {

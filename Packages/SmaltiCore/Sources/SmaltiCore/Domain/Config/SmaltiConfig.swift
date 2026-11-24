@@ -26,7 +26,7 @@ public struct AppearanceSettings: Equatable, Sendable {
     /// edits of each theme.
     public var theme = ThemeID.obsidiana
     public var protectLegibility = true
-    public var ansiOverrides: [ThemeID: [Int: RGBAColor]] = [:]
+    public var ansiOverrides: [ThemeID: ANSIOverrides] = [:]
 
     public static let maximumFontFamilyLength = 100
 

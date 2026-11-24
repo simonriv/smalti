@@ -8,7 +8,7 @@ struct ANSIPaletteTests {
     @Test func overridesReplaceOnlyTheirIndex() throws {
         let base = Theme.obsidian.terminal.palette
 
-        let palette = try ANSIPalette(base: base, overrides: [1: red])
+        let palette = ANSIPalette(base: base, overrides: try ANSIOverrides([1: red]))
 
         #expect(palette.colors[1] == red)
         #expect(
@@ -19,18 +19,19 @@ struct ANSIPaletteTests {
     @Test func noOverridesKeepsBase() throws {
         let base = Theme.obsidian.terminal.palette
 
-        #expect(try ANSIPalette(base: base, overrides: [:]).colors == base)
+        #expect(ANSIPalette(base: base, overrides: .none).colors == base)
     }
 
     @Test(arguments: [16, -1])
     func indexOutsideSixteenIsRejected(_ index: Int) {
         #expect(throws: ColorError.ansiIndexOutOfRange(index)) {
-            try ANSIPalette(base: Theme.obsidian.terminal.palette, overrides: [index: red])
+            try ANSIOverrides([index: red])
         }
     }
 
     @Test func boundaryIndicesAreAccepted() throws {
-        let palette = try ANSIPalette(base: Theme.obsidian.terminal.palette, overrides: [0: red, 15: red])
+        let palette = ANSIPalette(
+            base: Theme.obsidian.terminal.palette, overrides: try ANSIOverrides([0: red, 15: red]))
 
         #expect(palette.colors.first == red)
         #expect(palette.colors.last == red)
