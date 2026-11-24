@@ -210,6 +210,26 @@ struct ImageGridTests {
         #expect(order(["a²b.png", "a1b.png"]) == ["a1b.png", "a²b.png"])
     }
 
+    /// Block 3 review m2: in a short pane the thumbnail leaves room for its name, its size and the prompt.
+    @Test func shortPaneCapsTheThumbnailRows() throws {
+        var metrics = CellMetrics(columns: 80, cellWidth: 8, cellHeight: 16)
+        metrics.visibleRows = 6
+
+        let cell = try #require(
+            ImageGrid.layout([image("a.png", 100, 1000)], skipped: 0, in: metrics).rows.first?.cells.first)
+
+        #expect(cell.rows == 3)
+    }
+
+    @Test func tinyPaneStillGivesOneRow() throws {
+        var metrics = CellMetrics(columns: 80, cellWidth: 8, cellHeight: 16)
+        metrics.visibleRows = 2
+
+        let cell = try #require(ImageGrid.layout([image("a.png")], skipped: 0, in: metrics).rows.first?.cells.first)
+
+        #expect(cell.rows == 1)
+    }
+
     @Test func noImagesGiveNoRows() {
         #expect(ImageGrid.layout([], skipped: 2, in: wide).rows.isEmpty)
     }

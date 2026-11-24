@@ -27,7 +27,7 @@ final class KittyGraphicsTests: SmaltiUITestCase {
     }
 
     func testThirdPartyKittyImageIsDrawn() throws {
-        launchWithEmitter()
+        try launchWithEmitter()
 
         XCTAssertGreaterThan(samples(of: Self.red), 150, "the emitted image is not on screen")
         attachScreenshot("kitty-third-party")
@@ -41,10 +41,12 @@ final class KittyGraphicsTests: SmaltiUITestCase {
         }
         launch(.isolatedSmalti())
 
-        app.run("clear; smalti img '\(grid.path(percentEncoded: false))'")
+        // The panes' `$TMUX` is the isolation guard, not a tmux: inside a real one `smalti img` writes a list.
+        app.run("clear; TMUX= smalti img '\(grid.path(percentEncoded: false))'")
 
         XCTAssertTrue(waitForTerminal(containing: "4 imágenes"), terminalText)
-        XCTAssertEqual(blobsAcrossTheFirstImageRow(of: Self.blue), 4)
+        // The text arrives before the frame that paints the images.
+        XCTAssertTrue(waitUntil { self.blobsAcrossTheFirstImageRow(of: Self.blue) == 4 })
         XCTAssertTrue(terminalText.contains("a.png"))
         XCTAssertTrue(terminalText.contains("320×200"))
         attachScreenshot("smalti-img-grid")
@@ -53,7 +55,7 @@ final class KittyGraphicsTests: SmaltiUITestCase {
     /// F0's render list A9–A11 with an image in the scrollback: it scrolls away and back, survives a resize, and
     /// `clear` takes it off the screen.
     func testImageSurvivesScrollResizeAndClear() throws {
-        launchWithEmitter()
+        try launchWithEmitter()
         XCTAssertGreaterThan(samples(of: Self.red), 150)
 
         app.run("for i in $(seq 1 120); do echo linea-$i; done")
@@ -64,10 +66,15 @@ final class KittyGraphicsTests: SmaltiUITestCase {
         attachScreenshot("kitty-scrolled-back")
 
         let window = app.windows["smalti.window"]
+        let original = window.frame
         window.typeKey("f", modifierFlags: [.control, .command])
+        defer { if window.frame != original { window.typeKey("f", modifierFlags: [.control, .command]) } }
+        // Block 3 review I1: the image counts only once the window really is another size.
+        XCTAssertTrue(waitUntilSettled(window, awayFrom: original), "the window did not change size")
         XCTAssertTrue(waitUntil { self.samples(of: Self.red) > 150 }, "the image is gone after resizing")
         attachScreenshot("kitty-resized")
         window.typeKey("f", modifierFlags: [.control, .command])
+        XCTAssertTrue(waitUntil(timeout: 10) { window.frame == original }, "the window did not come back")
 
         terminal.scroll(byDeltaX: 0, deltaY: -4000)
         app.run("clear")
@@ -78,11 +85,11 @@ final class KittyGraphicsTests: SmaltiUITestCase {
     // MARK: - Launch
 
     /// The spike's emitter as the pane's shell: prints a line, a 240×120 image, a line, then becomes `zsh -f`.
-    private func launchWithEmitter() {
+    private func launchWithEmitter() throws {
         let image = folder.appending(path: "red.png")
-        try? Self.png(Self.red, width: 240, height: 120).write(to: image)
+        try Self.png(Self.red, width: 240, height: 120).write(to: image)
         let script = folder.appending(path: "emit.zsh")
-        try? Data(Self.emitter(image: image.path(percentEncoded: false)).utf8).write(to: script)
+        try Data(Self.emitter(image: image.path(percentEncoded: false)).utf8).write(to: script)
         launch(.isolatedSmalti(shell: "/bin/zsh -f \(script.path(percentEncoded: false))"))
         XCTAssertTrue(waitForTerminal(containing: "despues de la imagen"), terminalText)
     }
@@ -128,12 +135,11 @@ final class KittyGraphicsTests: SmaltiUITestCase {
 
     /// Points of the pane, every 4 pt, whose color is within 50 per channel of `color`.
     private func samples(of color: (red: Int, green: Int, blue: Int)) -> Int {
-        let screen = ScreenPixels()
-        let frame = terminal.frame
+        let pane = PanePixels(terminal)
         var count = 0
-        for x in stride(from: frame.minX, to: frame.maxX, by: 4) {
-            for y in stride(from: frame.minY, to: frame.maxY, by: 4)
-            where screen.isClose(to: color, at: CGPoint(x: x, y: y)) {
+        for x in stride(from: 0, to: pane.size.width, by: 4) {
+            for y in stride(from: 0, to: pane.size.height, by: 4)
+            where pane.isClose(to: color, at: CGPoint(x: x, y: y)) {
                 count += 1
             }
         }
@@ -142,23 +148,30 @@ final class KittyGraphicsTests: SmaltiUITestCase {
 
     /// Runs of `color` along the row that crosses the first thumbnails: one per image drawn side by side.
     private func blobsAcrossTheFirstImageRow(of color: (red: Int, green: Int, blue: Int)) -> Int {
-        let screen = ScreenPixels()
-        let frame = terminal.frame
-        let firstColored = stride(from: frame.minY, to: frame.maxY, by: 2).first { y in
-            stride(from: frame.minX, to: frame.maxX, by: 2).contains {
-                screen.isClose(to: color, at: CGPoint(x: $0, y: y))
-            }
+        let pane = PanePixels(terminal)
+        let firstColored = stride(from: 0, to: pane.size.height, by: 2).first { y in
+            stride(from: 0, to: pane.size.width, by: 2).contains { pane.isClose(to: color, at: CGPoint(x: $0, y: y)) }
         }
         guard let top = firstColored else { return 0 }
-        let y = top + 10
         var blobs = 0
         var inside = false
-        for x in stride(from: frame.minX, to: frame.maxX, by: 2) {
-            let isColored = screen.isClose(to: color, at: CGPoint(x: x, y: y))
+        for x in stride(from: 0, to: pane.size.width, by: 2) {
+            let isColored = pane.isClose(to: color, at: CGPoint(x: x, y: top + 10))
             if isColored && !inside { blobs += 1 }
             inside = isColored
         }
         return blobs
+    }
+
+    /// True once the window's frame is not `original` and has stopped changing (the full-screen animation ended).
+    private func waitUntilSettled(_ window: XCUIElement, awayFrom original: CGRect) -> Bool {
+        guard waitUntil(timeout: 10, { window.frame != original }) else { return false }
+        var last = window.frame
+        return waitUntil(timeout: 10) {
+            usleep(300_000)
+            defer { last = window.frame }
+            return window.frame == last
+        }
     }
 
     private func waitForTerminal(containing text: String, timeout: TimeInterval = 10) -> Bool {
@@ -182,15 +195,17 @@ final class KittyGraphicsTests: SmaltiUITestCase {
     }
 }
 
-/// The main screen as captured now; points are XCUITest screen coordinates (top-left origin).
-private struct ScreenPixels {
+/// The pane as captured now, on whatever display it is; points are relative to the pane's top-left corner.
+private struct PanePixels {
+    let size: CGSize
     private let bitmap: NSBitmapImageRep?
     private let scale: CGFloat
 
-    init() {
-        let image = XCUIScreen.main.screenshot().image
+    init(_ element: XCUIElement) {
+        let image = element.screenshot().image
         bitmap = image.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:))
-        scale = CGFloat(bitmap?.pixelsWide ?? 0) / max(NSScreen.main?.frame.width ?? 1, 1)
+        size = element.frame.size
+        scale = CGFloat(bitmap?.pixelsWide ?? 0) / max(size.width, 1)
     }
 
     func isClose(to color: (red: Int, green: Int, blue: Int), at point: CGPoint) -> Bool {

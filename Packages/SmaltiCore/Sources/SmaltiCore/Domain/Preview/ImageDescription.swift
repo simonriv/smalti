@@ -21,6 +21,8 @@ public struct CellMetrics: Equatable, Sendable {
     public let columns: Int
     public let cellWidth: Double
     public let cellHeight: Double
+    /// Rows the terminal shows (`ws_row`); a thumbnail leaves three of them for its name, its size and the prompt.
+    public var visibleRows = Int.max
 
     public init(columns: Int, cellWidth: Double, cellHeight: Double) {
         self.columns = columns

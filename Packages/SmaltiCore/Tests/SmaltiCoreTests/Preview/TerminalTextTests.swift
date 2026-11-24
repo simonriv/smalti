@@ -12,7 +12,10 @@ struct TerminalTextTests {
         #expect(TerminalText.sanitized(text) == safe)
     }
 
-    @Test(arguments: [("abc", 3), ("写真", 4), ("ñ", 1), ("😀", 2), ("", 0)])
+    @Test(arguments: [
+        ("abc", 3), ("写真", 4), ("ñ", 1), ("😀", 2), ("", 0), ("🚀", 2), ("🫠", 2), ("❤️", 2), ("🇨🇴", 2),
+        ("a\u{200B}b", 2), ("e\u{301}", 1),
+    ])
     func widthCountsCells(_ text: String, _ cells: Int) {
         #expect(TerminalText.width(text) == cells)
     }

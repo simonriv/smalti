@@ -5,6 +5,8 @@ public struct ImageGrid: Equatable, Sendable {
     public static let gap = 2
     public static let maxRows = 6
     public static let limit = 100
+    /// The name, the size and the prompt under a thumbnail in a short pane.
+    static let reservedRows = 3
 
     public let rows: [GridRow]
     public let columnsPerRow: Int
@@ -28,8 +30,9 @@ public struct ImageGrid: Equatable, Sendable {
         let rows =
             Double(cellColumns) * metrics.cellWidth * Double(image.pixelHeight)
             / (Double(image.pixelWidth) * metrics.cellHeight)
+        let cap = max(1, min(maxRows, metrics.visibleRows - reservedRows))
         guard rows.isFinite, rows > 0 else { return 1 }
-        return Int(min(Double(maxRows), max(1, rows.rounded())))
+        return Int(min(Double(cap), max(1, rows.rounded())))
     }
 }
 

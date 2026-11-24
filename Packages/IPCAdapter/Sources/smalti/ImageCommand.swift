@@ -12,7 +12,7 @@ protocol CommandTerminal {
 
 /// The process's own standard output and error.
 struct StandardTerminal: CommandTerminal {
-    let metrics = TerminalSize.metrics(of: STDOUT_FILENO)
+    let metrics = TerminalSize.metrics(of: STDOUT_FILENO, environment: ProcessInfo.processInfo.environment)
 
     func write(_ text: String) { FileHandle.standardOutput.write(Data(text.utf8)) }
     func writeError(_ text: String) { FileHandle.standardError.write(Data(text.utf8)) }
@@ -27,8 +27,12 @@ enum ImageCommand {
 
         """
 
+    /// Describing reads every file's header: past this many, a terminal is told why it waits.
+    static let announcedFileCount = 500
+
     static func run(_ arguments: [String], in directory: String, terminal: any CommandTerminal) async -> Int32 {
-        if arguments.first == "--help" || arguments.first == "-h" {
+        let options = arguments.prefix { $0 != "--" }
+        if options.contains("--help") || options.contains("-h") {
             terminal.write(usage)
             return 0
         }
@@ -36,9 +40,11 @@ enum ImageCommand {
         do {
             listing = try ImageArguments.listing(arguments, currentDirectory: directory)
         } catch {
-            guard case .missing(let path) = error else { return 1 }
-            terminal.writeError("No existe: \(TerminalText.sanitized(path))\n")
+            terminal.writeError(error.message)
             return 1
+        }
+        if terminal.metrics != nil, listing.images.count > announcedFileCount {
+            terminal.writeError("Leyendo \(listing.images.count) archivos…\n")
         }
         let output = await ShowImageGrid.render(listing, metrics: terminal.metrics, files: ImageIOImageFiles())
         terminal.write(output.stdout)
@@ -49,34 +55,56 @@ enum ImageCommand {
 
 enum ImageArgumentError: Error, Equatable {
     case missing(String)
+    case unreadable(String, reason: String)
+
+    /// What the user reads on stderr, with the argument as written.
+    var message: String {
+        switch self {
+        case .missing(let path): "No existe: \(TerminalText.sanitized(path))\n"
+        case .unreadable(let path, _): "No se pudo leer: \(TerminalText.sanitized(path))\n"
+        }
+    }
 }
 
 /// From the arguments to the image paths: a folder gives its visible files (no recursion, subfolders left out), a file
 /// gives itself, hidden or not. Files without an image extension count as skipped.
 enum ImageArguments {
     static func listing(_ arguments: [String], currentDirectory: String) throws(ImageArgumentError) -> ImageListing {
-        let given = arguments.isEmpty ? ["."] : arguments
+        let paths = arguments.filter { $0 != "--" }
+        let given = paths.isEmpty ? ["."] : paths
         var images: [String] = []
         var skipped = 0
         for argument in given {
-            let directory = URL(fileURLWithPath: currentDirectory, isDirectory: true)
-            let path = URL(fileURLWithPath: argument, relativeTo: directory).standardizedFileURL.path
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
-                throw .missing(argument)
-            }
-            let files = isDirectory.boolValue ? visibleFiles(in: path) : [path]
-            images += files.filter(ImageFileKind.isImage)
-            skipped += files.count { !ImageFileKind.isImage($0) }
+            let entries = try entries(of: argument, in: currentDirectory)
+            images += entries.filter(ImageFileKind.isImage)
+            skipped += entries.count { !ImageFileKind.isImage($0) }
         }
-        return ImageListing(source: given.joined(separator: " "), images: images, skipped: skipped)
+        var seen = Set<String>()
+        let unique = images.filter { seen.insert($0).inserted }
+        return ImageListing(source: given.joined(separator: " "), images: unique, skipped: skipped)
     }
 
-    private static func visibleFiles(in folder: String) -> [String] {
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder)) ?? []
-        return names.filter { !$0.hasPrefix(".") }.map { "\(folder)/\($0)" }.filter { path in
-            var isDirectory: ObjCBool = false
-            return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && !isDirectory.boolValue
+    /// The argument's files: a folder's visible entries that are not folders (a broken link included, so it counts
+    /// as skipped), or the file itself.
+    private static func entries(of argument: String, in currentDirectory: String) throws(ImageArgumentError)
+        -> [String]
+    {
+        let directory = URL(fileURLWithPath: currentDirectory, isDirectory: true)
+        let path = URL(fileURLWithPath: argument, relativeTo: directory).standardizedFileURL.path
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            throw .missing(argument)
+        }
+        guard isDirectory.boolValue else { return [path] }
+        let names: [String]
+        do {
+            names = try FileManager.default.contentsOfDirectory(atPath: path)
+        } catch {
+            throw .unreadable(argument, reason: error.localizedDescription)
+        }
+        return names.filter { !$0.hasPrefix(".") }.map { "\(path)/\($0)" }.filter { entry in
+            var isFolder: ObjCBool = false
+            return !FileManager.default.fileExists(atPath: entry, isDirectory: &isFolder) || !isFolder.boolValue
         }
     }
 }

@@ -81,6 +81,71 @@ struct ImageCommandTests {
         #expect(terminal.written.hasPrefix("uso: smalti img [carpeta | archivos…]"))
     }
 
+    /// Block 3 review I3: a folder that cannot be read is an error, not an empty folder.
+    @Test func unreadableFolderFails() async throws {
+        let locked = folder.appending(path: "locked")
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: locked.path) }
+        let terminal = RecordingTerminal()
+
+        let code = await ImageCommand.run(["locked"], in: folder.path, terminal: terminal)
+
+        #expect(code == 1)
+        #expect(terminal.errors == "No se pudo leer: locked\n")
+    }
+
+    @Test func helpIsFoundAnywhere() async {
+        let terminal = RecordingTerminal()
+
+        #expect(await ImageCommand.run([".", "--help"], in: folder.path, terminal: terminal) == 0)
+        #expect(terminal.written.hasPrefix("uso: smalti img"))
+    }
+
+    @Test func doubleDashEndsOptions() throws {
+        try Data().write(to: folder.appending(path: "--help.png"))
+
+        let listing = try listing(["--", "--help.png"])
+
+        #expect(listing.images == [folder.appending(path: "--help.png").path])
+    }
+
+    @Test func sameImageTwiceIsListedOnce() throws {
+        let listing = try listing([".", "./b.png"])
+
+        #expect(listing.images.count == 2)
+    }
+
+    @Test func brokenLinkInFolderCountsAsSkipped() throws {
+        try FileManager.default.createSymbolicLink(
+            atPath: folder.appending(path: "gone.png").path, withDestinationPath: "/nonexistent/x.png")
+
+        let listing = try listing([])
+
+        // An image name that describes as nothing: the grid counts it as skipped, it never vanishes.
+        #expect(listing.images.contains(folder.appending(path: "gone.png").path))
+    }
+
+    /// Block 3 review m5: describing thousands of files takes seconds; say so on a terminal.
+    @Test func manyFilesAreAnnouncedOnATerminal() async throws {
+        let many = folder.appending(path: "many")
+        try FileManager.default.createDirectory(at: many, withIntermediateDirectories: true)
+        for index in 0..<501 { try Data().write(to: many.appending(path: "i\(index).png")) }
+        let terminal = RecordingTerminal(metrics: CellMetrics(columns: 80, cellWidth: 8, cellHeight: 16))
+
+        _ = await ImageCommand.run(["many"], in: folder.path, terminal: terminal)
+
+        #expect(terminal.errors.hasPrefix("Leyendo 501 archivos…\n"))
+    }
+
+    @Test func fewFilesAreNotAnnounced() async throws {
+        let terminal = RecordingTerminal(metrics: CellMetrics(columns: 80, cellWidth: 8, cellHeight: 16))
+
+        _ = await ImageCommand.run([], in: folder.path, terminal: terminal)
+
+        #expect(!terminal.errors.contains("Leyendo"))
+    }
+
     @Test func emptyFolderSaysSo() async throws {
         let empty = folder.appending(path: "sub")
         let terminal = RecordingTerminal()
@@ -110,7 +175,21 @@ struct TerminalSizeTests {
             close(secondary)
         }
 
-        #expect(TerminalSize.metrics(of: secondary) == CellMetrics(columns: 80, cellWidth: 8, cellHeight: 16))
+        let metrics = TerminalSize.metrics(of: secondary, environment: [:])
+
+        #expect(metrics?.columns == 80 && metrics?.cellWidth == 8 && metrics?.cellHeight == 16)
+        #expect(metrics?.visibleRows == 24)
+    }
+
+    /// Block 3 review I2: tmux drops kitty graphics unless passthrough is set up: inside it, the plain list.
+    @Test func insideTmuxGivesNoMetrics() throws {
+        let (main, secondary) = try pty(columns: 80, rows: 24, width: 640, height: 384)
+        defer {
+            close(main)
+            close(secondary)
+        }
+
+        #expect(TerminalSize.metrics(of: secondary, environment: ["TMUX": "/tmp/tmux-501/default,1,0"]) == nil)
     }
 
     @Test func terminalWithoutPixelsGivesNoMetrics() throws {
@@ -120,7 +199,7 @@ struct TerminalSizeTests {
             close(secondary)
         }
 
-        #expect(TerminalSize.metrics(of: secondary) == nil)
+        #expect(TerminalSize.metrics(of: secondary, environment: [:]) == nil)
     }
 
     @Test func pipeGivesNoMetrics() {
@@ -128,6 +207,6 @@ struct TerminalSizeTests {
         #expect(pipe(&ends) == 0)
         defer { ends.forEach { close($0) } }
 
-        #expect(TerminalSize.metrics(of: ends[1]) == nil)
+        #expect(TerminalSize.metrics(of: ends[1], environment: [:]) == nil)
     }
 }
