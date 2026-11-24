@@ -198,4 +198,5 @@
 - [x] T15 · Buscar en el scrollback (SearchTests 8/8; captura f45-search.png)
 - [x] T16 · Feedback, registros y funciones básicas del terminal (TerminalBasicsTests 8/8, FeedbackTests 4/4; captura f45-feedback.png)
 #### Bloque 5 · Cierre
-- [ ] T17 · Checklist, revisión final, mutación, PR y despliegue
+- [x] T17 · Checklist (`docs/specs/F4.5-checklist.md`), revisión final de la rama (6 importantes y 10 menores corregidos, cada uno con su prueba en rojo y en verde), mutación de lo cambiado en F4.5 90,2 % (23 sobrevivientes muertos con prueba nueva); SmaltiCore 1107, GhosttyAdapter 208, TOMLConfigAdapter 80, DiagnosticsAdapter 10
+- [ ] PR a `develop` y PR `develop` → `main` (los fusiona Simón); Release instalado en `/Applications` tras su visto bueno
