@@ -97,9 +97,9 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app de desarrollo `build/Build/Products/Debug/Smalti Dev.app` (`dev.simonriv.smalti.dev`, estado propio); el Release (`Smalti.app`, `dev.simonriv.smalti`) es el diario.
 - `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
 - `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.
-- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase]`: XCUITest, con una línea `[n/total] ok|FAIL` por prueba.
+- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase | Clase/prueba …]`: XCUITest, una sola compilación para todo lo pedido y una línea `[n/total] ok|FAIL` por prueba.
 - `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter Packages/FigCompletionAdapter/Sources Packages/FigCompletionAdapter/Tests Packages/ProjectContextAdapter Packages/IPCAdapter Packages/FileSessionAdapter Packages/DiagnosticsAdapter scripts/input-bench/Sources`: formato.
-- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore`: mutation testing; pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
+- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore [--changed-since <base>]`: mutation testing (con `--changed-since`, solo los archivos que cambió la rama); pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
 - Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux). Las que necesitan la integración de shell (F4: OSC 133 y widgets) usan `"/bin/zsh -d"` con un ZDOTDIR temporal vacío vía `-SmaltiUserZdotdir`.
 
 ## Git
