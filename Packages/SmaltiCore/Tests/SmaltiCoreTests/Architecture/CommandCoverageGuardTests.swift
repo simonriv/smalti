@@ -92,6 +92,17 @@ struct CommandCoverageGuardTests {
         #expect(commands.filter { !Self.hasCase(for: $0, in: source) }.isEmpty)
     }
 
+    /// Block 1 review (M3): a pending command that already has an action must leave `pendingInApp`, or the guard
+    /// would stop watching it for good.
+    @Test(.enabled(if: isInRepository))
+    func pendingCommandsHaveNoActionYet() throws {
+        let source = try String(contentsOf: Self.controller, encoding: .utf8)
+
+        let wired = Self.pendingInApp.filter { source.contains(".\(Self.swiftName($0.rawValue))") }
+
+        #expect(wired.isEmpty, "remove from pendingInApp: \(wired.map(\.rawValue))")
+    }
+
     /// Runs inside the repository only: mutation testing copies this package alone, without the app.
     @Test(.enabled(if: isInRepository))
     func everyStandardCommandHasAnActionInTheApp() throws {

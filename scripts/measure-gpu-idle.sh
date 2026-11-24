@@ -38,6 +38,8 @@ for run in $(seq 1 "$runs"); do
       -SmaltiStatePath "$work/state" -SmaltiConfigPath "$work/config.toml" \
       -SmaltiShellCommand "/bin/zsh -f" -SmaltiGlassProbe "$probe" > "$work/app.log" 2>&1 &
     app_pid=$!
+    # Block 1 review (M7): a failure under `set -e` must not leave Smalti Dev open.
+    trap 'kill "$app_pid" 2>/dev/null || true' EXIT
     sleep "$settle"
     if ! kill -0 "$app_pid" 2>/dev/null; then echo "[$run/$runs] FAIL $probe app exited"; exit 1; fi
     mean="$(sample_gpu)"

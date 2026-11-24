@@ -57,6 +57,9 @@ struct LibghosttyF5ApiTests {
         }
         try type("printf '\\n\\n\\uE900\\uE900\\uE900\\uE900\\n'", in: view)
         await tick(runtime, seconds: 1.5)
+        // Block 1 review (M6): the cell holds U+E900 itself, so the pixels compare the same text on both runtimes.
+        let visible = (view.accessibilityValue() as? String) ?? ""
+        #expect(visible.contains("\u{E900}"))
         let image = try #require(WindowCapture.image(of: window))
         return Self.brightPixels(in: image)
     }
