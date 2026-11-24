@@ -54,6 +54,23 @@ final class AgentStatusTests: SmaltiUITestCase {
         wait(for: [active], timeout: 5)
     }
 
+    /// F4.5: ⌘J looks in every window and brings the one with the waiting agent to the front.
+    func testJumpBringsTheWindowOfTheWaitingAgentToTheFront() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        send(try steps()[4])  // PermissionRequest: this window's pane waits
+        expectStatus("waiting", after: "PermissionRequest")
+        app.typeKey("n", modifierFlags: .command)
+        waitForShells(count: 2)
+
+        app.typeKey("j", modifierFlags: .command)
+
+        let front = app.windows.matching(identifier: "smalti.window").element(boundBy: 0)
+        let status = front.descendants(matching: .any).matching(identifier: "smalti.paneStatus").firstMatch
+        let waiting = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'waiting'"), object: status)
+        wait(for: [waiting], timeout: 5)
+    }
+
     // MARK: - Helpers
 
     private func steps() throws -> [Step] {

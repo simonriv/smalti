@@ -166,3 +166,37 @@
 - [x] T16 · UI tests, aislamiento y capturas
 #### Bloque 5 · Cierre
 - [x] T17 · Mediciones, checklist, revisión final, mutación y PR (checklist `docs/specs/F4-checklist.md`; mutación 98,6 %)
+
+## F4.5 · Ayuda, ventanas y funciones básicas
+
+### Spec
+- [x] Auditoría de usabilidad aprobada (`docs/specs/F4.5-auditoria.md`, 2026-11-23): 25 huecos entran en F4.5
+- [x] Aprobada (`docs/specs/F4.5-ayuda-ventanas.md`, 2026-11-23): enfoque A de ventanas, menú y ayuda desde el `Keymap`, búsqueda de libghostty, sesión v2
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F4.5-ayuda-ventanas.md`)
+
+### Tareas
+#### Bloque 1 · Dominio y verificación
+- [x] T1 · Verificar la API de libghostty v1.4.0: `search:<texto>`, `navigate_search:next|previous` y `end_search` funcionan; `SEARCH_TOTAL` cuenta también la línea del comando y llega con el tick de la app; `-1` es "sin búsqueda". `select_all`, `clear_screen`, `scroll_*`, `jump_to_prompt:±1` y `*_font_size` aceptados. `read -s` emite `SECURE_INPUT` ON (`macos-auto-secure-input` por defecto). `MOUSE_OVER_LINK` con ⌘ llega en un frame posterior al movimiento. El texto visible ya existía (`accessibilityValue`)
+- [x] T2 · Ids nuevos, varios atajos por comando y teclas con nombre (⇧ forma parte del carácter en símbolos: ayuda en ⌘?, ⌘+ en los dos layouts, sin aviso de ⇧⌘=)
+- [x] T3 · Ventanas y sesión v2
+- [x] T4 · Acciones del terminal, tamaño de letra y confirmar cierre (ocupado = programa en primer plano que no es el shell, sin depender de OSC 133)
+- [x] T5 · Catálogo, ayuda y modelo del menú
+#### Bloque 2 · Adaptadores
+- [x] T6 · Feedback, plantilla del TOML y versión (0.4.5 y commit en el Info.plist)
+- [x] T7 · GhosttyAdapter: acciones, búsqueda, texto, eventos y letra (config del motor solo con `keybind = clear` y entrada segura automática)
+- [x] T8 · FileSessionAdapter: sesión v2 (lee v1 y v2, guarda v2, aparta versiones desconocidas)
+- [x] T9 · DiagnosticsAdapter (OSLogStore del proceso, privados redactados, guarda de logs públicos)
+#### Bloque 3 · Ventanas en la app
+- [x] T10 · `WindowComposition` (refactor; 64 pruebas de UI de F1–F4 iguales antes y después)
+- [x] T11 · Varias ventanas, pantalla completa, Dock y restauración (WindowTests 7/7; regresión de 8 clases en verde)
+- [x] T12 · Confirmar antes de cerrar (CloseConfirmationTests 8/8; regresión de 8 clases en verde)
+#### Bloque 4 · Descubrimiento y terminal en la app
+- [x] T13 · Menú de macOS, contextual y comandos de la app (MenuTests 8/8; capturas f45-menu-*)
+- [x] T14 · Ayuda (HelpTests 6/6; captura f45-help.png)
+- [x] T15 · Buscar en el scrollback (SearchTests 8/8; captura f45-search.png)
+- [x] T16 · Feedback, registros y funciones básicas del terminal (TerminalBasicsTests 8/8, FeedbackTests 4/4; captura f45-feedback.png)
+#### Bloque 5 · Cierre
+- [x] T17 · Checklist (`docs/specs/F4.5-checklist.md`), revisión final de la rama (6 importantes y 10 menores corregidos, cada uno con su prueba en rojo y en verde), mutación de lo cambiado en F4.5 90,2 % (23 sobrevivientes muertos con prueba nueva); SmaltiCore 1107, GhosttyAdapter 208, TOMLConfigAdapter 80, DiagnosticsAdapter 10
+- [ ] PR a `develop` y PR `develop` → `main` (los fusiona Simón); Release instalado en `/Applications` tras su visto bueno

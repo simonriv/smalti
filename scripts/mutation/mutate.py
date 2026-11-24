@@ -6,7 +6,10 @@ job for pure-Swift code: it copies a package to a temporary directory, applies o
 and runs the package's tests. A mutant the tests catch is "killed"; one they miss "survives".
 
 Usage:
-    scripts/mutation/mutate.py [--package Packages/SmaltiCore] [--min-score 80] [--timeout 120]
+    scripts/mutation/mutate.py [--package Packages/SmaltiCore] [--min-score 80] [--timeout 120] [--changed-since REF]
+
+--changed-since mutates only the package sources that differ from REF (committed, uncommitted or untracked): the
+quick run during a phase. The full run, without it, closes the phase.
 
 Prints one line per mutant as "[n/total] ok|FAIL <file:line operator>" (total fixed from the first line) and
 exits non-zero when the mutation score falls below --min-score. The real sources are never modified.
@@ -154,6 +157,20 @@ def source_files(package: Path) -> list[Path]:
     return sorted((package / "Sources" / package.name).rglob("*.swift"))
 
 
+def changed_sources(sources: list[Path], changed: list[str], root: Path) -> list[Path]:
+    """The sources whose repository-relative path is among `changed` (as git prints them)."""
+    names = set(changed)
+    return [source for source in sources if str(source.relative_to(root)) in names]
+
+
+def git_changes(root: Path, since: str) -> list[str]:
+    """Paths that differ from `since` in the working tree, plus untracked ones, relative to `root`."""
+    diff = subprocess.run(["git", "diff", "--name-only", since], cwd=root, capture_output=True, text=True, check=True)
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"], cwd=root, capture_output=True, text=True, check=True)
+    return (diff.stdout + untracked.stdout).splitlines()
+
+
 def missing_sources_message(package: Path, files: list[Path]) -> str | None:
     """An error message when there is nothing to mutate; a silent 100 % score would be misleading."""
     return None if files else f"no sources under Sources/{package.name}"
@@ -164,6 +181,7 @@ def main() -> int:
     parser.add_argument("--package", default="Packages/SmaltiCore")
     parser.add_argument("--min-score", type=float, default=80.0)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--changed-since", metavar="REF", help="mutate only the sources changed since REF")
     args = parser.parse_args()
 
     source_package = Path(args.package).resolve()
@@ -172,6 +190,15 @@ def main() -> int:
     if problem:
         print(problem, file=sys.stderr)
         return 2
+    if args.changed_since:
+        root = Path(subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], cwd=source_package, capture_output=True, text=True, check=True
+        ).stdout.strip()).resolve()
+        sources = changed_sources(sources, git_changes(root, args.changed_since), root)
+        print(f"changed since {args.changed_since}: {len(sources)} source file(s)")
+        if not sources:
+            print("nothing to mutate: no source of the package changed")
+            return 0
     mutants = [
         mutant
         for file in sources

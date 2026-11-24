@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Runs the XCUITest suite (optionally one class: scripts/test-ui.sh MainWindowTests) and prints one line per
-# finished test as "[n/total] ok|FAIL <Class.test>". Exits with xcodebuild's own status.
+# Runs the XCUITest suite, or only what is named (classes or single tests, any number:
+# scripts/test-ui.sh MainWindowTests MenuTests/testAboutShowsVersionAndCommit), building once for all of it, and
+# prints one line per finished test as "[n/total] ok|FAIL <Class.test>". Exits with xcodebuild's own status.
 set -uo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 logs="$root/build/test-ui"; mkdir -p "$logs"
 args=(-project "$root/App/Smalti.xcodeproj" -scheme Smalti -destination "platform=macOS" -derivedDataPath "$root/build")
-only=(); [[ -n "${1:-}" ]] && only=("-only-testing:SmaltiUITests/$1")
+only=(); for target in "$@"; do only+=("-only-testing:SmaltiUITests/$target"); done
 
 xcodebuild build-for-testing "${args[@]}" > "$logs/build.log" 2>&1 || { tail -30 "$logs/build.log"; exit 1; }
 

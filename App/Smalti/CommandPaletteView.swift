@@ -19,8 +19,7 @@ final class CommandPaletteView: NSView {
     init(theme: Theme) {
         self.theme = theme
         super.init(frame: .zero)
-        let content = makeContent()
-        layoutBox(content)
+        OverlayBox.decorate(self, around: makeContent(), theme: theme)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.palette")
@@ -88,50 +87,16 @@ final class CommandPaletteView: NSView {
 
     override func layout() {
         super.layout()
-        let radius = theme.palette.cornerRadius
-        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: radius, cornerHeight: radius, transform: nil)
+        OverlayBox.updateShadow(of: self, theme: theme)
     }
 
     // MARK: - Layout
 
-    /// Shadow outside, blur and tint inside the rounded box, border on top.
-    private func layoutBox(_ content: NSView) {
-        let palette = theme.palette
-        wantsLayer = true
-        layer?.shadowColor = NSColor.black.cgColor
-        layer?.shadowOpacity = Float(palette.shadowOpacity)
-        // CSS blur radius is twice the Core Animation shadow radius; y grows down in CSS and up here.
-        layer?.shadowRadius = palette.shadowBlur / 2
-        layer?.shadowOffset = CGSize(width: 0, height: -palette.shadowOffsetY)
-        let blur = NSVisualEffectView()
-        blur.material = .hudWindow
-        blur.blendingMode = .withinWindow
-        blur.state = .active
-        blur.wantsLayer = true
-        blur.layer?.cornerRadius = palette.cornerRadius
-        blur.layer?.masksToBounds = true
-        for view in [blur, content] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-            pin(view, to: self)
-        }
-    }
-
     private func makeContent() -> NSView {
-        let palette = theme.palette
-        let content = NSView()
-        content.wantsLayer = true
-        content.layer?.cornerRadius = palette.cornerRadius
-        content.layer?.borderWidth = theme.chrome.hairlineWidth
-        content.layer?.borderColor = palette.border.nsColor.cgColor
-        content.layer?.backgroundColor = palette.background.nsColor.cgColor
         let stack = NSStackView(views: [fieldRow(), separator(), listArea(), separator(listSeparator), footer()])
         stack.orientation = .vertical
         stack.spacing = 0
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(stack)
-        pin(stack, to: content)
-        return content
+        return stack
     }
 
     private func fieldRow() -> NSView {
@@ -202,16 +167,11 @@ final class CommandPaletteView: NSView {
 
     /// `<kbd>↑↓</kbd> navegar`: the board separates key and word with a plain space.
     private func hint(_ keys: String, _ action: String) -> NSView {
-        let row = NSStackView(views: [KbdView(keys, theme: theme), footerLabel(" \(action)")])
-        row.spacing = 0
-        return row
+        OverlayBox.hint(keys, action, theme: theme)
     }
 
     private func footerLabel(_ text: String) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
-        label.font = theme.interfaceFont(size: theme.palette.footerFontSize)
-        label.textColor = theme.text.secondary.nsColor
-        return label
+        OverlayBox.footerLabel(text, theme: theme)
     }
 
     private func separator(_ line: NSView = NSView()) -> NSView {
@@ -222,12 +182,7 @@ final class CommandPaletteView: NSView {
     }
 
     private func pin(_ view: NSView, to container: NSView) {
-        NSLayoutConstraint.activate([
-            view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            view.topAnchor.constraint(equalTo: container.topAnchor),
-            view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
+        OverlayBox.pin(view, to: container)
     }
 }
 

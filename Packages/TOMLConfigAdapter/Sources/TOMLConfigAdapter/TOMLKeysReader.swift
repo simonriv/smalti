@@ -8,7 +8,7 @@ enum TOMLKeysReader {
     private static let knownCommands = Set(CommandID.allStandard)
 
     static func read(_ section: TOMLSection, over keymap: Keymap) throws(ConfigError) -> Keymap {
-        var bindings: [KeyChord: CommandID?] = [:]
+        var bindings: [(chord: KeyChord, command: CommandID?)] = []
         var writtenChords: [KeyChord: String] = [:]
         for text in section.keysInFileOrder {
             let chord = try chord(text, in: section)
@@ -17,7 +17,7 @@ enum TOMLKeysReader {
             }
             try validate(chord, writtenAs: text, in: section)
             writtenChords[chord] = text
-            bindings[chord] = try command(at: text, in: section)
+            bindings.append((chord, try command(at: text, in: section)))
         }
         return try apply(bindings, to: keymap, writtenAs: writtenChords, in: section)
     }
@@ -53,11 +53,11 @@ enum TOMLKeysReader {
 
     /// `Keymap.overriding` reports the chord by its display (`⌥K`); this puts back the user's text and its line.
     private static func apply(
-        _ bindings: [KeyChord: CommandID?], to keymap: Keymap, writtenAs texts: [KeyChord: String],
+        _ bindings: [(chord: KeyChord, command: CommandID?)], to keymap: Keymap, writtenAs texts: [KeyChord: String],
         in section: TOMLSection
     ) throws(ConfigError) -> Keymap {
         do {
-            return try keymap.overriding(bindings)
+            return try keymap.overriding(ordered: bindings)
         } catch {
             guard let text = texts.first(where: { $0.key.display == error.key })?.value else { throw error }
             throw section.error(at: text, error.reason)
@@ -71,6 +71,7 @@ enum TOMLKeysReader {
         case .unknownModifier(let name): "modificador desconocido: \(name)"
         case .unknownKey(let key): "tecla desconocida: \(key)"
         case .missingKey: "falta la tecla; el + se escribe plus"
+        case .shiftOnSymbol: "⇧ no cuenta con números ni símbolos: escribe el carácter (cmd+? en vez de shift+cmd+/)"
         }
     }
 }

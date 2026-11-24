@@ -11,7 +11,6 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
         for name in InheritedEnvironment.agentSessionVariables(in: ProcessInfo.processInfo.environment) {
             unsetenv(name)
         }
-        NSApp.mainMenu = AppMenu.make()
         let composition = AppComposition()
         composition.showMainWindow()
         self.composition = composition
@@ -21,14 +20,26 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// The session saves now; the observatory's index gets up to a second to write what it has not saved yet.
+    /// F4.5: first asks, if something runs; a "Cancelar" leaves everything running.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        composition?.saveForQuit()
         guard let composition else { return .terminateNow }
-        Task {
-            await composition.persistObservatory()
-            sender.reply(toApplicationShouldTerminate: true)
+        composition.confirmQuit { confirmed in
+            guard confirmed else {
+                sender.reply(toApplicationShouldTerminate: false)
+                return
+            }
+            composition.saveForQuit()
+            Task {
+                await composition.persistObservatory()
+                sender.reply(toApplicationShouldTerminate: true)
+            }
         }
         return .terminateLater
+    }
+
+    /// F4.5: "Nueva ventana" in the Dock's menu.
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        composition?.dockMenu()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

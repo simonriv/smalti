@@ -16,6 +16,7 @@
 		26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2F7A6887BBCCFE90DCDF359C /* IPCAdapter */; };
 		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
 		0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 6432A366F755335850ECF0B4 /* FileSessionAdapter */; };
+		DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */; };
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
 		C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */; };
 		81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */; };
@@ -58,6 +59,7 @@
 				26BBA0B22097F8B0B4626A59 /* IPCAdapter in Frameworks */,
 				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
 				0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */,
+				DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +104,7 @@
 				82A968CB662751220D4DFE2D /* Resources */,
 				C25A501B472CEDF18639FE6A /* Copy Ghostty resources */,
 				E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */,
+				5A11C0DE4F45A7B0C0FFEE01 /* Stamp commit */,
 			);
 			buildRules = (
 			);
@@ -124,6 +127,7 @@
 				2F7A6887BBCCFE90DCDF359C /* IPCAdapter */,
 				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
 				6432A366F755335850ECF0B4 /* FileSessionAdapter */,
+				DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */,
 			);
 			productName = Smalti;
 			productReference = 81918909E83595C8F4212CCC /* Smalti.app */;
@@ -191,6 +195,7 @@
 				14590C8CDB297A843FB38540 /* XCLocalSwiftPackageReference "../Packages/IPCAdapter" */,
 				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
 				595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */,
+				DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
@@ -265,6 +270,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "\"$SRCROOT/../scripts/embed-cli-and-plugin.sh\"\n";
+		};
+		5A11C0DE4F45A7B0C0FFEE01 /* Stamp commit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Stamp commit";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/stamp-commit.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -347,7 +368,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.dev;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "Smalti Dev";
@@ -367,7 +388,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -379,7 +400,7 @@
 			buildSettings = {
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -391,7 +412,7 @@
 			buildSettings = {
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -463,6 +484,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/ClaudeHarnessAdapter;
 		};
+		DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DiagnosticsAdapter;
+		};
 		595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/FileSessionAdapter;
@@ -513,6 +538,11 @@
 		D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ClaudeHarnessAdapter;
+		};
+		DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */;
+			productName = DiagnosticsAdapter;
 		};
 		6432A366F755335850ECF0B4 /* FileSessionAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

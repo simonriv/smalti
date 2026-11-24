@@ -14,12 +14,13 @@ enum TOMLConfigParser {
         static let keys = "keys"
         static let observatory = "observatory"
         static let input = "input"
+        static let window = "window"
     }
 
     static func parse(_ text: String, file: String) throws(ConfigError) -> SmaltiConfig {
         let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
         try root.rejectUnknownKeys(allowed: [
-            Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input,
+            Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input, Table.window,
         ])
         var config = SmaltiConfig.defaults
         if let section = try root.section(Table.appearance) {
@@ -39,6 +40,9 @@ enum TOMLConfigParser {
         }
         if let section = try root.section(Table.input) {
             config.input = try InputReader.read(section)
+        }
+        if let section = try root.section(Table.window) {
+            config.window = try WindowReader.read(section)
         }
         return config
     }
@@ -148,5 +152,17 @@ private enum ShellReader {
         if text == loginKeyword { return .loginShell }
         guard text.contains(where: { !$0.isWhitespace }) else { throw section.error(at: key, reason) }
         return .custom(text)
+    }
+}
+
+/// `[window]` (F4.5): `confirm_close`, a boolean.
+private enum WindowReader {
+    private static let confirmCloseKey = "confirm_close"
+
+    static func read(_ section: TOMLSection) throws(ConfigError) -> WindowSettings {
+        try section.rejectUnknownKeys(allowed: [confirmCloseKey])
+        var settings = WindowSettings.standard
+        settings.confirmClose = try section.flag(confirmCloseKey) ?? settings.confirmClose
+        return settings
     }
 }

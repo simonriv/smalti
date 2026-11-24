@@ -1,5 +1,5 @@
 /// A width and height in points.
-public struct Size: Hashable, Sendable {
+public struct Size: Hashable, Codable, Sendable {
     public let width: Double
     public let height: Double
 

@@ -12,19 +12,30 @@ public enum KeyChordError: Error, Equatable, Sendable {
     /// Without ⌘, ⌃ or ⌥ the chord would be plain typing.
     case missingModifier(String)
     case missingKey(String)
+    /// ⇧ on a number or symbol is part of the character (⇧/ is ?): written in the TOML it would silently vanish.
+    case shiftOnSymbol(String)
 }
 
 /// A key plus modifiers. `key` is a single lowercase character or one of `KeyChord.namedKeys`.
+///
+/// ⇧ is part of the character on a symbol key (`=` is ⇧0 on the Latin American layout, `+` is ⇧= on US), so a chord
+/// on a symbol never keeps ⇧: ⌃⌘= is the same chord on every layout. Letters and named keys keep it (⇧⌘A, ⇧⌘←).
 public struct KeyChord: Hashable, Sendable {
     public let key: String
     public let modifiers: Set<KeyModifier>
 
     public init(key: String, modifiers: Set<KeyModifier>) {
         self.key = key
-        self.modifiers = modifiers
+        self.modifiers = Self.isSymbol(key) ? modifiers.subtracting([.shift]) : modifiers
     }
 
-    /// Parses `"cmd+opt+d"`, `"ctrl+1"`, `"shift+cmd+="` or `"cmd+opt+left"`.
+    private static func isSymbol(_ key: String) -> Bool {
+        if key == "plus" { return true }
+        guard key.count == 1, let character = key.first else { return false }
+        return !character.isLetter
+    }
+
+    /// Parses `"cmd+opt+d"`, `"ctrl+1"`, `"cmd+?"` or `"shift+cmd+left"`. ⇧ goes only with letters and named keys.
     public static func parse(_ text: String) throws(KeyChordError) -> KeyChord {
         let parts = text.lowercased().split(separator: "+", omittingEmptySubsequences: false).map(String.init)
         guard let key = parts.last, !key.isEmpty else { throw .missingKey(text) }
@@ -35,14 +46,18 @@ public struct KeyChord: Hashable, Sendable {
             guard modifiers.insert(modifier).inserted else { throw .duplicateModifier(name) }
         }
         guard !modifiers.isDisjoint(with: [.command, .control, .option]) else { throw .missingModifier(text) }
+        guard !(modifiers.contains(.shift) && isSymbol(key)) else { throw .shiftOnSymbol(text) }
         return KeyChord(key: key, modifiers: modifiers)
     }
 
     /// Modifiers in Apple's order (⌃⌥⇧⌘) followed by the key, e.g. `⌥⇧⌘←`.
     public var display: String {
         let symbols = Self.displayOrder.filter { modifiers.contains($0.modifier) }.map(\.symbol)
-        return symbols.joined() + (Self.namedKeySymbols[key] ?? key.uppercased())
+        return symbols.joined() + keySymbol
     }
+
+    /// The key alone as shown: `←`, `⇞`, `K`.
+    public var keySymbol: String { Self.namedKeySymbols[key] ?? key.uppercased() }
 
     /// ⌥ without ⌘ or ⌃ is reserved for typing characters.
     public var usesOptionAlone: Bool {
@@ -51,6 +66,7 @@ public struct KeyChord: Hashable, Sendable {
 
     private static let namedKeySymbols = [
         "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "escape": "⎋", "tab": "⇥", "plus": "+",
+        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
     ]
     private static let namedKeys = Set(namedKeySymbols.keys)
     private static let modifierNames: [String: KeyModifier] = [

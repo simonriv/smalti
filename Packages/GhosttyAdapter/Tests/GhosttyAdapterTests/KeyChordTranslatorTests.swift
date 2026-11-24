@@ -14,14 +14,49 @@ struct KeyChordTranslatorTests {
         static let leftArrow: UInt16 = 123
         static let upArrow: UInt16 = 126
         static let escape: UInt16 = 53
+        static let equal: UInt16 = 24
+        static let slash: UInt16 = 44
+        static let quote: UInt16 = 27
+        static let latinPlus: UInt16 = 30
     }
 
-    /// `=` is ⇧0 on the Latin American layout, so ⇧⌘0 arrives as "=" with ⇧ and must trigger "Igualar tamaños".
-    @Test func shiftedCharacterMatchesShiftedChord() throws {
-        let chord = KeyChordTranslator.chord(keyCode: KeyCode.zero, characters: "=", modifiers: [.shift, .command])
+    /// `=` is ⇧0 on the Latin American layout: ⌃⇧⌘0 arrives as "=" with ⇧ and must trigger "Igualar paneles" (F4.5:
+    /// ⌃⌘=), the same chord as ⌃⌘= on US.
+    @Test func shiftedSymbolMatchesTheChordWithoutShift() throws {
+        let latin = KeyChordTranslator.chord(
+            keyCode: KeyCode.zero, characters: "=", modifiers: [.shift, .control, .command])
+        let us = KeyChordTranslator.chord(keyCode: KeyCode.equal, characters: "=", modifiers: [.control, .command])
 
-        #expect(chord == (try KeyChord.parse("shift+cmd+=")))
-        #expect(chord.flatMap(Keymap.standard.command(for:)) == .panesEqualize)
+        #expect(latin == (try KeyChord.parse("ctrl+cmd+=")))
+        #expect(latin.flatMap(Keymap.standard.command(for:)) == .panesEqualize)
+        #expect(us.flatMap(Keymap.standard.command(for:)) == .panesEqualize)
+    }
+
+    /// ⌘+: its own key on Latin American, ⇧= on US. Both increase the font.
+    @Test func plusIncreasesTheFontOnBothLayouts() {
+        let latin = KeyChordTranslator.chord(keyCode: KeyCode.latinPlus, characters: "+", modifiers: [.command])
+        let us = KeyChordTranslator.chord(keyCode: KeyCode.equal, characters: "+", modifiers: [.shift, .command])
+
+        #expect(latin.flatMap(Keymap.standard.command(for:)) == .fontIncrease)
+        #expect(us.flatMap(Keymap.standard.command(for:)) == .fontIncrease)
+    }
+
+    /// ⌘?: ⇧/ on US, ⇧' on Latin American; both arrive as "?" with ⇧.
+    @Test func helpChordIsSameOnUSAndLatinAmerican() {
+        let us = KeyChordTranslator.chord(keyCode: KeyCode.slash, characters: "?", modifiers: [.shift, .command])
+        let latin = KeyChordTranslator.chord(keyCode: KeyCode.quote, characters: "?", modifiers: [.shift, .command])
+
+        #expect(us.flatMap(Keymap.standard.command(for:)) == .helpShow)
+        #expect(latin.flatMap(Keymap.standard.command(for:)) == .helpShow)
+    }
+
+    @Test(arguments: [
+        (UInt16(116), "pageup"), (121, "pagedown"), (115, "home"), (119, "end"),
+    ])
+    func translatorNamesPageAndHomeKeys(_ code: UInt16, _ name: String) {
+        let chord = KeyChordTranslator.chord(keyCode: code, characters: "\u{F72C}", modifiers: [.command])
+
+        #expect(chord?.key == name)
     }
 
     /// ⌥Q writes `@`; no Smalti shortcut uses ⌥ alone, so it passes to the terminal.

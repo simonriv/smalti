@@ -47,7 +47,7 @@ struct KeymapTests {
         #expect(keymap.command(for: try chord("cmd+opt+d")) == .layoutDwindle)
         #expect(keymap.command(for: try chord("cmd+opt+c")) == .layoutColumns)
         #expect(keymap.command(for: try chord("cmd+opt+m")) == .layoutMaster)
-        #expect(keymap.command(for: try chord("shift+cmd+=")) == .panesEqualize)
+        #expect(keymap.command(for: try chord("ctrl+cmd+=")) == .panesEqualize)
         #expect(keymap.command(for: try chord("cmd+d")) == .paneNew)
         #expect(keymap.command(for: try chord("cmd+w")) == .paneClose)
         #expect(keymap.command(for: try chord("cmd+1")) == .paneFocus(1))
@@ -85,6 +85,14 @@ struct KeymapTests {
         #expect(keymap.chord(for: .paneClose) == nil)
     }
 
+    @Test func movingACommandUnbindsTheOldChordWithNone() throws {
+        let newChord = try chord("cmd+j")
+
+        let keymap = try Keymap.standard.overriding([newChord: .paletteOpen, try chord("cmd+k"): nil])
+
+        #expect(keymap.chords(for: .paletteOpen) == [newChord])
+    }
+
     @Test func rebindingUsedChordReleasesPreviousCommand() throws {
         let usedChord = try chord("cmd+d")
 
@@ -92,7 +100,7 @@ struct KeymapTests {
 
         #expect(keymap.command(for: usedChord) == .layoutDwindle)
         #expect(keymap.chord(for: .paneNew) == nil)
-        #expect(keymap.chord(for: .layoutDwindle) == usedChord)
+        #expect(keymap.chords(for: .layoutDwindle) == [usedChord])
     }
 
     @Test func overridingRejectsOptionOnlyChord() throws {
@@ -123,13 +131,13 @@ struct KeymapTests {
         #expect(original == Keymap.standard)
     }
 
-    @Test func bindingOneCommandToTwoChordsKeepsTheGreaterDisplay() throws {
+    @Test func bindingOneCommandToTwoChordsAddsBothInDisplayOrder() throws {
         let first = try chord("cmd+j")
         let second = try chord("cmd+m")
 
-        let keymap = try Keymap.standard.overriding([first: .paletteOpen, second: .paletteOpen])
+        let keymap = try Keymap.standard.overriding([second: .paletteOpen, first: .paletteOpen])
 
-        #expect(keymap.chord(for: .paletteOpen) == KeyChord(key: "m", modifiers: [.command]))
+        #expect(keymap.chords(for: .paletteOpen) == [first, second])
     }
 
     @Test func validateRejectsOptionAloneChord() throws {
@@ -156,7 +164,8 @@ struct KeymapTests {
         let bindings = Keymap.standard.bindings
         let paneNumbers = Set(NumberedShortcuts.range.filter { bindings.values.contains(.paneFocus($0)) })
         let workspaceNumbers = Set(NumberedShortcuts.range.filter { bindings.values.contains(.workspace($0)) })
-        let digitKeys = Set(bindings.keys.compactMap { Int($0.key) })
+        let numbered = Set(NumberedShortcuts.range.flatMap { [CommandID.paneFocus($0), .workspace($0)] })
+        let digitKeys = Set(bindings.filter { numbered.contains($0.value) }.keys.compactMap { Int($0.key) })
 
         #expect(paneNumbers == Set(NumberedShortcuts.range))
         #expect(workspaceNumbers == Set(NumberedShortcuts.range))

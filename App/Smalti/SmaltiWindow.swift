@@ -22,7 +22,8 @@ final class SmaltiWindow: NSWindow {
         statusBar = content.statusBar
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            // No `.closable`: windows close only through ⇧⌘W, which asks first and closes their panes (F4.5).
+            styleMask: [.titled, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
         titlebarAppearsTransparent = true
@@ -39,7 +40,14 @@ final class SmaltiWindow: NSWindow {
         contentView = content
         setContentSize(Self.defaultContentSize)
         setAccessibilityIdentifier("smalti.window")
+        // F4.5: native full screen (⌃⌘F); the traffic lights stay hidden (window buttons are F5).
+        collectionBehavior.insert(.fullScreenPrimary)
         center()
+    }
+
+    /// In full screen the glass loses its rounded corners and border: they would frame the whole screen.
+    func showsFullScreenChrome(_ isFullScreen: Bool) {
+        content.showsFullScreenChrome(isFullScreen)
     }
 
     /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
@@ -103,9 +111,20 @@ final class WindowContentView: NSView {
         setAccessibilityValue("vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)")
     }
 
+    /// F4.5: square and borderless in full screen; the tokens again when it leaves.
+    func showsFullScreenChrome(_ isFullScreen: Bool) {
+        self.isFullScreen = isFullScreen
+        if let tokens = paintedTokens { paint(tokens) }
+        setAccessibilityHelp(isFullScreen ? "pantalla completa" : nil)
+    }
+
+    private var isFullScreen = false
+    private var paintedTokens: WindowTokens?
+
     private func paint(_ tokens: WindowTokens) {
-        layer?.cornerRadius = tokens.cornerRadius
-        layer?.borderWidth = tokens.borderWidth
+        paintedTokens = tokens
+        layer?.cornerRadius = isFullScreen ? 0 : tokens.cornerRadius
+        layer?.borderWidth = isFullScreen ? 0 : tokens.borderWidth
         layer?.borderColor = tokens.border.nsColor.cgColor
         layer?.backgroundColor = tokens.background.nsColor.cgColor
     }

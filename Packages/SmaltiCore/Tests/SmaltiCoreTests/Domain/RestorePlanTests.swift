@@ -34,7 +34,7 @@ struct RestorePlanTests {
     @Test func fullRestoresShellScrollbackAndHistory() {
         let saved = snapshot([workspace("solen", [pane()])])
 
-        let planned = onlyPane(RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved)))
+        let planned = onlyPane(RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved)))
 
         #expect(planned?.restoresScrollback == true)
         #expect(planned?.restoresHistory == true)
@@ -45,7 +45,7 @@ struct RestorePlanTests {
     @Test func agentPaneResumesWithoutScrollback() {
         let saved = snapshot([workspace("solen", [pane(agent: resume)])])
 
-        let planned = onlyPane(RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved)))
+        let planned = onlyPane(RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved)))
 
         #expect(planned?.launch == .resume(resume))
         #expect(planned?.restoresScrollback == false)
@@ -57,7 +57,7 @@ struct RestorePlanTests {
         let saved = snapshot([workspace("solen", [relaunching])])
         let selection = RestoreSelection.defaults(for: saved).toggling(relaunching.id)
 
-        let planned = onlyPane(RestorePlan.make(from: saved, mode: .full, selection: selection))
+        let planned = onlyPane(RestorePlan.make(from: saved.windows[0], mode: .full, selection: selection))
 
         #expect(planned?.launch == .relaunch(server))
         #expect(planned?.restoresScrollback == false)
@@ -66,7 +66,7 @@ struct RestorePlanTests {
     @Test func layoutsOnlyOpensCleanShells() {
         let saved = snapshot([workspace("solen", [pane(), pane(agent: resume)])])
 
-        let plan = RestorePlan.make(from: saved, mode: .layoutsOnly, selection: .defaults(for: saved))
+        let plan = RestorePlan.make(from: saved.windows[0], mode: .layoutsOnly, selection: .defaults(for: saved))
 
         let panes = plan.workspaces[0].panes
         #expect(panes.map(\.launch) == [.shell, .shell])
@@ -79,7 +79,8 @@ struct RestorePlanTests {
         let dropped = pane()
         let saved = snapshot([workspace("solen", [kept, dropped])])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: RestoreSelection(unchecked: [dropped.id]))
+        let plan = RestorePlan.make(
+            from: saved.windows[0], mode: .full, selection: RestoreSelection(unchecked: [dropped.id]))
 
         #expect(plan.workspaces[0].panes.map(\.id) == [kept.id])
     }
@@ -88,7 +89,8 @@ struct RestorePlanTests {
         let lonely = pane()
         let saved = snapshot([workspace("solen", [lonely]), workspace("rizaria", [pane()])])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
+        let plan = RestorePlan.make(
+            from: saved.windows[0], mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
 
         #expect(plan.workspaces.map(\.name) == ["rizaria"])
     }
@@ -96,7 +98,7 @@ struct RestorePlanTests {
     @Test func emptyWorkspaceIsSkipped() {
         let saved = snapshot([workspace("vacío", []), workspace("rizaria", [pane()])])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved))
+        let plan = RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved))
 
         #expect(plan.workspaces.map(\.name) == ["rizaria"])
     }
@@ -106,7 +108,8 @@ struct RestorePlanTests {
         let focused = pane()
         let saved = snapshot([workspace("solen", [first, focused], focusedIndex: 1)])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: RestoreSelection(unchecked: [focused.id]))
+        let plan = RestorePlan.make(
+            from: saved.windows[0], mode: .full, selection: RestoreSelection(unchecked: [focused.id]))
 
         #expect(plan.workspaces[0].tree == nil)
         #expect(plan.workspaces[0].focusedIndex == 0)
@@ -115,7 +118,7 @@ struct RestorePlanTests {
     @Test func keptPanesKeepTreeAndFocus() {
         let saved = snapshot([workspace("solen", [pane(), pane()], focusedIndex: 1)])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved))
+        let plan = RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved))
 
         #expect(plan.workspaces[0].tree == saved.workspaces[0].tree)
         #expect(plan.workspaces[0].focusedIndex == 1)
@@ -128,7 +131,8 @@ struct RestorePlanTests {
             [workspace("solen", [lonely]), workspace("rizaria", [pane()]), workspace("xolken", [pane()])],
             activeIndex: 2)
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
+        let plan = RestorePlan.make(
+            from: saved.windows[0], mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
 
         #expect(plan.activeIndex == 1)
     }
@@ -137,7 +141,8 @@ struct RestorePlanTests {
         let lonely = pane()
         let saved = snapshot([workspace("solen", [pane()]), workspace("rizaria", [lonely])], activeIndex: 1)
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
+        let plan = RestorePlan.make(
+            from: saved.windows[0], mode: .full, selection: RestoreSelection(unchecked: [lonely.id]))
 
         #expect(plan.activeIndex == 0)
     }
@@ -166,7 +171,7 @@ struct RestorePlanTests {
     @Test func emptySnapshotPlansNothing() {
         let saved = snapshot([])
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved))
+        let plan = RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved))
 
         #expect(plan.workspaces.isEmpty)
         #expect(plan.activeIndex == 0)
@@ -180,7 +185,7 @@ struct RestorePlanTests {
                     name: "s", rootDirectory: "/tmp", layout: "spiral", tree: nil, focusedIndex: 0, panes: [pane()])
             ], activeIndex: 0)
 
-        let plan = RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved))
+        let plan = RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved))
 
         #expect(plan.workspaces[0].layout == LayoutID(rawValue: "spiral"))
     }
@@ -191,7 +196,7 @@ struct RestorePlanTests {
             relaunch: nil, agent: nil)
         let saved = snapshot([workspace("solen", [stale])])
 
-        let planned = onlyPane(RestorePlan.make(from: saved, mode: .full, selection: .defaults(for: saved)))
+        let planned = onlyPane(RestorePlan.make(from: saved.windows[0], mode: .full, selection: .defaults(for: saved)))
 
         #expect(planned?.restoresScrollback == false)
         #expect(planned?.launch == .shell)

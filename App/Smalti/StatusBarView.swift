@@ -6,6 +6,10 @@ import SmaltiCore
 @MainActor
 final class StatusBarView: NSView {
     private let label = NSTextField(labelWithString: "")
+    /// F4.5: the link under the pointer, in place of the label while it shows.
+    private let link = NSTextField(labelWithString: "")
+    /// F4.5: "Entrada segura" while secure keyboard entry is on; empty otherwise.
+    private let secure = NSTextField(labelWithString: "")
     private let figures = NSStackView()
     private var theme: Theme
 
@@ -22,9 +26,22 @@ final class StatusBarView: NSView {
         figures.setAccessibilityRole(.staticText)
         figures.setAccessibilityIdentifier("smalti.statusFigures")
         addSubview(figures)
+        for field in [link, secure] {
+            field.translatesAutoresizingMaskIntoConstraints = false
+            field.setAccessibilityElement(true)
+            addSubview(field)
+        }
+        link.lineBreakMode = .byTruncatingMiddle
+        link.setAccessibilityIdentifier("smalti.link")
+        secure.setAccessibilityIdentifier("smalti.secureInput")
         NSLayoutConstraint.activate([
+            link.leadingAnchor.constraint(equalTo: label.leadingAnchor),
+            link.centerYAnchor.constraint(equalTo: centerYAnchor),
+            link.trailingAnchor.constraint(lessThanOrEqualTo: secure.leadingAnchor, constant: -theme.statusBar.gap),
+            secure.trailingAnchor.constraint(equalTo: figures.leadingAnchor, constant: -theme.statusBar.gap),
+            secure.centerYAnchor.constraint(equalTo: centerYAnchor),
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: theme.statusBar.padding),
-            label.trailingAnchor.constraint(lessThanOrEqualTo: figures.leadingAnchor, constant: -theme.statusBar.gap),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: secure.leadingAnchor, constant: -theme.statusBar.gap),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
             figures.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -theme.statusBar.padding),
             figures.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -44,6 +61,15 @@ final class StatusBarView: NSView {
         label.textColor = theme.statusBar.text.nsColor
         label.stringValue = state.message?.text ?? state.set.active.statusLine
         setAccessibilityValue(label.stringValue)
+        for field in [link, secure] {
+            field.font = label.font
+            field.textColor = theme.statusBar.text.nsColor
+        }
+        link.stringValue = state.hoveredLink ?? ""
+        link.setAccessibilityValue(link.stringValue)
+        label.isHidden = state.hoveredLink != nil
+        secure.stringValue = state.isSecureInput ? "Entrada segura" : ""
+        secure.setAccessibilityValue(secure.stringValue)
         showFigures(state.observatory?.statusFigures)
         needsDisplay = true
     }

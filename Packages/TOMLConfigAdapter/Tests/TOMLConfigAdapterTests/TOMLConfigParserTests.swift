@@ -299,7 +299,20 @@ struct TOMLConfigParserTests {
     @Test func shortcutReplacesTheStandardChord() throws {
         let config = try parse("[keys]\n\"cmd+j\" = \"palette.open\"")
 
-        #expect(config.keys.chord(for: .paletteOpen) == KeyChord(key: "j", modifiers: [.command]))
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+j")])
+    }
+
+    /// F4.5: two lines for one command give it two chords; the first one written is its primary.
+    @Test func twoLinesGiveTwoChordsInFileOrder() throws {
+        let config = try parse("[keys]\n\"cmd+m\" = \"palette.open\"\n\"cmd+j\" = \"palette.open\"")
+
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+m"), try chord("cmd+j")])
+    }
+
+    @Test func shortcutMovesWithNoneOnTheStandardChord() throws {
+        let config = try parse("[keys]\n\"cmd+j\" = \"palette.open\"\n\"cmd+k\" = \"none\"")
+
+        #expect(config.keys.chords(for: .paletteOpen) == [try chord("cmd+j")])
     }
 
     @Test func unbindWithNone() throws {
@@ -312,7 +325,7 @@ struct TOMLConfigParserTests {
     @Test func plusKeyIsWrittenPlus() throws {
         let config = try parse("[keys]\n\"cmd+plus\" = \"panes.equalize\"")
 
-        #expect(config.keys.chord(for: .panesEqualize) == KeyChord(key: "plus", modifiers: [.command]))
+        #expect(config.keys.command(for: KeyChord(key: "plus", modifiers: [.command])) == .panesEqualize)
     }
 
     @Test func optionOnlyShortcutIsRejectedWithLine() throws {
@@ -367,10 +380,54 @@ struct TOMLConfigParserTests {
         ("hyper+k", "modificador desconocido: hyper"),
         ("cmd+space", "tecla desconocida: space"),
         ("cmd++", "falta la tecla; el + se escribe plus"),
+        ("shift+cmd+1", "⇧ no cuenta con números ni símbolos: escribe el carácter (cmd+? en vez de shift+cmd+/)"),
     ])
     func chordErrorIsTranslatedWithLine(chord: String, reason: String) {
         let error = error(parsing: "[keys]\n\n\"\(chord)\" = \"palette.open\"")
 
         #expect(error == ConfigError(file: Self.file, line: 3, key: chord, reason: reason))
+    }
+}
+
+@Suite("TOML · F4.5")
+struct TOMLF45Tests {
+    private func parse(_ text: String) throws -> SmaltiConfig {
+        try TOMLConfigParser.parse(text, file: "config.toml")
+    }
+
+    /// C12: the template ⌘, writes, with every value uncommented, reads as the defaults.
+    @Test func templateUncommentedEqualsDefaults() throws {
+        let text = ConfigTemplate.uncommented(ConfigTemplate.text(defaults: .defaults))
+
+        #expect(try parse(text) == .defaults)
+    }
+
+    @Test func templateAsWrittenReadsAsDefaults() throws {
+        #expect(try parse(ConfigTemplate.text(defaults: .defaults)) == .defaults)
+    }
+
+    @Test func windowConfirmCloseParses() throws {
+        #expect(try parse("[window]\nconfirm_close = false").window.confirmClose == false)
+    }
+
+    @Test func windowConfirmCloseRejectsNonBool() {
+        #expect(throws: ConfigError.self) { try parse("[window]\nconfirm_close = \"no\"") }
+    }
+
+    @Test func windowRejectsUnknownKeys() {
+        #expect(throws: ConfigError.self) { try parse("[window]\nconfirm = true") }
+    }
+}
+
+@Suite("TOML · F4.5 template examples")
+struct TOMLTemplateExampleTests {
+    /// The commented observatory example, uncommented by hand, is a valid table.
+    @Test func observatoryExampleParses() throws {
+        let lines = ConfigTemplate.text(defaults: .defaults).split(separator: "\n")
+        let example = lines.drop { !$0.hasPrefix("# [observatory.models.") }.prefix { $0.hasPrefix("# ") }
+            .map { String($0.dropFirst(2)) }.joined(separator: "\n")
+
+        #expect(!example.isEmpty)
+        #expect(throws: Never.self) { try TOMLConfigParser.parse(example, file: "config.toml") }
     }
 }

@@ -28,7 +28,10 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
         }
         do {
-            views[pane] = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+            let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
+            view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
+            view.exposesCellSize = exposesCellSize
+            views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.
             try? FileManager.default.removeItem(at: restoreFile(for: pane))
@@ -140,6 +143,43 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     /// The cursor's cell in the pane's view, in points from its top-left corner.
     public func cursorCell(_ pane: PaneID) -> Rect? {
         views[pane]?.cursorCell
+    }
+
+    // MARK: - F4.5
+
+    /// The terminal's menu for a right click or ⌃click on `pane`; nil shows none. The app builds it.
+    public var contextMenu: ((PaneID) -> NSMenu?)?
+
+    /// UI tests only: each terminal states its cell size as its accessibility title ("celda 8 × 21").
+    public var exposesCellSize = false
+
+    public func perform(_ action: TerminalAction, in pane: PaneID) {
+        guard let view = views[pane] else { return }
+        let name = TerminalActionBinding.action(for: action)
+        if !view.bind(name) {
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "smalti", category: "engine")
+                .error("libghostty did not run \(name, privacy: .public)")
+        }
+    }
+
+    public func search(_ text: String, in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.search(text))
+    }
+
+    public func navigateSearch(_ direction: SearchDirection, in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.navigate(direction))
+    }
+
+    public func endSearch(in pane: PaneID) {
+        views[pane]?.bind(TerminalActionBinding.endSearch)
+    }
+
+    public func visibleText(of pane: PaneID) -> String {
+        views[pane]?.visibleText ?? ""
+    }
+
+    public func foregroundProcess(of pane: PaneID) -> SmaltiCore.ForegroundProcess? {
+        views[pane]?.currentForegroundProcess
     }
 }
 

@@ -10,6 +10,14 @@ public enum TerminalEvent: Equatable, Sendable {
     /// The terminal asked to close its pane.
     case closeRequested
     case exited(code: Int?)
+    /// F4.5: matches of the pane's scrollback search; nil when no search is active.
+    case searchTotal(Int?)
+    /// F4.5: index of the selected search match; nil when none is selected.
+    case searchSelected(Int?)
+    /// F4.5: the link under the pointer while ⌘ is held; nil when the pointer leaves it.
+    case linkHovered(String?)
+    /// F4.5: the terminal asks for secure keyboard entry (a password prompt) or releases it.
+    case secureInputRequested(Bool)
 }
 
 public struct CommandOutcome: Equatable, Sendable {

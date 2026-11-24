@@ -36,10 +36,10 @@ final class CompletionMenuController {
 
     var isOpen: Bool { view != nil }
 
-    /// True when the menu used the key.
-    func handle(_ event: NSEvent) -> Bool {
+    /// True when the menu used the key: only one pressed in the window of the pane it is open on.
+    func handle(_ event: NSEvent, in window: NSWindow) -> Bool {
         guard isOpen, event.type == .keyDown, let pane = request?.pane, let terminal = provider.view(for: pane),
-            terminal.window?.firstResponder === terminal
+            terminal.window === window, terminal.window?.firstResponder === terminal
         else { return false }
         // A command may have started since the last prompt check: its keys are never the menu's.
         guard provider.isAtPrompt(pane) else {

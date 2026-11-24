@@ -30,15 +30,20 @@ struct GhosttyConfigTextTests {
         #expect(firstLine == "keybind = clear")
     }
 
-    @Test func configRebindsOnlyCopyAndPaste() {
+    /// F4.5: copy and paste are Smalti commands (`KeyRouter` → `TerminalEngine.perform`), so libghostty binds nothing.
+    @Test func configHasOnlyClearKeybind() {
         let keybinds = GhosttyConfigText.render(Theme.obsidian.terminal)
             .split(separator: "\n")
             .filter { $0.hasPrefix("keybind = ") }
 
-        #expect(
-            keybinds == [
-                "keybind = clear", "keybind = super+c=copy_to_clipboard", "keybind = super+v=paste_from_clipboard",
-            ])
+        #expect(keybinds == ["keybind = clear"])
+    }
+
+    /// F4.5 T10: password prompts ask for secure keyboard entry by themselves.
+    @Test func configEnablesAutoSecureInput() {
+        let lines = GhosttyConfigText.render(Theme.obsidian.terminal).split(separator: "\n")
+
+        #expect(lines.contains("macos-auto-secure-input = true"))
     }
 
     @Test func renderNeverInjectsLinesFromFontFamily() {

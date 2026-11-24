@@ -15,7 +15,8 @@ enum RestoreChoice: Equatable {
 final class RestoreController {
     struct Content {
         let snapshot: SessionSnapshot
-        let workspaces: [ResumeWorkspace]
+        /// F4.5: grouped by window ("Ventana 1 · 2 workspaces") when the session had two or more.
+        let windows: [ResumeWindow]
         /// "anoche a las 23:48".
         let closedAt: String
     }
@@ -26,7 +27,7 @@ final class RestoreController {
     private let onChoice: (RestoreChoice) -> Void
     private var selection: RestoreSelection
     private var highlighted = 0
-    private var rowIDs: [UUID] { content.workspaces.flatMap(\.rows).map(\.id) }
+    private var rowIDs: [UUID] { content.windows.flatMap(\.workspaces).flatMap(\.rows).map(\.id) }
 
     init(
         _ content: Content, theme: Theme, preferences: any RestorePreferenceStore,
@@ -36,7 +37,7 @@ final class RestoreController {
         self.preferences = preferences
         self.onChoice = onChoice
         selection = .defaults(for: content.snapshot)
-        view = RestoreView(theme: theme, workspaces: content.workspaces, closedAt: content.closedAt)
+        view = RestoreView(theme: theme, windows: content.windows, closedAt: content.closedAt)
         view.onKey = { [weak self] key in self?.handle(key) ?? false }
         view.onToggleRow = { [weak self] id in self?.toggle(id) }
         view.onAction = { [weak self] action in self?.perform(action) }

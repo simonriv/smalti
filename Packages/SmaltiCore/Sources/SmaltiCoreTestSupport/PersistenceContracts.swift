@@ -20,12 +20,25 @@ public enum SessionArchiveContract {
                 ])
         ], activeIndex: 0)
 
+    /// F4.5: two windows, one with a frame and full screen, the other in front without a frame.
+    static let twoWindows = SessionSnapshot(
+        version: SessionSnapshot.formatVersion, savedAt: Date(timeIntervalSince1970: 1_800_000_000),
+        windows: [
+            WindowSnapshot(
+                frame: Rect(x: -1500, y: 40, width: 800, height: 600), isFullScreen: true,
+                workspaces: snapshot.workspaces, activeIndex: 0),
+            WindowSnapshot(frame: nil, isFullScreen: false, workspaces: snapshot.workspaces, activeIndex: 0),
+        ], frontIndex: 1)
+
     @MainActor
     public static func verify(_ make: () -> some Archive) throws {
         #expect(make().lastSession() == .none, "an empty archive has no session")
         let archive = make()
         try archive.save(snapshot)
         #expect(archive.lastSession() == .saved(snapshot), "saving then loading returns the snapshot")
+        let windows = make()
+        try windows.save(twoWindows)
+        #expect(windows.lastSession() == .saved(twoWindows), "every window comes back, with its frame")
         try transcripts(make())
         try preferences(make())
     }

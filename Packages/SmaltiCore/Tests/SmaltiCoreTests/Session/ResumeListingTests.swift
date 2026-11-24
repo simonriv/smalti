@@ -105,3 +105,39 @@ struct ResumeListingTests {
         #expect(ResumeListing.grouped(value) == expected)
     }
 }
+
+@Suite("ResumeListing · windows")
+struct ResumeListingWindowsTests {
+    private let home = SessionFixtures.directory("/Users/s")
+    private let harnesses = HarnessRegistry([FakeHarnessAdapter()])
+
+    private func window(_ names: [String]) -> WindowSnapshot {
+        WindowSnapshot(
+            frame: nil, isFullScreen: false,
+            workspaces: names.map {
+                WorkspaceSnapshot(
+                    name: $0, rootDirectory: "/tmp", layout: "dwindle", tree: nil, focusedIndex: nil, panes: [])
+            },
+            activeIndex: 0)
+    }
+
+    private func listing(_ windows: [WindowSnapshot]) -> [ResumeWindow] {
+        ResumeListing.windows(
+            in: SessionSnapshot(version: 2, savedAt: .now, windows: windows, frontIndex: 0), home: home,
+            harnesses: harnesses)
+    }
+
+    @Test func listingGroupsByWindowWhenTwoOrMore() {
+        let windows = listing([window(["solen", "billi"]), window(["smalti"])])
+
+        #expect(windows.map(\.title) == ["Ventana 1 · 2 workspaces", "Ventana 2 · 1 workspace"])
+        #expect(windows.map { $0.workspaces.map(\.name) } == [["solen", "billi"], ["smalti"]])
+    }
+
+    @Test func listingFlatWithOneWindow() {
+        let windows = listing([window(["solen", "billi"])])
+
+        #expect(windows.count == 1)
+        #expect(windows[0].title == nil)
+    }
+}

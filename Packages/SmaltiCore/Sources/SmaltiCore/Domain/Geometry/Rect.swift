@@ -1,5 +1,6 @@
-/// A rectangle in points, origin at the top left, y growing downward.
-public struct Rect: Hashable, Sendable {
+/// A rectangle in points. Pane layouts use it with the origin at the top left and y growing downward; window frames
+/// (`WindowFrame`, `WindowSnapshot`) use AppKit screen coordinates, origin bottom-left and y up.
+public struct Rect: Hashable, Codable, Sendable {
     public static let zero = Rect(x: 0, y: 0, width: 0, height: 0)
 
     public let origin: Point

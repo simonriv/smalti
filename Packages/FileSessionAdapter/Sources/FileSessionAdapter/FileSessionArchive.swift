@@ -54,15 +54,24 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
             // Present but unreadable (permissions): reported, never mistaken for "no session".
             return .unreadable(reason: "session.json: \(error.localizedDescription)")
         }
+        // The version first: a newer format may not decode at all, and it is set aside naming its version.
+        if let version = try? decoder.decode(FormatVersion.self, from: data).version,
+            !Self.readableVersions.contains(version)
+        {
+            return setAside(reason: "unknown format version \(version)")
+        }
         do {
-            let snapshot = try decoder.decode(SessionSnapshot.self, from: data)
-            guard snapshot.version == SessionSnapshot.formatVersion else {
-                return setAside(reason: "unknown format version \(snapshot.version)")
-            }
-            return .saved(snapshot)
+            return .saved(try decoder.decode(SessionSnapshot.self, from: data))
         } catch {
             return setAside(reason: "session.json: \(error)")
         }
+    }
+
+    /// Format 1 (F2–F4, one window) still opens; it is written back as the current format.
+    private static let readableVersions = 1...SessionSnapshot.formatVersion
+
+    private struct FormatVersion: Decodable {
+        let version: Int
     }
 
     private func setAside(reason: String) -> LastSession {

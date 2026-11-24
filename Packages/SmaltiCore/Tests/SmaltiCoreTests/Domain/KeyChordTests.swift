@@ -12,7 +12,13 @@ struct KeyChordTests {
 
     @Test func parsesCharacterKeyAndSymbolKey() throws {
         #expect(try KeyChord.parse("ctrl+1") == KeyChord(key: "1", modifiers: [.control]))
-        #expect(try KeyChord.parse("shift+cmd+=") == KeyChord(key: "=", modifiers: [.shift, .command]))
+        #expect(try KeyChord.parse("cmd+=") == KeyChord(key: "=", modifiers: [.shift, .command]))
+    }
+
+    /// Final review: "shift+cmd+1" would silently become ⌘1 and take it from "Ir al panel 1"; it is refused instead.
+    @Test(arguments: ["shift+cmd+1", "shift+cmd+=", "shift+ctrl+plus"])
+    func refusesShiftOnASymbolKey(_ text: String) {
+        #expect(throws: KeyChordError.shiftOnSymbol(text)) { try KeyChord.parse(text) }
     }
 
     @Test func rejectsUnknownModifier() {
@@ -21,7 +27,7 @@ struct KeyChordTests {
 
     @Test func rejectsEmptyAndUnknownKeys() {
         #expect(throws: KeyChordError.missingKey("cmd+")) { try KeyChord.parse("cmd+") }
-        #expect(throws: KeyChordError.unknownKey("home")) { try KeyChord.parse("cmd+home") }
+        #expect(throws: KeyChordError.unknownKey("insert")) { try KeyChord.parse("cmd+insert") }
     }
 
     @Test func rejectsChordsWithoutCommandControlOrOption() {

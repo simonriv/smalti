@@ -28,6 +28,11 @@ let package = Package(
                 .linkedFramework("MetalKit"),
                 .linkedFramework("QuartzCore"),
             ]),
-        .testTarget(name: "GhosttyAdapterTests", dependencies: ["GhosttyAdapter", "GhosttyKit", "SmaltiCore"]),
+        .testTarget(
+            name: "GhosttyAdapterTests",
+            dependencies: [
+                "GhosttyAdapter", "GhosttyKit", "SmaltiCore",
+                .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
+            ]),
     ]
 )
