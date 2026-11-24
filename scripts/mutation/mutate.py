@@ -18,8 +18,10 @@ exits non-zero when the mutation score falls below --min-score. The real sources
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -135,10 +137,17 @@ def mutants_for_source(source: str, path: str) -> list[Mutant]:
 
 
 def run(command: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess[str] | None:
+    """Runs `command` in its own process group; on timeout the whole group is killed, so a test helper that a
+    mutant hung (a grandchild of `swift test`) never outlives its run and slows the next ones."""
+    process = subprocess.Popen(
+        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
     try:
-        return subprocess.run(command, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.communicate()
         return None
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
 def builds(package: Path, timeout: int) -> bool:

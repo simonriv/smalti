@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from mutate import (
+    run,
     Mutant,
     changed_sources,
     missing_sources_message,
@@ -168,3 +169,23 @@ class ChangedSources(unittest.TestCase):
 
         self.assertEqual(changed_sources([self.a], changed, self.root), [])
 
+
+
+class RunnerTimeout(unittest.TestCase):
+    """A hung test helper is a grandchild of `swift test`: on timeout the whole group goes, never an orphan."""
+
+    def test_timeout_kills_grandchildren(self):
+        import os
+        import time
+
+        with tempfile.TemporaryDirectory() as folder:
+            pid_file = Path(folder) / "grandchild.pid"
+            script = f"sleep 60 & echo $! > {pid_file}; wait"
+
+            result = run(["/bin/sh", "-c", script], Path(folder), timeout=1)
+
+            self.assertIsNone(result)
+            grandchild = int(pid_file.read_text())
+            time.sleep(0.2)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(grandchild, 0)
