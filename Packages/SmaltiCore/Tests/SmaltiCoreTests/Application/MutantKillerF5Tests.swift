@@ -105,7 +105,8 @@ struct MutantKillerF5Tests {
 
     @Test func starshipFormatsWrapOnlyGitStatusAsOptional() {
         let clean = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian))
-        let pills = StarshipPreset.make(from: PromptConfig.standard.applying(.pills), theme: ThemeCatalog.apply(.obsidian))
+        let pills = StarshipPreset.make(
+            from: PromptConfig.standard.applying(.pills), theme: ThemeCatalog.apply(.obsidian))
 
         #expect(clean.table("directory")?.value("format") == .string("[$path]($style) "))
         #expect(pills.table("directory")?.value("format") == .string("[ $path ]($style) "))
