@@ -143,3 +143,102 @@ struct FakePromptFactsContractTests {
         await PromptFactsContract.verify { FakePromptFacts() }
     }
 }
+
+/// Block 2 review (I1, I2): `promptstyle` carries only what the immediate prompt references, and slow facts never
+/// override a newer `context` nor revive a shell that started a command.
+@MainActor
+@Suite("RenderPrompt · review")
+struct RenderPromptReviewTests {
+    /// Facts for "/slow" wait until the test opens the gate; any other directory answers at once.
+    private actor Gate: PromptFacts {
+        private var waiting: [CheckedContinuation<Void, Never>] = []
+        private var isOpen = false
+
+        func facts(for query: PromptQuery) async -> PromptFactsResult {
+            if query.directory == "/slow", !isOpen {
+                await withCheckedContinuation { waiting.append($0) }
+            }
+            return PromptFactsResult(branch: query.directory == "/slow" ? "old" : "new")
+        }
+
+        func open() {
+            isOpen = true
+            waiting.forEach { $0.resume() }
+            waiting = []
+        }
+
+        var hasWaiter: Bool { !waiting.isEmpty }
+    }
+
+    private let pane = PaneID()
+    private let workspace = WorkspaceID()
+
+    private func make(_ facts: any PromptFacts) -> RenderPrompt {
+        let workspace = workspace
+        return RenderPrompt(
+            facts: facts,
+            environment: PromptEnvironment(
+                settings: { (PromptConfig.standard, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
+                workspace: { _ in workspace }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) }))
+    }
+
+    private func context(_ pwd: String) -> ShellContext {
+        ShellContext(pwd: pwd, exit: 0, durationMilliseconds: 0, awsProfile: nil, kubeconfig: nil, runtimePaths: [:])
+    }
+
+    private func seq(_ message: SmaltiMessage?) -> Int? {
+        if case .prompt(let seq, _) = message { seq } else { nil }
+    }
+
+    private func waitForWaiter(_ gate: Gate) async {
+        while !(await gate.hasWaiter) { await Task.yield() }
+    }
+
+    @Test func styleMessageCarriesOnlyTheSymbol() {
+        guard case .promptStyle(let prompt, _) = make(FakePromptFacts()).styleMessage() else {
+            Issue.record("no style message")
+            return
+        }
+        #expect(prompt.values == ["_smalti_sym": "›"])
+    }
+
+    @Test func lateFactsDoNotOverrideNewerContext() async {
+        let gate = Gate()
+        let render = make(gate)
+        let slow = Task { await render.handle(context("/slow"), seq: 5, pane: pane) }
+        await waitForWaiter(gate)
+        _ = await render.handle(context("/fast"), seq: 6, pane: pane)
+
+        await gate.open()
+        let late = await slow.value
+
+        #expect(late == nil)
+        #expect(render.agentsChanged(in: workspace).map { seq($0.message) } == [6])
+    }
+
+    @Test func lateFactsAfterExecAreDropped() async {
+        let gate = Gate()
+        let render = make(gate)
+        let slow = Task { await render.handle(context("/slow"), seq: 5, pane: pane) }
+        await waitForWaiter(gate)
+        render.commandStarted(pane: pane)
+
+        await gate.open()
+        _ = await slow.value
+
+        #expect(render.agentsChanged(in: workspace).isEmpty)
+    }
+
+    @Test func lateFactsAfterForgetAreDropped() async {
+        let gate = Gate()
+        let render = make(gate)
+        let slow = Task { await render.handle(context("/slow"), seq: 5, pane: pane) }
+        await waitForWaiter(gate)
+        render.forget(pane: pane)
+
+        await gate.open()
+
+        #expect(await slow.value == nil)
+        #expect(render.agentsChanged(in: workspace).isEmpty)
+    }
+}

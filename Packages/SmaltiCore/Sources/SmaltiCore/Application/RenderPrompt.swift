@@ -30,6 +30,9 @@ public final class RenderPrompt {
     private let environment: PromptEnvironment
     /// Shells at their prompt: the last `context`, its `seq` and the facts it got, until the next command starts.
     private var quiet: [PaneID: QuietShell] = [:]
+    /// The newest `context` of each shell still waiting for its facts: a slower, older answer is dropped, and `exec`
+    /// or `forget` cancel it (block 2 review, I2).
+    private var pending: [PaneID: Int] = [:]
 
     private struct QuietShell {
         let seq: Int
@@ -47,7 +50,10 @@ public final class RenderPrompt {
         guard environment.settings().0.source == .smalti else { return nil }
         let query = PromptQuery(
             directory: context.pwd, runtimePaths: context.runtimePaths, kubeconfig: context.kubeconfig)
+        pending[pane] = seq
         let found = await facts.facts(for: query)
+        guard pending[pane] == seq else { return nil }
+        pending[pane] = nil
         quiet[pane] = QuietShell(seq: seq, context: context, facts: found)
         return message(for: pane)
     }
@@ -62,11 +68,13 @@ public final class RenderPrompt {
     /// `exec`: the shell left its prompt; a late re-send must not reach it.
     public func commandStarted(pane: PaneID) {
         quiet[pane] = nil
+        pending[pane] = nil
     }
 
     /// The pane or its connection is gone.
     public func forget(pane: PaneID) {
         quiet[pane] = nil
+        pending[pane] = nil
     }
 
     /// The immediate prompt and the ghost color for every shell; `nil` with `source = "shell"`.
@@ -75,7 +83,13 @@ public final class RenderPrompt {
         guard config.source == .smalti else { return nil }
         let base = PromptContext(directory: environment.home, home: environment.home)
         let rendered = ZshPromptRenderer.render(config, context: base, theme: theme)
-        return .promptStyle(rendered, ghost: theme.theme.text.ghostText)
+        // Only what the immediate prompt references: a full prompt's values would repaint the one on screen with
+        // another context's text (block 2 review, I1).
+        let symbol = ZshPromptRenderer.symbolVariable
+        let style = RenderedPrompt(
+            immediate: rendered.immediate, full: "", values: rendered.values.filter { $0.key == symbol },
+            directoryLabel: "")
+        return .promptStyle(style, ghost: theme.theme.text.ghostText)
     }
 
     private func message(for pane: PaneID) -> SmaltiMessage? {
