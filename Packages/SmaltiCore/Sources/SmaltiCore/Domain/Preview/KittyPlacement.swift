@@ -7,12 +7,9 @@ public enum KittyPlacement {
     public static let chunkSize = 4096
 
     public static func sequences(png: Data, columns: Int, rows: Int) -> [String] {
-        let payload = png.base64EncodedString()
-        let chunks = stride(from: 0, to: max(payload.count, 1), by: chunkSize).map { start in
-            let from = payload.index(payload.startIndex, offsetBy: start)
-            return String(
-                payload[
-                    from..<(payload.index(from, offsetBy: chunkSize, limitedBy: payload.endIndex) ?? payload.endIndex)])
+        let payload = Array(png.base64EncodedString().utf8)
+        let chunks = stride(from: 0, to: payload.count, by: chunkSize).map { start in
+            String(decoding: payload[start..<min(start + chunkSize, payload.count)], as: UTF8.self)
         }
         return chunks.enumerated().map { index, chunk in
             let more = index < chunks.count - 1 ? 1 : 0

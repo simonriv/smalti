@@ -38,4 +38,8 @@ struct KittyPlacementTests {
         #expect(payload.allSatisfy { $0.count <= 4096 && !$0.contains("\n") })
         #expect(payload.joined() == png.base64EncodedString())
     }
+
+    @Test func emptyDataGivesNoCommands() {
+        #expect(KittyPlacement.sequences(png: Data(), columns: 12, rows: 4).isEmpty)
+    }
 }

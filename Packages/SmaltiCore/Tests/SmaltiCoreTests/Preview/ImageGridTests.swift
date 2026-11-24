@@ -112,6 +112,66 @@ struct ImageGridTests {
         #expect(grid.rows.flatMap(\.cells).last?.image.name == "img100.png")
     }
 
+    @Test(arguments: [0.0, -8, .infinity, .nan])
+    func invalidCellWidthGivesOneRow(_ width: Double) throws {
+        let metrics = CellMetrics(columns: 80, cellWidth: width, cellHeight: 16)
+
+        let cell = try #require(ImageGrid.layout([image("a.png")], skipped: 0, in: metrics).rows.first?.cells.first)
+
+        #expect(cell.rows == 1)
+    }
+
+    @Test(arguments: [0.0, .infinity, .nan])
+    func invalidCellHeightGivesOneRow(_ height: Double) throws {
+        let metrics = CellMetrics(columns: 80, cellWidth: 8, cellHeight: height)
+
+        let cell = try #require(ImageGrid.layout([image("a.png")], skipped: 0, in: metrics).rows.first?.cells.first)
+
+        #expect(cell.rows == 1)
+    }
+
+    @Test func absurdAspectCapsWithoutTrapping() throws {
+        let cell = try #require(
+            ImageGrid.layout([image("a.png", 1, Int.max)], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.rows == 6)
+    }
+
+    @Test(arguments: [0, -5])
+    func noColumnsGiveOneColumn(_ columns: Int) {
+        let grid = ImageGrid.layout(
+            images(2), skipped: 0, in: CellMetrics(columns: columns, cellWidth: 8, cellHeight: 16))
+
+        #expect(grid.columnsPerRow == 1)
+    }
+
+    @Test(arguments: [
+        ("\u{1B}[2Jx.png", "?[2Jx.png"), ("a\nb.png", "a?b.png"), ("a\u{7F}.png", "a?.png"),
+        ("a\u{9B}1m.png", "a?1m.png"),
+    ])
+    func controlCharactersInLabelsAreReplaced(_ name: String, _ label: String) throws {
+        let cell = try #require(ImageGrid.layout([image(name)], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.label == label)
+    }
+
+    @Test func wideCharactersCountTwoCells() throws {
+        let cell = try #require(
+            ImageGrid.layout([image("写真写真写真写真.png")], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.label == "写真写真写…")
+        #expect(TerminalText.width(cell.label) <= ImageGrid.cellColumns)
+    }
+
+    @Test func longDigitRunsSortByValue() {
+        let small = "a" + String(repeating: "9", count: 20) + ".png"
+        let big = "a1" + String(repeating: "0", count: 20) + ".png"
+
+        let grid = ImageGrid.layout([image(big), image(small)], skipped: 0, in: wide)
+
+        #expect(grid.rows.flatMap(\.cells).map(\.image.name) == [small, big])
+    }
+
     @Test func noImagesGiveNoRows() {
         #expect(ImageGrid.layout([], skipped: 2, in: wide).rows.isEmpty)
     }

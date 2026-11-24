@@ -22,11 +22,14 @@ public struct ImageGrid: Equatable, Sendable {
         return ImageGrid(rows: rows, columnsPerRow: perRow, summary: summary)
     }
 
+    /// Clamped as a `Double` before becoming an `Int`: a zero, infinite or NaN cell size (a terminal that reports no
+    /// pixels) or an absurd header gives 1 to 6 rows, never a trap.
     private static func rows(of image: ImageDescription, in metrics: CellMetrics) -> Int {
-        guard image.pixelWidth > 0, metrics.cellHeight > 0 else { return 1 }
-        let width = Double(cellColumns) * metrics.cellWidth
-        let height = width * Double(image.pixelHeight) / Double(image.pixelWidth)
-        return min(maxRows, max(1, Int((height / metrics.cellHeight).rounded())))
+        let rows =
+            Double(cellColumns) * metrics.cellWidth * Double(image.pixelHeight)
+            / (Double(image.pixelWidth) * metrics.cellHeight)
+        guard rows.isFinite, rows > 0 else { return 1 }
+        return Int(min(Double(maxRows), max(1, rows.rounded())))
     }
 }
 
@@ -42,11 +45,18 @@ public struct GridCell: Equatable, Sendable {
     /// Terminal rows the thumbnail takes.
     public let rows: Int
 
-    /// The name cut to the cell's width, ending in "…" when cut.
+    /// The name, without control characters, cut to the cell's width in terminal cells, ending in "…" when cut.
     public var label: String {
-        let name = image.name
-        guard name.count > ImageGrid.cellColumns else { return name }
-        return String(name.prefix(ImageGrid.cellColumns - 1)) + "…"
+        let name = TerminalText.sanitized(image.name)
+        guard TerminalText.width(name) > ImageGrid.cellColumns else { return name }
+        var label = ""
+        var width = 0
+        for character in name {
+            width += TerminalText.width(of: character)
+            if width > ImageGrid.cellColumns - 1 { break }
+            label.append(character)
+        }
+        return label + "…"
     }
 
     public var dimensions: String { image.dimensions }
@@ -94,16 +104,18 @@ enum NaturalOrder {
 
     private struct Chunk: Comparable {
         let text: String
-        let number: Int?
+        let number: String?
 
         init(_ text: String, isNumber: Bool) {
             self.text = text
-            number = isNumber ? Int(text) : nil
+            number = isNumber ? String(text.drop { $0 == "0" }) : nil
         }
 
+        /// Digits without leading zeros: a longer run is a bigger number, equal lengths compare as text, at any length.
         static func < (lhs: Chunk, rhs: Chunk) -> Bool {
             switch (lhs.number, rhs.number) {
-            case (let a?, let b?): a == b ? lhs.text < rhs.text : a < b
+            case (let a?, let b?):
+                if a == b { lhs.text < rhs.text } else if a.count != b.count { a.count < b.count } else { a < b }
             case (.some, .none): true
             case (.none, .some): false
             case (.none, .none): lhs.text < rhs.text

@@ -27,7 +27,7 @@ struct PreviewCandidatesTests {
 
         let paths = PreviewCandidates.paths(for: "a.png", in: context)
 
-        #expect(paths == ["/w/a.png", "/w/shots/a.png", "/o/a.png"])
+        #expect(paths == ["/w/shots/a.png", "/o/a.png", "/w/a.png"])
     }
 
     @Test func quotedArgumentWithSpaceIsOneDirectory() {
@@ -35,7 +35,7 @@ struct PreviewCandidatesTests {
 
         let paths = PreviewCandidates.paths(for: "a.png", in: context)
 
-        #expect(paths == ["/w/a.png", "/w/mis fotos/a.png", "/w/otra carpeta/a.png"])
+        #expect(paths == ["/w/mis fotos/a.png", "/w/otra carpeta/a.png", "/w/a.png"])
     }
 
     @Test func absoluteAndTildeArgumentsAreCandidates() {
@@ -43,17 +43,41 @@ struct PreviewCandidatesTests {
 
         let paths = PreviewCandidates.paths(for: "a.png", in: context)
 
-        #expect(paths == ["/w/a.png", "/srv/img/a.png", "/h/Desktop/a.png"])
+        #expect(paths == ["/srv/img/a.png", "/h/Desktop/a.png", "/w/a.png"])
     }
 
     @Test func otherUsersTildeGivesNoCandidates() {
         #expect(PreviewCandidates.paths(for: "~ana/x.png", in: context).isEmpty)
     }
 
-    @Test func lastSimpleCommandOfLineIsUsed() {
+    @Test func everyCommandOfTheLineIsUsed() {
         let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: "cd docs && ls shots")
 
-        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/a.png", "/w/shots/a.png"])
+        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/docs/a.png", "/w/shots/a.png", "/w/a.png"])
+    }
+
+    @Test func pipelineArgumentsAreCandidates() {
+        let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: "ls -t shots | head -5")
+
+        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/shots/a.png", "/w/a.png"])
+    }
+
+    /// Block 1 review: with `a.png` in both, `ls shots/` printed the one in shots, never the parent's.
+    @Test func commandDirectoriesComeBeforeWorkingDirectory() {
+        let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: "ls shots/")
+
+        #expect(PreviewCandidates.paths(for: "a.png", in: context).first == "/w/shots/a.png")
+    }
+
+    @Test(arguments: ["ls shots > out.txt", "ls shots 2>&1", "ls shots >out.txt", "ls shots &> log", "ls shots < in"])
+    func redirectionsAreNotCandidates(_ command: String) {
+        let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: command)
+
+        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/shots/a.png", "/w/a.png"])
+    }
+
+    @Test func trailingPeriodIsTrimmed() {
+        #expect(PreviewCandidates.paths(for: "out.png.", in: context) == ["/w/out.png"])
     }
 
     @Test func duplicateCandidatesAppearOnce() {
