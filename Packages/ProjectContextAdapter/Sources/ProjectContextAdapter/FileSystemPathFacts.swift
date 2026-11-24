@@ -4,12 +4,38 @@ import SmaltiCore
 /// `PathFacts` with `lstat`: what is at a path, without opening it (a FIFO or a device never blocks). A symbolic
 /// link is followed one level: its target must not be a link itself (spec F5.6, "Rutas").
 public struct FileSystemPathFacts: PathFacts {
-    public init() {}
+    /// `lstat`'s file mode, or `nil` when the path cannot be read; tests replace it to simulate a stuck disk.
+    private let mode: @Sendable (String) -> mode_t?
+
+    public init() {
+        self.init(mode: Self.mode(of:))
+    }
+
+    init(mode: @escaping @Sendable (String) -> mode_t?) {
+        self.mode = mode
+    }
+
+    /// One serial queue for every lookup: a stuck disk holds one thread of its own, never the cooperative pool's,
+    /// and later lookups simply wait (highlighting stops waiting after its budget).
+    private static let queueKey = DispatchSpecificKey<Bool>()
+    private static let queue: DispatchQueue = {
+        let queue = DispatchQueue(label: "dev.simonriv.smalti.path-facts", qos: .userInitiated)
+        queue.setSpecific(key: queueKey, value: true)
+        return queue
+    }()
+
+    static var isOnLookupQueue: Bool { DispatchQueue.getSpecific(key: queueKey) == true }
 
     public func kind(of path: String) async -> PathKind? {
-        guard let mode = Self.mode(of: path) else { return nil }
-        guard Self.isLink(mode) else { return Self.kind(of: mode) }
-        guard let target = Self.target(of: path), let targetMode = Self.mode(of: target), !Self.isLink(targetMode)
+        await withCheckedContinuation { continuation in
+            Self.queue.async { continuation.resume(returning: lookUp(path)) }
+        }
+    }
+
+    private func lookUp(_ path: String) -> PathKind? {
+        guard let first = mode(path) else { return nil }
+        guard Self.isLink(first) else { return Self.kind(of: first) }
+        guard let target = Self.target(of: path), let targetMode = mode(target), !Self.isLink(targetMode)
         else { return nil }
         return Self.kind(of: targetMode)
     }

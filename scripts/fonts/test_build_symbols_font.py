@@ -88,6 +88,18 @@ class BuildSymbolsFontTest(unittest.TestCase):
             self.assertLessEqual(x_max - x_min, build.MAX_WIDTH + 1, name)
         self.assertLessEqual(build.MAX_WIDTH, 1100)
 
+    def test_width_limited_glyphs_are_max_width_and_not_tiny(self):
+        """Spec F5.6, amendment 1 (Simón): wide icons stop at MAX_WIDTH, so they keep room before the text."""
+        limited = []
+        for name in NAMES:
+            x_min, y_min, x_max, y_max = self._bounds(name)
+            if y_max - y_min < build.TARGET_HEIGHT - 2:
+                limited.append(name)
+                self.assertAlmostEqual(x_max - x_min, build.MAX_WIDTH, delta=2, msg=name)
+                self.assertGreaterEqual(y_max - y_min, 600, name)
+        self.assertEqual(build.MAX_WIDTH, 900)
+        self.assertIn("folder", limited)
+
     def test_glyphs_sit_on_baseline(self):
         for name in NAMES:
             _, y_min, _, _ = self._bounds(name)

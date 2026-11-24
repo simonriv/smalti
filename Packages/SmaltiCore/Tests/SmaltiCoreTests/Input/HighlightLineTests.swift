@@ -136,6 +136,59 @@ struct HighlightLineTests {
     }
 }
 
+extension HighlightLineTests {
+    private static let xargs = CompletionSpec(name: ["xargs"], args: [ArgSpec(name: "command", isCommand: true)])
+
+    @Test func commandFromIsCommandGetsItsSpec() async {
+        let completions = FakeCompletionProvider(specs: [Self.xargs, Self.git])
+
+        let answer = await highlighter(completions: completions).firstAnswer(
+            line("xargs git status"), directory: "/w", home: "/h")
+
+        #expect(answer.spans.contains(HighlightSpan(range: 10..<16, role: .subcommand)))
+        #expect(answer.isComplete)
+    }
+
+    @Test func lateLookupFillsCache() async throws {
+        let facts = InMemoryPathFacts(kinds: ["/w/a": .file], delay: .milliseconds(40))
+        let subject = highlighter(paths: facts)
+        _ = await subject.firstAnswer(line("cat a"), directory: "/w", home: "/h")
+
+        try await Task.sleep(for: .milliseconds(200))
+        let again = await subject.firstAnswer(line("cat a"), directory: "/w", home: "/h")
+
+        #expect(await facts.queried.count == 1)
+        #expect(again.spans.contains(HighlightSpan(range: 4..<5, role: .path)))
+        #expect(again.isComplete)
+    }
+
+    @Test func lateLookupIsNotReusedAfterExpiry() async throws {
+        let facts = InMemoryPathFacts(kinds: ["/w/a": .file], delay: .milliseconds(40))
+        let now = Now()
+        let subject = highlighter(paths: facts, now: now)
+        _ = await subject.firstAnswer(line("cat a"), directory: "/w", home: "/h")
+        try await Task.sleep(for: .milliseconds(200))
+
+        now.date += 3
+        _ = await subject.completeAnswer(line("cat a"), directory: "/w", home: "/h")
+
+        #expect(await facts.queried.count == 2)
+    }
+
+    @Test func completeAnswerGivesUpAfterLimit() async {
+        let facts = InMemoryPathFacts(kinds: ["/w/a": .file], delay: .seconds(5))
+        let subject = HighlightLine(
+            paths: facts, completions: FakeCompletionProvider(),
+            timing: HighlightTiming(budget: .milliseconds(3), completeLimit: .milliseconds(100)) { Date() })
+        let start = ContinuousClock.now
+
+        let spans = await subject.completeAnswer(line("cat a"), directory: "/w", home: "/h")
+
+        #expect(ContinuousClock.now - start < .seconds(1))
+        #expect(!spans.contains { $0.role == .path })
+    }
+}
+
 @Suite("InMemoryPathFacts")
 struct InMemoryPathFactsTests {
     @Test func honoursPathFactsContract() async throws {

@@ -20,6 +20,15 @@ private struct Walker {
     private static let precommands: Set<String> = [
         "sudo", "doas", "time", "nohup", "exec", "command", "builtin", "noglob", "nice", "env",
     ]
+    /// Reserved words after which a command comes: they are colored as commands and keep the command position.
+    private static let leadingReservedWords: Set<String> = [
+        "if", "then", "else", "elif", "do", "while", "until", "!", "{", "}",
+    ]
+    /// Precommand options that take the next word as their value (`sudo -u root ls`).
+    private static let precommandValueOptions: [String: Set<String>] = [
+        "sudo": ["-u", "-g", "-C", "-h", "-p", "-U", "-r", "-t", "-T", "-D", "-R"], "doas": ["-u", "-C"],
+        "nice": ["-n"], "env": ["-u", "-C", "-S", "-P"], "exec": ["-a"],
+    ]
     private static let globCharacters: Set<Unicode.Scalar> = ["*", "?", "["]
 
     let specs: (String) -> CompletionSpec?
@@ -32,8 +41,10 @@ private struct Walker {
     /// Words still owed to the last option's arguments.
     private var optionArguments = 0
     private var isRedirectionTarget = false
-    /// `sudo -E git`: a precommand's own options keep the command position.
-    private var isAfterPrecommand = false
+    /// `sudo -E git`: a precommand's own options keep the command position; this names that precommand.
+    private var precommand: String?
+    /// The precommand option just read takes the next word as its value.
+    private var isPrecommandValueNext = false
 
     init(specs: @escaping (String) -> CompletionSpec?) {
         self.specs = specs
@@ -47,6 +58,8 @@ private struct Walker {
         case .redirection:
             spans.append(HighlightSpan(range: lexeme.range, role: .operator))
             isRedirectionTarget = true
+        case .arithmetic:
+            arithmetic(lexeme)
         case .word(let parts):
             visitWord(lexeme, parts: parts)
         }
@@ -63,7 +76,19 @@ private struct Walker {
         spec = nil
         positionals = 0
         optionArguments = 0
-        isAfterPrecommand = false
+        precommand = nil
+        isPrecommandValueNext = false
+        isRedirectionTarget = false
+    }
+
+    /// `((` and its closing `))` are operators; the expression inside has no role.
+    private mutating func arithmetic(_ lexeme: Lexeme) {
+        let length = lexeme.range.count
+        spans.append(HighlightSpan(range: lexeme.range.lowerBound..<(lexeme.range.lowerBound + 2), role: .operator))
+        if length >= 4, lexeme.text.hasSuffix("))") {
+            spans.append(HighlightSpan(range: (lexeme.range.upperBound - 2)..<lexeme.range.upperBound, role: .operator))
+        }
+        isCommandPosition = false
     }
 
     // MARK: - Words
@@ -72,12 +97,16 @@ private struct Walker {
         if isRedirectionTarget {
             isRedirectionTarget = false
             argument(lexeme, parts: parts)
-        } else if isCommandPosition, isAfterPrecommand, isOption(lexeme, parts: parts) {
+        } else if isCommandPosition, isPrecommandValueNext {
+            isPrecommandValueNext = false
+            colorParts(parts)
+        } else if isCommandPosition, let name = precommand, isOption(lexeme, parts: parts) {
             spans.append(HighlightSpan(range: lexeme.range, role: .option))
+            isPrecommandValueNext = Self.precommandValueOptions[name]?.contains(lexeme.text) ?? false
         } else if isCommandPosition {
             commandWord(lexeme, parts: parts)
         } else if isOption(lexeme, parts: parts) {
-            option(lexeme)
+            option(lexeme, parts: parts)
         } else if optionArguments > 0 {
             optionArguments -= 1
             argument(lexeme, parts: parts)
@@ -100,10 +129,17 @@ private struct Walker {
             colorParts(parts.filter { $0.range.lowerBound > lexeme.range.lowerBound + name })
             return
         }
+        if parts.contains(where: { $0.kind == .variable }) {
+            // `$EDITOR file`: only the shell knows what runs; the word keeps its parts' colors.
+            colorParts(parts)
+            isCommandPosition = false
+            return
+        }
         spans.append(HighlightSpan(range: lexeme.range, role: .command))
         let name = Self.literal(lexeme, parts: parts)
-        isAfterPrecommand = Self.precommands.contains(name)
-        if isAfterPrecommand { return }
+        if Self.leadingReservedWords.contains(name) { return }
+        precommand = Self.precommands.contains(name) ? name : nil
+        if precommand != nil { return }
         isCommandPosition = false
         spec = specs(name)
         if spec == nil, !name.isEmpty { withoutSpec.append(name) }
@@ -127,11 +163,12 @@ private struct Walker {
     }
 
     /// `--name=value` colors only `--name=`; the option's spec decides how many words it takes after it.
-    private mutating func option(_ lexeme: Lexeme) {
+    private mutating func option(_ lexeme: Lexeme, parts: [WordPart]) {
         let scalars = Array(lexeme.text.unicodeScalars)
         if let equals = scalars.firstIndex(of: "="), lexeme.text.hasPrefix("--") {
-            spans.append(
-                HighlightSpan(range: lexeme.range.lowerBound..<(lexeme.range.lowerBound + equals + 1), role: .option))
+            let name = lexeme.range.lowerBound..<(lexeme.range.lowerBound + equals + 1)
+            spans.append(HighlightSpan(range: name, role: .option))
+            colorParts(parts.filter { $0.range.lowerBound >= name.upperBound })
             return
         }
         spans.append(HighlightSpan(range: lexeme.range, role: .option))

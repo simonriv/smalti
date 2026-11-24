@@ -7,10 +7,13 @@ public struct HighlightTiming: Sendable {
     public static let cacheLifetime: TimeInterval = 2
 
     public let budget: Duration
+    /// The complete answer stops waiting for the disk after this; what is still missing stays without a span.
+    public let completeLimit: Duration
     public let now: @Sendable () -> Date
 
-    public init(budget: Duration, now: @escaping @Sendable () -> Date) {
+    public init(budget: Duration, completeLimit: Duration = .seconds(2), now: @escaping @Sendable () -> Date) {
         self.budget = budget
+        self.completeLimit = completeLimit
         self.now = now
     }
 }
@@ -51,7 +54,7 @@ public actor HighlightLine {
     public func firstAnswer(_ line: InputLine, directory: String, home: String) async -> HighlightAnswer {
         let plan = await plan(for: line.text, loading: false)
         let resolved = await kinds(
-            of: plan.pathCandidates, where: Place(directory: directory, home: home), waiting: false)
+            of: plan.pathCandidates, where: Place(directory: directory, home: home), waitingFor: timing.budget)
         let missingSpecs = await commandsWithUnloadedSpec(plan.commandsWithoutSpec)
         return HighlightAnswer(
             spans: Self.merge(plan.spans, paths: resolved.spans), isComplete: resolved.isComplete && !missingSpecs)
@@ -60,23 +63,32 @@ public actor HighlightLine {
     public func completeAnswer(_ line: InputLine, directory: String, home: String) async -> [HighlightSpan] {
         let plan = await plan(for: line.text, loading: true)
         let resolved = await kinds(
-            of: plan.pathCandidates, where: Place(directory: directory, home: home), waiting: true)
+            of: plan.pathCandidates, where: Place(directory: directory, home: home), waitingFor: timing.completeLimit)
         return Self.merge(plan.spans, paths: resolved.spans)
     }
 
     // MARK: - Specs
 
-    /// The line's plan with the specs at hand: the first pass finds the commands, the second colors their
-    /// subcommands.
+    /// The line's plan with the specs at hand. Each pass may reveal new commands (`xargs git …` shows `git` once
+    /// `xargs`' spec is known), so it repeats while it finds specs for them, a few times at most.
     private func plan(for text: String, loading: Bool) async -> HighlightPlan {
-        let first = LineHighlighter.plan(for: text) { _ in nil }
         var specs: [String: CompletionSpec] = [:]
-        for name in Set(first.commandsWithoutSpec) {
-            let spec = loading ? await completions.spec(for: name) : await completions.loadedSpec(for: name)
-            if let spec { specs[name] = spec }
+        var asked: Set<String> = []
+        var plan = LineHighlighter.plan(for: text) { _ in nil }
+        for _ in 0..<Self.specPasses {
+            let names = Set(plan.commandsWithoutSpec).subtracting(asked)
+            guard !names.isEmpty else { break }
+            asked.formUnion(names)
+            for name in names {
+                let spec = loading ? await completions.spec(for: name) : await completions.loadedSpec(for: name)
+                if let spec { specs[name] = spec }
+            }
+            plan = LineHighlighter.plan(for: text) { specs[$0] }
         }
-        return specs.isEmpty ? first : LineHighlighter.plan(for: text) { specs[$0] }
+        return plan
     }
+
+    private static let specPasses = 3
 
     private func commandsWithUnloadedSpec(_ names: [String]) async -> Bool {
         guard !names.isEmpty else { return false }
@@ -107,15 +119,18 @@ public actor HighlightLine {
         case timedOut
     }
 
-    /// Asks for every candidate at once and takes the answers that arrive before the deadline (none with
-    /// `waiting`). A late lookup keeps running and fills the cache for the complete answer.
-    private func kinds(of candidates: [PathCandidate], where place: Place, waiting: Bool) async -> Resolved {
+    /// Asks for every candidate at once and takes the answers that arrive within `limit`. A late lookup keeps
+    /// running and stores its answer when it comes, for the next answer.
+    private func kinds(of candidates: [PathCandidate], where place: Place, waitingFor limit: Duration) async
+        -> Resolved
+    {
+        cache = cache.filter { isFresh($0.value) }
         let queries = candidates.compactMap { candidate in
             Self.absolute(candidate.word, in: place).map {
                 Query(candidate: candidate, path: $0, key: place.directory + "\u{0}" + candidate.word)
             }
         }
-        await lookUp(queries.filter { !isCached($0.key) }, waiting: waiting)
+        await lookUp(queries.filter { !isCached($0.key) }, waitingFor: limit)
         var spans: [HighlightSpan] = []
         var isComplete = true
         for query in queries {
@@ -128,29 +143,35 @@ public actor HighlightLine {
         return Resolved(spans: spans, isComplete: isComplete)
     }
 
-    private func lookUp(_ queries: [Query], waiting: Bool) async {
+    private func lookUp(_ queries: [Query], waitingFor limit: Duration) async {
         guard !queries.isEmpty else { return }
         let (events, sink) = AsyncStream.makeStream(of: Event.self)
         for query in queries {
-            let task = inFlight[query.key] ?? Task { [paths] in await paths.kind(of: query.path) }
+            let task = inFlight[query.key] ?? lookUpTask(query)
             inFlight[query.key] = task
             Task { sink.yield(.answered(key: query.key, kind: await task.value)) }
         }
-        if !waiting {
-            let deadline = ContinuousClock.now + timing.budget
-            Task {
-                try? await Task.sleep(until: deadline, clock: .continuous)
-                sink.yield(.timedOut)
-            }
+        let deadline = ContinuousClock.now + limit
+        Task {
+            try? await Task.sleep(until: deadline, clock: .continuous)
+            sink.yield(.timedOut)
         }
         var pending = Set(queries.map(\.key))
         for await event in events {
-            guard case .answered(let key, let kind) = event else { break }
-            store(kind, for: key)
+            guard case .answered(let key, _) = event else { break }
             pending.remove(key)
             if pending.isEmpty { break }
         }
         sink.finish()
+    }
+
+    /// The lookup stores its own answer, even after every waiting answer gave up on it.
+    private func lookUpTask(_ query: Query) -> Task<PathKind?, Never> {
+        Task { [paths] in
+            let kind = await paths.kind(of: query.path)
+            store(kind, for: query.key)
+            return kind
+        }
     }
 
     private func store(_ kind: PathKind?, for key: String) {

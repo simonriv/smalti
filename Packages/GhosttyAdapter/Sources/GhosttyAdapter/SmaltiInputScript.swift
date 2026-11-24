@@ -93,7 +93,8 @@ enum SmaltiInputScript {
                 [[ -n $word ]] || return 1
                 (( $+aliases[$word] || $+functions[$word] || $+builtins[$word] || $+commands[$word] )) && return 0
                 (( ${reswords[(Ie)$word]} )) && return 0
-                [[ $word == */* ]] || return 1
+                # A binary installed after the table was filled: `whence -p` only searches `PATH`.
+                [[ $word != */* ]] && { whence -p -- "$word" >/dev/null 2>&1; return }
                 [[ $word == '~/'* ]] && word=$HOME${word#\~}
                 [[ -x $word && ! -d $word ]]
             }
@@ -131,7 +132,8 @@ enum SmaltiInputScript {
             }
 
             # F5.6: before the answer for a new line arrives, keep only the spans that end before the first changed
-            # character, so no color ever sits on text that is no longer its own; a cursor move only repaints.
+            # character (or at it, when the change starts with a separator), so no color ever sits on text that is no
+            # longer its own; a cursor move only repaints.
             _smalti_hl_keep_prefix() {
                 emulate -L zsh
                 (( ${#_smalti_hl_spans} )) || { region_highlight=("${(@)region_highlight:#*memo=smaltihl}"); return 0 }
@@ -144,10 +146,14 @@ enum SmaltiInputScript {
                         while (( i <= ${#old} && i <= ${#BUFFER} )) && [[ ${BUFFER[i]} == "${old[i]}" ]]; do (( i++ )); done
                         first=$(( i - 1 ))
                     fi
+                    # A span touching the change survives only when the change starts with a separator: the
+                    # word just finished keeps its color, the one being typed loses it.
+                    local -i reach=first
+                    [[ ${BUFFER[first+1]} == [[:space:]\;\|\&\(\)\<\>] ]] && (( reach++ ))
                     local -a kept
                     for span in $_smalti_hl_spans; do
                         rest=${span#*,}
-                        (( ${rest%%,*} < first )) && kept+=($span)
+                        (( ${rest%%,*} < reach )) && kept+=($span)
                     done
                     _smalti_hl_spans=($kept)
                     _smalti_hl_buffer=$BUFFER

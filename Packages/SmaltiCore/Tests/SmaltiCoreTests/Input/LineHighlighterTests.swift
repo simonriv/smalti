@@ -149,4 +149,69 @@ struct LineHighlighterTests {
 
         #expect(starts == starts.sorted())
     }
+
+    // MARK: - Intermediate review 1
+
+    @Test(arguments: [
+        ("sudo -u root ls", [0..<4, 13..<15]), ("nice -n 10 make", [0..<4, 11..<15]),
+        ("env -u VAR cmd", [0..<3, 11..<14]), ("exec -a name cmd", [0..<4, 13..<16]),
+    ])
+    func precommandOptionTakesItsArgument(_ text: String, _ commands: [Range<Int>]) {
+        #expect(spans(text, .command) == commands)
+    }
+
+    @Test func arithmeticCommandIsNotACommand() {
+        let text = "(( i++ )) && ls"
+
+        #expect(spans(text, .command) == [13..<15])
+        #expect(spans(text, .operator) == [0..<2, 7..<9, 10..<12])
+    }
+
+    @Test func arithmeticExpansionHasNoRole() {
+        let result = plan("echo $((1+2)) x")
+
+        #expect(result.spans == [HighlightSpan(range: 0..<4, role: .command)])
+    }
+
+    @Test func commandFromVariableHasNoCommandSpan() {
+        let text = "$EDITOR notes.md"
+
+        #expect(spans(text, .command).isEmpty)
+        #expect(spans(text, .variable) == [0..<7])
+        #expect(plan(text).pathCandidates.map(\.word) == ["notes.md"])
+    }
+
+    @Test func quotedVariableCommandHasNoCommandSpan() {
+        let text = "\"$cmd\" x"
+
+        #expect(spans(text, .command).isEmpty)
+        #expect(spans(text, .variable) == [1..<5])
+    }
+
+    @Test func processSubstitutionStartsCommands() {
+        #expect(spans("diff <(sort a) <(sort b)", .command) == [0..<4, 7..<11, 17..<21])
+    }
+
+    @Test func reservedWordsKeepCommandPosition() {
+        let text = "if git status; then git push; fi"
+
+        #expect(spans(text, .command) == [0..<2, 3..<6, 15..<19, 20..<23, 30..<32])
+    }
+
+    @Test func negationAndBraceKeepCommandPosition() {
+        #expect(spans("! { ls; }", .command) == [0..<1, 2..<3, 4..<6, 8..<9])
+    }
+
+    @Test func forLoopVariableIsNotCommand() {
+        let text = "for f in *; do echo $f; done"
+
+        #expect(spans(text, .command) == [0..<3, 12..<14, 15..<19, 24..<28])
+    }
+
+    @Test func quotedValueOfLongOptionIsString() {
+        let text = "git --msg=\"x\""
+
+        #expect(spans(text, .option) == [4..<10])
+        #expect(spans(text, .string) == [10..<13])
+    }
 }

@@ -248,4 +248,73 @@ struct ZshHighlightTests {
         #expect(state.buffer == "ls -la x")
         #expect(!state.highlight.contains("memo=smaltihl"))
     }
+
+    // MARK: - Intermediate review 1
+
+    @Test func variableCommandIsNeverRed() throws {
+        let server = try FakeInputServer(reply: Self.highlighting)
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("$EDITOR notes ")
+
+        #expect(!entries(zsh).contains(Self.red))
+    }
+
+    @Test func newlyInstalledCommandIsBlue() throws {
+        let server = try FakeInputServer(reply: Self.highlighting)
+        let zsh = try ZshHarness(
+            socket: server.path, zshrc: "mkdir -p \"$HOME/bin\"\npath=(\"$HOME/bin\" $path)\nrehash")
+        defer { zsh.close() }
+        let tool = zsh.work.appending(path: "bin/newtool")
+        try Data("#!/bin/sh\n".utf8).write(to: tool)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: tool.path(percentEncoded: false))
+
+        zsh.type("newtool ")
+
+        #expect(smaltiEntries(zsh).first == "0 7 \(Self.blue)")
+    }
+
+    @Test func hostileWholeWordIsNotEvaluated() throws {
+        let server = try FakeInputServer(reply: Self.styleOnly)
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        let target = zsh.work.appending(path: "pwned3").path(percentEncoded: false)
+        let word = "$(touch \(target))"
+        zsh.type(word + " ")
+        let latest = try #require(
+            server.received.filter { $0.hasPrefix("line\t") }.compactMap { Int($0.split(separator: "\t")[1]) }.max())
+
+        server.push("highlight\t\(latest)\t0,\(word.count),c")
+        zsh.type("")
+
+        #expect(!FileManager.default.fileExists(atPath: target))
+        #expect(smaltiEntries(zsh) == ["0 \(word.count) \(Self.red)"])
+    }
+
+    @Test func incrementalSearchStaysVisible() throws {
+        let server = try FakeInputServer(reply: Self.highlighting)
+        let zsh = try ZshHarness(
+            socket: server.path, zshrc: "bindkey '^X^R' history-incremental-search-backward\nprint -s 'ls -la'")
+        defer { zsh.close() }
+        let before = zsh.printed.count
+
+        zsh.type("\u{18}\u{12}la")
+
+        let after = String(zsh.printed.dropFirst(before))
+        #expect(after.contains("\u{1b}[4m"))
+    }
+
+    @Test func wordBoundaryKeepsFinishedWord() throws {
+        let server = try FakeInputServer(reply: Self.highlighting)
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("ls")
+        server.stopAnswering()
+
+        zsh.type(" ")
+
+        #expect(smaltiEntries(zsh) == ["0 2 \(Self.blue)"])
+    }
 }

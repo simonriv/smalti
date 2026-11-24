@@ -112,4 +112,21 @@ struct HighlightLexerTests {
 
         #expect(words(lexemes) == ["sleep", "2"])
     }
+
+    @Test func arithmeticCommandIsOneLexeme() {
+        let lexemes = HighlightLexer.lexemes(in: "(( i++ )) && ls")
+
+        #expect(lexemes.first == Lexeme(kind: .arithmetic, range: 0..<9, text: "(( i++ ))"))
+        #expect(lexemes.count == 3)
+    }
+
+    @Test func unterminatedArithmeticRunsToEnd() {
+        #expect(HighlightLexer.lexemes(in: "(( i").first?.kind == .arithmetic)
+    }
+
+    @Test func arithmeticExpansionIsOneBarePart() {
+        let lexemes = HighlightLexer.lexemes(in: "echo $((1+2))x")
+
+        #expect(parts(lexemes[1]) == [WordPart(kind: .bare, range: 5..<14)])
+    }
 }

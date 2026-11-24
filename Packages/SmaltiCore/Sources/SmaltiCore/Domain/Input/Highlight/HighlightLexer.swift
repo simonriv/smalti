@@ -17,6 +17,8 @@ public enum LexemeKind: Equatable, Sendable {
     case word(parts: [WordPart])
     case controlOperator
     case redirection
+    /// `(( … ))`: an arithmetic command, whose inside is never a command.
+    case arithmetic
 }
 
 public struct WordPart: Equatable, Sendable {
@@ -70,7 +72,9 @@ private struct Scanner {
 
     private mutating func step() {
         let scalar = scalars[offset]
-        if wordStart == nil, let end = redirectionEnd(at: offset) {
+        if wordStart == nil, scalar == "(", peek(1) == "(" {
+            emit(.arithmetic, offset..<arithmeticEnd(after: offset + 2))
+        } else if wordStart == nil, let end = redirectionEnd(at: offset) {
             emit(.redirection, offset..<end)
         } else if scalar == " " || scalar == "\t" {
             closeWord()
@@ -129,6 +133,9 @@ private struct Scanner {
             add(.quoted, start..<offset)
         case "\"":
             consumeDoubleQuoted()
+        case "$" where peek(1) == "(" && peek(2) == "(":
+            offset = arithmeticEnd(after: offset + 3)
+            add(.bare, start..<offset)
         case "$" where peek(1) == "'":
             offset = closingEscaped(after: offset + 2)
             add(.quoted, start..<offset)
@@ -167,6 +174,22 @@ private struct Scanner {
         }
         offset = min(offset + 1, scalars.count)
         if start < offset { add(.quoted, start..<offset) }
+    }
+
+    /// The end of `(( … ))` or `$(( … ))`: right after the `))` that closes it, counting nested parentheses.
+    private func arithmeticEnd(after start: Int) -> Int {
+        var depth = 0
+        var index = start
+        while index < scalars.count {
+            if scalars[index] == "(" {
+                depth += 1
+            } else if scalars[index] == ")" {
+                if depth == 0, index + 1 < scalars.count, scalars[index + 1] == ")" { return index + 2 }
+                depth = max(0, depth - 1)
+            }
+            index += 1
+        }
+        return scalars.count
     }
 
     private func closing(_ quote: Unicode.Scalar, after start: Int) -> Int {
