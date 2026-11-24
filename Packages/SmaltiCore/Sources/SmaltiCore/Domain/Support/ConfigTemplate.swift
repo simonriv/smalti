@@ -10,7 +10,7 @@ public enum ConfigTemplate {
             # Después de guardar: ⌘K → "Recargar configuración".
 
             [appearance]
-            # accent = "\(appearance.accent.hexString)"
+            # accent = "\((appearance.accent ?? ThemeCatalog.theme(appearance.theme).accent).hexString)"
             # glass_opacity = \(number(appearance.glassOpacity))
             # blur = \(number(appearance.blur))
             # font_family = "\(escaped(appearance.fontFamily))"

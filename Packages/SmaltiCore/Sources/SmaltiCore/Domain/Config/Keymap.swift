@@ -94,7 +94,10 @@ public struct Keymap: Sendable, Equatable {
         (chord("f", .control, .command), .windowFullscreen),
         (chord("m", .command), .windowMinimize),
         (chord("?", .command), .helpShow),
-        (chord(",", .command), .configOpen),
+        // F5: ⌘, is Settings on macOS, so it opens Apariencia; the TOML moves to ⌥⌘,.
+        (chord(",", .command), .appearanceOpen),
+        (chord(",", .option, .command), .configOpen),
+        (chord("p", .shift, .command), .promptStudio),
         (chord("c", .command), .terminalCopy),
         (chord("v", .command), .terminalPaste),
         (chord("a", .command), .terminalSelectAll),

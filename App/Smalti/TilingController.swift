@@ -20,6 +20,10 @@ struct TilingState {
     let set: WorkspaceSet
     let config: SmaltiConfig
     let theme: Theme
+    /// F5: how opaque "Proteger legibilidad" made each surface; `chrome` backs the strip and the status bar.
+    let opacities: SurfaceOpacities
+    /// F5 "Solo símbolo": the prompt's context of the active workspace's panes, shown in their headers.
+    var promptHeaders: [PaneID: String] = [:]
     let message: StatusMessage?
     /// Directories show relative to it (`~/dev/xolken`).
     let home: WorkingDirectory
@@ -29,6 +33,11 @@ struct TilingState {
     var isSecureInput = false
     /// F4.5: the link under the pointer while ⌘ is held.
     var hoveredLink: String?
+}
+
+extension TilingState {
+    /// F5: the glass-colored layer behind the strip and the status bar; clear when protection does not need it.
+    var chromeBackground: RGBAColor { theme.window.background.withAlpha(opacities.chrome) }
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -75,13 +84,19 @@ final class TilingController {
     static let appCommands: Set<CommandID> = [
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
+        .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
+        .promptExport,
     ]
 
     private let deps: Dependencies
     private let layouts = LayoutCatalog.standard
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "tiling")
     private(set) var set: WorkspaceSet
-    private(set) var config: SmaltiConfig
+    private(set) var config: SmaltiConfig {
+        didSet { applied = ThemeCatalog.apply(config.appearance) }
+    }
+    /// F5: the theme of `config.appearance`, protected; computed once per config, not per access.
+    private(set) var applied: AppliedTheme
     private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
@@ -94,12 +109,13 @@ final class TilingController {
     init(_ deps: Dependencies, initial reload: ConfigReload) {
         self.deps = deps
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        applied = ThemeCatalog.apply(reload.config.appearance)
         let layout = LayoutCatalog.standard.strategyOrDefault(for: config.defaultLayout)
         set = WorkspaceSet(first: .empty(name: deps.home.lastComponent, rootDirectory: deps.home, layout: layout))
         status = status.withPersistent(reload.error.map(StatusMessage.invalidConfig))
     }
 
-    var theme: Theme { Theme.obsidian.applying(config.appearance) }
+    var theme: Theme { applied.theme }
 
     var home: WorkingDirectory { deps.home }
 
@@ -398,31 +414,57 @@ final class TilingController {
     }
 
     /// "Recargar configuración" in the window that also reloads the terminal engine (it is the app's).
-    func reloadConfig() {
-        guard applyReloadedConfig() else { return publish() }
+    @discardableResult
+    func reloadConfig() -> Bool {
+        guard applyReloadedConfig() else {
+            publish()
+            return false
+        }
         do {
             try deps.applyAppearance(theme.terminal)
         } catch {
             show(.engineFailure(error))
         }
         publish()
+        return true
+    }
+
+    /// F5 Apariencia: the panel's document, painted at once in this window (keys, shell and the rest stay).
+    func adopt(_ document: AppearanceDocument) {
+        config = document.applied(to: config)
+        publish()
+    }
+
+    /// The engine's appearance is the app's: one window gives it the theme's terminal colors and font.
+    func applyEngineAppearance() {
+        do {
+            try deps.applyAppearance(theme.terminal)
+        } catch {
+            show(.engineFailure(error))
+        }
     }
 
     /// "Recargar configuración" in the other windows: they read the file again; the engine is already reloaded.
-    func rereadConfig() {
-        _ = applyReloadedConfig()
+    @discardableResult
+    func rereadConfig() -> Bool {
+        let isReloaded = applyReloadedConfig()
         publish()
+        return isReloaded
     }
 
     /// Reads the file; false when it was invalid (the status bar says so and the last good config stays).
     private func applyReloadedConfig() -> Bool {
         let reload = ReloadConfig(store: deps.configStore).execute()
-        config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        // Block 4 review (C1): a file that does not load keeps what is painted now (Apariencia's edits included),
+        // not the last config the store read.
         if let error = reload.error {
             show(.invalidConfig(error))
             return false
         }
+        config = reload.config.withShell(overriddenBy: deps.shellOverride)
         status = status.withPersistent(nil)
+        // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
+        if let warning = reload.warnings.first { show(.configWarning(warning.message)) }
         return true
     }
 
@@ -518,10 +560,21 @@ final class TilingController {
         keepMinutesFresh()
     }
 
+    /// F5 "Solo símbolo": each pane's prompt context, from the app's `RenderPrompt`.
+    var promptHeader: ((PaneID) -> String?)?
+
+    /// Something the views show changed outside this controller (a pane's prompt context).
+    func refresh() { publish() }
+
     private var state: TilingState {
-        TilingState(
-            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory,
+        var state = TilingState(
+            set: set, config: config, theme: theme, opacities: applied.opacities, message: status.showing,
+            home: deps.home, observatory: observatory,
             isSecureInput: isSecureInput, hoveredLink: hoveredLink)
+        if let promptHeader {
+            for pane in set.active.panes { state.promptHeaders[pane.id] = promptHeader(pane.id) }
+        }
+        return state
     }
 
     private var isSecureInput = false

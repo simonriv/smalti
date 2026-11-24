@@ -172,7 +172,7 @@ final class CompletionMenuController {
 @MainActor
 enum Appearing {
     static func fadeIn(_ view: NSView, duration: Double) {
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, duration > 0 else { return }
+        guard !Motion.isReduced, duration > 0 else { return }
         view.alphaValue = 0
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration

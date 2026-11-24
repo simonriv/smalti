@@ -99,7 +99,9 @@ private struct Rows {
 
     var configuration: [HelpEntry] {
         [entry(.paletteOpen, "Paleta de comandos")]
-            + [CommandID.helpShow, .configOpen].map(titled)
+            + [CommandID.helpShow].map(titled)
+            + CommandID.appearance.map(titled)
+            + [CommandID.configOpen].map(titled)
             + [entry(.configReload, "Recargar configuración")]
             + [CommandID.feedbackReport, .logsShow, .appAbout].map(titled)
             + [

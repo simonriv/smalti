@@ -22,6 +22,10 @@ final class InputCoordinator {
     var onHistory: ((Request, String) -> Void)?
     /// Every new line of a pane, for an open menu to refilter or close.
     var onLine: ((PaneID, InputLine) -> Void)?
+    /// F5: the Smalti prompt; zsh's `context` gets its full prompt from it.
+    var renderPrompt: RenderPrompt?
+    /// F5: a pane's prompt context changed (its header shows it with "Solo símbolo").
+    var onPromptRendered: ((PaneID) -> Void)?
 
     private let session: InputSession
     private let provider: any TerminalViewProvider
@@ -105,14 +109,63 @@ final class InputCoordinator {
             if let older = connections[pane], older != connection { older.close() }
             panes[connection.id] = pane
             connections[pane] = connection
+            // F5: the shell paints Smalti's immediate prompt (and takes its answers) once it has the style.
+            deliverStyle(to: pane, over: connection)
         }
         guard let pane = panes[connection.id] else { return }
         if message == .bye { forget(connection, of: pane) }
         if let seq = Self.seq(of: message) { latestSeq[pane] = seq }
         if case .line(_, let line) = message { onLine?(pane, line) }
+        handlePrompt(message, pane: pane, connection: connection)
         let path = packet.directory ?? directory(pane) ?? Self.home
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
+    }
+
+    // MARK: - Prompt (F5)
+
+    private func handlePrompt(_ message: ShellMessage, pane: PaneID, connection: InputConnection) {
+        switch message {
+        case .context(let seq, let context):
+            // A style that did not fit while the shell was busy goes before its next prompt (final review, I3).
+            deliverStyle(to: pane, over: connection)
+            Task { [weak self] in
+                guard let reply = await self?.renderPrompt?.handle(context, seq: seq, pane: pane) else { return }
+                connection.send(reply)
+                self?.onPromptRendered?(pane)
+            }
+        case .exec: renderPrompt?.commandStarted(pane: pane)
+        case .bye: renderPrompt?.forget(pane: pane)
+        default: break
+        }
+    }
+
+    /// An agent of `workspace` changed state: the shells quiet at their prompt get theirs again, unasked.
+    func agentsChanged(in workspace: WorkspaceID) {
+        for (pane, message) in renderPrompt?.agentsChanged(in: workspace) ?? [] {
+            connections[pane]?.send(message)
+        }
+    }
+
+    /// The theme or the prompt changed: each shell whose style is out of date gets the new immediate prompt and ghost
+    /// color, and the quiet ones their full prompt again in the new colors (final review, I2). A change that leaves
+    /// the style as it was (the blur, the gap) sends nothing.
+    func sendPromptStyle() {
+        guard let render = renderPrompt else { return }
+        let restyled = connections.filter { pane, connection in deliverStyle(to: pane, over: connection) }
+        for (pane, message) in render.quietPrompts() where restyled[pane] != nil {
+            restyled[pane]?.send(message)
+        }
+    }
+
+    /// Sends the pane's pending style, if any; true when one went out whole.
+    @discardableResult
+    private func deliverStyle(to pane: PaneID, over connection: InputConnection) -> Bool {
+        guard let render = renderPrompt, let style = render.pendingStyle(for: pane), connection.send(style) else {
+            return false
+        }
+        render.styleDelivered(style, to: pane)
+        return true
     }
 
     /// Ends the connections of panes that no longer exist (closed panes or workspaces): a background job that
@@ -120,6 +173,8 @@ final class InputCoordinator {
     func keepOnly(_ open: Set<PaneID>) {
         for (pane, connection) in connections where !open.contains(pane) {
             connection.close()
+            // Block 5 review (M5): a closed pane's prompt state goes too.
+            renderPrompt?.forget(pane: pane)
         }
     }
 
@@ -132,7 +187,9 @@ final class InputCoordinator {
 
     private static func seq(of message: ShellMessage) -> Int? {
         switch message {
-        case .line(let seq, _), .exec(let seq, _), .done(let seq, _), .complete(let seq, _), .history(let seq, _): seq
+        case .line(let seq, _), .exec(let seq, _), .done(let seq, _), .complete(let seq, _), .history(let seq, _),
+            .context(let seq, _):
+            seq
         case .hello, .bye: nil
         }
     }

@@ -40,6 +40,17 @@ struct PresentationTextTests {
                     process: "claude", directory: "~/dev/xolken", status: nil, detail: nil, shortcut: "⌘3"))
     }
 
+    /// F5 "Solo símbolo": the prompt's context replaces the directory in the header.
+    @Test func promptContextReplacesTheDirectory() throws {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/simon/dev/xolken"))
+        var context = HeaderContext(keymap: .standard, home: home, now: .now)
+        context.promptHeaders = [pane.id: "xolken · main +2"]
+
+        let header = PaneHeaderContent(pane, index: 3, context: context)
+
+        #expect(header.directory == "xolken · main +2")
+    }
+
     @Test func headerWithoutIndexHasNoShortcut() throws {
         let pane = Pane(id: PaneID(), workingDirectory: home).applying(.titleChanged("vim notes.md"))
 

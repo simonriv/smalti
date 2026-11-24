@@ -46,6 +46,9 @@ struct CommandCoverageGuardTests {
         }.joined()
     }
 
+    /// Commands of a phase in progress whose app action lands in a later task; empty between phases.
+    static let pendingInApp: Set<CommandID> = []
+
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue
         let directions = ["left", "right", "up", "down"]
@@ -86,12 +89,23 @@ struct CommandCoverageGuardTests {
         #expect(commands.filter { !Self.hasCase(for: $0, in: source) }.isEmpty)
     }
 
+    /// Block 1 review (M3): a pending command that already has an action must leave `pendingInApp`, or the guard
+    /// would stop watching it for good.
+    @Test(.enabled(if: isInRepository))
+    func pendingCommandsHaveNoActionYet() throws {
+        let source = try String(contentsOf: Self.controller, encoding: .utf8)
+
+        let wired = Self.pendingInApp.filter { source.contains(".\(Self.swiftName($0.rawValue))") }
+
+        #expect(wired.isEmpty, "remove from pendingInApp: \(wired.map(\.rawValue))")
+    }
+
     /// Runs inside the repository only: mutation testing copies this package alone, without the app.
     @Test(.enabled(if: isInRepository))
     func everyStandardCommandHasAnActionInTheApp() throws {
         let source = try String(contentsOf: Self.controller, encoding: .utf8)
 
-        let missing = CommandID.allStandard.filter { !Self.isFamily($0) }.filter {
+        let missing = CommandID.allStandard.filter { !Self.isFamily($0) && !Self.pendingInApp.contains($0) }.filter {
             !source.contains(".\(Self.swiftName($0.rawValue))")
         }
 

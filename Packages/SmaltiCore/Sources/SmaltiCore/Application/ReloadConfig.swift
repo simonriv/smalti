@@ -2,10 +2,12 @@
 public struct ConfigReload: Equatable, Sendable {
     public let config: SmaltiConfig
     public let error: ConfigError?
+    public let warnings: [ConfigWarning]
 
-    public init(config: SmaltiConfig, error: ConfigError?) {
+    public init(config: SmaltiConfig, error: ConfigError?, warnings: [ConfigWarning] = []) {
         self.config = config
         self.error = error
+        self.warnings = warnings
     }
 }
 
@@ -20,7 +22,8 @@ public struct ReloadConfig {
 
     public func execute() -> ConfigReload {
         do {
-            return ConfigReload(config: try store.reload(), error: nil)
+            let config = try store.reload()
+            return ConfigReload(config: config, error: nil, warnings: store.warnings())
         } catch {
             return ConfigReload(config: store.current(), error: error)
         }

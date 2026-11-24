@@ -19,6 +19,10 @@ import TOMLConfigAdapter
 final class AppComposition {
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "engine")
     private var runtime: GhosttyRuntime?
+    /// F5: the one Appearance document every window's panel edits.
+    private var appearance: AppearanceSession?
+    /// F5 "Solo símbolo": a pane's prompt context for its header (from `RenderPrompt`).
+    private var promptHeader: ((PaneID) -> String?)?
     private var engine: GhosttyTerminalEngine?
     private var sessionKeeper: SessionKeeper?
     /// F4.5: every window, in opening order, and the one in front (the last key window).
@@ -74,11 +78,11 @@ final class AppComposition {
             arguments: launchArguments(), home: home,
             defaultStateDirectory: AppIdentity.current.defaultStateDirectory(home: home))
         createStateDirectory(settings.stateDirectory)
-        let store = TOMLConfigStore(file: settings.configFile)
+        let store = TOMLConfigStore(config: settings.configFile, theme: settings.themeFile)
         let initial = ReloadConfig(store: store).execute()
         return Startup(
             settings: settings, store: store, initial: initial,
-            theme: Theme.obsidian.applying(initial.config.appearance))
+            theme: ThemeCatalog.apply(initial.config.appearance).theme)
     }
 
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
@@ -149,6 +153,7 @@ final class AppComposition {
         configStore = startup.store
         configFile = startup.settings.configFile
         restorePreferences = archive
+        startAppearance(startup)
         let (controller, visibility) = makeController(dependencies, initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
         if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
@@ -179,6 +184,24 @@ final class AppComposition {
         if !composition.isAskingToRestore { beginSaving(keepingPreviousSession: false) }
     }
 
+    // MARK: - Appearance (F5)
+
+    private func startAppearance(_ startup: Startup) {
+        let session = AppearanceSession(
+            config: startup.initial.config, themeFile: startup.settings.themeFile
+        ) { [weak self] error in self?.controller?.report(.invalidConfig(error)) }
+        session.onApply = { [weak self] document in self?.applyAppearance(document) }
+        session.onRefresh = { [weak self] in self?.compositions.forEach { $0.refreshAppearancePanel() } }
+        appearance = session
+    }
+
+    /// Every window paints the document; the engine (the app's) takes its terminal appearance once.
+    private func applyAppearance(_ document: AppearanceDocument) {
+        compositions.forEach { $0.controller.adopt(document) }
+        compositions.first?.controller.applyEngineAppearance()
+        input?.sendPromptStyle()
+    }
+
     // MARK: - Windows (F4.5)
 
     /// A controller whose agents count as seen only while its own window is the key one, on screen.
@@ -189,7 +212,9 @@ final class AppComposition {
         let agents = TilingController.AgentDependencies(
             notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
-        return (TilingController(dependencies.with(agents: agents), initial: initial), visibility)
+        let controller = TilingController(dependencies.with(agents: agents), initial: initial)
+        controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
+        return (controller, visibility)
     }
 
     /// A window for `controller`, cascaded from the front one, in front. Its controller has not opened panes yet.
@@ -219,6 +244,8 @@ final class AppComposition {
     private func makeWindow() -> WindowComposition? {
         guard let dependencies = controllerDependencies, let store = configStore, let engine else { return nil }
         let (controller, visibility) = makeController(dependencies, initial: ReloadConfig(store: store).execute())
+        // Block 4 review (M2): painted with the panel's document, also before theme.toml has it.
+        if let document = appearance?.document { controller.adopt(document) }
         return makeComposition(controller, visibility: visibility, engine: engine)
     }
 
@@ -235,6 +262,10 @@ final class AppComposition {
         sessionKeeper?.changed(set)
         let panes = Set(set.allPanes.map(\.id))
         input?.keepOnly(panes)
+        // A closed pane's agent no longer waits for anyone (final review, M1); unchanged prompts send nothing.
+        for composition in compositions {
+            composition.controller.set.workspaces.forEach { input?.agentsChanged(in: $0.id) }
+        }
         if secureInput.entry.isRequested {
             secureInput.keep(panes: panes)
             compositions.forEach { $0.controller.showSecureInput(secureInput.entry.isRequested) }
@@ -254,8 +285,13 @@ final class AppComposition {
         case .agentJump: jumpToWaitingAgent(from: composition)
         case .configReload:
             // The engine's appearance is the app's: one window applies it, the others follow the file.
-            compositions.first?.controller.reloadConfig()
+            let isReloaded = compositions.first?.controller.reloadConfig() ?? false
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
+            // Block 4 review (C1): only a reload that loaded replaces the panel's document.
+            if isReloaded, let config = compositions.first?.controller.config {
+                appearance?.reload(config)
+                input?.sendPromptStyle()
+            }
             mainMenu?.refresh()
         case .appAbout: showAbout()
         case .feedbackReport:
@@ -267,6 +303,16 @@ final class AppComposition {
         case .fontDecrease: scaleFont(fontScale.decreased())
         case .fontReset: scaleFont(fontScale.reset())
         case .configOpen: openConfig()
+        case .appearanceOpen: appearance.map(composition.toggleAppearance)
+        case .themeOpen: appearance?.openThemeFile()
+        case .themeNext:
+            let next = composition.controller.config.appearance.theme.next
+            appearance?.selectTheme(next)
+        case .ansiReset: appearance?.edit { $0.resetANSI() }
+        case .legibilityToggle: appearance?.edit { $0.appearance.protectLegibility.toggle() }
+        case .promptStudio: appearance.map(composition.toggleStudio)
+        case .promptApply: composition.performInStudio(.apply)
+        case .promptExport: composition.performInStudio(.export)
         case .secureInputToggle:
             secureInput.toggle()
             showSecureInput()
@@ -310,6 +356,9 @@ final class AppComposition {
         }
         compositions.removeAll { $0 === composition }
         composition.closeOverlays()
+        // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
+        composition.closeAppearancePanel()
+        composition.closeStudio()
         composition.window.close()
         observatoryOpenChanged()
         frontID = set.frontID
@@ -632,6 +681,10 @@ final class AppComposition {
                     // The window that holds the pane applies it; the others ignore a pane they do not have.
                     self?.compositions.forEach { $0.controller.handle(event) }
                     self?.observatory?.agentEvent(event)
+                    // F5 "Agentes que esperan": the quiet prompts of the workspace show it without a keypress.
+                    if let workspace = self?.workspace(containing: event.pane)?.id {
+                        self?.input?.agentsChanged(in: workspace)
+                    }
                 }
             }
         } catch IPCError.socketInUse {
@@ -660,6 +713,7 @@ final class AppComposition {
             self?.composition(containing: pane)?.controller.set.workspaces.lazy.flatMap(\.panes)
                 .first { $0.id == pane }?.workingDirectory.path
         }
+        connectPrompt(coordinator, startup: startup)
         do {
             try coordinator.start(socketFile: socket)
             input = coordinator
@@ -676,6 +730,36 @@ final class AppComposition {
         } catch {
             logger.error("input socket unavailable: \(String(describing: error), privacy: .public)")
         }
+    }
+
+    /// F5: zsh's `context` → `RenderPrompt` → `prompt`; agents that start waiting re-send it; "Solo símbolo" moves
+    /// the context to the pane header.
+    private func connectPrompt(_ coordinator: InputCoordinator, startup: Startup) {
+        let environment = PromptEnvironment(
+            settings: { [weak self] in
+                let config = self?.controller?.config ?? startup.initial.config
+                return (config.prompt, ThemeCatalog.apply(config.appearance))
+            },
+            agents: { [weak self] pane in
+                self?.workspace(containing: pane)?.waitingAgents(besides: pane) ?? WaitingAgents()
+            },
+            workspace: { [weak self] pane in self?.workspace(containing: pane)?.id },
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() })
+        let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
+        coordinator.renderPrompt = render
+        // Only a header that shows the prompt's context changes with it (block 5 review, M2).
+        var headers: [PaneID: String] = [:]
+        coordinator.onPromptRendered = { [weak self] pane in
+            let header = render.headerText(for: pane)
+            guard header != headers[pane] else { return }
+            headers[pane] = header
+            self?.composition(containing: pane)?.controller.refresh()
+        }
+        promptHeader = { pane in render.headerText(for: pane) }
+    }
+
+    private func workspace(containing pane: PaneID) -> Workspace? {
+        composition(containing: pane)?.controller.set.workspaces.first { $0.panes.contains { $0.id == pane } }
     }
 
     private static func ipcEndpoints(socket: URL, inputSocket: URL?) -> IPCEndpoints? {
@@ -735,6 +819,8 @@ final class AppComposition {
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
     func saveForQuit() {
+        // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
+        appearance?.saveIfPending()
         secureInput.releaseAll()
         windowsChanged()
         sessionKeeper?.saveForQuit()

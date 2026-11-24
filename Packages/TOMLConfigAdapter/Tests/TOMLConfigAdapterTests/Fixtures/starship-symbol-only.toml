@@ -1,0 +1,8 @@
+# Generado por Smalti (Estudio de prompt).
+
+add_newline = false
+format = "$character"
+
+[character]
+success_symbol = "[›](#7aa2f7)"
+error_symbol = "[›](#f7768e)"

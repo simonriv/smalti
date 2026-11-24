@@ -63,7 +63,7 @@ final class MenuTests: SmaltiUITestCase {
         click(
             "Acerca de Smalti", in: app.menuBars.firstMatch.children(matching: .menuBarItem).element(boundBy: 1).title)
 
-        let version = app.staticTexts.matching(NSPredicate(format: "value CONTAINS '0.4.5 ('")).firstMatch
+        let version = app.staticTexts.matching(NSPredicate(format: "value CONTAINS '0.5.0 ('")).firstMatch
         XCTAssertTrue(version.waitForExistence(timeout: 5))
     }
 
@@ -71,7 +71,8 @@ final class MenuTests: SmaltiUITestCase {
         launchWithOpenLog()
         XCTAssertFalse(FileManager.default.fileExists(atPath: app.configFile.path(percentEncoded: false)))
 
-        app.typeKey(",", modifierFlags: .command)
+        // F5: "Abrir config.toml" is ⌥⌘, (⌘, opens Apariencia).
+        app.typeKey(",", modifierFlags: [.option, .command])
 
         let opened = XCTNSPredicateExpectation(
             predicate: NSPredicate { [openLog] _, _ in

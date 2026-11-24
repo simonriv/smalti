@@ -1,0 +1,42 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Proteger legibilidad</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif}
+.desk{width:1440px;height:900px;position:relative;overflow:hidden;background-color:#0b0d12;background-image:radial-gradient(circle at 16% 20%,#284766 0,rgba(40,71,102,0) 38%),radial-gradient(circle at 84% 80%,#563663 0,rgba(86,54,99,0) 42%),radial-gradient(circle at 72% 12%,#1d5a55 0,rgba(29,90,85,0) 34%),radial-gradient(circle at 30% 92%,#5a4a2a 0,rgba(90,74,42,0) 30%)}
+.desk.white{background:#ffffff}
+.win{position:absolute;border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,0.5);backdrop-filter:blur(28px) saturate(150%);display:flex;flex-direction:column;overflow:hidden}
+.strip{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:12.5px}
+.ws{padding:5px 12px;border-radius:7px}
+.area{flex:1;display:grid;gap:8px;padding:10px}
+.pane{border-radius:11px;display:flex;flex-direction:column;overflow:hidden}
+.ph{height:30px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12px}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.term{padding:10px 14px;font:400 12.5px/1.62 'JetBrains Mono',monospace;white-space:pre}
+.status{height:28px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11.5px}
+.lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin:0}
+.sw{width:18px;height:18px;border-radius:5px;display:inline-block;margin-right:5px}
+.note{position:absolute;font-size:12px;color:#8b919c;line-height:1.5}
+.light{position:absolute;top:14px;width:12px;height:12px;border-radius:50%}
+</style></head><body><div class="desk white"><div class="win" style="left:40px;top:80px;width:660px;height:420px;background:rgba(13,15,21,0.62);border:1px solid rgba(255,255,255,0.09);color:#d7dae0">
+<div class="strip" style="border-bottom:1px solid rgba(255,255,255,0.05);background:transparent;padding-left:14px"><span class="ws" style="background:rgba(122,162,247,0.13);border:1px solid rgba(122,162,247,0.5);color:#e6e9ef">solen</span><span class="ws" style="color:#8b919c">billi</span><span style="flex:1"></span><span style="color:#8b919c;font-size:11.5px">Proteger legibilidad: no</span></div>
+<div class="area"><div class="pane" style="background:rgba(6,7,10,0.34);border:1px solid rgba(122,162,247,0.5);box-shadow:0 0 0 3px rgba(122,162,247,0.13)">
+<div class="ph" style="border-bottom:1px solid rgba(255,255,255,0.05)"><span class="dot" style="background:#9ece6a"></span><b style="font-weight:600;color:#e6e9ef">zsh</b><span style="color:#8b919c">~/Projects/solen</span></div>
+<div class="term"><span style="color:#7aa2f7"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#7aa2f7" stroke-width="1.4" style="vertical-align:-1px"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"/></svg> solen/apps/api</span> <span style="color:#bb9af7"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#bb9af7" stroke-width="1.4" style="vertical-align:-1px"><circle cx="5" cy="3.5" r="1.5"/><circle cx="5" cy="12.5" r="1.5"/><circle cx="11" cy="6" r="1.5"/><path d="M5 5v6M11 7.5c0 2-2 2.5-6 3.5"/></svg> main</span> <span style="color:#e0af68">●2</span> <span style="color:#9ece6a">+1</span> <span style="color:#8b919c"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.4" style="vertical-align:-1px"><path d="M8 2l5 3v6l-5 3-5-3V5z"/></svg> 22.11</span>
+<span style="color:#7aa2f7">›</span> pnpm test
+<span style="color:#9ece6a">✓</span> reminders (23)  <span style="color:#9ece6a">✓</span> calendar (41)  <span style="color:#f7768e">✗</span> sync (1)
+<span style="color:#e0af68">warn</span> 2 tests lentos &gt; 500ms
+<span style="color:#bb9af7">const</span> due = event.startsAt.<span style="color:#7aa2f7">minus</span>(rule.offset)
+<span style="color:#7dcfff">info</span> <span style="color:#8b919c">compilado en 1.2 s</span>
+<span style="color:#7aa2f7">›</span> git sta<span style="color:#5f6672">tus</span></div></div></div>
+<div class="status" style="border-top:1px solid rgba(255,255,255,0.05);color:#8b919c;background:transparent"><span><span class="dot" style="display:inline-block;background:#9ece6a"></span> 1 trabajando · <span class="dot" style="display:inline-block;background:#e0af68"></span> 1 te espera · <span class="dot" style="display:inline-block;background:#f7768e"></span> 1 error · <span class="dot" style="display:inline-block;border:1.5px solid #6b717c"></span> 1 detenido</span><span>dwindle</span></div></div><div class="win" style="left:740px;top:80px;width:660px;height:420px;background:rgba(13,15,21,0.62);border:1px solid rgba(255,255,255,0.09);color:#d7dae0">
+<div class="strip" style="border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(13,15,21,0.89);padding-left:14px"><span class="ws" style="background:rgba(122,162,247,0.13);border:1px solid rgba(122,162,247,0.5);color:#e6e9ef">solen</span><span class="ws" style="color:#8b919c">billi</span><span style="flex:1"></span><span style="color:#8b919c;font-size:11.5px">Proteger legibilidad: sí</span></div>
+<div class="area"><div class="pane" style="background:rgba(6,7,10,0.66);border:1px solid rgba(122,162,247,0.5);box-shadow:0 0 0 3px rgba(122,162,247,0.13)">
+<div class="ph" style="border-bottom:1px solid rgba(255,255,255,0.05)"><span class="dot" style="background:#9ece6a"></span><b style="font-weight:600;color:#e6e9ef">zsh</b><span style="color:#8b919c">~/Projects/solen</span></div>
+<div class="term"><span style="color:#7aa2f7"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#7aa2f7" stroke-width="1.4" style="vertical-align:-1px"><path d="M2 4.5h4l1.5 1.5H14v6.5H2z"/></svg> solen/apps/api</span> <span style="color:#bb9af7"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#bb9af7" stroke-width="1.4" style="vertical-align:-1px"><circle cx="5" cy="3.5" r="1.5"/><circle cx="5" cy="12.5" r="1.5"/><circle cx="11" cy="6" r="1.5"/><path d="M5 5v6M11 7.5c0 2-2 2.5-6 3.5"/></svg> main</span> <span style="color:#e0af68">●2</span> <span style="color:#9ece6a">+1</span> <span style="color:#8b919c"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.4" style="vertical-align:-1px"><path d="M8 2l5 3v6l-5 3-5-3V5z"/></svg> 22.11</span>
+<span style="color:#7aa2f7">›</span> pnpm test
+<span style="color:#9ece6a">✓</span> reminders (23)  <span style="color:#9ece6a">✓</span> calendar (41)  <span style="color:#f7768e">✗</span> sync (1)
+<span style="color:#e0af68">warn</span> 2 tests lentos &gt; 500ms
+<span style="color:#bb9af7">const</span> due = event.startsAt.<span style="color:#7aa2f7">minus</span>(rule.offset)
+<span style="color:#7dcfff">info</span> <span style="color:#8b919c">compilado en 1.2 s</span>
+<span style="color:#7aa2f7">›</span> git sta<span style="color:#8b919b">tus</span></div></div></div>
+<div class="status" style="border-top:1px solid rgba(255,255,255,0.05);color:#8b919c;background:rgba(13,15,21,0.89)"><span><span class="dot" style="display:inline-block;background:#9ece6a"></span> 1 trabajando · <span class="dot" style="display:inline-block;background:#e0af68"></span> 1 te espera · <span class="dot" style="display:inline-block;background:#f7768e"></span> 1 error · <span class="dot" style="display:inline-block;border:1.5px solid #6b717c"></span> 1 detenido</span><span>dwindle</span></div></div><div class="note" style="left:40px;top:530px;width:1360px;color:#2a2e36">Peor caso: escritorio blanco detrás del vidrio al 62 %. A la derecha, los paneles suben de 34% a 66% y la franja y la barra de estado reciben un fondo al 89 %; los márgenes y los huecos de 8 px conservan el vidrio. El fantasma se aclara hasta 4.5:1.</div></div></body></html>

@@ -36,6 +36,10 @@ final class WindowComposition {
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
     private var help: HelpController?
+    /// F5 ⌘,: the Appearance aside, created on first use with the app's session.
+    private var appearancePanel: AppearancePanelController?
+    /// F5 ⇧⌘P: the prompt studio over the whole window.
+    private var studio: PromptStudioController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
     private var restoreScreen: RestoreController?
@@ -148,6 +152,61 @@ final class WindowComposition {
         if kept != .feedback { feedback?.close() }
     }
 
+    /// ⌘, (spec F5): opens or closes the Appearance aside of this window.
+    func toggleAppearance(_ session: AppearanceSession) {
+        let panel =
+            appearancePanel
+            ?? {
+                let panel = AppearancePanelController(window: window, session: session)
+                panel.onOpenChange = { [weak self] isOpen in
+                    guard let self, !isOpen else { return }
+                    focusKeyboard(on: controller.set.active.focusedPane)
+                }
+                appearancePanel = panel
+                return panel
+            }()
+        closeOverlays()
+        panel.toggle()
+    }
+
+    /// ⇧⌘P (spec F5): the studio covers the window; the panes behind it are hidden but keep running.
+    func toggleStudio(_ session: AppearanceSession) {
+        let studio =
+            self.studio
+            ?? {
+                let studio = PromptStudioController(window: window, session: session)
+                studio.hasOverlayOnTop = { [weak self] in self?.palette?.isOpen == true || self?.help?.isOpen == true }
+                studio.onOpenChange = { [weak self] isOpen in
+                    guard let self else { return }
+                    setTilingHidden(isOpen)
+                    if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+                }
+                self.studio = studio
+                return studio
+            }()
+        closeOverlays()
+        appearancePanel?.close()
+        studio.toggle()
+    }
+
+    /// ⌘K's studio commands act only while it is open in this window.
+    func performInStudio(_ edit: PromptStudioEdit) {
+        guard studio?.isOpen == true else { return }
+        studio?.perform(edit)
+    }
+
+    func closeStudio() {
+        studio?.close()
+    }
+
+    func closeAppearancePanel() {
+        appearancePanel?.close()
+    }
+
+    func refreshAppearancePanel() {
+        appearancePanel?.refresh()
+    }
+
     func dismissObservatory() {
         observatoryScreen?.dismiss()
     }
@@ -201,6 +260,7 @@ final class WindowComposition {
         controller.onChange = { [weak self] state in
             guard let self else { return }
             applyGlass(state.theme)
+            window.buttons?.apply(state.config.window.buttons, theme: state.theme)
             window.strip.render(state)
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
@@ -218,6 +278,14 @@ final class WindowComposition {
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        window.strip.onCursor = { [weak window] isInside in window?.buttons?.cursorOnStrip(isInside) }
+        window.buttons?.onShow = { [weak window] faded in
+            window?.strip.setAccessibilityValue(faded ? "botones con fundido" : "botones sin fundido")
+        }
+        window.onCloseRequest = { [weak self] in
+            guard let self else { return }
+            services.appCommand(.windowClose, self)
+        }
         controller.onAppCommand = { [weak self] command in
             guard let self else { return }
             services.appCommand(command, self)
@@ -361,6 +429,11 @@ final class WindowComposition {
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        // F5: in the studio ⌘↑ and ⌘↓ move modules; only its own commands, ⌘K and the help act. ⌘K and the help
+        // on top of it come first (block 5 review, M3).
+        if studio?.isOpen == true {
+            return .panel(allowing: [.promptStudio, .promptApply, .promptExport, .paletteOpen, .helpShow])
+        }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
         if feedback?.isOpen == true { return KeyContext(allowing: []) }
         if search?.isOpen == true {
@@ -390,7 +463,8 @@ final class WindowComposition {
     /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
     /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
     func focusKeyboard(on pane: PaneID?) {
-        guard !hasOverlayOpen, let pane, let view = services.engine.view(for: pane), window.firstResponder !== view
+        guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, studio?.isOpen != true, let pane,
+            let view = services.engine.view(for: pane), window.firstResponder !== view
         else { return }
         window.makeFirstResponder(view)
     }

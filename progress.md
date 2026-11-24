@@ -199,4 +199,40 @@
 - [x] T16 · Feedback, registros y funciones básicas del terminal (TerminalBasicsTests 8/8, FeedbackTests 4/4; captura f45-feedback.png)
 #### Bloque 5 · Cierre
 - [x] T17 · Checklist (`docs/specs/F4.5-checklist.md`), revisión final de la rama (6 importantes y 10 menores corregidos, cada uno con su prueba en rojo y en verde), mutación de lo cambiado en F4.5 90,2 % (23 sobrevivientes muertos con prueba nueva); SmaltiCore 1107, GhosttyAdapter 208, TOMLConfigAdapter 80, DiagnosticsAdapter 10
-- [ ] PR a `develop` y PR `develop` → `main` (los fusiona Simón); Release instalado en `/Applications` tras su visto bueno
+- [x] PR a `develop` (#23) y PR `develop` → `main` (#24) fusionados por Simón; Release 0.4.5 (`81f154d`) instalado en `/Applications` y confirmado (2026-11-23)
+
+## F5 · Apariencia y prompt
+
+### Spec
+- [x] Aprobada (`docs/specs/F5-apariencia-prompt.md`, 2026-11-23): prompt generado por Smalti (A), previews a F5.5, `theme.toml`, "Proteger legibilidad" activa sobre el peor escritorio, AppKit, agentes que esperan en vivo, prompt de Smalti por defecto
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F5-apariencia-prompt.md`)
+
+### Tareas
+#### Bloque 1 · Verificaciones y dominio de apariencia
+- [x] T1 · `font-codepoint-map` alcanza una fuente registrada solo para el proceso (captura de la propia ventana: 3565 píxeles con el map frente a 1929 sin él). GPU en reposo (`scripts/measure-gpu-idle.sh`, 3 × 10 s, diario cerrado): base 6,8/5,9 %, por defecto 9,1 %, sin sombra 4,8 %, sin recorte de paneles 9,5 %; sin máscara 20,7 % y sin desenfoque 20,3 % por un pico aislado (las otras muestras, 8–10 %). El desenfoque no es la causa; el ~25 % del issue no aparece en reposo limpio (hipótesis: recomposición del vidrio con contenido que cambia detrás). T13 añade ese escenario y ataca la sombra
+- [x] T2 · Contraste WCAG y `LegibilityGuard` (opacidad mínima en pasos de 0,01 y mezcla del 1 %): Obsidiana 65 %, Niebla 82 %, chrome 89 % como en la spec; compuesto en 8 bits
+- [x] T3 · Cuatro temas (`ThemeColors` + `Theme.make`), ANSI por tema, `ThemeCatalog.apply` con la protección (colores inalcanzables ajustados sin forzar panel opaco)
+- [x] T4 · `PromptConfig`, `WindowButtons`, 8 comandos nuevos, ⌘, Apariencia, ⌥⌘, config.toml, ⇧⌘P Estudio (en ⌘K, ayuda y menú)
+#### Bloque 2 · Dominio del prompt
+- [x] T5 · Módulos (un tipo por módulo), estilos Limpio/Píldoras/Solo símbolo, `DirectoryLabel`, `PromptHeaderText`, iconos
+- [x] T6 · `ZshPromptRenderer`: prompt inmediato con expansiones de zsh y completo con valores en `${_smalti_p_N}` (`%` escapado)
+- [x] T7 · Mensajes `context`/`prompt`/`promptstyle`, puerto `PromptFacts`, `RenderPrompt` con reenvío espontáneo
+- [x] T8 · `AppearanceStore`, `ChangeAppearance` (300 ms), `EditPrompt` con las tres vistas previas, `StarshipPreset`
+#### Bloque 3 · Adaptadores
+- [x] T9 · `theme.toml` leído encima de `config.toml` clave a clave (aviso de claves repetidas), escritor atómico que respeta ediciones a mano, `starship.toml` con dorados
+- [x] T10 · `FilePromptFacts`: raíz y rama, `git status` con 300 ms y caché, versión de runtime, contexto de k8s; procesos solo en `CommandRunner`
+- [x] T11 · Script de zsh del prompt con `psvar` (enmienda 1), hook antes del de Ghostty con marcas OSC 133, input opcional; corregido un fallo de F4 (respuestas junto al EOF)
+- [x] T12 · `SmaltiSymbols.ttf` (9 iconos de trazo fino) y lámina `F5-assets/icons-sheet.png` para aprobar
+#### Bloque 4 · App: vidrio, temas y ventana
+- [x] T13 · GPU en reposo (#5): la causa es la sombra del sistema de una ventana no opaca (WindowServer la recalcula en cada cambio de contenido); sombra propia en una ventana hija: 2,2 % en reposo (antes 29,5 %), 38,5 % con contenido moviéndose detrás (antes 71,1 %). El script activa la app y tapa el escritorio (T1 midió con la ventana detrás de la terminal)
+- [x] T14 · Tema en vivo y capas de legibilidad (C2 medido en pantalla con calibración por parches de gris; C12 en dos ventanas)
+- [x] T15 · Botones de ventana (ocultos, al pasar el cursor, visibles; cerrar pregunta; Zoom con `performZoom`)
+- [x] T16 · Panel Apariencia (revisión del bloque 4: 1 crítico, 4 importantes y 6 menores corregidos; regresión 68/68)
+#### Bloque 5 · App: prompt
+- [x] T17 · Prompt conectado y contexto en la cabecera (hallazgo: `/usr/bin/git` es el shim de xcrun y nunca llegaba a los 300 ms; `GitLocator`)
+- [x] T18 · Estudio de prompt (`KeyContext.panel` para ⌘↑ ⌘↓)
+- [x] T19 · Capturas y comparación con los tableros (hallazgo: `SmaltiSymbols` sin nombre PostScript; revisión del bloque 5: 4 importantes y 9 menores corregidos; regresión 72/72)
+#### Bloque 6 · Cierre
+- [x] T20 · Checklist (`docs/specs/F5-checklist.md`), revisión final (4 importantes y 4 menores corregidos), mutación 99,5 %, XCUITest 191/191 con el diario intacto, C6 2,6 % al cierre, PR y despliegue 0.5.0

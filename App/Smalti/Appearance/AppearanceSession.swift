@@ -1,0 +1,117 @@
+import AppKit
+import SmaltiCore
+import TOMLConfigAdapter
+
+/// The app's one Appearance document (spec F5): edits apply at once to every window through `onApply`, and
+/// `theme.toml` is written 300 ms after the last one. "Recargar configuración" replaces the document with the files'.
+@MainActor
+final class AppearanceSession {
+    private let change: ChangeAppearance
+    private let store: TOMLAppearanceStore
+    private let themeFile: URL
+    /// Every window paints the new document (and the engine takes its terminal appearance).
+    var onApply: ((AppearanceDocument) -> Void)?
+    /// The open panels show the document again.
+    var onRefresh: (() -> Void)?
+
+    init(config: SmaltiConfig, themeFile: URL, onSaveError: @escaping @MainActor (ConfigError) -> Void) {
+        let document = AppearanceDocument(config: config)
+        let store = TOMLAppearanceStore(file: themeFile)
+        store.remember(document)
+        self.store = store
+        self.themeFile = themeFile
+        change = ChangeAppearance(
+            document: document, store: store, debouncer: TimerDebouncer(delay: ChangeAppearance.saveDelay),
+            onSaveError: onSaveError)
+        // A hand edit merged on save is painted and shown, like any other change (final review, I1).
+        change.onSaved = { [weak self] _ in self?.publish() }
+    }
+
+    var document: AppearanceDocument { change.document }
+
+    var state: AppearancePanelState {
+        AppearancePanelState(
+            document: change.document, applied: ThemeCatalog.apply(change.document.appearance),
+            savedIn: AppearanceTexts.savedIn(path: themeFile.path(percentEncoded: false), home: Self.home))
+    }
+
+    private static var home: String {
+        let path = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        return path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
+
+    func edit(_ edit: (inout AppearanceDocument) -> Void) {
+        change.apply(edit)
+        publish()
+    }
+
+    func selectTheme(_ id: ThemeID) {
+        change.selectTheme(id)
+        publish()
+    }
+
+    /// The files changed ("Recargar configuración"): show them; nothing is written back.
+    func reload(_ config: SmaltiConfig) {
+        let document = AppearanceDocument(config: config)
+        store.remember(document)
+        change.reload(document)
+        onRefresh?()
+    }
+
+    // MARK: - Prompt studio
+
+    /// A draft of the prompt over this document (spec F5): nothing changes until it is applied.
+    func promptEditor() -> EditPrompt { EditPrompt(appearance: change) }
+
+    /// "Aplicar a todos los paneles": written now, painted in every window and sent to every shell.
+    func applyPrompt(_ editor: EditPrompt) {
+        editor.apply()
+        publish()
+    }
+
+    var theme: Theme { ThemeCatalog.apply(change.document.appearance).theme }
+
+    /// "Exportar como starship.toml": the draft with this document's colors.
+    func starshipText(for draft: PromptConfig) -> String {
+        StarshipText.render(StarshipPreset.make(from: draft, theme: ThemeCatalog.apply(change.document.appearance)))
+    }
+
+    /// "Abrir theme.toml": written first if it does not exist yet, so there is something to open.
+    func openThemeFile() {
+        if !FileManager.default.fileExists(atPath: themeFile.path(percentEncoded: false)) { change.saveNow() }
+        URLOpener.open(themeFile)
+    }
+
+    /// Quitting: the change still waiting for its 300 ms is written.
+    func saveIfPending() { change.saveIfPending() }
+
+    private func publish() {
+        onApply?(change.document)
+        onRefresh?()
+    }
+}
+
+/// `Debouncer` on the main run loop: only the last action scheduled within `delay` runs.
+@MainActor
+final class TimerDebouncer: Debouncer {
+    private let delay: Duration
+    private var pending: Task<Void, Never>?
+
+    init(delay: Duration) {
+        self.delay = delay
+    }
+
+    func schedule(_ action: @escaping @MainActor () -> Void) {
+        pending?.cancel()
+        pending = Task { [delay] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            action()
+        }
+    }
+
+    func cancel() {
+        pending?.cancel()
+        pending = nil
+    }
+}

@@ -31,6 +31,9 @@ public enum InputRouting {
             return .openMenu(seq: seq, line: line, result: result)
         case .history(let seq, let query):
             return .openHistory(seq: seq, query: query)
+        case .context:
+            // F5: the app hands `context` to `RenderPrompt` (spec F5, T17); nothing to route here.
+            return .none
         case .bye:
             return .none
         }

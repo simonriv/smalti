@@ -19,7 +19,7 @@ struct KeymapF45Tests {
 
     @Test(arguments: [
         ("cmd+n", CommandID.windowNew), ("shift+cmd+w", .windowClose), ("ctrl+cmd+f", .windowFullscreen),
-        ("cmd+m", .windowMinimize), ("cmd+?", .helpShow), ("cmd+,", .configOpen), ("cmd+c", .terminalCopy),
+        ("cmd+m", .windowMinimize), ("cmd+?", .helpShow), ("opt+cmd+,", .configOpen), ("cmd+c", .terminalCopy),
         ("cmd+v", .terminalPaste), ("cmd+a", .terminalSelectAll), ("cmd+l", .terminalClear), ("cmd+f", .searchOpen),
         ("cmd+g", .searchNext), ("shift+cmd+g", .searchPrevious), ("cmd+plus", .fontIncrease),
         ("cmd+-", .fontDecrease), ("cmd+0", .fontReset), ("cmd+pageup", .scrollPageUp),

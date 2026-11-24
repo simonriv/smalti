@@ -84,7 +84,7 @@ enum SmaltiInputScript {
                 _smalti_input_ghost=$1
                 POSTDISPLAY=$1
                 region_highlight=("${(@)region_highlight:#*memo=smalti}")
-                [[ -n $1 ]] && region_highlight+=("${#BUFFER} $(( ${#BUFFER} + ${#1} )) fg=${SMALTI_GHOST_COLOR:-#5f6672} memo=smalti")
+                [[ -n $1 ]] && region_highlight+=("${#BUFFER} $(( ${#BUFFER} + ${#1} )) fg=${_smalti_ghost_color:-${SMALTI_GHOST_COLOR:-#5f6672}} memo=smalti")
             }
 
             # Only the shell's own prompt takes part: from `precmd` to `preexec`. `vared` and `select` read lines
@@ -163,6 +163,9 @@ enum SmaltiInputScript {
                         _smalti_input_is_current "$fields[2]" || return 0
                         _smalti_input_widget '^I' expand-or-complete
                         ;;
+                    prompt|promptstyle)
+                        _smalti_prompt_apply "$1"
+                        ;;
                 esac
                 return 0
             }
@@ -171,23 +174,27 @@ enum SmaltiInputScript {
             # answer stays in the inbox until its newline arrives. EOF disables the channel.
             _smalti_input_drain() {
                 emulate -L zsh
-                local chunk lines line
+                local chunk lines line closed=0
                 local -a reply
                 while [[ -n $_smalti_input_fd ]] && zselect -t 0 -r $_smalti_input_fd 2>/dev/null; do
                     chunk=
                     if ! sysread -i $_smalti_input_fd -s 4096 chunk 2>/dev/null || [[ -z $chunk ]]; then
-                        _smalti_input_disable
-                        return 0
+                        closed=1
+                        break
                     fi
                     _smalti_input_inbox+=$chunk
                 done
-                [[ $_smalti_input_inbox == *$'\n'* ]] || return 0
-                lines=${_smalti_input_inbox%$'\n'*}
-                _smalti_input_inbox=${_smalti_input_inbox##*$'\n'}
-                [[ $1 == discard ]] && return 0
-                for line in "${(@f)lines}"; do
-                    _smalti_input_apply "$line"
-                done
+                # The last answers can arrive together with the end of the channel: they still count (F5).
+                if [[ $_smalti_input_inbox == *$'\n'* ]]; then
+                    lines=${_smalti_input_inbox%$'\n'*}
+                    _smalti_input_inbox=${_smalti_input_inbox##*$'\n'}
+                    for line in "${(@f)lines}"; do
+                        # Away from the prompt (vared, select) only a new style still counts (block 3 review, M4).
+                        [[ $1 == discard && $line != promptstyle$'\t'* ]] && continue
+                        _smalti_input_apply "$line"
+                    done
+                fi
+                (( closed )) && _smalti_input_disable
             }
 
             # `zle -F -w` handler (widget handlers get no error argument: a failed read tells instead). It always
@@ -338,17 +345,37 @@ enum SmaltiInputScript {
                 return 0
             }
 
+        \#(SmaltiPromptScript.functions)
+
             _smalti_input_install() {
+                local code=$?
                 emulate -L zsh
                 precmd_functions=(${precmd_functions:#_smalti_input_install})
-                zmodload zsh/net/socket zsh/zselect zsh/system 2>/dev/null || return 0
+                zmodload zsh/net/socket zsh/zselect zsh/system zsh/datetime 2>/dev/null || return 0
                 zsocket "$SMALTI_INPUT_SOCKET" 2>/dev/null || return 0
                 # Moved to a descriptor of ten or more: the user's `exec 3>file` must never receive Smalti's lines.
                 local low=$REPLY
                 { exec {_smalti_input_fd}>&$low } 2>/dev/null || { { exec {low}>&- } 2>/dev/null; return 0 }
                 { exec {low}>&- } 2>/dev/null
-                _smalti_input_remember
                 zle -N _smalti_input_receive
+                zle -F -w $_smalti_input_fd _smalti_input_receive
+                # `SMALTI_INPUT_FEATURES=0`: Smalti's prompt only (spec F5); ghost, Tab, ⌃R and history stay off.
+                if [[ ${SMALTI_INPUT_FEATURES:-1} != 0 ]]; then
+                    _smalti_input_widgets
+                fi
+                preexec_functions+=(_smalti_prompt_preexec)
+                zshexit_functions+=(_smalti_input_bye)
+                _smalti_input_prompt=1
+                _smalti_input_send "hello"$'\t'"$SMALTI_PANE_ID"
+                # The first prompt is on screen already: its context goes now, with the startup files' last status
+                # (block 3 review, M3); it also puts the precmd hook in place for the later ones.
+                _smalti_prompt_context $code
+                return 0
+            }
+
+            _smalti_input_widgets() {
+                emulate -L zsh
+                _smalti_input_remember
                 zle -N smalti-accept
                 zle -N smalti-accept-end
                 zle -N smalti-complete
@@ -357,7 +384,6 @@ enum SmaltiInputScript {
                 zle -N _smalti_input_redraw
                 zle -N _smalti_input_line_init
                 zle -N _smalti_input_line_finish
-                zle -F -w $_smalti_input_fd _smalti_input_receive
                 autoload -Uz add-zle-hook-widget
                 add-zle-hook-widget line-pre-redraw _smalti_input_redraw
                 add-zle-hook-widget line-init _smalti_input_line_init
@@ -376,9 +402,6 @@ enum SmaltiInputScript {
                 done
                 preexec_functions+=(_smalti_input_preexec)
                 precmd_functions+=(_smalti_input_precmd)
-                zshexit_functions+=(_smalti_input_bye)
-                _smalti_input_prompt=1
-                _smalti_input_send "hello"$'\t'"$SMALTI_PANE_ID"
                 return 0
             }
             typeset -ag precmd_functions preexec_functions zshexit_functions

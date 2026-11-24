@@ -5,6 +5,19 @@ import Testing
 struct KeyRoutingTests {
     private func chord(_ text: String) throws -> KeyChord { try KeyChord.parse(text) }
 
+    /// F5: a panel with its own controls (the prompt studio) runs only its commands; every other shortcut, ⌘↓
+    /// among them, reaches the focused control instead of being eaten.
+    @Test func panelLetsOtherShortcutsReachItsControls() throws {
+        let context = KeyContext.panel(allowing: [.promptStudio])
+
+        #expect(
+            KeyRouting.decide(KeyPress(try chord("cmd+down"), isRepeat: false), keymap: .standard, context: context)
+                == .passThrough)
+        #expect(
+            KeyRouting.decide(KeyPress(try chord("cmd+shift+p"), isRepeat: false), keymap: .standard, context: context)
+                == .perform(.promptStudio))
+    }
+
     @Test func boundChordPerformsItsCommand() throws {
         let decision = KeyRouting.decide(KeyPress(try chord("cmd+d"), isRepeat: false), keymap: .standard)
 

@@ -21,7 +21,8 @@ struct ZshChannelTests {
 
         zsh.type("ls")
 
-        #expect(server.waitFor { $0.contains { $0.hasPrefix("line\t2\t") && $0.hasSuffix("\t2\tls") } })
+        // seq 1 is the first prompt's `context` (F5); the two keystrokes are 2 and 3.
+        #expect(server.waitFor { $0.contains { $0.hasPrefix("line\t3\t") && $0.hasSuffix("\t2\tls") } })
         #expect(server.received.first?.hasPrefix("hello\t6F2B4E1C") == true)
     }
 

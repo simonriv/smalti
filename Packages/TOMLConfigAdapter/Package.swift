@@ -25,6 +25,7 @@ let package = Package(
                 "TOMLConfigAdapter",
                 .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
+                .product(name: "TOMLDecoder", package: "TOMLDecoder"),
             ],
             exclude: ["Fixtures"]),
     ]
