@@ -20,13 +20,16 @@ struct FilePromptFactsTests {
             self.answers = answers
         }
 
-        func run(_ executable: String, _ arguments: [String], in directory: String, timeout: Duration) async -> String?
+        func run(_ executable: String, _ arguments: [String], in directory: String, timeout: Duration)
+            async throws(CommandError) -> String
         {
             let line = ([executable] + arguments).joined(separator: " ")
-            return lock.withLock {
+            let answer = lock.withLock {
                 calls.append(line)
                 return answers[line]
             }
+            guard let answer else { throw .timedOut }
+            return answer
         }
 
         var callCount: Int {
@@ -224,26 +227,48 @@ struct FilePromptFactsTests {
 
 @Suite("SystemCommandRunner")
 struct SystemCommandRunnerTests {
-    @Test func returnsStandardOutput() async {
-        let output = await SystemCommandRunner().run("/bin/echo", ["hola"], in: "/tmp", timeout: .seconds(2))
+    @Test func returnsStandardOutput() async throws {
+        let output = try await SystemCommandRunner().run("/bin/echo", ["hola"], in: "/tmp", timeout: .seconds(2))
 
         #expect(output == "hola\n")
     }
 
-    @Test func timeoutGivesNilQuickly() async {
+    @Test func timeoutThrowsQuickly() async {
         let start = ContinuousClock.now
 
-        let output = await SystemCommandRunner().run("/bin/sleep", ["5"], in: "/tmp", timeout: .milliseconds(100))
-
-        #expect(output == nil)
+        await #expect(throws: CommandError.timedOut) {
+            try await SystemCommandRunner().run("/bin/sleep", ["5"], in: "/tmp", timeout: .milliseconds(100))
+        }
         #expect(ContinuousClock.now - start < .seconds(2))
     }
 
-    @Test func failureGivesNil() async {
-        #expect(await SystemCommandRunner().run("/usr/bin/false", [], in: "/tmp", timeout: .seconds(2)) == nil)
+    @Test func failureThrowsItsStatus() async {
+        await #expect(throws: CommandError.failed(status: 1)) {
+            try await SystemCommandRunner().run("/usr/bin/false", [], in: "/tmp", timeout: .seconds(2))
+        }
     }
 
-    @Test func missingExecutableGivesNil() async {
-        #expect(await SystemCommandRunner().run("/nonexistent", [], in: "/tmp", timeout: .seconds(2)) == nil)
+    @Test func missingExecutableCannotStart() async {
+        await #expect(throws: CommandError.couldNotStart) {
+            try await SystemCommandRunner().run("/nonexistent", [], in: "/tmp", timeout: .seconds(2))
+        }
+    }
+
+    /// Block 3 review (I3): a grandchild that keeps standard output open must not hold the answer past the child.
+    @Test func grandchildHoldingOutputDoesNotBlock() async throws {
+        let start = ContinuousClock.now
+
+        let output = try await SystemCommandRunner().run(
+            "/bin/sh", ["-c", "sleep 5 & echo hola"], in: "/tmp", timeout: .seconds(3))
+
+        #expect(output == "hola\n")
+        #expect(ContinuousClock.now - start < .seconds(1))
+    }
+
+    @Test func largeOutputIsReadWhole() async throws {
+        let output = try await SystemCommandRunner().run(
+            "/bin/sh", ["-c", "yes 0123456789 | head -c 1000000"], in: "/tmp", timeout: .seconds(5))
+
+        #expect(output.utf8.count == 1_000_000)
     }
 }

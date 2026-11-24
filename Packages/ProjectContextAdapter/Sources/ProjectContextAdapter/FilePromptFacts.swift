@@ -40,7 +40,8 @@ public actor FilePromptFacts: PromptFacts {
         }
         // `--no-optional-locks`: never take `index.lock` from under the user's own `git commit` (block 3 review, I2).
         let arguments = ["--no-optional-locks", "status", "--porcelain=v2", "--untracked-files=no"]
-        guard let output = await runner.run(Self.git, arguments, in: directory, timeout: Self.gitTimeout) else {
+        // Any failure (slow repository, git missing) only leaves the module out.
+        guard let output = try? await runner.run(Self.git, arguments, in: directory, timeout: Self.gitTimeout) else {
             return nil
         }
         let changes = GitStatusReader.changes(in: output)
@@ -54,7 +55,7 @@ public actor FilePromptFacts: PromptFacts {
         if let cached = versions[path], cached.date == date, date != nil {
             return cached.version.map { RuntimeVersion(kind: kind, version: $0) }
         }
-        let output = await runner.run(
+        let output = try? await runner.run(
             path, RuntimeVersions.arguments(for: kind), in: directory.path(percentEncoded: false),
             timeout: Self.versionTimeout)
         let version = output.flatMap(RuntimeVersions.majorMinor)
