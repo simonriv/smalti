@@ -8,7 +8,7 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
+F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F6 Multi-harness ──▶ F7 Extras
 ```
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3 y F4.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5 y F5.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -94,9 +94,17 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F5 · Apariencia y prompt
 
 - **Objetivo:** cambiar tema, prompt y layout sin editar archivos a mano.
-- **Entregables:** temas Obsidiana, Niebla, Ámbar nocturno y Bosque; vidrio ajustable (opacidad 30–95 %, desenfoque 0–48 px); "Proteger legibilidad" (contraste 4.5:1); paleta ANSI editable; botones de ventana (ocultos, al pasar el cursor o visibles); tipografía, espacio y radio; estudio de prompt con plantillas, módulos, iconos y exportación a `starship.toml`; previews de imágenes (kitty, hover sobre enlace, Quick Look). UI y TOML equivalentes en las dos direcciones.
+- **Entregables:** temas Obsidiana, Niebla, Ámbar nocturno y Bosque; vidrio ajustable (opacidad 30–95 %, desenfoque 0–48 px); "Proteger legibilidad" (contraste 4.5:1); paleta ANSI editable; botones de ventana (ocultos, al pasar el cursor o visibles); tipografía, espacio y radio; estudio de prompt con plantillas, módulos, iconos y exportación a `starship.toml`. UI y TOML (`theme.toml`) equivalentes en las dos direcciones. Heredado: contraste del texto fantasma, botones de ventana (Zoom sin botón desde F4.5) e issue #5 (GPU en reposo). Las previews de imágenes pasan a F5.5 (Simón, 2026-11-23).
+- **Spec:** `docs/specs/F5-apariencia-prompt.md` (aprobada 2026-11-23).
 - **Criterio de cierre:** cada ajuste de `Apariencia.dc.html` y `Prompt.dc.html` se cambia desde la UI y se refleja en el TOML, y al revés. Una prueba de ida y vuelta lo verifica. El contraste medido nunca baja de 4.5:1 con "Proteger legibilidad" activo.
 - **Dependencias:** F1 (`ConfigStore`) y F4 (la zona del prompt la controla Smalti).
+
+## F5.5 · Previews
+
+- **Objetivo:** ver imágenes sin salir de la terminal.
+- **Entregables:** imágenes inline por el protocolo de gráficos de kitty (lo soporta libghostty); vista previa al pasar el cursor sobre un enlace a imagen; espacio abre Quick Look.
+- **Criterio de cierre:** por definir en su spec.
+- **Dependencias:** F5 (temas y superposiciones). Separada de F5 por Simón (2026-11-23): no comparte nada con temas ni prompt.
 
 ## F6 · Multi-harness y Neovim
 

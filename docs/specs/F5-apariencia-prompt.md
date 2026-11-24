@@ -1,6 +1,6 @@
 # F5 · Apariencia y prompt — Spec
 
-Estado: borrador para aprobar · 2026-11-23 · Roadmap: `docs/ROADMAP.md#f5--apariencia-y-prompt`
+Estado: aprobada · 2026-11-23 · Roadmap: `docs/ROADMAP.md#f5--apariencia-y-prompt`
 Diseño: `docs/design/Apariencia.dc.html` y `docs/design/Prompt.dc.html` (tableros aprobados). Lo que los tableros no cubren está en las maquetas de `F5-assets/`, que se aprueban con esta spec: `mockup-themes` (los cuatro temas), `mockup-buttons` (botones de ventana), `mockup-prompt` (el prompt en el panel y "Solo símbolo") y `mockup-legibility` ("Proteger legibilidad" sobre escritorio blanco). Cada una es un `.html` más su `.png`, y se regeneran con `generate-mockups.py`, que además comprueba el contraste de los temas.
 
 ## Objetivo

@@ -200,3 +200,11 @@
 #### Bloque 5 · Cierre
 - [x] T17 · Checklist (`docs/specs/F4.5-checklist.md`), revisión final de la rama (6 importantes y 10 menores corregidos, cada uno con su prueba en rojo y en verde), mutación de lo cambiado en F4.5 90,2 % (23 sobrevivientes muertos con prueba nueva); SmaltiCore 1107, GhosttyAdapter 208, TOMLConfigAdapter 80, DiagnosticsAdapter 10
 - [x] PR a `develop` (#23) y PR `develop` → `main` (#24) fusionados por Simón; Release 0.4.5 (`81f154d`) instalado en `/Applications` y confirmado (2026-11-23)
+
+## F5 · Apariencia y prompt
+
+### Spec
+- [x] Aprobada (`docs/specs/F5-apariencia-prompt.md`, 2026-11-23): prompt generado por Smalti (A), previews a F5.5, `theme.toml`, "Proteger legibilidad" activa sobre el peor escritorio, AppKit, agentes que esperan en vivo, prompt de Smalti por defecto
+
+### Plan
+- [ ] Plan de implementación (`docs/plans/F5-apariencia-prompt.md`)
