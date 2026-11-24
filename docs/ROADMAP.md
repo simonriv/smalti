@@ -116,7 +116,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - El scroll con el trackpad o la rueda solo recorre parte de la lista y obliga a usar las flechas para ver todas las opciones; debe recorrerla entera.
 - **Iconos del prompt** (Simón, 2026-11-24): los de `SmaltiSymbols` (casa, rama, reloj…) se ven diminutos; pasan a la altura de las mayúsculas de JetBrains Mono o algo más, con lámina antes/después y capturas en los cuatro temas.
 - **Spec:** `docs/specs/F5.6-resaltado.md` (aprobada 2026-11-24).
-- **Criterio de cierre:** el resaltado llega en p99 < 16 ms de extremo a extremo sin empeorar el fantasma de F4 más de un 10 %; ⌘K muestra solo la acción de integración que aplica y su lista se recorre entera con trackpad o rueda; lámina antes/después de los iconos aprobada.
+- **Criterio de cierre:** el resaltado llega en p99 < 16 ms de extremo a extremo y el fantasma de F4 sigue en p99 < 16 ms, con la mediana a menos de un 10 % y el p99 a menos de 2 ms de la base (enmienda 6 de la spec); ⌘K muestra solo la acción de integración que aplica y su lista se recorre entera con trackpad o rueda; lámina antes/después de los iconos aprobada.
 - **Dependencias:** F4 (canal con zsh, specs de Fig, `region_highlight` con `memo=smalti`) y F5 (temas y colores de rol). Separada de F5.5: no comparte nada con las previews.
 
 ## F6 · Multi-harness y Neovim
