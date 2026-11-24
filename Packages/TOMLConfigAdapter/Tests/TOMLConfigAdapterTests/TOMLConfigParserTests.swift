@@ -32,10 +32,12 @@ struct TOMLConfigParserTests {
 
     // MARK: Values
 
+    /// The fixture writes every key, `accent` included: since F5 a written accent is the user's choice, so the result
+    /// is the defaults with Obsidiana's accent chosen explicitly.
     @Test func fullDefaultFileRoundTripsToDefaults() throws {
         let config = try parseFixture("defaults")
 
-        #expect(config == .defaults)
+        #expect(config == .defaultsWithExplicitAccent)
     }
 
     @Test func emptyTextGivesDefaults() throws {
@@ -399,7 +401,7 @@ struct TOMLF45Tests {
     @Test func templateUncommentedEqualsDefaults() throws {
         let text = ConfigTemplate.uncommented(ConfigTemplate.text(defaults: .defaults))
 
-        #expect(try parse(text) == .defaults)
+        #expect(try parse(text) == .defaultsWithExplicitAccent)
     }
 
     @Test func templateAsWrittenReadsAsDefaults() throws {
@@ -429,5 +431,14 @@ struct TOMLTemplateExampleTests {
 
         #expect(!example.isEmpty)
         #expect(throws: Never.self) { try TOMLConfigParser.parse(example, file: "config.toml") }
+    }
+}
+
+extension SmaltiConfig {
+    /// `SmaltiConfig.defaults` with `accent` written out, as a file that lists every key reads.
+    fileprivate static var defaultsWithExplicitAccent: SmaltiConfig {
+        var config = SmaltiConfig.defaults
+        config.appearance.accent = Theme.obsidian.accent
+        return config
     }
 }

@@ -1,6 +1,7 @@
 /// Look settings the user can change; the named parameter object that carries appearance into `Theme.applying`. Defaults are the Obsidiana theme.
 public struct AppearanceSettings: Equatable, Sendable {
-    public var accent: RGBAColor
+    /// `nil`: the theme's own accent (spec F5). Only the TOML sets it; choosing a theme in the UI clears it.
+    public var accent: RGBAColor?
     public var glassOpacity: Double
     public var blur: Double
     public var fontFamily: String
@@ -9,7 +10,7 @@ public struct AppearanceSettings: Equatable, Sendable {
     public var radius: Double
 
     public init(
-        accent: RGBAColor, glassOpacity: Double, blur: Double, fontFamily: String, fontSize: Double, gap: Double,
+        accent: RGBAColor?, glassOpacity: Double, blur: Double, fontFamily: String, fontSize: Double, gap: Double,
         radius: Double
     ) {
         self.accent = accent
@@ -20,6 +21,12 @@ public struct AppearanceSettings: Equatable, Sendable {
         self.gap = gap
         self.radius = radius
     }
+
+    /// F5, outside the initializer like `SmaltiConfig.observatory`: the theme, "Proteger legibilidad" and the ANSI
+    /// edits of each theme.
+    public var theme = ThemeID.obsidiana
+    public var protectLegibility = true
+    public var ansiOverrides: [ThemeID: [Int: RGBAColor]] = [:]
 
     public static let maximumFontFamilyLength = 100
 
@@ -35,7 +42,7 @@ public struct AppearanceSettings: Equatable, Sendable {
     }
 
     public static let obsidian = AppearanceSettings(
-        accent: Theme.obsidian.accent,
+        accent: nil,
         glassOpacity: Theme.obsidian.window.background.alpha,
         blur: Theme.obsidian.window.blurRadius,
         fontFamily: Theme.obsidian.terminal.fontFamily,

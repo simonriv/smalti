@@ -42,4 +42,6 @@ public struct RGBAColor: Equatable, Hashable, Sendable {
 
 public enum ColorError: Error, Equatable, Sendable {
     case invalidHex(String)
+    /// `[appearance.ansi.<tema>]` names an index outside 0–15.
+    case ansiIndexOutOfRange(Int)
 }
