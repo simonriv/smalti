@@ -1,4 +1,5 @@
 import AppKit
+import Quartz
 import SmaltiCore
 
 /// Borderless-looking glass window: no traffic lights, rounded, dragged from the top strip.
@@ -18,6 +19,18 @@ final class SmaltiWindow: NSWindow {
     private(set) var buttons: WindowButtonsController?
     /// The close button asks like ⇧⌘W (spec F5); AppKit never closes the window by itself.
     var onCloseRequest: (() -> Void)?
+    /// F5.5 ⌘Y: the Quick Look panel's source while this window controls it.
+    let quickLook = QuickLookPresenter()
+
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = quickLook
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = nil
+    }
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
     var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 

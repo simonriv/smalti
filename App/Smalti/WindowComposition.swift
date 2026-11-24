@@ -367,6 +367,8 @@ final class WindowComposition {
             case .observatoryPeriod: screen?.cyclePeriod()
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
+            case .previewQuickLook:
+                self.preview?.toggleQuickLook()
             case .helpShow:
                 closeOverlays(keeping: .help)
                 self.help?.toggle(theme: theme)

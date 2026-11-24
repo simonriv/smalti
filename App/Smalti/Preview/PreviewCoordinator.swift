@@ -44,6 +44,12 @@ final class PreviewCoordinator {
     /// The image of the card on screen, for ⌘Y.
     var visibleCard: PreviewCard? { preview?.current }
 
+    /// ⌘Y: closes Quick Look when it shows (the card hid when the panel took the keyboard), or opens it on the card's
+    /// image; without either, nothing.
+    func toggleQuickLook() {
+        (window as? SmaltiWindow)?.quickLook.toggle(visibleCard?.path)
+    }
+
     func pointerWordChanged(_ word: PointerWord?, in pane: PaneID) {
         requests += 1
         let request = requests
@@ -69,8 +75,10 @@ final class PreviewCoordinator {
     private static let noContext = PreviewContext(workingDirectory: nil, home: "", lastCommand: nil)
 
     private func watchForDismissal() {
+        // A shortcut (⌘Y above all) is a command, not typing: it leaves the card for the command to use.
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .scrollWheel]) { [weak self] event in
-            if event.window === self?.window { self?.hide() }
+            let isShortcut = event.type == .keyDown && event.modifierFlags.contains(.command)
+            if event.window === self?.window, !isShortcut { self?.hide() }
             return event
         }
         resignObserver = NotificationCenter.default.addObserver(

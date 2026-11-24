@@ -138,6 +138,44 @@ final class PreviewTests: SmaltiUITestCase {
         XCTAssertEqual(card.value as? String, "sin fundido")
     }
 
+    // MARK: - Quick Look
+
+    /// The system's Quick Look panel, titled in the system's language.
+    private var quickLookWindows: XCUIElementQuery {
+        app.windows.matching(NSPredicate(format: "title IN %@", ["Vista rápida", "Quick Look"]))
+    }
+
+    func testCommandYOpensQuickLook() {
+        showCard()
+
+        app.typeKey("y", modifierFlags: .command)
+
+        XCTAssertTrue(quickLookWindows.firstMatch.waitForExistence(timeout: 5))
+        app.typeKey("y", modifierFlags: .command)
+        XCTAssertTrue(waitUntil(timeout: 5) { self.quickLookWindows.count == 0 })
+    }
+
+    func testCommandYWithoutCardDoesNothing() {
+        launchPreview()
+        list("ls -1")
+        let windows = app.windows.count
+
+        app.typeKey("y", modifierFlags: .command)
+
+        XCTAssertFalse(waitUntil(timeout: 2) { self.app.windows.count != windows })
+        XCTAssertEqual(quickLookWindows.count, 0)
+    }
+
+    func testQuickLookIsInThePalette() {
+        launchPreview()
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.palette").waitForExistence(timeout: 5))
+
+        app.typeText("quick")
+
+        XCTAssertTrue(app.staticTexts["Abrir en Quick Look"].waitForExistence(timeout: 5))
+    }
+
     // MARK: - Helpers
 
     private func launchPreview(config: String? = nil, reduceMotion: Bool = false) {
