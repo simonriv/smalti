@@ -17,6 +17,9 @@ public enum GhosttyConfigText {
     /// the other basics are Smalti commands that reach the engine through `TerminalEngine.perform`.
     static let keybinds = ["keybind = clear"]
 
+    /// `SmaltiSymbols`' private-use range (spec F5).
+    static let iconCodepoints = "U+E900-U+E91F"
+
     public static func render(_ appearance: TerminalAppearance) -> String {
         let settings = [
             "font-size = \(number(appearance.fontSize))",
@@ -36,6 +39,8 @@ public enum GhosttyConfigText {
             "confirm-close-surface = true",
             // F4.5: libghostty asks for secure keyboard entry at password prompts (`SECURE_INPUT`).
             "macos-auto-secure-input = true",
+            // F5: the prompt's thin-stroke icons come from Smalti's own font, registered for the process.
+            "font-codepoint-map = \(iconCodepoints)=SmaltiSymbols",
         ]
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
         return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"

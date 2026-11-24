@@ -33,7 +33,7 @@ final class ZshHarness: @unchecked Sendable {
             zle -N _test_dump
             bindkey '^X^D' _test_dump
             bindkey -M viins '^X^D' _test_dump
-            _test_prompt() { print -r -- "$(print -rP -- "$PROMPT")"$'\\x1f'"$PROMPT"$'\\x1f'"${precmd_functions[-1]}"$'\\x1f'"$BUFFER"$'\\x1f'"$(bindkey '^I')" >| \(dump)-prompt }
+            _test_prompt() { print -r -- "$(print -rP -- "$PROMPT")"$'\\x1f'"$PROMPT"$'\\x1f'"${precmd_functions[-2]} ${precmd_functions[-1]}"$'\\x1f'"$BUFFER"$'\\x1f'"$(bindkey '^I')" >| \(dump)-prompt }
             zle -N _test_prompt
             bindkey '^X^P' _test_prompt
             \(zshrc)
@@ -102,7 +102,9 @@ final class ZshHarness: @unchecked Sendable {
         guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         let parts = text.trimmingCharacters(in: .newlines).components(separatedBy: "\u{1f}")
         guard parts.count == 5 else { return nil }
-        let shown = parts[0].replacingOccurrences(of: "\u{1b}\\[[0-9;]*m", with: "", options: .regularExpression)
+        let shown = parts[0]
+            .replacingOccurrences(of: "\u{1b}\\][^\u{07}]*\u{07}", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\u{1b}\\[[0-9;]*m", with: "", options: .regularExpression)
         return PromptState(shown: shown, raw: parts[1], lastPrecmd: parts[2], buffer: parts[3], tab: parts[4])
     }
 

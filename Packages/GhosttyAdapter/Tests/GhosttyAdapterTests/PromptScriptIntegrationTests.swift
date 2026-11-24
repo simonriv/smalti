@@ -5,15 +5,15 @@ import Testing
 /// full prompt when Smalti answers, never waiting, never running a name, and the user's prompt when asked.
 @Suite("zsh prompt from Smalti", .serialized)
 struct PromptScriptIntegrationTests {
-    static let immediate = "IMM:${_smalti_dir}${_smalti_duration:+ }${_smalti_duration} ${_smalti_sym} "
-    static let full = "FULL:${_smalti_p_1} ${_smalti_sym} "
+    static let immediate = "IMM:%2v%(3V. .)%3v %1v "
+    static let full = "FULL:%4v %1v "
 
     static func style(ghost: String = "#5f6672", immediate: String = immediate, symbol: String = "›") -> String {
-        "promptstyle\t\(immediate)\t\(ghost)\t_smalti_sym=\(symbol)"
+        "promptstyle\t\(immediate)\t\(ghost)\t1=\(symbol)"
     }
 
     static func prompt(seq: String, branch: String) -> String {
-        "prompt\t\(seq)\tsolen\t\(immediate)\t\(full)\t_smalti_p_1=\(branch)\u{1f}_smalti_sym=›"
+        "prompt\t\(seq)\tsolen\t\(immediate)\t\(full)\t4=\(branch)\u{1f}1=›"
     }
 
     /// Styles at hello; answers every `context` with a full prompt carrying `branch`.
@@ -138,7 +138,9 @@ struct PromptScriptIntegrationTests {
 
         zsh.type("\r", settle: 0.5)
 
-        #expect(zsh.dumpPrompt()?.raw == "p%% ")
+        let raw = zsh.dumpPrompt()?.raw ?? ""
+        #expect(raw.contains("p%% "))
+        #expect(!raw.contains("IMM:"))
     }
 
     @Test func switchingToShellSourceRestoresUserPrompt() throws {
@@ -150,7 +152,9 @@ struct PromptScriptIntegrationTests {
         server.push(Self.style(immediate: ""))
         zsh.type("\r", settle: 0.4)
 
-        #expect(zsh.dumpPrompt()?.raw == "p%% ")
+        let raw = zsh.dumpPrompt()?.raw ?? ""
+        #expect(raw.contains("p%% "))
+        #expect(!raw.contains("IMM:"))
     }
 
     @Test func smaltiPromptWinsOverZshrcAndStarshipLikeHook() throws {
@@ -164,7 +168,8 @@ struct PromptScriptIntegrationTests {
         let state = zsh.dumpPrompt()
 
         #expect(state?.shown.hasPrefix("IMM:") == true, "\(state?.shown ?? "")")
-        #expect(state?.lastPrecmd == "_smalti_prompt_precmd")
+        // Smalti's hook right before Ghostty's, which stays last to add its OSC 133 marks.
+        #expect(state?.lastPrecmd == "_smalti_prompt_precmd _ghostty_precmd")
     }
 
     @Test func spontaneousPromptKeepsBuffer() throws {
@@ -201,7 +206,8 @@ struct PromptScriptIntegrationTests {
         let server = try FakeInputServer { fields in
             switch fields.first {
             case "hello": [Self.style()]
-            case "context": ["prompt\t\(fields[1])\tx\t\(Self.immediate)\tFULL:${PATH}\tPATH=/nowhere\u{1f}_smalti_sym=›"]
+            case "context":
+                ["prompt\t\(fields[1])\tx\t\(Self.immediate)\tFULL:%4v\tPATH=/nowhere\u{1f}4=ok\u{1f}99999=z\u{1f}1=›"]
             default: []
             }
         }
@@ -210,7 +216,10 @@ struct PromptScriptIntegrationTests {
 
         zsh.type("\r", settle: 0.5)
 
-        #expect(zsh.dumpPrompt()?.shown.hasPrefix("FULL:/usr/bin") == true)
+        #expect(zsh.dumpPrompt()?.shown == "FULL:ok")
+        zsh.type("print -r -- $PATH >| $HOME/path\r", settle: 0.3)
+        #expect(
+            (try? String(contentsOf: zsh.work.appending(path: "path"), encoding: .utf8))?.hasPrefix("/usr/bin") == true)
     }
 
     @Test func ghostColorChangesLive() throws {
@@ -249,5 +258,18 @@ struct PromptScriptIntegrationTests {
         zsh.type("\r", settle: 0.4)
 
         #expect(zsh.dumpPrompt()?.tab.contains("smalti-complete") == false)
+    }
+
+    @Test func fullPromptKeepsTheOSC133Marks() throws {
+        let server = try FakeInputServer(reply: Self.answering(branch: "main"))
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+        let raw = zsh.dumpPrompt()?.raw ?? ""
+
+        #expect(raw.contains("FULL:"))
+        #expect(raw.contains("]133;A"))
+        #expect(raw.contains("]133;B"))
     }
 }
