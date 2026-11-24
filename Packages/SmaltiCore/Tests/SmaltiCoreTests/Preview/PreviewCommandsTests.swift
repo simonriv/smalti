@@ -58,9 +58,10 @@ struct PreviewCommandsTests {
     @Test func keymapsBindingTheSameChordToOtherCommandsDiffer() throws {
         let y = try KeyChord.parse("cmd+y")
 
-        let other = try Keymap.standard.overriding([y: .paletteOpen])
+        let first = try Keymap.standard.overriding([y: .themeNext])
+        let second = try Keymap.standard.overriding([y: .ansiReset])
 
-        #expect(other != Keymap.standard)
+        #expect(first != second)
     }
 
     @Test func previewDefaultsToHover() {
