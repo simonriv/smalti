@@ -134,6 +134,13 @@ public actor InputSession {
         HistorySearch.search(query, scope: scope, in: index)
     }
 
+    /// The pane's command in flight, or else its last finished one (spec F5.5: where `ls shots/` listed); never one the
+    /// secret filter flags.
+    public func lastCommand(in pane: PaneID) -> String? {
+        let command = running[pane]?.command ?? previous[pane]?.command
+        return command.flatMap { SecretFilter.isSensitive($0) ? nil : $0 }
+    }
+
     /// RecordCommand, first half: zsh's `preexec`.
     public func began(_ command: String, pane: PaneID, directory: String) {
         running[pane] = Running(command: command, directory: directory, start: clock())
