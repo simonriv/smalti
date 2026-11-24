@@ -52,14 +52,17 @@ public actor FilePromptFacts: PromptFacts {
     private func runtime(for directory: URL, paths: [RuntimeKind: String]) async -> RuntimeVersion? {
         guard let kind = RuntimeVersions.kind(for: directory), let path = paths[kind] else { return nil }
         let date = modificationDate(of: path)
-        if let cached = versions[path], cached.date == date, date != nil {
+        // Per project too: a version shim (mise, asdf, volta) keeps its path and date while each project pins its own
+        // version (block 3 review, M5).
+        let key = path + "\u{0}" + directory.standardizedFileURL.path(percentEncoded: false)
+        if let cached = versions[key], cached.date == date, date != nil {
             return cached.version.map { RuntimeVersion(kind: kind, version: $0) }
         }
         let output = try? await runner.run(
             path, RuntimeVersions.arguments(for: kind), in: directory.path(percentEncoded: false),
             timeout: Self.versionTimeout)
         let version = output.flatMap(RuntimeVersions.majorMinor)
-        versions[path] = (date, version)
+        versions[key] = (date, version)
         return version.map { RuntimeVersion(kind: kind, version: $0) }
     }
 
@@ -165,11 +168,16 @@ enum RuntimeVersions {
 
 /// `current-context:` of a kubeconfig (`nil` path: `~/.kube/config`).
 enum KubeContext {
+    /// `KUBECONFIG` may list several files separated by `:`; kubectl takes the first `current-context` (M6).
     static func current(in kubeconfig: String?) -> String? {
-        let path =
+        let list =
             kubeconfig
-            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: ".kube/config")
-            .path(percentEncoded: false)
+            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: ".kube/config").path(
+                percentEncoded: false)
+        return list.split(separator: ":").lazy.compactMap { context(inFile: String($0)) }.first
+    }
+
+    private static func context(inFile path: String) -> String? {
         guard let text = try? String(contentsOf: URL(filePath: path), encoding: .utf8) else { return nil }
         return text.split(separator: "\n").lazy.compactMap { line -> String? in
             guard let match = line.firstMatch(of: /^current-context:\s*"?([^"\s]+)"?\s*$/) else { return nil }

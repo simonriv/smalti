@@ -272,3 +272,57 @@ struct SystemCommandRunnerTests {
         #expect(output.utf8.count == 1_000_000)
     }
 }
+
+/// Block 3 review (M5, M6): version shims answer per project; `KUBECONFIG` may list several files.
+@Suite("FilePromptFacts · review")
+struct FilePromptFactsReviewTests {
+    private final class CountingRunner: CommandRunner, @unchecked Sendable {
+        // Safe: only mutated under `lock`.
+        private let lock = NSLock()
+        private var count = 0
+
+        func run(_ executable: String, _ arguments: [String], in directory: String, timeout: Duration)
+            async throws(CommandError) -> String
+        {
+            lock.withLock { count += 1 }
+            return "v1.0.0"
+        }
+
+        var calls: Int { lock.withLock { count } }
+    }
+
+    private let root = FileManager.default.temporaryDirectory.appending(path: "smalti-facts-review-\(UUID())")
+
+    private func project(_ name: String) throws -> String {
+        let directory = root.appending(path: name)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try "".write(to: directory.appending(path: "package.json"), atomically: true, encoding: .utf8)
+        return directory.path(percentEncoded: false)
+    }
+
+    @Test func versionShimAnswersPerProject() async throws {
+        let shim = root.appending(path: "shims/node")
+        try FileManager.default.createDirectory(at: shim.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "".write(to: shim, atomically: true, encoding: .utf8)
+        let runner = CountingRunner()
+        let facts = FilePromptFacts(runner: runner)
+        let paths: [RuntimeKind: String] = [.node: shim.path(percentEncoded: false)]
+
+        _ = await facts.facts(for: PromptQuery(directory: try project("a"), runtimePaths: paths, kubeconfig: "/none"))
+        _ = await facts.facts(for: PromptQuery(directory: try project("b"), runtimePaths: paths, kubeconfig: "/none"))
+
+        #expect(runner.calls == 2)
+    }
+
+    @Test func kubeconfigWithSeveralFilesUsesTheFirstContext() async throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let second = root.appending(path: "second")
+        try "current-context: gke-west\n".write(to: second, atomically: true, encoding: .utf8)
+        let list = "/nonexistent/first:" + second.path(percentEncoded: false)
+
+        let facts = await FilePromptFacts(runner: CountingRunner()).facts(
+            for: PromptQuery(directory: root.path(percentEncoded: false), runtimePaths: [:], kubeconfig: list))
+
+        #expect(facts.kubeContext == "gke-west")
+    }
+}
