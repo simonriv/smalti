@@ -10,12 +10,14 @@ public struct PromptEnvironment: Sendable {
     public let now: @Sendable () -> Date
     /// The shell's zone for the clock module, so the full prompt agrees with the immediate `%D{%H:%M}`.
     public let timeZone: TimeZone
+    /// F5.6: `[input] highlighting` (and `[input] enabled`) as configured now.
+    public let highlighting: @MainActor () -> Bool
 
     public init(
         settings: @escaping @MainActor () -> (PromptConfig, AppliedTheme),
         agents: @escaping @MainActor (PaneID) -> WaitingAgents,
         workspace: @escaping @MainActor (PaneID) -> WorkspaceID?, home: String, now: @escaping @Sendable () -> Date,
-        timeZone: TimeZone = .current
+        timeZone: TimeZone = .current, highlighting: @escaping @MainActor () -> Bool = { true }
     ) {
         self.settings = settings
         self.agents = agents
@@ -23,6 +25,7 @@ public struct PromptEnvironment: Sendable {
         self.home = home
         self.now = now
         self.timeZone = timeZone
+        self.highlighting = highlighting
     }
 }
 
@@ -39,7 +42,7 @@ public final class RenderPrompt {
     private var pending: [PaneID: Int] = [:]
     /// The last `promptstyle` each shell received: a shell busy when a style went out (its socket full) gets it again
     /// with its next `context` (final review, I3).
-    private var deliveredStyles: [PaneID: SmaltiMessage] = [:]
+    private var deliveredStyles: [PaneID: [SmaltiMessage]] = [:]
     /// "Solo símbolo": the last prompt context of each shell, for its pane header; it stays while a command runs.
     private var lastShells: [PaneID: QuietShell] = [:]
     /// Characters a pane header gives the context before trimming the directory from the left.
@@ -96,14 +99,21 @@ public final class RenderPrompt {
         pending[pane] = nil
     }
 
-    /// The style `pane` still has to get: the current one when it never got it or got another; `nil` when up to date.
-    public func pendingStyle(for pane: PaneID) -> SmaltiMessage? {
-        let current = styleMessage()
-        return deliveredStyles[pane] == current ? nil : current
+    /// The styles `pane` still has to get: the current ones when it never got them or got others; empty when up to
+    /// date.
+    public func pendingStyles(for pane: PaneID) -> [SmaltiMessage] {
+        let current = styleMessages()
+        return deliveredStyles[pane] == current ? [] : current
     }
 
-    public func styleDelivered(_ style: SmaltiMessage, to pane: PaneID) {
-        deliveredStyles[pane] = style
+    public func stylesDelivered(_ styles: [SmaltiMessage], to pane: PaneID) {
+        deliveredStyles[pane] = styles
+    }
+
+    /// Every style a shell keeps: the prompt's and the highlight colors (F5.6), off when highlighting is.
+    public func styleMessages() -> [SmaltiMessage] {
+        let palette = environment.highlighting() ? environment.settings().1.theme.highlightPalette : nil
+        return [styleMessage(), .highlightStyle(palette)]
     }
 
     /// After a new style the shells quiet at their prompt get their full prompt again, in the new colors: the style

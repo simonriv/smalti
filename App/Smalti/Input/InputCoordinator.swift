@@ -166,10 +166,10 @@ final class InputCoordinator {
     /// Sends the pane's pending style, if any; true when one went out whole.
     @discardableResult
     private func deliverStyle(to pane: PaneID, over connection: InputConnection) -> Bool {
-        guard let render = renderPrompt, let style = render.pendingStyle(for: pane), connection.send(style) else {
-            return false
-        }
-        render.styleDelivered(style, to: pane)
+        guard let render = renderPrompt else { return false }
+        let styles = render.pendingStyles(for: pane)
+        guard !styles.isEmpty, styles.allSatisfy({ connection.send($0) }) else { return false }
+        render.stylesDelivered(styles, to: pane)
         return true
     }
 

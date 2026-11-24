@@ -40,6 +40,18 @@ struct InputReaderTests {
         #expect(config.input.generatorTimeout == .milliseconds(250))
     }
 
+    @Test func highlightingDefaultsTrue() throws {
+        #expect(try parse("[input]\n").input.isHighlighting)
+    }
+
+    @Test func highlightingFalseRead() throws {
+        #expect(try !parse("[input]\nhighlighting = false\n").input.isHighlighting)
+    }
+
+    @Test func highlightingNotBoolIsTypedError() {
+        #expect(error(parsing: "[input]\nhighlighting = 1\n")?.key == "highlighting")
+    }
+
     @Test func inputTableUnknownKeyThrowsWithLine() {
         let error = error(parsing: "[input]\nenabled = true\nghost = 1\n")
 
