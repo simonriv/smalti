@@ -20,7 +20,14 @@ public struct ANSIOverrides: Equatable, Sendable {
         self.init(validated: colors)
     }
 
-    private init(validated colors: [Int: RGBAColor]) {
+    fileprivate init(validated colors: [Int: RGBAColor]) {
         self.colors = colors
+    }
+}
+
+extension ANSIOverrides {
+    /// These edits with `other`'s on top, index by index (both already hold only 0–15).
+    public func merging(_ other: ANSIOverrides) -> ANSIOverrides {
+        ANSIOverrides(validated: colors.merging(other.colors) { _, written in written })
     }
 }

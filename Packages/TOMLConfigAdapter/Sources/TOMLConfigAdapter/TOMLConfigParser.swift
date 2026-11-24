@@ -154,7 +154,8 @@ private enum AppearanceReader {
             try Choice.read("theme", in: section, as: ThemeID.self, prefix: "tema desconocido; ") ?? appearance.theme
         appearance.protectLegibility = try section.flag("protect_legibility") ?? appearance.protectLegibility
         if let ansi = try section.section("ansi") {
-            appearance.ansiOverrides.merge(try ANSIReader.read(ansi)) { _, written in written }
+            // Per index across files (block 3 review, M7): theme.toml's colors over config.toml's, one by one.
+            appearance.ansiOverrides.merge(try ANSIReader.read(ansi)) { earlier, written in earlier.merging(written) }
         }
         appearance.accent = try accent(in: section) ?? appearance.accent
         appearance.glassOpacity = try number("glass_opacity", in: section, glassOpacity) ?? appearance.glassOpacity

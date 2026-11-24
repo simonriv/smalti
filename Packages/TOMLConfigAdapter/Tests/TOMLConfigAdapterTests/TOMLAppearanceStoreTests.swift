@@ -170,3 +170,105 @@ struct TOMLAppearanceStoreTests {
         }
     }
 }
+
+/// Block 3 review (I5, M7–M9): the first save of a session, ANSI per index across files, keys deleted by hand, a broken
+/// file and a symlinked theme.toml.
+@MainActor
+@Suite("TOMLAppearanceStore · review")
+struct TOMLAppearanceStoreReviewTests {
+    private let directory = FileManager.default.temporaryDirectory.appending(path: "smalti-store-review-\(UUID())")
+    private var themeFile: URL { directory.appending(path: "theme.toml") }
+    private var configFile: URL { directory.appending(path: "config.toml") }
+
+    init() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    private func readBack() throws -> AppearanceDocument {
+        AppearanceDocument(config: try TOMLConfigStore(config: configFile, theme: themeFile).reload())
+    }
+
+    private func bumpDate() throws {
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(10)], ofItemAtPath: themeFile.path(percentEncoded: false))
+    }
+
+    @Test func firstSaveOfTheSessionKeepsAHandEdit() throws {
+        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+        let store = TOMLAppearanceStore(file: themeFile)
+        store.remember(try readBack())
+        let edited = try String(contentsOf: themeFile, encoding: .utf8).replacingOccurrences(
+            of: "gap = 8", with: "gap = 3")
+        try edited.write(to: themeFile, atomically: true, encoding: .utf8)
+        try bumpDate()
+        var ui = AppearanceDocument(config: .defaults)
+        ui.appearance.radius = 5
+
+        try store.save(ui)
+
+        #expect(try readBack().appearance.gap == 3)
+        #expect(try readBack().appearance.radius == 5)
+    }
+
+    @Test func keyDeletedByHandIsRespected() throws {
+        let store = TOMLAppearanceStore(file: themeFile)
+        var base = AppearanceDocument(config: .defaults)
+        base.appearance.accent = try RGBAColor(hex: "#ff0000")
+        try store.save(base)
+        let edited = try String(contentsOf: themeFile, encoding: .utf8).split(separator: "\n")
+            .filter { !$0.hasPrefix("accent") }.joined(separator: "\n")
+        try edited.write(to: themeFile, atomically: true, encoding: .utf8)
+        try bumpDate()
+        var ui = base
+        ui.appearance.theme = .bosque
+
+        try store.save(ui)
+
+        #expect(try readBack().appearance.accent == nil)
+    }
+
+    @Test func brokenFileIsBackedUpBeforeOverwriting() throws {
+        let store = TOMLAppearanceStore(file: themeFile)
+        try store.save(AppearanceDocument(config: .defaults))
+        try "[appearance\nroto = ".write(to: themeFile, atomically: true, encoding: .utf8)
+        try bumpDate()
+
+        try store.save(AppearanceDocument(config: .defaults))
+
+        let backup = directory.appending(path: "theme.toml.bak")
+        #expect((try? String(contentsOf: backup, encoding: .utf8)) == "[appearance\nroto = ")
+    }
+
+    @Test func symlinkedFileStaysASymlink() throws {
+        let real = directory.appending(path: "dotfiles/theme.toml")
+        try FileManager.default.createDirectory(at: real.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "".write(to: real, atomically: true, encoding: .utf8)
+        try FileManager.default.createSymbolicLink(at: themeFile, withDestinationURL: real)
+
+        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+
+        let kind = try FileManager.default.attributesOfItem(atPath: themeFile.path(percentEncoded: false))[.type]
+        #expect(kind as? FileAttributeType == .typeSymbolicLink)
+        #expect(try String(contentsOf: real, encoding: .utf8).contains("[appearance]"))
+    }
+}
+
+/// Block 3 review (M7): ANSI edits combine per index across config.toml and theme.toml.
+@MainActor
+@Suite("theme.toml reading · review")
+struct ThemeReaderReviewTests {
+    @Test func ansiOverridesMergePerIndex() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "smalti-ansi-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try "[appearance.ansi.obsidiana]\n1 = \"#111111\"\n".write(
+            to: directory.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+        try "[appearance.ansi.obsidiana]\n2 = \"#222222\"\n".write(
+            to: directory.appending(path: "theme.toml"), atomically: true, encoding: .utf8)
+
+        let config = try TOMLConfigStore(
+            config: directory.appending(path: "config.toml"), theme: directory.appending(path: "theme.toml")
+        ).reload()
+
+        #expect(config.appearance.ansiOverrides[.obsidiana]?.colors.keys.sorted() == [1, 2])
+    }
+}
