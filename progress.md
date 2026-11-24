@@ -253,9 +253,9 @@
 - [x] T3 · Config, ⌘Y, menú, ayuda y token del pie
 - [x] T4 · `ImageGrid` y `KittyPlacement`
 #### Bloque 2 · Casos de uso y adaptadores
-- [ ] T5 · Puerto `ImageFiles`, `PreviewCard` y `PreviewUnderPointer`
-- [ ] T6 · `ImageIOAdapter`
-- [ ] T7 · Palabra bajo el ratón en `GhosttyAdapter`
+- [x] T5 · Puerto `ImageFiles`, `PreviewCard` y `PreviewUnderPointer`
+- [x] T6 · `ImageIOAdapter`
+- [x] T7 · Palabra bajo el ratón en `GhosttyAdapter`
 #### Bloque 3 · Config, CLI y kitty de terceros
 - [ ] T8 · `[preview]` en `TOMLConfigAdapter`
 - [ ] T9 · `ShowImageGrid` y `smalti img`
