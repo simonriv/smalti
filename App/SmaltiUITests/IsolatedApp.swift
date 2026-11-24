@@ -74,6 +74,18 @@ extension XCUIApplication {
         }
     }
 
+    /// F5: `theme.toml` next to the config file, as the app looks for it.
+    func writeTheme(_ text: String) {
+        let file = configFile.deletingLastPathComponent().appending(path: "theme.toml")
+        do {
+            try FileManager.default.createDirectory(
+                at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try text.write(to: file, atomically: true, encoding: .utf8)
+        } catch {
+            XCTFail("could not write the fixture theme at \(file.path(percentEncoded: false)): \(error)")
+        }
+    }
+
     /// Named `config.toml`, as the user's file, so the status bar shows the same name. Created only on write.
     private static var isolatedConfigFile: URL {
         FileManager.default.temporaryDirectory.appending(path: "smalti-ui-tests-\(UUID().uuidString)/config.toml")

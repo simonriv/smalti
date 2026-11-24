@@ -20,6 +20,8 @@ struct TilingState {
     let set: WorkspaceSet
     let config: SmaltiConfig
     let theme: Theme
+    /// F5: how opaque "Proteger legibilidad" made each surface; `chrome` backs the strip and the status bar.
+    let opacities: SurfaceOpacities
     let message: StatusMessage?
     /// Directories show relative to it (`~/dev/xolken`).
     let home: WorkingDirectory
@@ -29,6 +31,11 @@ struct TilingState {
     var isSecureInput = false
     /// F4.5: the link under the pointer while ⌘ is held.
     var hoveredLink: String?
+}
+
+extension TilingState {
+    /// F5: the glass-colored layer behind the strip and the status bar; clear when protection does not need it.
+    var chromeBackground: RGBAColor { theme.window.background.withAlpha(opacities.chrome) }
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -81,7 +88,11 @@ final class TilingController {
     private let layouts = LayoutCatalog.standard
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "tiling")
     private(set) var set: WorkspaceSet
-    private(set) var config: SmaltiConfig
+    private(set) var config: SmaltiConfig {
+        didSet { applied = ThemeCatalog.apply(config.appearance) }
+    }
+    /// F5: the theme of `config.appearance`, protected; computed once per config, not per access.
+    private(set) var applied: AppliedTheme
     private var status = StatusSlot<StatusMessage>()
     private var messageClearing: Task<Void, Never>?
     private var openedAt: [PaneID: ContinuousClock.Instant] = [:]
@@ -94,12 +105,13 @@ final class TilingController {
     init(_ deps: Dependencies, initial reload: ConfigReload) {
         self.deps = deps
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        applied = ThemeCatalog.apply(reload.config.appearance)
         let layout = LayoutCatalog.standard.strategyOrDefault(for: config.defaultLayout)
         set = WorkspaceSet(first: .empty(name: deps.home.lastComponent, rootDirectory: deps.home, layout: layout))
         status = status.withPersistent(reload.error.map(StatusMessage.invalidConfig))
     }
 
-    var theme: Theme { Theme.obsidian.applying(config.appearance) }
+    var theme: Theme { applied.theme }
 
     var home: WorkingDirectory { deps.home }
 
@@ -520,7 +532,8 @@ final class TilingController {
 
     private var state: TilingState {
         TilingState(
-            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory,
+            set: set, config: config, theme: theme, opacities: applied.opacities, message: status.showing,
+            home: deps.home, observatory: observatory,
             isSecureInput: isSecureInput, hoveredLink: hoveredLink)
     }
 

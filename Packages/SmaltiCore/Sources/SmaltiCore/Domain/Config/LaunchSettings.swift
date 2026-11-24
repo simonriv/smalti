@@ -18,6 +18,9 @@ public struct LaunchSettings: Equatable, Sendable {
     public static let userConfigPath = ".config/smalti/config.toml"
 
     public let configFile: URL
+    /// F5: where the UI writes the appearance, next to the config file (`~/.config/smalti/theme.toml`).
+    public var themeFile: URL { configFile.deletingLastPathComponent().appending(path: Self.themeFileName) }
+    public static let themeFileName = "theme.toml"
     public let shellOverride: TerminalCommand?
     /// Where the app keeps its sessions, layouts and socket: the build's own directory unless a test swaps it.
     public let stateDirectory: URL

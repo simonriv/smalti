@@ -20,6 +20,20 @@ struct LaunchSettingsTests {
         #expect(settings.configFile == URL(filePath: "/Users/simon/.config/smalti/config.toml"))
     }
 
+    /// F5: `theme.toml` lives next to the config file, so tests that swap one also swap the other.
+    @Test func themeFileSitsNextToTheConfigFile() {
+        let settings = LaunchSettings(
+            arguments: ["SmaltiConfigPath": "/tmp/run/config.toml"], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.themeFile == URL(filePath: "/tmp/run/theme.toml"))
+    }
+
+    @Test func userThemeFileIsInTheSmaltiConfigFolder() {
+        let settings = LaunchSettings(arguments: [:], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.themeFile == URL(filePath: "/Users/simon/.config/smalti/theme.toml"))
+    }
+
     @Test func userZdotdirArgumentIsRead() {
         let settings = LaunchSettings(
             arguments: ["SmaltiUserZdotdir": "/tmp/zdot"], home: home, defaultStateDirectory: defaultState)

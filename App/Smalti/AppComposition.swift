@@ -74,11 +74,11 @@ final class AppComposition {
             arguments: launchArguments(), home: home,
             defaultStateDirectory: AppIdentity.current.defaultStateDirectory(home: home))
         createStateDirectory(settings.stateDirectory)
-        let store = TOMLConfigStore(file: settings.configFile)
+        let store = TOMLConfigStore(config: settings.configFile, theme: settings.themeFile)
         let initial = ReloadConfig(store: store).execute()
         return Startup(
             settings: settings, store: store, initial: initial,
-            theme: Theme.obsidian.applying(initial.config.appearance))
+            theme: ThemeCatalog.apply(initial.config.appearance).theme)
     }
 
     /// `-Key value` launch arguments land in the argument domain of the user defaults.

@@ -61,6 +61,7 @@ final class WorkspaceStripView: NSView {
     required init?(coder: NSCoder) { nil }
 
     func render(_ state: TilingState) {
+        layer?.backgroundColor = state.chromeBackground.nsColor.cgColor
         let model = StripModel(
             pills: state.set.workspaces.map {
                 .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID, status: $0.agentStatus)
