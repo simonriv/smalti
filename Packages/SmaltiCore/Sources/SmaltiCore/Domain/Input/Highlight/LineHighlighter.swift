@@ -126,7 +126,8 @@ private struct Walker {
         if let name = assignmentName(lexeme, parts: parts) {
             spans.append(
                 HighlightSpan(range: lexeme.range.lowerBound..<(lexeme.range.lowerBound + name), role: .variable))
-            colorParts(parts.filter { $0.range.lowerBound > lexeme.range.lowerBound + name })
+            // The name and `=` are a bare part, which `colorParts` leaves alone; the value keeps its own colors.
+            colorParts(parts)
             return
         }
         if parts.contains(where: { $0.kind == .variable }) {

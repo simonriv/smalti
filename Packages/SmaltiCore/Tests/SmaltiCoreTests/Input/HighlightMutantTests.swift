@@ -52,6 +52,18 @@ struct HighlightMutantTests {
         #expect(lexemes("echo $(((1)+2))y")[1].range == 5..<16)
     }
 
+    @Test func arithmeticExpansionEndsAtItsClosing() {
+        #expect(kinds("echo $(((1)+2)) y") == ["w:echo", "w:$(((1)+2))", "w:y"])
+    }
+
+    @Test func arithmeticCommandClosingRightAfterWord() {
+        #expect(kinds("(( x)) y") == ["a:(( x))", "w:y"])
+    }
+
+    @Test func arithmeticEndingInOneParenthesisRunsToEnd() {
+        #expect(kinds("(( x)") == ["a:(( x)"])
+    }
+
     @Test func nestedArithmeticCommand() {
         #expect(kinds("(( (a) )) x") == ["a:(( (a) ))", "w:x"])
     }
@@ -109,7 +121,10 @@ struct HighlightMutantTests {
         #expect(spans("A=\"x\" cmd", .string) == [2..<5])
     }
 
-    @Test(arguments: [("A1=x make", [6..<10], [0..<2]), ("1A=x y", [0..<4], []), ("a-b=x y", [0..<5], [])])
+    @Test(arguments: [
+        ("A1=x make", [5..<9], [0..<2]), ("1A=x y", [0..<4], []), ("a-b=x y", [0..<5], []),
+        ("_X=1 make", [5..<9], [0..<2]), ("ab=1 make", [5..<9], [0..<2]),
+    ])
     func assignmentNames(_ text: String, _ commands: [Range<Int>], _ variables: [Range<Int>]) {
         #expect(spans(text, .command) == commands)
         #expect(spans(text, .variable) == variables)

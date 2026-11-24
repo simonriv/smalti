@@ -79,6 +79,9 @@ private struct Scanner {
         } else if scalar == " " || scalar == "\t" {
             closeWord()
             offset += 1
+        } else if scalar == "&", peek(1) == ">", let end = redirectionEnd(at: offset) {
+            closeWord()
+            emit(.redirection, offset..<end)
         } else if let end = controlEnd(at: offset) {
             closeWord()
             emit(.controlOperator, offset..<end)
@@ -97,9 +100,7 @@ private struct Scanner {
             let pair = String(String.UnicodeScalarView([scalars[start], scalars[start + 1]]))
             if Self.controlPairs.contains(pair) { return start + 2 }
         }
-        let scalar = scalars[start]
-        if scalar == "&", start + 1 < scalars.count, scalars[start + 1] == ">" { return nil }
-        return Self.controlSingles.contains(scalar) ? start + 1 : nil
+        return Self.controlSingles.contains(scalars[start]) ? start + 1 : nil
     }
 
     /// `[n]>`, `[n]>>`, `[n]>|`, `[n]<`, `<<`, `<<<`, `&>`, `&>>` and `>&n`/`>&-`, starting a word.
