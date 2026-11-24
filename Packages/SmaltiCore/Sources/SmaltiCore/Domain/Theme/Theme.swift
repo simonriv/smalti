@@ -17,7 +17,7 @@ public struct Theme: Equatable, Sendable {
     public let emptyState: EmptyStateTokens
     public let resume: ResumeTokens
     public let agent: AgentStatusTokens
-    public let observatory: ObservatoryTokens
+    public internal(set) var observatory: ObservatoryTokens
     public let inputMenu: InputMenuTokens
     public let historyPalette: HistoryPaletteTokens
     /// F4.5 (mockup-help, mockup-feedback): the ⌘K box with these sizes.
@@ -496,7 +496,7 @@ public struct ObservatoryTokens: Equatable, Sendable {
     public let gap: Double
     public let sideColumnWidth: Double
     public let cardGap: Double
-    public let cardBackground: RGBAColor
+    public internal(set) var cardBackground: RGBAColor
     public let cardBorder: RGBAColor
     public let cardRadius: Double
     public let cardPaddingVertical: Double

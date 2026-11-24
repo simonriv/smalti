@@ -39,6 +39,8 @@ THEMES = {
     ),
 }
 GLASS_OPACITY = 0.62
+# 4.5 plus a margin: Core Animation blends without rounding each layer (spec F5, block 1 review).
+SEARCH_CONTRAST = 4.55
 PANEL_OPACITY = 0.34
 
 
@@ -85,7 +87,7 @@ def protected_panel_opacity(theme):
     under = over(rgb(theme["glass"]), GLASS_OPACITY, worst)
     for step in range(int(PANEL_OPACITY * 100), 101):
         ground = over(rgb(theme["panel"]), step / 100, under)
-        if all(contrast(rgb(c), ground) >= 4.5 for c in protected_colors(theme)):
+        if all(contrast(rgb(c), ground) >= SEARCH_CONTRAST for c in protected_colors(theme)):
             return step / 100
     return 1.0
 
@@ -95,7 +97,7 @@ def protected_ghost(theme, ground):
     ghost, text = rgb(theme["ghost"]), rgb(theme["text"])
     for step in range(0, 101):
         mixed = over(text, step / 100, ghost)
-        if contrast(mixed, ground) >= 4.5:
+        if contrast(mixed, ground) >= SEARCH_CONTRAST:
             return "#" + "".join(f"{round(c):02x}" for c in mixed)
     return theme["text"]
 

@@ -21,5 +21,5 @@ public enum ThemeID: String, CaseIterable, Sendable {
     public var worstBackdrop: Backdrop { isLight ? .black : .white }
 
     /// ANSI indices meant as backgrounds, which protection leaves alone (spec F5).
-    var backgroundPair: Set<Int> { isLight ? [7, 15] : [0, 8] }
+    public var backgroundIndices: Set<Int> { isLight ? [7, 15] : [0, 8] }
 }

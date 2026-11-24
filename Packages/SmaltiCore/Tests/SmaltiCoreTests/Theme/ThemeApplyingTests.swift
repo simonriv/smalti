@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 import Testing
 
@@ -25,17 +26,17 @@ struct ThemeApplyingTests {
         #expect(AppearanceSettings.obsidian.accent == nil)
     }
 
-    @Test func protectionRaisesPanelTo65InObsidian() {
+    @Test func protectionRaisesPanelTo66InObsidian() {
         let applied = ThemeCatalog.apply(settings())
 
-        #expect(applied.theme.panel.background.alpha == 0.65)
-        #expect(applied.opacities.panel == 0.65)
+        #expect(applied.theme.panel.background.alpha == 0.66)
+        #expect(applied.opacities.panel == 0.66)
     }
 
     @Test func nieblaProtectsAgainstBlackDesktop() {
         let applied = ThemeCatalog.apply(settings { $0.theme = .niebla })
 
-        #expect(applied.opacities.panel == 0.82)
+        #expect(applied.opacities.panel == 0.83)
     }
 
     @Test func protectionNeverLowersTheGlass() {
@@ -116,7 +117,7 @@ struct ThemeApplyingTests {
     @Test func unreachableOverrideDoesNotForceOpaquePanel() {
         let applied = ThemeCatalog.apply(settings { $0.ansiOverrides = [.obsidiana: [1: hex("#15161e")]] })
 
-        #expect(applied.opacities.panel == 0.65)
+        #expect(applied.opacities.panel == 0.66)
     }
 
     @Test func backgroundPairIsNeverAdjusted() {
@@ -158,5 +159,93 @@ struct ThemeApplyingTests {
         #expect(applied.theme.panel.cornerRadius == 6)
         #expect(applied.theme.terminal.fontSize == 15)
         #expect(applied.theme.window.blurRadius == 0)
+    }
+}
+
+/// C2 (block 1 review, I1 and I4): every theme, glass from 30 to 95 %, checked with exact (unrounded) blending as Core
+/// Animation does, so 8-bit rounding in the search can never leave a color at 4.49 on screen.
+@Suite("Proteger legibilidad · C2")
+struct LegibilityC2Tests {
+    private struct Exact {
+        var red, green, blue: Double
+
+        init(_ color: RGBAColor) {
+            red = Double(color.red)
+            green = Double(color.green)
+            blue = Double(color.blue)
+        }
+
+        func under(_ top: RGBAColor) -> Exact {
+            var result = self
+            result.red = Double(top.red) * top.alpha + red * (1 - top.alpha)
+            result.green = Double(top.green) * top.alpha + green * (1 - top.alpha)
+            result.blue = Double(top.blue) * top.alpha + blue * (1 - top.alpha)
+            return result
+        }
+
+        private static func linear(_ channel: Double) -> Double {
+            let value = channel / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+
+        var luminance: Double {
+            0.2126 * Self.linear(red) + 0.7152 * Self.linear(green) + 0.0722 * Self.linear(blue)
+        }
+
+        func contrast(with color: RGBAColor) -> Double {
+            let other = Exact(color).luminance
+            return (max(luminance, other) + 0.05) / (min(luminance, other) + 0.05)
+        }
+    }
+
+    private static let opacities = [0.30, 0.50, 0.75, 0.85, 0.90, 0.95]
+
+    private func applied(_ id: ThemeID, glass: Double) -> AppliedTheme {
+        var appearance = AppearanceSettings.obsidian
+        appearance.theme = id
+        appearance.glassOpacity = glass
+        return ThemeCatalog.apply(appearance)
+    }
+
+    private func failing(_ colors: [RGBAColor], on ground: Exact) -> [String] {
+        colors.filter { ground.contrast(with: $0) < LegibilityGuard.minimumContrast }.map(\.hexString)
+    }
+
+    @Test(arguments: ThemeID.allCases, opacities)
+    func panelTextStaysAt4_5(_ id: ThemeID, glass: Double) {
+        let applied = applied(id, glass: glass)
+        let theme = applied.theme
+        let ground = Exact(id.worstBackdrop.color).under(theme.window.background).under(theme.panel.background)
+        let colors =
+            [theme.text.primary, theme.text.secondary, theme.text.ghostText]
+            + theme.terminal.palette.enumerated().filter { !id.backgroundIndices.contains($0.offset) }.map(\.element)
+
+        #expect(failing(colors, on: ground).isEmpty, "\(id) \(glass): \(failing(colors, on: ground))")
+    }
+
+    @Test(arguments: ThemeID.allCases, opacities)
+    func chromeTextStaysAt4_5(_ id: ThemeID, glass: Double) {
+        let theme = applied(id, glass: glass).theme
+        let chrome = theme.window.background.withAlpha(applied(id, glass: glass).opacities.chrome)
+        let ground = Exact(id.worstBackdrop.color).under(theme.window.background).under(chrome)
+        let colors = [theme.text.primary, theme.text.title, theme.text.secondary]
+
+        #expect(failing(colors, on: ground).isEmpty, "\(id) \(glass): \(failing(colors, on: ground))")
+    }
+
+    @Test(arguments: ThemeID.allCases, opacities)
+    func overlayTextStaysAt4_5(_ id: ThemeID, glass: Double) {
+        let theme = applied(id, glass: glass).theme
+        let ground = Exact(id.worstBackdrop.color).under(theme.window.background).under(theme.palette.background)
+        let colors = [theme.text.primary, theme.text.title, theme.text.secondary]
+
+        #expect(failing(colors, on: ground).isEmpty, "\(id) \(glass): \(failing(colors, on: ground))")
+    }
+
+    @Test(arguments: ThemeID.allCases)
+    func observatoryCardFollowsProtectedPanel(_ id: ThemeID) {
+        let theme = applied(id, glass: 0.62).theme
+
+        #expect(theme.observatory.cardBackground == theme.panel.background)
     }
 }

@@ -2,6 +2,9 @@
 /// 4.5:1 over the worst desktop.
 public enum LegibilityGuard {
     public static let minimumContrast = 4.5
+    /// What the searches aim for: Core Animation blends layers without rounding each one to 8 bits, so a step that
+    /// reaches exactly 4.5 here can land at 4.48 on screen (block 1 review, I1).
+    static let searchContrast = minimumContrast + 0.05
     private static let steps = 100
 
     /// The smallest opacity, in steps of 0.01, at which every color of `surface` reaches `minimumContrast` over the
@@ -29,7 +32,7 @@ public enum LegibilityGuard {
     }
 
     private static func isLegible(_ color: RGBAColor, on ground: RGBAColor) -> Bool {
-        ContrastRatio.between(color, ground) >= minimumContrast
+        ContrastRatio.between(color, ground) >= searchContrast
     }
 }
 

@@ -36,7 +36,7 @@ public enum ThemeCatalog {
     }
 
     fileprivate static func chromaticANSI(of theme: Theme, id: ThemeID) -> [RGBAColor] {
-        theme.terminal.palette.enumerated().filter { !id.backgroundPair.contains($0.offset) }.map(\.element)
+        theme.terminal.palette.enumerated().filter { !id.backgroundIndices.contains($0.offset) }.map(\.element)
     }
 }
 
@@ -77,12 +77,14 @@ private struct Protection {
         let tint = theme.panel.background
         let opaquePanel = glassGround.underneath(tint.withAlpha(1))
         let reachable = ThemeCatalog.protectedColors(of: theme, id: id).filter {
-            ContrastRatio.between($0, opaquePanel) >= LegibilityGuard.minimumContrast
+            ContrastRatio.between($0, opaquePanel) >= LegibilityGuard.searchContrast
         }
         let needed = LegibilityGuard.minimumOpacity(
             for: ProtectedSurface(tint: tint, colors: reachable), over: glassGround)
         let alpha = max(tint.alpha, needed)
         theme.panel.background = tint.withAlpha(alpha)
+        // The observatory's cards are the panel's tint and carry the same text.
+        theme.observatory.cardBackground = theme.panel.background
         return alpha
     }
 
@@ -92,7 +94,7 @@ private struct Protection {
         theme.text.ghostText = LegibilityGuard.legible(theme.text.ghostText, on: ground, toward: anchor)
         var moved = 0
         theme.terminal.palette = theme.terminal.palette.enumerated().map { index, color in
-            guard !id.backgroundPair.contains(index) else { return color }
+            guard !id.backgroundIndices.contains(index) else { return color }
             let legible = LegibilityGuard.legible(color, on: ground, toward: anchor)
             if legible != color { moved += 1 }
             return legible
