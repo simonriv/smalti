@@ -7,6 +7,8 @@ public protocol PromptModule: Sendable {
     func segment(in context: PromptContext) -> PromptSegment?
     /// Its piece of the immediate prompt; `nil` for modules only Smalti can answer.
     var immediate: ImmediatePart? { get }
+    /// What it becomes in `starship.toml`; none for what exists only in Smalti.
+    func starshipTables(using builder: StarshipBuilder) -> [StarshipTable]
 }
 
 /// The modules by identifier, and the segments of a configuration.

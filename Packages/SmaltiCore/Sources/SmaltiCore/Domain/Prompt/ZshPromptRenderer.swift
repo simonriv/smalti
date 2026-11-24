@@ -70,37 +70,15 @@ private struct ZshPalette {
     let icons: PromptIcons
 
     func color(_ role: SegmentColor) -> RGBAColor {
-        switch role {
-        case .accent: theme.accent
-        case .ansi(let index):
-            theme.terminal.palette.indices.contains(index) ? theme.terminal.palette[index] : theme.text.primary
-        case .secondary: theme.text.secondary
-        case .waiting: theme.agent.waiting
-        case .failed: theme.agent.failed
-        }
+        theme.color(for: role)
     }
 
     private func foreground(_ role: SegmentColor, _ text: String) -> String {
         "%F{\(color(role).hexString)}\(text)%f"
     }
 
-    /// Icons the chosen set cannot draw ("Sin iconos") go away together with the space after them.
     func drawable(_ line: [StyledRun]) -> [StyledRun] {
-        var kept: [StyledRun] = []
-        var skipsSpace = false
-        for run in line {
-            if case .icon(let icon) = run.content, icons.character(for: icon) == nil {
-                skipsSpace = true
-                continue
-            }
-            if skipsSpace, case .text(" ") = run.content {
-                skipsSpace = false
-                continue
-            }
-            skipsSpace = false
-            kept.append(run)
-        }
-        return kept
+        drawableRuns(line, icons: icons)
     }
 
     func paint(_ run: StyledRun, values: inout ValueTable) -> String {

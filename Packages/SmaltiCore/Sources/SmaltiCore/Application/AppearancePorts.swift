@@ -37,3 +37,35 @@ public struct PromptFactsResult: Equatable, Sendable {
 
     public static let none = PromptFactsResult()
 }
+
+/// What Apariencia and the prompt studio edit, and what `theme.toml` holds (spec F5).
+public struct AppearanceDocument: Equatable, Sendable {
+    public var appearance: AppearanceSettings
+    public var buttons: WindowButtons
+    public var prompt: PromptConfig
+
+    public init(config: SmaltiConfig) {
+        appearance = config.appearance
+        buttons = config.window.buttons
+        prompt = config.prompt
+    }
+
+    /// `config` with this document's values; everything else (`confirm_close`, keys, shell…) stays.
+    public func applied(to config: SmaltiConfig) -> SmaltiConfig {
+        var updated = config
+        updated.appearance = appearance
+        updated.window.buttons = buttons
+        updated.prompt = prompt
+        return updated
+    }
+}
+
+/// Port to where the UI writes (`theme.toml`). It writes the whole document; a failure leaves the file as it was.
+public protocol AppearanceStore: AnyObject {
+    @MainActor func save(_ document: AppearanceDocument) throws(ConfigError)
+}
+
+/// Runs only the last action scheduled within its delay (the app waits `ChangeAppearance.saveDelay`).
+public protocol Debouncer: AnyObject {
+    @MainActor func schedule(_ action: @escaping @MainActor () -> Void)
+}
