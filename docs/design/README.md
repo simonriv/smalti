@@ -41,6 +41,8 @@ Estos seis archivos son la referencia visual obligatoria. Son mockups en HTML co
 
 Paleta ANSI completa: ver `Apariencia.dc.html`.
 
+**Preview de imagen de `Main.dc.html` (spec F5.5):** la tarjeta se usa sobre nombres de archivo locales, no sobre URLs, y su pie dice "⌘Y para abrir" en lugar de "espacio para abrir".
+
 ## Temas de F5 y maquetas aprobadas
 
 Niebla, Ámbar nocturno y Bosque se completaron a partir de las muestras de `Apariencia.dc.html`: la tabla fuente es `THEMES` en `docs/specs/F5-assets/generate-mockups.py`, que comprueba que todo color protegido da ≥ 4.5:1 sobre el panel de su tema. Maquetas aprobadas con la spec F5: `mockup-themes`, `mockup-buttons`, `mockup-prompt` y `mockup-legibility` en `docs/specs/F5-assets/`.

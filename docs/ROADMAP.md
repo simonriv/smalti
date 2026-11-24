@@ -102,14 +102,18 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F5.5 · Previews
 
 - **Objetivo:** ver imágenes sin salir de la terminal.
-- **Entregables:** imágenes inline por el protocolo de gráficos de kitty (lo soporta libghostty); vista previa al pasar el cursor sobre un enlace a imagen; espacio abre Quick Look.
-- **Criterio de cierre:** por definir en su spec.
+- **Entregables:** miniatura al pasar el cursor sobre nombres de imagen locales (salida de `ls` y rutas), ⌘Y abre Quick Look, `smalti img [carpeta|archivos]` pinta una cuadrícula de miniaturas por el protocolo de kitty, y las imágenes kitty de terceros siguen funcionando (spike de 2026-11-24: libghostty las pinta en un surface embebido sin cambios). Imágenes remotas fuera (las de los agentes las cubre un plugin de Simón).
+- **Spec:** `docs/specs/F5.5-previews.md` (aprobada 2026-11-24).
+- **Criterio de cierre:** en una carpeta con imágenes, tras `ls` (y tras `ls carpeta/` desde la padre), pasar el cursor por un nombre muestra su miniatura y ⌘Y la abre en Quick Look; `smalti img <carpeta>` pinta la cuadrícula aprobada. Sin coste con el ratón quieto.
 - **Dependencias:** F5 (temas y superposiciones). Separada de F5 por Simón (2026-11-23): no comparte nada con temas ni prompt.
 
 ## F5.6 · Resaltado del input
 
 - **Objetivo:** que la línea de comando se coloree mientras se escribe, sin plugins de zsh (Simón quitó zsh-syntax-highlighting el 2026-11-23, enmienda 1 de F4) (idea de Simón, 2026-11-24).
 - **Entregables:** resaltado nativo de la línea en el prompt del shell, pintado por zsh con `region_highlight` (como el fantasma de F4): comando existente o desconocido, subcomandos y opciones según las specs de Fig, cadenas, rutas que existen, variables y operadores. Colores de rol del tema activo, con "Proteger legibilidad"; activable en `[input]`.
+- **Correcciones de la paleta ⌘K** (Simón, 2026-11-24):
+  - "Instalar integración con Claude" y "Desinstalar integración con Claude" salen a la vez; debe salir solo la que aplica según el estado (instalada o no). Pensado para cuando haya más integraciones (F6), que serán un menú propio.
+  - El scroll con el trackpad o la rueda solo recorre parte de la lista y obliga a usar las flechas para ver todas las opciones; debe recorrerla entera.
 - **Criterio de cierre:** por definir en su spec.
 - **Dependencias:** F4 (canal con zsh, specs de Fig, `region_highlight` con `memo=smalti`) y F5 (temas y colores de rol). Separada de F5.5: no comparte nada con las previews.
 
