@@ -5,12 +5,22 @@ import SmaltiCore
 @MainActor
 enum PromptRunText {
     static func attributed(_ lines: [[PreviewRun]], theme: Theme, size: Double? = nil) -> NSAttributedString {
-        let font = monospaced(theme, size: size ?? theme.promptStudio.previewFontSize)
+        let pointSize = size ?? theme.promptStudio.previewFontSize
+        let font =
+            NSFont(name: theme.terminal.fontFamily, size: pointSize)
+            ?? .monospacedSystemFont(ofSize: pointSize, weight: .regular)
+        let symbols = NSFontManager.shared.font(
+            withFamily: symbolsFamily, traits: [], weight: regularWeight, size: pointSize)
         let text = NSMutableAttributedString()
         for (index, line) in lines.enumerated() {
             if index > 0 { text.append(NSAttributedString(string: "\n", attributes: [.font: font])) }
             for run in line {
-                var attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: run.color.nsColor]
+                // The thin icons are private-use characters only `SmaltiSymbols` has (its PostScript name is generated,
+                // so a cascade list does not find it by family).
+                let isIcon = run.text.unicodeScalars.contains { iconRange.contains($0.value) }
+                var attributes: [NSAttributedString.Key: Any] = [
+                    .font: (isIcon ? symbols : nil) ?? font, .foregroundColor: run.color.nsColor,
+                ]
                 if let background = run.background { attributes[.backgroundColor] = background.nsColor }
                 text.append(NSAttributedString(string: run.text, attributes: attributes))
             }
@@ -18,14 +28,10 @@ enum PromptRunText {
         return text
     }
 
-    /// The terminal's family with `SmaltiSymbols` in its cascade, so the icons' private-use characters draw.
-    private static func monospaced(_ theme: Theme, size: Double) -> NSFont {
-        let base =
-            NSFont(name: theme.terminal.fontFamily, size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
-        let symbols = NSFontDescriptor(fontAttributes: [.family: symbolsFamily])
-        let descriptor = base.fontDescriptor.addingAttributes([.cascadeList: [symbols]])
-        return NSFont(descriptor: descriptor, size: size) ?? base
-    }
+    /// `SmaltiSymbols`' code points (spec F5: U+E900–U+E91F).
+    private static let iconRange: ClosedRange<UInt32> = 0xE900...0xE91F
+    /// `NSFontManager`'s weight scale: 5 is regular.
+    private static let regularWeight = 5
 
     private static let symbolsFamily = "SmaltiSymbols"
 }

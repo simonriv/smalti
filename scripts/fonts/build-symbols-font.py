@@ -61,7 +61,14 @@ def build(icons, out_path):
     builder.setupGlyf(glyphs)
     builder.setupHorizontalMetrics({name: (ADVANCE, 0) for name in [".notdef"] + names})
     builder.setupHorizontalHeader(ascent=1020, descent=-300)
-    builder.setupNameTable({"familyName": "SmaltiSymbols", "styleName": "Regular"})
+    builder.setupNameTable(
+        {
+            "familyName": "SmaltiSymbols",
+            "styleName": "Regular",
+            "fullName": "SmaltiSymbols Regular",
+            "psName": "SmaltiSymbols-Regular",
+        }
+    )
     builder.setupOS2(sTypoAscender=1020, sTypoDescender=-300, usWinAscent=1020, usWinDescent=300)
     builder.setupPost(isFixedPitch=1)
     builder.updateHead(created=FIXED_TIMESTAMP, modified=FIXED_TIMESTAMP)

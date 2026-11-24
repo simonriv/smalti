@@ -44,6 +44,13 @@ class BuildSymbolsFontTest(unittest.TestCase):
     def test_font_names_family_SmaltiSymbols(self):
         self.assertEqual(self.font["name"].getDebugName(1), "SmaltiSymbols")
 
+    def test_font_has_a_postscript_and_full_name(self):
+        # T19: without them macOS generates a PostScript name per registration and AppKit's text views cannot use the
+        # font in attributed strings (the studio's previews drew missing-glyph boxes).
+        names = self.font["name"]
+        self.assertEqual(names.getDebugName(6), "SmaltiSymbols-Regular")
+        self.assertEqual(names.getDebugName(4), "SmaltiSymbols Regular")
+
     def test_every_glyph_has_ink(self):
         glyf = self.font["glyf"]
         for name in NAMES:
