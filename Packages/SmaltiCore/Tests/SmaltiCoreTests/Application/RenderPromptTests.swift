@@ -61,7 +61,7 @@ struct RenderPromptTests {
 
         let answer = rendered(await render.handle(context(pwd: "/tmp"), seq: 1, pane: paneA))
 
-        #expect(answer?.prompt.values["_smalti_p_1"] == "/tmp")
+        #expect(answer?.prompt.values["4"] == "/tmp")
         #expect(answer?.prompt.values.count == 2)
     }
 
@@ -113,7 +113,14 @@ struct RenderPromptTests {
         let (render, _) = make(world: world)
 
         #expect(await render.handle(context(), seq: 1, pane: paneA) == nil)
-        #expect(render.styleMessage() == nil)
+        // An empty immediate prompt tells zsh to give the user's prompt back; the ghost color still travels.
+        guard case .promptStyle(let prompt, let ghost) = render.styleMessage() else {
+            Issue.record("no style message")
+            return
+        }
+        #expect(prompt.immediate.isEmpty)
+        #expect(prompt.values.isEmpty)
+        #expect(ghost == (try? RGBAColor(hex: "#5f6672")))
     }
 
     @Test func styleMessageCarriesImmediateAndGhost() throws {
@@ -123,7 +130,7 @@ struct RenderPromptTests {
             Issue.record("no style message")
             return
         }
-        #expect(prompt.immediate.contains("${_smalti_dir}"))
+        #expect(prompt.immediate.contains("%2v"))
         #expect(ghost == (try RGBAColor(hex: "#5f6672")))
     }
 
@@ -199,7 +206,7 @@ struct RenderPromptReviewTests {
             Issue.record("no style message")
             return
         }
-        #expect(prompt.values == ["_smalti_sym": "›"])
+        #expect(prompt.values == ["1": "›"])
     }
 
     @Test func lateFactsDoNotOverrideNewerContext() async {

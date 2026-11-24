@@ -1,0 +1,253 @@
+import Foundation
+import Testing
+
+/// F5 T11 (spec C7–C10, C10b): the zsh side of Smalti's prompt in a real interactive zsh — immediate prompt at once,
+/// full prompt when Smalti answers, never waiting, never running a name, and the user's prompt when asked.
+@Suite("zsh prompt from Smalti", .serialized)
+struct PromptScriptIntegrationTests {
+    static let immediate = "IMM:${_smalti_dir}${_smalti_duration:+ }${_smalti_duration} ${_smalti_sym} "
+    static let full = "FULL:${_smalti_p_1} ${_smalti_sym} "
+
+    static func style(ghost: String = "#5f6672", immediate: String = immediate, symbol: String = "›") -> String {
+        "promptstyle\t\(immediate)\t\(ghost)\t_smalti_sym=\(symbol)"
+    }
+
+    static func prompt(seq: String, branch: String) -> String {
+        "prompt\t\(seq)\tsolen\t\(immediate)\t\(full)\t_smalti_p_1=\(branch)\u{1f}_smalti_sym=›"
+    }
+
+    /// Styles at hello; answers every `context` with a full prompt carrying `branch`.
+    static func answering(branch: String) -> @Sendable ([String]) -> [String] {
+        { fields in
+            switch fields.first {
+            case "hello": [style()]
+            case "context": [prompt(seq: fields[1], branch: branch)]
+            default: []
+            }
+        }
+    }
+
+    private func contexts(_ server: FakeInputServer) -> [[String]] {
+        server.received.filter { $0.hasPrefix("context\t") }.map { $0.components(separatedBy: "\t") }
+    }
+
+    @Test func promptShowsFullWhenSmaltiAnswers() throws {
+        let server = try FakeInputServer(reply: Self.answering(branch: "main"))
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+
+        #expect(zsh.dumpPrompt()?.shown == "FULL:main › ")
+    }
+
+    @Test func immediatePromptAppearsWithoutAnAnswer() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("cd /usr/local/bin\r", settle: 0.5)
+
+        #expect(zsh.dumpPrompt()?.shown == "IMM:local/bin › ")
+    }
+
+    @Test func contextCarriesDirectoryExitAndEnvironment() throws {
+        let server = try FakeInputServer(reply: Self.answering(branch: "main"))
+        let zsh = try ZshHarness(socket: server.path, extra: ["AWS_PROFILE": "prod"])
+        defer { zsh.close() }
+
+        zsh.type("cd /tmp; false\r", settle: 0.5)
+
+        let last = try #require(contexts(server).last)
+        #expect(last.count == 8)
+        #expect(last[2] == "/tmp" || last[2] == "/private/tmp")
+        #expect(last[3] == "1")
+        #expect(last[5] == "prod")
+    }
+
+    @Test func durationFromTwoSecondsReachesImmediatePrompt() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("sleep 2.1\r", settle: 2.6)
+
+        let shown = try #require(zsh.dumpPrompt()?.shown)
+        #expect(shown.hasPrefix("IMM:"))
+        #expect(shown.contains(" 2.1s ›") || shown.contains(" 2.2s ›"), "\(shown)")
+    }
+
+    @Test func silentServerDoesNotDelayPrompt() throws {
+        func timeTwentyPrompts(_ socket: String?) throws -> TimeInterval {
+            let zsh = try ZshHarness(socket: socket)
+            defer { zsh.close() }
+            let start = Date()
+            for _ in 0..<20 { zsh.type("\r", settle: 0) }
+            let deadline = Date().addingTimeInterval(5)
+            while zsh.printed.components(separatedBy: "p% ").count < 22, Date() < deadline { usleep(2000) }
+            return Date().timeIntervalSince(start)
+        }
+        let silent = try FakeInputServer(mode: .neverReads)
+
+        let withChannel = try timeTwentyPrompts(silent.path)
+        let without = try timeTwentyPrompts(nil)
+
+        // C8: ± 5 ms per prompt over 20 prompts.
+        #expect(withChannel - without < 0.1, "with channel \(withChannel) s, without \(without) s")
+    }
+
+    @Test func closedChannelKeepsLastImmediatePrompt() throws {
+        let server = try FakeInputServer(mode: .closesAfter(2)) { fields in
+            fields.first == "hello" ? [Self.style()] : []
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.4)
+        zsh.type("cd /usr/local/bin\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.shown == "IMM:local/bin › ")
+        #expect(zsh.isRunning)
+    }
+
+    @Test(arguments: ["", "unsetopt prompt_subst", "setopt prompt_subst"])
+    func hostileBranchDoesNotRun(_ zshrc: String) throws {
+        let marker = FileManager.default.temporaryDirectory.appending(path: "smalti-pwned-\(UUID())")
+        let path = marker.path(percentEncoded: false)
+        let server = try FakeInputServer(reply: Self.answering(branch: "$(touch \(path))`touch \(path)`%F{red}"))
+        let zsh = try ZshHarness(socket: server.path, zshrc: zshrc)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+        let shown = zsh.dumpPrompt()?.shown ?? ""
+
+        #expect(!FileManager.default.fileExists(atPath: path))
+        #expect(shown.hasPrefix("FULL:$(touch"), "\(shown)")
+    }
+
+    @Test func shellSourceKeepsUserPrompt() throws {
+        let server = try FakeInputServer { fields in
+            switch fields.first {
+            case "hello": [Self.style(immediate: "")]
+            case "context": [Self.prompt(seq: fields[1], branch: "main")]
+            default: []
+            }
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+
+        #expect(zsh.dumpPrompt()?.raw == "p%% ")
+    }
+
+    @Test func switchingToShellSourceRestoresUserPrompt() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("\r", settle: 0.4)
+
+        server.push(Self.style(immediate: ""))
+        zsh.type("\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.raw == "p%% ")
+    }
+
+    @Test func smaltiPromptWinsOverZshrcAndStarshipLikeHook() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let rc = "starship_like() { PROMPT='STAR> ' }\nprecmd_functions+=(starship_like)"
+        let zsh = try ZshHarness(socket: server.path, zshrc: rc)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.4)
+        zsh.type("\r", settle: 0.4)
+        let state = zsh.dumpPrompt()
+
+        #expect(state?.shown.hasPrefix("IMM:") == true, "\(state?.shown ?? "")")
+        #expect(state?.lastPrecmd == "_smalti_prompt_precmd")
+    }
+
+    @Test func spontaneousPromptKeepsBuffer() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("\r", settle: 0.4)
+        let seq = try #require(contexts(server).last?[1])
+
+        zsh.type("ls -la")
+        server.push(Self.prompt(seq: seq, branch: "claude te espera"))
+        zsh.type("", settle: 0.3)
+        let state = zsh.dumpPrompt()
+
+        #expect(state?.shown == "FULL:claude te espera › ")
+        #expect(state?.buffer == "ls -la")
+    }
+
+    @Test func staleSpontaneousPromptIsDropped() throws {
+        let server = try FakeInputServer { fields in fields.first == "hello" ? [Self.style()] : [] }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("\r", settle: 0.4)
+        let old = try #require(contexts(server).last?[1])
+        zsh.type("true\r", settle: 0.4)
+
+        server.push(Self.prompt(seq: old, branch: "viejo"))
+        zsh.type("", settle: 0.3)
+
+        #expect(zsh.dumpPrompt()?.shown.hasPrefix("IMM:") == true)
+    }
+
+    @Test func badValueNamesAreIgnored() throws {
+        let server = try FakeInputServer { fields in
+            switch fields.first {
+            case "hello": [Self.style()]
+            case "context": ["prompt\t\(fields[1])\tx\t\(Self.immediate)\tFULL:${PATH}\tPATH=/nowhere\u{1f}_smalti_sym=›"]
+            default: []
+            }
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+
+        #expect(zsh.dumpPrompt()?.shown.hasPrefix("FULL:/usr/bin") == true)
+    }
+
+    @Test func ghostColorChangesLive() throws {
+        let server = try FakeInputServer { fields in
+            switch fields.first {
+            case "hello": [Self.style(ghost: "#123456")]
+            case "line" where fields.last == "git s": ["suggest\t\(fields[1])\ttatus"]
+            default: []
+            }
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("git s")
+
+        #expect(zsh.dump()?.highlight.contains("fg=#123456 memo=smalti") == true)
+    }
+
+    @Test func promptWorksWithInputDisabled() throws {
+        let server = try FakeInputServer(reply: Self.answering(branch: "main"))
+        let zsh = try ZshHarness(socket: server.path, extra: ["SMALTI_INPUT_FEATURES": "0"])
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.5)
+        zsh.type("ls")
+
+        #expect(zsh.dumpPrompt()?.shown == "FULL:main › ")
+        #expect(!server.received.contains { $0.hasPrefix("line\t") })
+    }
+
+    @Test func inputDisabledInstallsNoWidgets() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path, extra: ["SMALTI_INPUT_FEATURES": "0"])
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.tab.contains("smalti-complete") == false)
+    }
+}

@@ -1,9 +1,9 @@
 /// The two prompt strings zsh shows (spec F5, "Del dominio a zsh"). The *immediate* one uses zsh's own expansions
 /// for local facts and is painted at once; the *full* one carries everything once Smalti answers. Outside text never
-/// enters the strings: it goes to `values`, which the script assigns to variables the strings reference, so `$(…)` in
-/// a branch name is shown, never run (the script turns on `prompt_subst` for those references).
+/// enters the strings: it goes to `values`, which the script puts in `psvar` slots the strings show with `%Nv`, so
+/// `$(…)` or `%F{red}` in a branch name is shown as it is, never run or expanded, whatever the user's options.
 public enum ZshPromptRenderer {
-    static let symbolVariable = "_smalti_sym"
+    static let symbolKey = String(PromptSlot.symbol.rawValue)
 
     public static func render(_ config: PromptConfig, context: PromptContext, theme: AppliedTheme) -> RenderedPrompt {
         let palette = ZshPalette(theme: theme.theme, icons: config.icons, isPills: config.style == .pills)
@@ -14,7 +14,7 @@ public enum ZshPromptRenderer {
         let full = lines.map { line in palette.drawable(line).map { palette.paint($0, values: &values) }.joined() }
             .joined(separator: "\n")
         let label = DirectoryLabel.label(directory: context.directory, home: context.home, repoRoot: context.repoRoot)
-        values.assign(symbolVariable, config.symbol.rawValue)
+        values.assign(Self.symbolKey, config.symbol.rawValue)
         return RenderedPrompt(
             immediate: immediate(config, palette: palette), full: full, values: values.entries,
             directoryLabel: ZshEscaping.literal(label))
@@ -47,16 +47,16 @@ public struct RenderedPrompt: Equatable, Sendable {
     }
 }
 
-/// `_smalti_p_1`, `_smalti_p_2`… in order of appearance.
+/// psvar slots from `PromptSlot.firstValue` on, in order of appearance.
 private struct ValueTable {
     private(set) var entries: [String: String] = [:]
-    private var count = 0
+    private var next = PromptSlot.firstValue
 
     mutating func reference(_ text: String) -> String {
-        count += 1
-        let name = "_smalti_p_\(count)"
-        entries[name] = ZshEscaping.literal(text)
-        return "${\(name)}"
+        let slot = next
+        next += 1
+        entries[String(slot)] = ZshEscaping.literal(text)
+        return "%\(slot)v"
     }
 
     mutating func assign(_ name: String, _ text: String) {
@@ -90,7 +90,7 @@ private struct ZshPalette {
             guard let character = icons.character(for: icon) else { return "" }
             body = foreground(run.color, String(character))
         case .symbol:
-            body = foreground(run.color, "${\(ZshPromptRenderer.symbolVariable)}")
+            body = foreground(run.color, "%\(PromptSlot.symbol.rawValue)v")
         case .text(let text) where text.allSatisfy { $0 == " " }:
             body = text
         case .text(let text):
@@ -107,11 +107,11 @@ private struct ZshPalette {
     /// review, C1). Colors sit outside the condition; with an empty value they paint nothing.
     func paint(_ part: ImmediatePart, gap: String) -> String {
         switch part {
-        case .variable(let name, let icon, let role):
-            return gap + pill(role, iconPrefix(icon, role) + foreground(role, "${\(name)}"), pad: " ")
-        case .optional(let name, let role):
-            let pad = "${\(name):+ }"
-            return "${\(name):+\(gap)}" + pill(role, foreground(role, "${\(name)}"), pad: pad)
+        case .variable(let slot, let icon, let role):
+            return gap + pill(role, iconPrefix(icon, role) + foreground(role, "%\(slot.rawValue)v"), pad: " ")
+        case .optional(let slot, let role):
+            let pad = "%(\(slot.rawValue)V. .)"
+            return "%(\(slot.rawValue)V.\(gap).)" + pill(role, foreground(role, "%\(slot.rawValue)v"), pad: pad)
         case .clock(let icon, let role):
             return gap + pill(role, iconPrefix(icon, role) + foreground(role, "%D{%H:%M}"), pad: " ")
         }
@@ -132,6 +132,6 @@ private struct ZshPalette {
         let ok = color(.accent).hexString
         let failed = color(.failed).hexString
         let secondary = color(.secondary).hexString
-        return "%(?.%F{\(ok)}.%F{\(failed)})${\(ZshPromptRenderer.symbolVariable)}%f%(?.. %F{\(secondary)}exit %?%f) "
+        return "%(?.%F{\(ok)}.%F{\(failed)})%\(PromptSlot.symbol.rawValue)v%f%(?.. %F{\(secondary)}exit %?%f) "
     }
 }

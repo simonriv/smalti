@@ -1,5 +1,5 @@
-/// Outside text (directories, branches, names) made safe for a zsh prompt value (spec F5, "Escapado"): `%` doubled so
-/// prompt expansion shows it, line breaks and tabs replaced, other control characters dropped, and long text trimmed
+/// Outside text (directories, branches, names) made safe for a zsh prompt value (spec F5, "Escapado"): `psvar` shows
+/// it as it is, so only line breaks and tabs are replaced, other control characters dropped, and long text trimmed
 /// from the left to `maximumBytes` of UTF-8, whole characters only, so the worst `prompt` answer still fits
 /// `InputProtocol.maximumAnswerBytes` (block 2 review, I3).
 public enum ZshEscaping {
@@ -19,10 +19,9 @@ public enum ZshEscaping {
         return ellipsis + kept.reversed().joined()
     }
 
-    /// One character escaped on its own, so trimming never splits `%%` or a grapheme.
+    /// One character escaped on its own, so trimming never splits a grapheme.
     private static func escape(_ character: Character) -> String {
         switch character {
-        case "%": return "%%"
         case "\n", "\r", "\r\n", "\u{2028}", "\u{2029}": return "␤"
         case "\t": return " "
         default:

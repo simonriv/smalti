@@ -2,14 +2,15 @@ import Foundation
 import SmaltiCore
 import Testing
 
-/// Block 2 review (C1): the renderer's strings expanded by a real zsh (`print -P`, `prompt_subst`), so a string zsh
+/// Block 2 review (C1): the renderer's strings expanded by a real zsh (`print -P` with `psvar`), so a string zsh
 /// would cut or misread fails here instead of being pinned as text.
 @Suite("Prompt strings in zsh", .enabled(if: FileManager.default.isExecutableFile(atPath: "/bin/zsh")))
 struct ZshExpansionTests {
     /// What zsh prints for `prompt` with `variables` assigned and `$?` = `exit`, escape sequences removed.
     private func expand(_ prompt: String, _ variables: [String: String], exit: Int = 0) throws -> String {
-        let assignments = variables.sorted { $0.key < $1.key }.map { "typeset -g \($0.key)=\(quoted($0.value))" }
-        let script = (["setopt prompt_subst"] + assignments + ["(exit \(exit))", "print -rnP -- \(quoted(prompt))"])
+        // psvar slots by number (spec F5: values are shown with `%Nv`, never expanded); no prompt_subst needed.
+        let assignments = variables.compactMap { key, value in Int(key).map { "psvar[\($0)]=\(quoted(value))" } }
+        let script = (assignments + ["(exit \(exit))", "print -rnP -- \(quoted(prompt))"])
             .joined(separator: "\n")
         let process = Process()
         process.executableURL = URL(filePath: "/bin/zsh")
@@ -39,7 +40,7 @@ struct ZshExpansionTests {
     @Test func immediateWithoutDurationShowsDirectoryAndSymbol() throws {
         let prompt = immediate()
 
-        let shown = try expand(prompt.immediate, ["_smalti_dir": "solen", "_smalti_duration": "", "_smalti_sym": "›"])
+        let shown = try expand(prompt.immediate, ["2": "solen", "3": "", "1": "›"])
 
         #expect(shown == "\u{E900} solen\n› ")
     }
@@ -48,14 +49,14 @@ struct ZshExpansionTests {
         let prompt = immediate()
 
         let shown = try expand(
-            prompt.immediate, ["_smalti_dir": "solen", "_smalti_duration": "4.2s", "_smalti_sym": "›"])
+            prompt.immediate, ["2": "solen", "3": "4.2s", "1": "›"])
 
         #expect(shown == "\u{E900} solen   4.2s\n› ")
     }
 
     @Test func failedExitShowsExitCode() throws {
         let shown = try expand(
-            immediate().immediate, ["_smalti_dir": "x", "_smalti_duration": "", "_smalti_sym": "›"], exit: 3)
+            immediate().immediate, ["2": "x", "3": "", "1": "›"], exit: 3)
 
         #expect(shown == "\u{E900} x\n› exit 3 ")
     }
@@ -63,7 +64,7 @@ struct ZshExpansionTests {
     @Test func pillsImmediateWithoutDurationLeavesNothing() throws {
         let prompt = immediate { $0 = $0.applying(.pills) }
 
-        let shown = try expand(prompt.immediate, ["_smalti_dir": "solen", "_smalti_duration": "", "_smalti_sym": "›"])
+        let shown = try expand(prompt.immediate, ["2": "solen", "3": "", "1": "›"])
 
         #expect(shown == " \u{E900} solen  › ")
     }

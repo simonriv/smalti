@@ -39,13 +39,13 @@ struct ZshPromptRendererTests {
 
         #expect(
             rendered.full
-                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_p_1}%f   %F{#bb9af7}\u{E901}%f %F{#bb9af7}${_smalti_p_2}%f "
-                + "%F{#e0af68}${_smalti_p_3}%f%F{#9ece6a}${_smalti_p_4}%f   %F{#8b919c}\u{E902}%f %F{#8b919c}${_smalti_p_5}%f"
-                + "\n%F{#7aa2f7}${_smalti_sym}%f ")
+                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}%4v%f   %F{#bb9af7}\u{E901}%f %F{#bb9af7}%5v%f "
+                + "%F{#e0af68}%6v%f%F{#9ece6a}%7v%f   %F{#8b919c}\u{E902}%f %F{#8b919c}%8v%f"
+                + "\n%F{#7aa2f7}%1v%f ")
         #expect(
             rendered.values == [
-                "_smalti_p_1": "solen/apps/api", "_smalti_p_2": "feat/reminders", "_smalti_p_3": "●2",
-                "_smalti_p_4": " +1", "_smalti_p_5": "22.11", "_smalti_sym": "›",
+                "4": "solen/apps/api", "5": "feat/reminders", "6": "●2",
+                "7": " +1", "8": "22.11", "1": "›",
             ])
         #expect(rendered.directoryLabel == "solen/apps/api")
     }
@@ -56,7 +56,7 @@ struct ZshPromptRendererTests {
 
         let rendered = render(config)
 
-        #expect(rendered.full == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_p_1}%f %F{#7aa2f7}${_smalti_sym}%f ")
+        #expect(rendered.full == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}%4v%f %F{#7aa2f7}%1v%f ")
     }
 
     @Test func immediateHasOnlyLocalSegments() {
@@ -64,8 +64,8 @@ struct ZshPromptRendererTests {
 
         #expect(
             rendered.immediate
-                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_dir}%f${_smalti_duration:+   }%F{#8b919c}${_smalti_duration}%f"
-                + "\n%(?.%F{#7aa2f7}.%F{#f7768e})${_smalti_sym}%f%(?.. %F{#8b919c}exit %?%f) ")
+                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}%2v%f%(3V.   .)%F{#8b919c}%3v%f"
+                + "\n%(?.%F{#7aa2f7}.%F{#f7768e})%1v%f%(?.. %F{#8b919c}exit %?%f) ")
     }
 
     @Test func immediateTimeUsesZshClock() {
@@ -78,16 +78,16 @@ struct ZshPromptRendererTests {
     @Test func fullWithFailedExitPaintsSymbolRedAndAddsExit() {
         let rendered = render(.standard, nodeProject { $0.lastExit = 1 })
 
-        #expect(rendered.full.hasSuffix("\n%F{#f7768e}${_smalti_sym}%f%F{#8b919c}${_smalti_p_6}%f "))
-        #expect(rendered.values["_smalti_p_6"] == " exit 1")
+        #expect(rendered.full.hasSuffix("\n%F{#f7768e}%1v%f%F{#8b919c}%9v%f "))
+        #expect(rendered.values["9"] == " exit 1")
     }
 
     @Test func branchWithSubstitutionStaysLiteral() {
         let rendered = render(.standard, nodeProject { $0.branch = "$(touch pwned)%F{red}" })
 
-        #expect(rendered.values["_smalti_p_2"] == "$(touch pwned)%%F{red}")
+        #expect(rendered.values["5"] == "$(touch pwned)%F{red}")
         #expect(!rendered.full.contains("touch"))
-        #expect(!rendered.full.contains("%F{red}"))
+        #expect(!rendered.full.contains("red"))
     }
 
     @Test func percentInDirectoryIsEscaped() {
@@ -98,14 +98,14 @@ struct ZshPromptRendererTests {
                 $0.directory = "/tmp/100%"
             })
 
-        // Two levels in all: zsh's `%2~` shows the whole path, as for `/usr`.
-        #expect(rendered.values["_smalti_p_1"] == "/tmp/100%%")
+        // Two levels in all: zsh's `%2~` shows the whole path, as for `/usr`. psvar shows `%` as is.
+        #expect(rendered.values["4"] == "/tmp/100%")
     }
 
     @Test func newlineInNameIsReplaced() {
         let rendered = render(.standard, nodeProject { $0.branch = "a\nb\tc" })
 
-        #expect(rendered.values["_smalti_p_2"] == "a␤b c")
+        #expect(rendered.values["5"] == "a␤b c")
     }
 
     @Test func dollarSymbolNeverAppearsBareInThePrompt() {
@@ -117,7 +117,7 @@ struct ZshPromptRendererTests {
             .filter { !$0.hasPrefix("{") }
 
         #expect(bare.isEmpty)
-        #expect(rendered.values["_smalti_sym"] == "$")
+        #expect(rendered.values["1"] == "$")
     }
 
     @Test func protectedColorsAreUsed() throws {
@@ -126,7 +126,7 @@ struct ZshPromptRendererTests {
 
         let full = render(.standard, nil, theme: applied).full
 
-        #expect(full.contains("%F{\(applied.theme.terminal.palette[5].hexString)}${_smalti_p_2}"))
+        #expect(full.contains("%F{\(applied.theme.terminal.palette[5].hexString)}%5v"))
         #expect(!full.contains("#15161e"))
     }
 
@@ -135,7 +135,7 @@ struct ZshPromptRendererTests {
         config.icons = .none
         config.modules = [.directory]
 
-        #expect(render(config).full == "%F{#7aa2f7}${_smalti_p_1}%f\n%F{#7aa2f7}${_smalti_sym}%f ")
+        #expect(render(config).full == "%F{#7aa2f7}%4v%f\n%F{#7aa2f7}%1v%f ")
     }
 
     @Test func nerdIconsUseNerdGlyphs() {
@@ -158,7 +158,7 @@ struct ZshPromptRendererTests {
     }
 
     @Test func symbolOnlyRendersOnlyTheSymbol() {
-        #expect(render(PromptConfig.standard.applying(.symbolOnly)).full == "%F{#7aa2f7}${_smalti_sym}%f ")
+        #expect(render(PromptConfig.standard.applying(.symbolOnly)).full == "%F{#7aa2f7}%1v%f ")
     }
 
     @Test func messageStaysUnder2000Bytes() {
@@ -174,7 +174,7 @@ struct ZshPromptRendererTests {
             + rendered.values.map { $0.key.utf8.count + $0.value.utf8.count }.reduce(0, +)
 
         #expect(size < 2000)
-        #expect(rendered.values["_smalti_p_1"]?.hasPrefix("…") == true)
+        #expect(rendered.values["4"]?.hasPrefix("…") == true)
     }
 }
 
@@ -222,6 +222,6 @@ struct ZshPromptWhitespaceTests {
         let rendered = ZshPromptRenderer.render(config, context: context, theme: ThemeCatalog.apply(.obsidian))
 
         #expect(!rendered.full.contains("\r"))
-        #expect(rendered.values["_smalti_p_1"] == "␤")
+        #expect(rendered.values["4"] == "␤")
     }
 }

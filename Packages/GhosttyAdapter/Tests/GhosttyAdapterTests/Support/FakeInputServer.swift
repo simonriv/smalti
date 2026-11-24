@@ -100,6 +100,13 @@ final class FakeInputServer: @unchecked Sendable {
         return true
     }
 
+    /// F5: a message Smalti sends without being asked (the spontaneous `prompt`, a new `promptstyle`).
+    func push(_ line: String) {
+        let fd = lock.withLock { client }
+        guard fd >= 0 else { return }
+        send(line + "\n", to: fd)
+    }
+
     private func send(_ text: String, to fd: Int32) {
         let data = Data(text.utf8)
         _ = data.withUnsafeBytes { write(fd, $0.baseAddress, data.count) }

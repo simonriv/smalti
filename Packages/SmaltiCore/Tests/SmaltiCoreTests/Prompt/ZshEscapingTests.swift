@@ -30,9 +30,8 @@ struct ZshEscapingReviewTests {
         #expect(ZshEscaping.literal("a\rb\u{2028}c") == "a␤b␤c")
     }
 
-    @Test func trimmingNeverLeavesALonePercent() {
-        let literal = ZshEscaping.literal(String(repeating: "%", count: 100))
-
-        #expect(literal.dropFirst().count % 2 == 0)
+    /// psvar shows its values as they are: `%` needs no escaping.
+    @Test func percentStaysAsIs() {
+        #expect(ZshEscaping.literal("100%F{red}") == "100%F{red}")
     }
 }

@@ -32,13 +32,24 @@ public enum PromptModules {
     }
 }
 
+/// The `psvar` slots the script fills and the prompt shows with `%Nv` (spec F5, "Escapado"): zsh inserts a slot's
+/// text as it is, with no expansion of `%`, `$` or backquotes and no option needed. Values of a full prompt start at
+/// `firstValue`.
+public enum PromptSlot: Int, Sendable {
+    case symbol = 1
+    case directory = 2
+    case duration = 3
+
+    public static let firstValue = 4
+}
+
 /// How a local module appears in the immediate prompt, with zsh's own expansions (spec F5): the script fills the
 /// variables at every `precmd`, so the prompt shows them before Smalti answers.
 public enum ImmediatePart: Equatable, Sendable {
-    /// Always shown: `${name}`.
-    case variable(String, icon: PromptIcon?, color: SegmentColor)
-    /// Shown only when the script set it (the duration from 2 s).
-    case optional(String, color: SegmentColor)
+    /// Always shown: `%Nv` of its slot.
+    case variable(PromptSlot, icon: PromptIcon?, color: SegmentColor)
+    /// Shown only when the script set it (the duration from 2 s): `%(NV.…)`.
+    case optional(PromptSlot, color: SegmentColor)
     /// zsh's clock, `%D{%H:%M}`.
     case clock(icon: PromptIcon?, color: SegmentColor)
 }
@@ -49,11 +60,11 @@ extension PromptModule {
 }
 
 extension DirectoryModule {
-    var immediate: ImmediatePart? { .variable("_smalti_dir", icon: .folder, color: .accent) }
+    var immediate: ImmediatePart? { .variable(.directory, icon: .folder, color: .accent) }
 }
 
 extension DurationModule {
-    var immediate: ImmediatePart? { .optional("_smalti_duration", color: .secondary) }
+    var immediate: ImmediatePart? { .optional(.duration, color: .secondary) }
 }
 
 extension TimeModule {

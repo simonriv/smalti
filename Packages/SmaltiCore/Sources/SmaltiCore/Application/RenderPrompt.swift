@@ -81,19 +81,23 @@ public final class RenderPrompt {
         pending[pane] = nil
     }
 
-    /// The immediate prompt and the ghost color for every shell; `nil` with `source = "shell"`.
-    public func styleMessage() -> SmaltiMessage? {
+    /// The immediate prompt and the ghost color for every shell. With `source = "shell"` the immediate prompt is
+    /// empty: zsh gives the user's prompt back, and the ghost color still arrives.
+    public func styleMessage() -> SmaltiMessage {
         let (config, theme) = environment.settings()
-        guard config.source == .smalti else { return nil }
+        let ghost = theme.theme.text.ghostText
+        guard config.source == .smalti else {
+            return .promptStyle(RenderedPrompt(immediate: "", full: "", values: [:], directoryLabel: ""), ghost: ghost)
+        }
         let base = PromptContext(directory: environment.home, home: environment.home)
         let rendered = ZshPromptRenderer.render(config, context: base, theme: theme)
         // Only what the immediate prompt references: a full prompt's values would repaint the one on screen with
         // another context's text (block 2 review, I1).
-        let symbol = ZshPromptRenderer.symbolVariable
+        let symbol = ZshPromptRenderer.symbolKey
         let style = RenderedPrompt(
             immediate: rendered.immediate, full: "", values: rendered.values.filter { $0.key == symbol },
             directoryLabel: "")
-        return .promptStyle(style, ghost: theme.theme.text.ghostText)
+        return .promptStyle(style, ghost: ghost)
     }
 
     private func message(for pane: PaneID) -> SmaltiMessage? {

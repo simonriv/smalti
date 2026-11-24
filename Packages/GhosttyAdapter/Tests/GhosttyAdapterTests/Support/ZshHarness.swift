@@ -20,8 +20,9 @@ final class ZshHarness: @unchecked Sendable {
     private let lock = NSLock()
     private var transcript = Data()
 
-    /// `socket` nil leaves `SMALTI_INPUT_SOCKET` unset; `zshrc` is appended to the test `.zshrc`.
-    init(socket: String?, zshrc: String = "") throws {
+    /// `socket` nil leaves `SMALTI_INPUT_SOCKET` unset; `zshrc` is appended to the test `.zshrc`; `extra` adds
+    /// variables to the shell's environment (F5: `SMALTI_INPUT_FEATURES`, `AWS_PROFILE`).
+    init(socket: String?, zshrc: String = "", extra: [String: String] = [:]) throws {
         let user = work.appending(path: "user")
         try FileManager.default.createDirectory(at: user, withIntermediateDirectories: true)
         let dump = work.appending(path: "dump").path(percentEncoded: false)
@@ -32,6 +33,9 @@ final class ZshHarness: @unchecked Sendable {
             zle -N _test_dump
             bindkey '^X^D' _test_dump
             bindkey -M viins '^X^D' _test_dump
+            _test_prompt() { print -r -- "$(print -rP -- "$PROMPT")"$'\\x1f'"$PROMPT"$'\\x1f'"${precmd_functions[-1]}"$'\\x1f'"$BUFFER"$'\\x1f'"$(bindkey '^I')" >| \(dump)-prompt }
+            zle -N _test_prompt
+            bindkey '^X^P' _test_prompt
             \(zshrc)
             """
         try rc.write(to: user.appending(path: ".zshrc"), atomically: true, encoding: .utf8)
@@ -47,6 +51,7 @@ final class ZshHarness: @unchecked Sendable {
             "SMALTI_PANE_ID": "6F2B4E1C-0A3D-4C5E-9F11-2233445566AA",
         ]
         if let socket { environment["SMALTI_INPUT_SOCKET"] = socket }
+        environment.merge(extra) { _, new in new }
         process.executableURL = URL(filePath: "/usr/bin/script")
         process.arguments = ["-q", "/dev/null", "/bin/zsh", "-d", "-i"]
         process.environment = environment
@@ -78,6 +83,27 @@ final class ZshHarness: @unchecked Sendable {
     func type(_ keys: String, settle: TimeInterval = 0.25) {
         input.fileHandleForWriting.write(Data(keys.utf8))
         Thread.sleep(forTimeInterval: settle)
+    }
+
+    /// F5: what zsh shows as the prompt (prompt-expanded, escapes removed), the raw `PROMPT`, the last precmd hook,
+    /// the line being edited and what Tab is bound to.
+    struct PromptState: Equatable {
+        let shown: String
+        let raw: String
+        let lastPrecmd: String
+        let buffer: String
+        let tab: String
+    }
+
+    func dumpPrompt() -> PromptState? {
+        let file = work.appending(path: "dump-prompt")
+        try? FileManager.default.removeItem(at: file)
+        type("\u{18}\u{10}")
+        guard let text = try? String(contentsOf: file, encoding: .utf8) else { return nil }
+        let parts = text.trimmingCharacters(in: .newlines).components(separatedBy: "\u{1f}")
+        guard parts.count == 5 else { return nil }
+        let shown = parts[0].replacingOccurrences(of: "\u{1b}\\[[0-9;]*m", with: "", options: .regularExpression)
+        return PromptState(shown: shown, raw: parts[1], lastPrecmd: parts[2], buffer: parts[3], tab: parts[4])
     }
 
     func dump() -> State? {
