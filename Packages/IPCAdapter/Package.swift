@@ -10,7 +10,8 @@ let package = Package(
         .executable(name: "smalti", targets: ["smalti"]),
     ],
     dependencies: [
-        .package(path: "../SmaltiCore")
+        .package(path: "../SmaltiCore"),
+        .package(path: "../ImageIOAdapter"),
     ],
     targets: [
         // Wire format only: no SmaltiCore, so the CLI starts fast inside a hook.
@@ -18,7 +19,13 @@ let package = Package(
         .target(
             name: "IPCAdapter",
             dependencies: ["SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore")]),
-        .executableTarget(name: "smalti", dependencies: ["SmaltiIPCProtocol"]),
+        // F5.5: `img` needs the domain and ImageIO; linking them costs `event` ~0.2 ms (plan T1).
+        .executableTarget(
+            name: "smalti",
+            dependencies: [
+                "SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore"),
+                .product(name: "ImageIOAdapter", package: "ImageIOAdapter"),
+            ]),
         .testTarget(name: "SmaltiIPCProtocolTests", dependencies: ["SmaltiIPCProtocol"]),
         .testTarget(
             name: "IPCAdapterTests",
@@ -26,6 +33,11 @@ let package = Package(
                 "IPCAdapter", "SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
             ]),
-        .testTarget(name: "SmaltiCLITests", dependencies: ["smalti", "SmaltiIPCProtocol"]),
+        .testTarget(
+            name: "SmaltiCLITests",
+            dependencies: [
+                "smalti", "SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore"),
+                .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
+            ]),
     ]
 )

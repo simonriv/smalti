@@ -35,6 +35,7 @@ public final class InMemoryImageFiles: ImageFiles, @unchecked Sendable {
     private var waiting: [Key: [CheckedContinuation<Void, Never>]] = [:]
     private var watchers: [Key: [CheckedContinuation<Void, Never>]] = [:]
     private var thumbnailedPaths: [String] = []
+    private var sizes: [Size] = []
     private var describedPaths: [String] = []
     private var cancelledPaths: [String] = []
 
@@ -44,6 +45,8 @@ public final class InMemoryImageFiles: ImageFiles, @unchecked Sendable {
 
     public var described: [String] { lock.withLock { describedPaths } }
     public var cancelled: [String] { lock.withLock { cancelledPaths } }
+    /// The boxes thumbnails were asked to fit.
+    public var thumbnailSizes: [Size] { lock.withLock { sizes } }
     /// Paths a thumbnail was started for.
     public var thumbnailed: [String] { lock.withLock { thumbnailedPaths } }
 
@@ -94,7 +97,10 @@ public final class InMemoryImageFiles: ImageFiles, @unchecked Sendable {
     }
 
     public func thumbnail(of path: String, fitting size: Size) async throws(ImagePreviewError) -> Data {
-        lock.withLock { thumbnailedPaths.append(path) }
+        lock.withLock {
+            thumbnailedPaths.append(path)
+            sizes.append(size)
+        }
         await waitIfHeld(Key(path: path, stage: .thumbnail))
         if Task.isCancelled { lock.withLock { cancelledPaths.append(path) } }
         guard case .image = entries[path] else { throw .unreadable(path: path, reason: "cannot decode") }
