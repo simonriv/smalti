@@ -4,10 +4,9 @@
 /// a branch name is shown, never run (the script turns on `prompt_subst` for those references).
 public enum ZshPromptRenderer {
     static let symbolVariable = "_smalti_sym"
-    private static let gap = CleanStyle.gap
 
     public static func render(_ config: PromptConfig, context: PromptContext, theme: AppliedTheme) -> RenderedPrompt {
-        let palette = ZshPalette(theme: theme.theme, icons: config.icons)
+        let palette = ZshPalette(theme: theme.theme, icons: config.icons, isPills: config.style == .pills)
         let style = PromptStyles.style(for: config.style)
         let symbol = SymbolSegment(symbol: config.symbol, lastExit: context.lastExit)
         let lines = style.lines(PromptModules.segments(for: config, in: context), symbol: symbol, layout: config.layout)
@@ -24,6 +23,7 @@ public enum ZshPromptRenderer {
     private static func immediate(_ config: PromptConfig, palette: ZshPalette) -> String {
         let parts =
             config.style == .symbolOnly ? [] : config.modules.compactMap { PromptModules.module(for: $0).immediate }
+        let gap = config.style == .pills ? " " : CleanStyle.gap
         let context = parts.enumerated().map { index, part in palette.paint(part, gap: index == 0 ? "" : gap) }.joined()
         let symbol = palette.conditionalSymbol()
         guard !context.isEmpty else { return symbol }
@@ -68,6 +68,8 @@ private struct ValueTable {
 private struct ZshPalette {
     let theme: Theme
     let icons: PromptIcons
+    /// Immediate pieces wear their pill too, so the prompt does not jump when Smalti answers.
+    let isPills: Bool
 
     func color(_ role: SegmentColor) -> RGBAColor {
         theme.color(for: role)
@@ -101,15 +103,23 @@ private struct ZshPalette {
         PillsStyle.background(of: color(role), over: theme.panel.background).hexString
     }
 
+    /// No prompt escape with braces goes inside `${name:+…}`: zsh would end the word at the escape's `}` (block 2
+    /// review, C1). Colors sit outside the condition; with an empty value they paint nothing.
     func paint(_ part: ImmediatePart, gap: String) -> String {
         switch part {
         case .variable(let name, let icon, let role):
-            return gap + iconPrefix(icon, role) + foreground(role, "${\(name)}")
+            return gap + pill(role, iconPrefix(icon, role) + foreground(role, "${\(name)}"), pad: " ")
         case .optional(let name, let role):
-            return "${\(name):+\(gap)\(foreground(role, "${\(name)}"))}"
+            let pad = "${\(name):+ }"
+            return "${\(name):+\(gap)}" + pill(role, foreground(role, "${\(name)}"), pad: pad)
         case .clock(let icon, let role):
-            return gap + iconPrefix(icon, role) + foreground(role, "%D{%H:%M}")
+            return gap + pill(role, iconPrefix(icon, role) + foreground(role, "%D{%H:%M}"), pad: " ")
         }
+    }
+
+    private func pill(_ role: SegmentColor, _ body: String, pad: String) -> String {
+        guard isPills else { return body }
+        return "%K{\(background(role))}\(pad)\(body)\(pad)%k"
     }
 
     private func iconPrefix(_ icon: PromptIcon?, _ role: SegmentColor) -> String {

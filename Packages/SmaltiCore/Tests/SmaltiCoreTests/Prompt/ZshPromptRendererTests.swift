@@ -64,7 +64,7 @@ struct ZshPromptRendererTests {
 
         #expect(
             rendered.immediate
-                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_dir}%f${_smalti_duration:+   %F{#8b919c}${_smalti_duration}%f}"
+                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_dir}%f${_smalti_duration:+   }%F{#8b919c}${_smalti_duration}%f"
                 + "\n%(?.%F{#7aa2f7}.%F{#f7768e})${_smalti_sym}%f%(?.. %F{#8b919c}exit %?%f) ")
     }
 
