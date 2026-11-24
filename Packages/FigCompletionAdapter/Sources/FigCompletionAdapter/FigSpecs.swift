@@ -55,6 +55,12 @@ public actor FigSpecs: CompletionProvider {
         return Array(Set(bundledCommands + userCommands)).sorted()
     }
 
+    /// Only what `spec(for:)` already loaded, for the same user file: never evaluates JavaScript.
+    public func loadedSpec(for command: String) async -> CompletionSpec? {
+        guard Self.isValidName(command), let loaded = loaded[command] else { return nil }
+        return loaded.userVersion == userVersion(of: command) ? loaded.spec : nil
+    }
+
     public func spec(for command: String) async -> CompletionSpec? {
         guard Self.isValidName(command) else { return nil }
         let version = userVersion(of: command)
