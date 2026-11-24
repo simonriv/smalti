@@ -338,6 +338,8 @@ struct FilePromptFactsGitTests {
         process.currentDirectoryURL = directory
         try process.run()
         process.waitUntilExit()
+        // Block 5 review (M11): a setup that fails says so, not as a wrong branch later.
+        #expect(process.terminationStatus == 0, "setup failed: \(script)")
     }
 
     @Test func modifiedFileIsCounted() async throws {

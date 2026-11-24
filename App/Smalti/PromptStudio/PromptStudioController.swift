@@ -13,6 +13,10 @@ final class PromptStudioController {
     private var editor: EditPrompt?
     private var view: PromptStudioView?
     private var escapeMonitor: Any?
+    /// Looked up once per opening (block 5 review, M9).
+    private var hasNerdFont = false
+    /// ⌘K or the help open on top of the studio: their Esc is theirs (block 5 review, M3).
+    var hasOverlayOnTop: () -> Bool = { false }
 
     /// UI tests: where the export writes, without the save panel.
     private static let exportDirectoryKey = "SmaltiExportDirectory"
@@ -45,6 +49,7 @@ final class PromptStudioController {
         self.editor = editor
         self.view = view
         isOpen = true
+        hasNerdFont = Self.isNerdFontInstalled
         render()
         window.makeFirstResponder(view.firstControl)
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -52,7 +57,7 @@ final class PromptStudioController {
             let isOurs = event.window === self?.window
             // Local monitors run on the main thread.
             let closed = MainActor.assumeIsolated { () -> Bool in
-                guard let self, isOurs, self.isOpen else { return false }
+                guard let self, isOurs, self.isOpen, !self.hasOverlayOnTop() else { return false }
                 self.close()
                 return true
             }
@@ -95,7 +100,7 @@ final class PromptStudioController {
         view.render(
             PromptStudioState(
                 draft: editor.draft, previews: previews, moduleList: editor.moduleList, theme: session.theme,
-                hasNerdFont: Self.hasNerdFont))
+                hasNerdFont: hasNerdFont))
     }
 
     // MARK: - Export
@@ -116,7 +121,9 @@ final class PromptStudioController {
         }
     }
 
-    private func write(_ text: String, to url: URL) {
+    /// A `starship.toml` linked from dotfiles is written through its link (block 5 review, M4).
+    private func write(_ text: String, to chosen: URL) {
+        let url = chosen.resolvingSymlinksInPath()
         do {
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -129,7 +136,7 @@ final class PromptStudioController {
     // MARK: - Nerd Font
 
     /// A font whose name says Nerd Font is installed (`CTFontManager`); `-SmaltiNerdFontAvailable` overrides it.
-    private static var hasNerdFont: Bool {
+    private static var isNerdFontInstalled: Bool {
         if UserDefaults.standard.object(forKey: nerdFontKey) != nil {
             return UserDefaults.standard.bool(forKey: nerdFontKey)
         }

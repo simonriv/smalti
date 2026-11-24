@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 /// F5 C7 and C12: the Smalti prompt in a real zsh (`zsh -d`, temporary ZDOTDIR whose `.zshrc` sets its own
@@ -71,5 +72,32 @@ final class PromptTests: SmaltiUITestCase {
         reloadConfigFromPalette()
 
         expectTerminal(containing: "λ")
+    }
+
+    // MARK: - F4 with the Smalti prompt (block 5 review, I5)
+
+    func testGhostTextWorksUnderTheSmaltiPrompt() {
+        launchWithPrompt()
+        app.typeText("<<<one>\"$SMALTI_UITEST_OUT\"\n")
+        waitForOutput("one\n")
+        try? FileManager.default.removeItem(at: outputFile)
+
+        app.typeText("<<<o")
+        sleep(1)
+        app.typeKey(.rightArrow, modifierFlags: [])
+        app.typeText("\n")
+
+        waitForOutput("one\n")
+    }
+
+    func testTabMenuWorksUnderTheSmaltiPrompt() {
+        launchWithPrompt()
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("git ch", forType: .string)
+        app.typeKey("v", modifierFlags: .command)
+
+        app.typeKey(.tab, modifierFlags: [])
+
+        XCTAssertTrue(app.element("smalti.completionMenu").waitForExistence(timeout: 5))
     }
 }

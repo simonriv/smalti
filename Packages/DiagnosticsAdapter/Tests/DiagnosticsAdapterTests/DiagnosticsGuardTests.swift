@@ -45,9 +45,9 @@ struct DiagnosticsGuardTests {
     }
 
     /// F5 C17: `privacy: .public` on what the prompt shows: its text, the directory or a path, the branch, the
-    /// repository, the kube context or the AWS profile.
+    /// repository, the kube context or the AWS profile, also wrapped in `String(describing:)` (block 5 review, M10).
     private static var publishedPrompt: Regex<Substring> {
-        #/\\\(\s*(?:[A-Za-z0-9_]+\.)*(?i:[A-Za-z0-9_]*(?:prompt|branch|pwd|directory|path|reporoot|kubecontext|awsprofile))(?![A-Za-z0-9_])(?:[^()]|\([^()]*\))*privacy: \.public/#
+        #/\\\(\s*(?:String\(describing:\s*)?(?:[A-Za-z0-9_]+\.)*(?i:[A-Za-z0-9_]*(?:prompt|branch|pwd|directory|path|reporoot|kubecontext|awsprofile))(?![A-Za-z0-9_])\)?(?:[^()]|\([^()]*\))*privacy: \.public/#
     }
 
     @Test(arguments: [
@@ -56,6 +56,7 @@ struct DiagnosticsGuardTests {
         "logger.error(\"in \\(context.pwd, privacy: .public)\")",
         "logger.error(\"at \\(file.path(percentEncoded: false), privacy: .public)\")",
         "logger.error(\"repo \\(result.repoRoot, privacy: .public)\")",
+        "logger.error(\"at \\(String(describing: path), privacy: .public)\")",
     ])
     func patternFindsPublishedPromptText(_ source: String) {
         #expect(source.contains(Self.publishedPrompt))

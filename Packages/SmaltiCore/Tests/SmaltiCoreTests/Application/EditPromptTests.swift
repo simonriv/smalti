@@ -81,6 +81,24 @@ struct EditPromptTests {
         #expect(Array(edit.draft.modules.prefix(2)) == [.directory, .gitBranch])
     }
 
+    /// Block 5 review (I2): a drag over several rows moves the module, the others keep their order.
+    @Test func moveSeveralPlacesShiftsTheOthers() {
+        let (edit, _) = make()
+
+        edit.move(.directory, by: 3)
+
+        #expect(edit.draft.modules == [.gitBranch, .gitStatus, .runtime, .directory, .duration, .agents])
+    }
+
+    @Test func moveBeyondTheEndStopsAtTheEdge() {
+        let (edit, _) = make()
+
+        edit.move(.gitStatus, by: 10)
+
+        #expect(edit.draft.modules.last == .gitStatus)
+        #expect(edit.draft.modules.count == 6)
+    }
+
     @Test func moveFirstUpIsNoop() {
         let (edit, _) = make()
         let before = edit.draft.modules

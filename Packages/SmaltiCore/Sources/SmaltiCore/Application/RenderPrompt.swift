@@ -46,6 +46,9 @@ public final class RenderPrompt {
         let seq: Int
         let context: ShellContext
         let facts: PromptFactsResult
+        /// The waiting agents its last prompt showed: a hook that leaves them as they were re-sends nothing (block 5
+        /// review, I1).
+        var shownAgents = WaitingAgents()
     }
 
     public init(facts: any PromptFacts, environment: PromptEnvironment) {
@@ -71,7 +74,7 @@ public final class RenderPrompt {
     /// The pane header's text with "Solo símbolo"; `nil` with another style or before the shell's first prompt.
     public func headerText(for pane: PaneID) -> String? {
         let config = environment.settings().0
-        guard config.style == .symbolOnly, let shell = lastShells[pane] else { return nil }
+        guard config.source == .smalti, config.style == .symbolOnly, let shell = lastShells[pane] else { return nil }
         let segments = PromptModules.segments(for: config, in: promptContext(shell, pane: pane))
         return PromptHeaderText.text(for: segments, maxWidth: Self.headerMaxCharacters)
     }
@@ -79,7 +82,8 @@ public final class RenderPrompt {
     /// The prompts to re-send after an agent of `workspace` changed state, with each shell's last `seq`.
     public func agentsChanged(in workspace: WorkspaceID) -> [(pane: PaneID, message: SmaltiMessage)] {
         quiet.keys.filter { environment.workspace($0) == workspace }.compactMap { pane in
-            message(for: pane).map { (pane, $0) }
+            guard environment.agents(pane) != quiet[pane]?.shownAgents else { return nil }
+            return message(for: pane).map { (pane, $0) }
         }
     }
 
@@ -119,6 +123,7 @@ public final class RenderPrompt {
         let (config, theme) = environment.settings()
         guard config.source == .smalti, let shell = quiet[pane] else { return nil }
         let context = promptContext(shell, pane: pane)
+        quiet[pane]?.shownAgents = context.agents
         return .prompt(seq: shell.seq, ZshPromptRenderer.render(config, context: context, theme: theme))
     }
 

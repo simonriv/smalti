@@ -743,7 +743,14 @@ final class AppComposition {
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() })
         let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
         coordinator.renderPrompt = render
-        coordinator.onPromptRendered = { [weak self] pane in self?.composition(containing: pane)?.controller.refresh() }
+        // Only a header that shows the prompt's context changes with it (block 5 review, M2).
+        var headers: [PaneID: String] = [:]
+        coordinator.onPromptRendered = { [weak self] pane in
+            let header = render.headerText(for: pane)
+            guard header != headers[pane] else { return }
+            headers[pane] = header
+            self?.composition(containing: pane)?.controller.refresh()
+        }
         promptHeader = { pane in render.headerText(for: pane) }
     }
 

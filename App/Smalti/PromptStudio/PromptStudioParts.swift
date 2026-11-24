@@ -15,8 +15,7 @@ enum PromptRunText {
         for (index, line) in lines.enumerated() {
             if index > 0 { text.append(NSAttributedString(string: "\n", attributes: [.font: font])) }
             for run in line {
-                // The thin icons are private-use characters only `SmaltiSymbols` has (its PostScript name is generated,
-                // so a cascade list does not find it by family).
+                // The thin icons are private-use characters only `SmaltiSymbols` has.
                 let isIcon = run.text.unicodeScalars.contains { iconRange.contains($0.value) }
                 var attributes: [NSAttributedString.Key: Any] = [
                     .font: (isIcon ? symbols : nil) ?? font, .foregroundColor: run.color.nsColor,
@@ -51,6 +50,7 @@ final class TemplateCardView: PanelButtonView {
         stack.alignment = .leading
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
+        // Sizes are the same in every theme (`PromptStudioTokens`); the colors come in `render`.
         let padding = Theme.obsidian.promptStudio.templatePadding
         stack.spacing = Theme.obsidian.promptStudio.templateGap
         NSLayoutConstraint.activate([
@@ -117,10 +117,14 @@ final class ModuleRowView: NSView {
     var onMove: ((Int) -> Void)?
     private let row: ModuleRow
     private let check: NSButton
+    var module: PromptModuleID { row.id }
     private var dragStart: CGFloat?
+
+    private let rowGap: Double
 
     init(row: ModuleRow, theme: Theme) {
         self.row = row
+        rowGap = theme.promptStudio.moduleRowGap
         check = NSButton(checkboxWithTitle: "", target: nil, action: nil)
         super.init(frame: .zero)
         let tokens = theme.promptStudio
@@ -204,7 +208,7 @@ final class ModuleRowView: NSView {
     override func mouseUp(with event: NSEvent) {
         defer { dragStart = nil }
         guard let start = dragStart, row.isActive else { return }
-        let pitch = bounds.height + Theme.obsidian.promptStudio.moduleRowGap
+        let pitch = bounds.height + rowGap
         let places = Int(((start - event.locationInWindow.y) / pitch).rounded())
         if places != 0 { onMove?(places) }
     }

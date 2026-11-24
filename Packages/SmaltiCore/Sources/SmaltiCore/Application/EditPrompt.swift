@@ -20,12 +20,13 @@ public final class EditPrompt {
         appearance.saveNow()
     }
 
-    /// Moves an active module up (negative) or down; at either end it stays.
+    /// Moves an active module up (negative) or down by `offset` places; the others keep their order, and past either
+    /// end it stops there (block 5 review, I2).
     public func move(_ id: PromptModuleID, by offset: Int) {
         guard let index = draft.modules.firstIndex(of: id) else { return }
-        let target = index + offset
-        guard draft.modules.indices.contains(target) else { return }
-        draft.modules.swapAt(index, target)
+        let target = min(max(index + offset, 0), draft.modules.count - 1)
+        draft.modules.remove(at: index)
+        draft.modules.insert(id, at: target)
     }
 
     /// Off removes it; on adds it at the end.

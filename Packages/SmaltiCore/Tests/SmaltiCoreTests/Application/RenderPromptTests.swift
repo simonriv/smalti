@@ -87,6 +87,26 @@ struct RenderPromptTests {
         #expect(rendered(updates.first?.message)?.prompt.values.values.contains("● claude te espera") == true)
     }
 
+    /// Block 5 review (I1): a hook that leaves the waiting agents as they were re-sends nothing.
+    @Test func unchangedAgentsSendNothing() async {
+        let (render, world) = make()
+        _ = await render.handle(context(), seq: 5, pane: paneA)
+        world.agents[paneA] = WaitingAgents(waiting: ["claude"])
+        _ = render.agentsChanged(in: workspace)
+
+        let again = render.agentsChanged(in: workspace)
+
+        #expect(again.isEmpty)
+    }
+
+    @Test func agentsSentWithThePromptCountAsSent() async {
+        let (render, world) = make()
+        world.agents[paneA] = WaitingAgents(waiting: ["claude"])
+        _ = await render.handle(context(), seq: 5, pane: paneA)
+
+        #expect(render.agentsChanged(in: workspace).isEmpty)
+    }
+
     @Test func noSpontaneousPromptAfterExec() async {
         let (render, _) = make()
         _ = await render.handle(context(), seq: 5, pane: paneA)
@@ -97,10 +117,11 @@ struct RenderPromptTests {
     }
 
     @Test func onlyPanesOfSameWorkspaceAreNotified() async {
-        let (render, _) = make()
+        let (render, world) = make()
         _ = await render.handle(context(), seq: 1, pane: paneA)
         _ = await render.handle(context(), seq: 1, pane: paneB)
         _ = await render.handle(context(), seq: 1, pane: other)
+        for pane in [paneA, paneB, other] { world.agents[pane] = WaitingAgents(waiting: ["claude"]) }
 
         let panes = Set(render.agentsChanged(in: workspace).map(\.pane))
 
@@ -180,12 +201,21 @@ struct RenderPromptReviewTests {
     private let pane = PaneID()
     private let workspace = WorkspaceID()
 
+    /// Agents that tests make start waiting after the prompts, so a re-send has something new to show.
+    private final class Agents {
+        var waiting = WaitingAgents()
+    }
+
+    private let agents = Agents()
+
     private func make(_ facts: any PromptFacts) -> RenderPrompt {
         let workspace = workspace
+        let agents = agents
         return RenderPrompt(
             facts: facts,
             environment: PromptEnvironment(
-                settings: { (PromptConfig.standard, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
+                settings: { (PromptConfig.standard, ThemeCatalog.apply(.obsidian)) },
+                agents: { _ in agents.waiting },
                 workspace: { _ in workspace }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) }))
     }
 
@@ -220,6 +250,7 @@ struct RenderPromptReviewTests {
         let late = await slow.value
 
         #expect(late == nil)
+        agents.waiting = WaitingAgents(waiting: ["claude"])
         #expect(render.agentsChanged(in: workspace).map { seq($0.message) } == [6])
     }
 
@@ -281,13 +312,16 @@ struct RenderPromptTimeZoneTests {
 struct RenderPromptHeaderTests {
     private let pane = PaneID()
 
-    private func make(style: PromptStyleID) -> RenderPrompt {
+    private final class Settings {
         var config = PromptConfig.standard
-        config.style = style
+    }
+
+    private func make(style: PromptStyleID, settings: Settings = Settings()) -> RenderPrompt {
+        settings.config.style = style
         let facts = FakePromptFacts(
             answers: ["/Users/simon/dev/solen": PromptFactsResult(repoRoot: "/Users/simon/dev/solen", branch: "main")])
         let environment = PromptEnvironment(
-            settings: { (config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
+            settings: { (settings.config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
             workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) })
         return RenderPrompt(facts: facts, environment: environment)
     }
@@ -306,6 +340,17 @@ struct RenderPromptHeaderTests {
     @Test func otherStylesLeaveTheHeaderAlone() async {
         let render = make(style: .clean)
         _ = await render.handle(shell, seq: 1, pane: pane)
+
+        #expect(render.headerText(for: pane) == nil)
+    }
+
+    /// Block 5 review (M1): with the user's own prompt the header shows the directory again.
+    @Test func shellPromptLeavesTheHeaderAlone() async {
+        let settings = Settings()
+        let render = make(style: .symbolOnly, settings: settings)
+        _ = await render.handle(shell, seq: 1, pane: pane)
+
+        settings.config.source = .shell
 
         #expect(render.headerText(for: pane) == nil)
     }

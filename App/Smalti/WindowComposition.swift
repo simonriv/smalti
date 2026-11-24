@@ -175,6 +175,7 @@ final class WindowComposition {
             self.studio
             ?? {
                 let studio = PromptStudioController(window: window, session: session)
+                studio.hasOverlayOnTop = { [weak self] in self?.palette?.isOpen == true || self?.help?.isOpen == true }
                 studio.onOpenChange = { [weak self] isOpen in
                     guard let self else { return }
                     setTilingHidden(isOpen)
@@ -426,12 +427,13 @@ final class WindowComposition {
     }
 
     private var keyContext: KeyContext {
-        // F5: in the studio ⌘↑ and ⌘↓ move modules; only its own commands, ⌘K and the help act.
+        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
+        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        // F5: in the studio ⌘↑ and ⌘↓ move modules; only its own commands, ⌘K and the help act. ⌘K and the help
+        // on top of it come first (block 5 review, M3).
         if studio?.isOpen == true {
             return .panel(allowing: [.promptStudio, .promptApply, .promptExport, .paletteOpen, .helpShow])
         }
-        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
-        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
         if feedback?.isOpen == true { return KeyContext(allowing: []) }
         if search?.isOpen == true {

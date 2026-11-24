@@ -160,10 +160,13 @@ final class PromptStudioView: NSView {
         }
     }
 
+    /// The rows are built again on every edit; the focused module keeps the focus (block 5 review, I3).
     private func renderModules(_ rows: [ModuleRow]) {
+        let focused = (window?.firstResponder as? ModuleRowView)?.module
         moduleStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         for row in rows {
             let view = ModuleRowView(row: row, theme: theme)
+            if row.id == focused { DispatchQueue.main.async { [weak view] in view?.window?.makeFirstResponder(view) } }
             view.onToggle = { [weak self] in self?.onEdit?(.toggle(row.id)) }
             view.onMove = { [weak self] offset in self?.onEdit?(.move(row.id, by: offset)) }
             moduleStack.addArrangedSubview(view)

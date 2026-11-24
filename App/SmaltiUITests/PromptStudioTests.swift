@@ -86,6 +86,17 @@ final class PromptStudioTests: SmaltiUITestCase {
         XCTAssertEqual(Array(moduleOrder().prefix(2)), ["Directorio", "Rama git"])
     }
 
+    /// Block 5 review (I3): the moved module keeps the focus, so ⌘↓ twice moves it twice.
+    func testKeyboardMovesTheSameModuleAgain() {
+        launchStudio()
+
+        app.elements("smalti.studio.module").element(boundBy: 0).click()
+        app.typeKey(.downArrow, modifierFlags: .command)
+        app.typeKey(.downArrow, modifierFlags: .command)
+
+        XCTAssertEqual(Array(moduleOrder().prefix(3)), ["Rama git", "Cambios git", "Directorio"])
+    }
+
     // MARK: - C12
 
     func testApplyUpdatesOpenShells() {

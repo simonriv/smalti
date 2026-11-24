@@ -156,6 +156,8 @@ final class InputCoordinator {
     func keepOnly(_ open: Set<PaneID>) {
         for (pane, connection) in connections where !open.contains(pane) {
             connection.close()
+            // Block 5 review (M5): a closed pane's prompt state goes too.
+            renderPrompt?.forget(pane: pane)
         }
     }
 
