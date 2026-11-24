@@ -221,10 +221,10 @@
 - [x] T7 · Mensajes `context`/`prompt`/`promptstyle`, puerto `PromptFacts`, `RenderPrompt` con reenvío espontáneo
 - [x] T8 · `AppearanceStore`, `ChangeAppearance` (300 ms), `EditPrompt` con las tres vistas previas, `StarshipPreset`
 #### Bloque 3 · Adaptadores
-- [ ] T9 · `TOMLConfigAdapter`: `theme.toml`, escritor y `starship.toml`
-- [ ] T10 · `ProjectContextAdapter`: `PromptFacts`
-- [ ] T11 · `GhosttyAdapter`: config por tema y script del prompt
-- [ ] T12 · Fuente `SmaltiSymbols`
+- [x] T9 · `theme.toml` leído encima de `config.toml` clave a clave (aviso de claves repetidas), escritor atómico que respeta ediciones a mano, `starship.toml` con dorados
+- [x] T10 · `FilePromptFacts`: raíz y rama, `git status` con 300 ms y caché, versión de runtime, contexto de k8s; procesos solo en `CommandRunner`
+- [x] T11 · Script de zsh del prompt con `psvar` (enmienda 1), hook antes del de Ghostty con marcas OSC 133, input opcional; corregido un fallo de F4 (respuestas junto al EOF)
+- [x] T12 · `SmaltiSymbols.ttf` (9 iconos de trazo fino) y lámina `F5-assets/icons-sheet.png` para aprobar
 #### Bloque 4 · App: vidrio, temas y ventana
 - [ ] T13 · GPU en reposo (#5)
 - [ ] T14 · Tema en vivo y capas de legibilidad
