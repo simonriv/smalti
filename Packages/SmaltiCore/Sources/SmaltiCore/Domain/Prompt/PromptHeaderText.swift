@@ -10,7 +10,7 @@ public enum PromptHeaderText {
         if let directory = segments.firstIndex(where: { $0.module == .directory }) {
             var texts = segments.map(\.text)
             let levels = texts[directory].split(separator: "/").map(String.init)
-            for kept in stride(from: levels.count - 1, through: 1, by: -1) {
+            for kept in (1..<max(levels.count, 1)).reversed() {
                 texts[directory] = ellipsis + "/" + levels.suffix(kept).joined(separator: "/")
                 let candidate = joined(texts, segments)
                 if candidate.count <= maxWidth { return candidate }

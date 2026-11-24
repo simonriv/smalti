@@ -13,19 +13,13 @@ extension Theme {
 
 /// Icons the chosen set cannot draw ("Sin iconos") go away together with the space after them.
 func drawableRuns(_ line: [StyledRun], icons: PromptIcons) -> [StyledRun] {
-    var kept: [StyledRun] = []
-    var skipsSpace = false
-    for run in line {
-        if case .icon(let icon) = run.content, icons.character(for: icon) == nil {
-            skipsSpace = true
-            continue
-        }
-        if skipsSpace, case .text(" ") = run.content {
-            skipsSpace = false
-            continue
-        }
-        skipsSpace = false
-        kept.append(run)
+    func isUndrawable(_ run: StyledRun) -> Bool {
+        if case .icon(let icon) = run.content { return icons.character(for: icon) == nil }
+        return false
     }
-    return kept
+    return line.indices.filter { index in
+        guard !isUndrawable(line[index]) else { return false }
+        guard index > 0, isUndrawable(line[index - 1]), case .text(" ") = line[index].content else { return true }
+        return false
+    }.map { line[$0] }
 }

@@ -26,7 +26,6 @@ public enum PreviewSituation: CaseIterable, Sendable {
             return context
         case .afterErrorWithAgent:
             var context = PromptContext(directory: Self.home + "/dev/rizaria/web", home: Self.home)
-            context.repoRoot = Self.home + "/dev/rizaria"
             context.branch = "main"
             context.duration = .milliseconds(4200)
             context.agents = WaitingAgents(waiting: ["claude"])

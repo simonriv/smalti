@@ -50,6 +50,17 @@ class BuildSymbolsFontTest(unittest.TestCase):
             coordinates, _, _ = glyf[name].getCoordinates(glyf)
             self.assertGreater(len(coordinates), 8, name)
 
+    def test_building_twice_gives_the_same_bytes(self):
+        """Block 3 review (M11): no build time inside the font, so a rebuild is byte for byte the same."""
+        again = self.work / "again.ttf"
+        import fontTools.fontBuilder as font_builder
+        from unittest import mock
+
+        later = font_builder.timestampNow() + 86_400
+        with mock.patch.object(font_builder, "timestampNow", return_value=later):
+            build.build(json.loads(self.json.read_text()), again)
+        self.assertEqual(again.read_bytes(), self.font_path.read_bytes())
+
     def test_glyphs_stay_inside_the_cell(self):
         glyf = self.font["glyf"]
         for name in NAMES:

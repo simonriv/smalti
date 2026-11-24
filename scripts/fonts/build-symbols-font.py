@@ -17,6 +17,9 @@ GRID = 16
 SCALE = ADVANCE / GRID
 CENTER_Y = 300  # middle of the lowercase body
 FIRST_CODEPOINT = 0xE900
+# A fixed creation date, so a rebuild is byte for byte the same (block 3 review, M11): 2026-11-23, in seconds since
+# 1904-01-01 as the `head` table counts. Built with fontTools 4.60.2.
+FIXED_TIMESTAMP = 3_846_960_000
 
 
 def to_font(point):
@@ -61,6 +64,7 @@ def build(icons, out_path):
     builder.setupNameTable({"familyName": "SmaltiSymbols", "styleName": "Regular"})
     builder.setupOS2(sTypoAscender=1020, sTypoDescender=-300, usWinAscent=1020, usWinDescent=300)
     builder.setupPost(isFixedPitch=1)
+    builder.updateHead(created=FIXED_TIMESTAMP, modified=FIXED_TIMESTAMP)
     builder.save(str(out_path))
 
 
