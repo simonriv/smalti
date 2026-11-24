@@ -43,4 +43,9 @@ struct PreviewCardPlacementTests {
         #expect(short.origin.y == 0)
         #expect(short.size.height == 140)
     }
+
+    /// A word in the bottom padding, past the pane's last row: the card still ends inside the pane.
+    @Test func wordPastTheBottomKeepsCardInside() {
+        #expect(frame(word: Rect(x: 40, y: 500, width: 64, height: 20)).origin.y == 260)
+    }
 }
