@@ -62,6 +62,8 @@ final class TilingController {
     struct AgentDependencies {
         let notifier: any Notifier
         let integration: any HarnessIntegration
+        /// F5.6: the integration's last known state, shared by every window.
+        let integrationStatus: ClaudeIntegrationStatus
         let isAppActive: () -> Bool
     }
 
@@ -159,10 +161,23 @@ final class TilingController {
 
     private func runIntegration(_ command: IntegrationCommand.Type) {
         let integration = deps.agents.integration
+        let status = deps.agents.integrationStatus
         Task { [weak self] in
             let line = await command.init(integration: integration).execute()
             self?.report(.integration(line))
+            status.refresh()
         }
+    }
+
+    /// What ⌘K lists besides the keymap: the workspaces, the saved layouts and the Claude integration's state.
+    func catalogState() -> CatalogState {
+        CatalogState(
+            workspaces: set, savedLayouts: savedLayouts(), claudeIntegration: deps.agents.integrationStatus.state)
+    }
+
+    /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
+    func refreshIntegrationState() {
+        deps.agents.integrationStatus.refresh()
     }
 
     /// The saved layouts as the palette lists them.

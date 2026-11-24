@@ -40,7 +40,7 @@ struct ClaudePluginInstallerTests {
             [.posixPermissions: 0o755], ofItemAtPath: claude.path(percentEncoded: false))
     }
 
-    private func installer(path: String? = nil, failOn: String? = nil, binary: String = "claude")
+    private func installer(path: String? = nil, failOn: String? = nil, command: [String] = ["claude"])
         -> ClaudePluginInstaller
     {
         var environment = [
@@ -50,7 +50,7 @@ struct ClaudePluginInstallerTests {
         if let failOn { environment["FAIL_ON"] = failOn }
         return ClaudePluginInstaller(
             pluginSource: Self.pluginSource, installDirectory: installDirectory,
-            runner: ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: environment), binary: binary)
+            runner: ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: environment), command: command)
     }
 
     private var recorded: [String] {
@@ -232,16 +232,18 @@ struct ClaudePluginInstallerTests {
         #expect(await subject.installState == .unknown)
     }
 
-    @Test func customBinaryIsUsed() async throws {
-        let custom = work.appending(path: "bin/fake-claude")
+    /// A script read by `sh` instead of executed: what the UI tests pass, since the runner's files are quarantined.
+    @Test func customCommandIsUsed() async throws {
+        let custom = work.appending(path: "fake-claude")
         try FileManager.default.copyItem(at: work.appending(path: "bin/claude"), to: custom)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o644], ofItemAtPath: custom.path(percentEncoded: false))
+        let command = ["/bin/sh", custom.path(percentEncoded: false)]
 
-        try await installer(path: "/usr/bin:/bin", binary: custom.path(percentEncoded: false)).install()
+        try await installer(path: "/usr/bin:/bin", command: command).install()
 
         #expect(recorded.contains("plugin install smalti@smalti"))
-        #expect(
-            await installer(path: "/usr/bin:/bin", binary: custom.path(percentEncoded: false)).installState
-                == .installed)
+        #expect(await installer(path: "/usr/bin:/bin", command: command).installState == .installed)
     }
 
     @Test func installerSatisfiesTheIntegrationContract() async {

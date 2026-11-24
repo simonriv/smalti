@@ -27,6 +27,9 @@ extension XCUIApplication {
             // F3: never the user's Claude data nor their Ollama; tests that need transcripts copy a fixture here.
             "-SmaltiClaudeHome", file.deletingLastPathComponent().appending(path: "claude").path(percentEncoded: false),
             "-SmaltiOllamaURL", "http://127.0.0.1:1",
+            // F5.6: the app asks `claude plugin list` at launch; tests never run the real `claude`.
+            "-SmaltiClaudeCommand",
+            file.deletingLastPathComponent().appending(path: "no-claude").path(percentEncoded: false),
         ]
         if let config { app.writeConfig(config) }
         return app
@@ -47,6 +50,39 @@ extension XCUIApplication {
         try? Data("PS1='p%% '\n".utf8).write(to: zdotdir.appending(path: ".zshrc"))
         app.launchArguments += ["-SmaltiUserZdotdir", zdotdir.path(percentEncoded: false)]
         return app
+    }
+
+    /// F5.6: a fake `claude` (a script the app runs with `/bin/sh`) next to the config that answers `plugin list` from a state file and installs or
+    /// uninstalls by touching it; `installed` sets the starting state. Returns the state file.
+    @discardableResult
+    func useFakeClaude(installed: Bool) -> URL {
+        let folder = configFile.deletingLastPathComponent()
+        let script = folder.appending(path: "fake-claude")
+        let state = folder.appending(path: "claude-state")
+        let text = """
+            #!/bin/sh
+            state="$(dirname "$0")/claude-state"
+            echo "$* · HOME=$HOME" >> "$(dirname "$0")/claude-calls"
+            case "$*" in
+              "plugin list") [ -f "$state" ] && echo "  ❯ smalti@smalti"; exit 0 ;;
+              "plugin install smalti@smalti") touch "$state" ;;
+              "plugin uninstall smalti@smalti") rm -f "$state" ;;
+            esac
+            exit 0
+            """
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try text.write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: script.path(percentEncoded: false))
+            if installed { try Data().write(to: state) }
+        } catch {
+            XCTFail("could not write the fake claude: \(error)")
+        }
+        if let position = launchArguments.firstIndex(of: "-SmaltiClaudeCommand") {
+            launchArguments[position + 1] = script.path(percentEncoded: false)
+        }
+        return state
     }
 
     /// The temporary config file this launch reads; tests rewrite it before "Recargar configuración".

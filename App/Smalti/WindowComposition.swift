@@ -310,9 +310,8 @@ final class WindowComposition {
             actions: .init(
                 search: { [weak controller] query in
                     guard let controller else { return [] }
-                    let state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
                     return SearchCommands(layouts: .standard).execute(
-                        query, state: state, keymap: controller.config.keys)
+                        query, state: controller.catalogState(), keymap: controller.config.keys)
                 },
                 perform: { [weak controller] command in controller?.perform(command) },
                 rename: { [weak controller] name in controller?.rename(to: name) },
@@ -323,7 +322,15 @@ final class WindowComposition {
             if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
             // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
             if isOpen { services.completionMenu()?.close() }
+            // F5.6: the integration may have changed outside Smalti; a new state rebuilds the open list.
+            if isOpen { controller.refreshIntegrationState() }
         }
+        // F5.6: a new Claude integration state rebuilds the open palette's list.
+        observers.append(
+            NotificationCenter.default.addObserver(forName: .claudeIntegrationChanged, object: nil, queue: .main) {
+                [weak palette] _ in
+                MainActor.assumeIsolated { palette?.catalogChanged() }
+            })
         let help = HelpController(
             window: window, keymap: { [weak controller] in controller?.config.keys ?? .standard },
             perform: { [weak controller] command in controller?.perform(command) })

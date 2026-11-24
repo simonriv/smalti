@@ -26,6 +26,10 @@ final class InputCoordinator {
     var renderPrompt: RenderPrompt?
     /// F5: a pane's prompt context changed (its header shows it with "Solo símbolo").
     var onPromptRendered: ((PaneID) -> Void)?
+    /// F5.6: colors each `line` (nil: no highlighting at all).
+    var highlighter: HighlightLine?
+    /// F5.6: `[input] highlighting` (and `enabled`) as configured now.
+    var isHighlighting: () -> Bool = { false }
 
     private let session: InputSession
     private let provider: any TerminalViewProvider
@@ -123,8 +127,28 @@ final class InputCoordinator {
         if case .line(_, let line) = message { onLine?(pane, line) }
         handlePrompt(message, pane: pane, connection: connection)
         let path = packet.directory ?? directory(pane) ?? Self.home
+        if case .line(let seq, let line) = message {
+            await highlight(
+                HighlightRequest(line: line, seq: seq, directory: path, home: Self.home), pane: pane, over: connection)
+        }
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
+    }
+
+    // MARK: - Highlighting (F5.6)
+
+    /// The first answer goes out before the ghost's; a follow-up (a spec that loaded, a slow path) only while the
+    /// line is still the shell's latest.
+    private func highlight(_ request: HighlightRequest, pane: PaneID, over connection: InputConnection) async {
+        guard let highlighter, isHighlighting() else { return }
+        let answer = await InputRouting.highlight(request, using: highlighter)
+        connection.send(answer.first)
+        guard answer.needsFollowUp else { return }
+        Task { [weak self] in
+            let followUp = await InputRouting.followUp(request, using: highlighter)
+            guard let self, InputRouting.shouldSendFollowUp(seq: request.seq, latest: latestSeq[pane]) else { return }
+            connection.send(followUp)
+        }
     }
 
     // MARK: - Prompt (F5)
