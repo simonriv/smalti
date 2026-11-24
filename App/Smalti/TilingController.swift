@@ -82,6 +82,7 @@ final class TilingController {
     static let appCommands: Set<CommandID> = [
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
+        .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle,
     ]
 
     private let deps: Dependencies
@@ -420,6 +421,21 @@ final class TilingController {
         publish()
     }
 
+    /// F5 Apariencia: the panel's document, painted at once in this window (keys, shell and the rest stay).
+    func adopt(_ document: AppearanceDocument) {
+        config = document.applied(to: config)
+        publish()
+    }
+
+    /// The engine's appearance is the app's: one window gives it the theme's terminal colors and font.
+    func applyEngineAppearance() {
+        do {
+            try deps.applyAppearance(theme.terminal)
+        } catch {
+            show(.engineFailure(error))
+        }
+    }
+
     /// "Recargar configuración" in the other windows: they read the file again; the engine is already reloaded.
     func rereadConfig() {
         _ = applyReloadedConfig()
@@ -435,6 +451,8 @@ final class TilingController {
             return false
         }
         status = status.withPersistent(nil)
+        // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
+        if let warning = reload.warnings.first { show(.configWarning(warning.message)) }
         return true
     }
 

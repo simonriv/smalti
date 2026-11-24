@@ -46,11 +46,8 @@ struct CommandCoverageGuardTests {
         }.joined()
     }
 
-    /// F5 commands whose app action lands in T16 (Apariencia) and T18 (Estudio); each task removes its own.
-    static let pendingInApp: Set<CommandID> = [
-        .appearanceOpen, .promptStudio, .themeOpen, .themeNext, .ansiReset, .promptApply, .promptExport,
-        .legibilityToggle,
-    ]
+    /// F5 commands whose app action lands in T18 (Estudio); it removes them.
+    static let pendingInApp: Set<CommandID> = [.promptStudio, .promptApply, .promptExport]
 
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue

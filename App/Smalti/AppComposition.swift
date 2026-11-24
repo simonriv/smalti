@@ -19,6 +19,8 @@ import TOMLConfigAdapter
 final class AppComposition {
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "engine")
     private var runtime: GhosttyRuntime?
+    /// F5: the one Appearance document every window's panel edits.
+    private var appearance: AppearanceSession?
     private var engine: GhosttyTerminalEngine?
     private var sessionKeeper: SessionKeeper?
     /// F4.5: every window, in opening order, and the one in front (the last key window).
@@ -149,6 +151,7 @@ final class AppComposition {
         configStore = startup.store
         configFile = startup.settings.configFile
         restorePreferences = archive
+        startAppearance(startup)
         let (controller, visibility) = makeController(dependencies, initial: startup.initial)
         listenForAgents(on: socket, controller: controller)
         if let inputSocket { startInput(on: inputSocket, settings: inputSettings, startup: startup, engine: engine) }
@@ -177,6 +180,23 @@ final class AppComposition {
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
         if !composition.isAskingToRestore { beginSaving(keepingPreviousSession: false) }
+    }
+
+    // MARK: - Appearance (F5)
+
+    private func startAppearance(_ startup: Startup) {
+        let session = AppearanceSession(
+            config: startup.initial.config, themeFile: startup.settings.themeFile
+        ) { [weak self] error in self?.controller?.report(.invalidConfig(error)) }
+        session.onApply = { [weak self] document in self?.applyAppearance(document) }
+        session.onRefresh = { [weak self] in self?.compositions.forEach { $0.refreshAppearancePanel() } }
+        appearance = session
+    }
+
+    /// Every window paints the document; the engine (the app's) takes its terminal appearance once.
+    private func applyAppearance(_ document: AppearanceDocument) {
+        compositions.forEach { $0.controller.adopt(document) }
+        compositions.first?.controller.applyEngineAppearance()
     }
 
     // MARK: - Windows (F4.5)
@@ -256,6 +276,7 @@ final class AppComposition {
             // The engine's appearance is the app's: one window applies it, the others follow the file.
             compositions.first?.controller.reloadConfig()
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
+            if let config = compositions.first?.controller.config { appearance?.reload(config) }
             mainMenu?.refresh()
         case .appAbout: showAbout()
         case .feedbackReport:
@@ -267,6 +288,13 @@ final class AppComposition {
         case .fontDecrease: scaleFont(fontScale.decreased())
         case .fontReset: scaleFont(fontScale.reset())
         case .configOpen: openConfig()
+        case .appearanceOpen: appearance.map(composition.toggleAppearance)
+        case .themeOpen: appearance?.openThemeFile()
+        case .themeNext:
+            let next = composition.controller.config.appearance.theme.next
+            appearance?.selectTheme(next)
+        case .ansiReset: appearance?.edit { $0.resetANSI() }
+        case .legibilityToggle: appearance?.edit { $0.appearance.protectLegibility.toggle() }
         case .secureInputToggle:
             secureInput.toggle()
             showSecureInput()

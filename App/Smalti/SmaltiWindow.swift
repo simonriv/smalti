@@ -77,6 +77,11 @@ final class SmaltiWindow: NSWindow {
         buttons?.place()
     }
 
+    /// F5 Apariencia and Estudio: an aside on the right; the strip, the panes and the status bar shrink to its left.
+    func showSidePanel(_ panel: NSView?, width: Double) {
+        content.showSidePanel(panel, width: width)
+    }
+
     /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
     func applyGlass(_ theme: Theme) {
         let radius = GlassProbe.current == .noBlur ? 0 : theme.window.blurRadius
@@ -150,6 +155,25 @@ final class WindowContentView: NSView {
 
     private var isFullScreen = false
     private var paintedTokens: WindowTokens?
+    /// Strip, pane grid and status bar trailing edges, in that order; the grid keeps its area padding.
+    private var trailingEdges: [NSLayoutConstraint] = []
+    private var areaPadding = 0.0
+    private var sidePanel: NSView?
+
+    func showSidePanel(_ panel: NSView?, width: Double) {
+        sidePanel?.removeFromSuperview()
+        sidePanel = panel
+        for (edge, inset) in zip(trailingEdges, [width, width + areaPadding, width]) { edge.constant = -inset }
+        guard let panel else { return }
+        panel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(panel, positioned: .above, relativeTo: nil)
+        NSLayoutConstraint.activate([
+            panel.topAnchor.constraint(equalTo: topAnchor),
+            panel.bottomAnchor.constraint(equalTo: bottomAnchor),
+            panel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            panel.widthAnchor.constraint(equalToConstant: width),
+        ])
+    }
 
     private func paint(_ tokens: WindowTokens) {
         paintedTokens = tokens
@@ -161,21 +185,25 @@ final class WindowContentView: NSView {
 
     private func layoutChrome(theme: Theme) {
         let padding = theme.panel.areaPadding
+        areaPadding = padding
         for view in [strip, paneGrid, statusBar] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        trailingEdges = [
+            strip.trailingAnchor.constraint(equalTo: trailingAnchor),
+            paneGrid.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
+            statusBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ]
+        NSLayoutConstraint.activate(trailingEdges)
         NSLayoutConstraint.activate([
             strip.topAnchor.constraint(equalTo: topAnchor),
             strip.leadingAnchor.constraint(equalTo: leadingAnchor),
-            strip.trailingAnchor.constraint(equalTo: trailingAnchor),
             strip.heightAnchor.constraint(equalToConstant: theme.chrome.topStripHeight),
             paneGrid.topAnchor.constraint(equalTo: strip.bottomAnchor, constant: padding),
             paneGrid.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
-            paneGrid.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
             paneGrid.bottomAnchor.constraint(equalTo: statusBar.topAnchor, constant: -padding),
             statusBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-            statusBar.trailingAnchor.constraint(equalTo: trailingAnchor),
             statusBar.bottomAnchor.constraint(equalTo: bottomAnchor),
             statusBar.heightAnchor.constraint(equalToConstant: theme.statusBar.height),
         ])

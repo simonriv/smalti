@@ -31,6 +31,11 @@ struct StatusMessage: Equatable {
     }
 
     /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.
+    /// F5: what reloading the files noticed but still applied (keys repeated in both files).
+    static func configWarning(_ text: String) -> StatusMessage {
+        StatusMessage(text: text, isTransient: true)
+    }
+
     static func sessionSaveFailed(_ reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }

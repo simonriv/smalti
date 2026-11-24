@@ -36,6 +36,8 @@ final class WindowComposition {
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
     private var help: HelpController?
+    /// F5 ⌘,: the Appearance aside, created on first use with the app's session.
+    private var appearancePanel: AppearancePanelController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
     private var restoreScreen: RestoreController?
@@ -146,6 +148,27 @@ final class WindowComposition {
         if kept != .help { help?.close() }
         if kept != .search { search?.dismiss() }
         if kept != .feedback { feedback?.close() }
+    }
+
+    /// ⌘, (spec F5): opens or closes the Appearance aside of this window.
+    func toggleAppearance(_ session: AppearanceSession) {
+        let panel =
+            appearancePanel
+            ?? {
+                let panel = AppearancePanelController(window: window, session: session)
+                panel.onOpenChange = { [weak self] isOpen in
+                    guard let self, !isOpen else { return }
+                    focusKeyboard(on: controller.set.active.focusedPane)
+                }
+                appearancePanel = panel
+                return panel
+            }()
+        closeOverlays()
+        panel.toggle()
+    }
+
+    func refreshAppearancePanel() {
+        appearancePanel?.refresh()
     }
 
     func dismissObservatory() {
@@ -399,7 +422,8 @@ final class WindowComposition {
     /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
     /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
     func focusKeyboard(on pane: PaneID?) {
-        guard !hasOverlayOpen, let pane, let view = services.engine.view(for: pane), window.firstResponder !== view
+        guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, let pane,
+            let view = services.engine.view(for: pane), window.firstResponder !== view
         else { return }
         window.makeFirstResponder(view)
     }

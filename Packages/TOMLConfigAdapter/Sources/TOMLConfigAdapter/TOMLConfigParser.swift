@@ -131,11 +131,11 @@ private enum AppearanceReader {
         }
     }
 
-    private static let glassOpacity = Bounds(0.3...0.95, "0,3 y 0,95")
-    private static let blur = Bounds(0...48, "0 y 48")
-    private static let fontSize = Bounds(6...72, "6 y 72")
-    private static let gap = Bounds(0...32, "0 y 32")
-    private static let radius = Bounds(0...32, "0 y 32")
+    private static let glassOpacity = Bounds(AppearanceSettings.glassOpacityRange, "0,3 y 0,95")
+    private static let blur = Bounds(AppearanceSettings.blurRange, "0 y 48")
+    private static let fontSize = Bounds(AppearanceSettings.fontSizeRange, "6 y 72")
+    private static let gap = Bounds(AppearanceSettings.gapRange, "0 y 32")
+    private static let radius = Bounds(AppearanceSettings.radiusRange, "0 y 32")
     private static let accentReason = "se esperaba un color #rrggbb"
     private static let fontFamilyKey = "font_family"
     private static let fontFamilyReason =
