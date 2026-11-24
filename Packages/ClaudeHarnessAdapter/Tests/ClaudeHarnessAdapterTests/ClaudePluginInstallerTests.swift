@@ -40,7 +40,9 @@ struct ClaudePluginInstallerTests {
             [.posixPermissions: 0o755], ofItemAtPath: claude.path(percentEncoded: false))
     }
 
-    private func installer(path: String? = nil, failOn: String? = nil) -> ClaudePluginInstaller {
+    private func installer(path: String? = nil, failOn: String? = nil, binary: String = "claude")
+        -> ClaudePluginInstaller
+    {
         var environment = [
             "PATH": path ?? "\(work.appending(path: "bin").path(percentEncoded: false)):/usr/bin:/bin",
             "LOG": log.path(percentEncoded: false), "STATE": work.appending(path: "state").path(percentEncoded: false),
@@ -48,7 +50,7 @@ struct ClaudePluginInstallerTests {
         if let failOn { environment["FAIL_ON"] = failOn }
         return ClaudePluginInstaller(
             pluginSource: Self.pluginSource, installDirectory: installDirectory,
-            runner: ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: environment))
+            runner: ShellCommandRunner(shell: ["/bin/sh", "-c"], environment: environment), binary: binary)
     }
 
     private var recorded: [String] {
@@ -202,6 +204,44 @@ struct ClaudePluginInstallerTests {
         ) {
             try await installer(failOn: "plugin install smalti@smalti").install()
         }
+    }
+
+    @Test func listWithPluginIsInstalled() async throws {
+        try await installer().install()
+
+        #expect(await installer().installState == .installed)
+    }
+
+    @Test func listWithoutPluginIsNotInstalled() async {
+        #expect(await installer().installState == .notInstalled)
+    }
+
+    @Test func missingBinaryIsUnknown() async {
+        #expect(await installer(path: "/usr/bin:/bin").installState == .unknown)
+    }
+
+    @Test func failingListIsUnknown() async {
+        #expect(await installer(failOn: "plugin list").installState == .unknown)
+    }
+
+    @Test func launchFailureIsUnknown() async {
+        let subject = ClaudePluginInstaller(
+            pluginSource: Self.pluginSource, installDirectory: installDirectory,
+            runner: ShellCommandRunner(shell: ["/nonexistent/shell", "-c"], environment: [:]))
+
+        #expect(await subject.installState == .unknown)
+    }
+
+    @Test func customBinaryIsUsed() async throws {
+        let custom = work.appending(path: "bin/fake-claude")
+        try FileManager.default.copyItem(at: work.appending(path: "bin/claude"), to: custom)
+
+        try await installer(path: "/usr/bin:/bin", binary: custom.path(percentEncoded: false)).install()
+
+        #expect(recorded.contains("plugin install smalti@smalti"))
+        #expect(
+            await installer(path: "/usr/bin:/bin", binary: custom.path(percentEncoded: false)).installState
+                == .installed)
     }
 
     @Test func installerSatisfiesTheIntegrationContract() async {
