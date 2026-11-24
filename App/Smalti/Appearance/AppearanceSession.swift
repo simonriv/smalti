@@ -56,6 +56,24 @@ final class AppearanceSession {
         onRefresh?()
     }
 
+    // MARK: - Prompt studio
+
+    /// A draft of the prompt over this document (spec F5): nothing changes until it is applied.
+    func promptEditor() -> EditPrompt { EditPrompt(appearance: change) }
+
+    /// "Aplicar a todos los paneles": written now, painted in every window and sent to every shell.
+    func applyPrompt(_ editor: EditPrompt) {
+        editor.apply()
+        publish()
+    }
+
+    var theme: Theme { ThemeCatalog.apply(change.document.appearance).theme }
+
+    /// "Exportar como starship.toml": the draft with this document's colors.
+    func starshipText(for draft: PromptConfig) -> String {
+        StarshipText.render(StarshipPreset.make(from: draft, theme: ThemeCatalog.apply(change.document.appearance)))
+    }
+
     /// "Abrir theme.toml": written first if it does not exist yet, so there is something to open.
     func openThemeFile() {
         if !FileManager.default.fileExists(atPath: themeFile.path(percentEncoded: false)) { change.saveNow() }

@@ -306,6 +306,9 @@ final class AppComposition {
             appearance?.selectTheme(next)
         case .ansiReset: appearance?.edit { $0.resetANSI() }
         case .legibilityToggle: appearance?.edit { $0.appearance.protectLegibility.toggle() }
+        case .promptStudio: appearance.map(composition.toggleStudio)
+        case .promptApply: composition.performInStudio(.apply)
+        case .promptExport: composition.performInStudio(.export)
         case .secureInputToggle:
             secureInput.toggle()
             showSecureInput()
@@ -351,6 +354,7 @@ final class AppComposition {
         composition.closeOverlays()
         // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
         composition.closeAppearancePanel()
+        composition.closeStudio()
         composition.window.close()
         observatoryOpenChanged()
         frontID = set.frontID

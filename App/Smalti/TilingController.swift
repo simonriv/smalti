@@ -84,7 +84,8 @@ final class TilingController {
     static let appCommands: Set<CommandID> = [
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
-        .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle,
+        .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
+        .promptExport,
     ]
 
     private let deps: Dependencies

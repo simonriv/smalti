@@ -13,6 +13,15 @@ public enum PreviewSituation: CaseIterable, Sendable {
 
     private static let home = "/Users/you"
 
+    /// The section's label on the board.
+    public var title: String {
+        switch self {
+        case .normalFolder: "Carpeta normal"
+        case .nodeProject: "Proyecto Node con git"
+        case .afterErrorWithAgent: "Después de un error, con agente activo"
+        }
+    }
+
     var context: PromptContext {
         switch self {
         case .normalFolder:

@@ -146,3 +146,35 @@ public enum PromptTemplate: CaseIterable, Sendable {
         self.style == style && (style == .symbolOnly || self.layout == layout)
     }
 }
+
+extension PromptIcons {
+    /// The studio's "Iconos" choices (`Prompt.dc.html`).
+    public var title: String {
+        switch self {
+        case .thin: "Trazo fino"
+        case .nerd: "Nerd Font"
+        case .none: "Sin iconos"
+        }
+    }
+}
+
+extension PromptLayout {
+    /// "Disposición": the board's text for two lines; one line takes its template's name (Claude).
+    public var title: String {
+        switch self {
+        case .twoLines: "Contexto arriba, input abajo"
+        case .oneLine: PromptTemplate.singleLine.title
+        }
+    }
+}
+
+extension PromptTemplate {
+    /// The grey note after a card's title on the board.
+    public var note: String? { self == .symbolOnly ? "· contexto en la cabecera" : nil }
+}
+
+/// The studio's texts that are not on the board (spec F5, "Textos nuevos").
+public enum PromptStudioTexts {
+    public static let shellPrompt = "Prompt del shell"
+    public static let noNerdFont = "No hay una Nerd Font instalada"
+}

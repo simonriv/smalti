@@ -38,6 +38,8 @@ final class WindowComposition {
     private var help: HelpController?
     /// F5 ⌘,: the Appearance aside, created on first use with the app's session.
     private var appearancePanel: AppearancePanelController?
+    /// F5 ⇧⌘P: the prompt studio over the whole window.
+    private var studio: PromptStudioController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
     private var restoreScreen: RestoreController?
@@ -165,6 +167,35 @@ final class WindowComposition {
             }()
         closeOverlays()
         panel.toggle()
+    }
+
+    /// ⇧⌘P (spec F5): the studio covers the window; the panes behind it are hidden but keep running.
+    func toggleStudio(_ session: AppearanceSession) {
+        let studio =
+            self.studio
+            ?? {
+                let studio = PromptStudioController(window: window, session: session)
+                studio.onOpenChange = { [weak self] isOpen in
+                    guard let self else { return }
+                    setTilingHidden(isOpen)
+                    if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+                }
+                self.studio = studio
+                return studio
+            }()
+        closeOverlays()
+        appearancePanel?.close()
+        studio.toggle()
+    }
+
+    /// ⌘K's studio commands act only while it is open in this window.
+    func performInStudio(_ edit: PromptStudioEdit) {
+        guard studio?.isOpen == true else { return }
+        studio?.perform(edit)
+    }
+
+    func closeStudio() {
+        studio?.close()
     }
 
     func closeAppearancePanel() {
@@ -395,6 +426,10 @@ final class WindowComposition {
     }
 
     private var keyContext: KeyContext {
+        // F5: in the studio ⌘↑ and ⌘↓ move modules; only its own commands, ⌘K and the help act.
+        if studio?.isOpen == true {
+            return .panel(allowing: [.promptStudio, .promptApply, .promptExport, .paletteOpen, .helpShow])
+        }
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
         if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
@@ -426,7 +461,7 @@ final class WindowComposition {
     /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
     /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
     func focusKeyboard(on pane: PaneID?) {
-        guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, let pane,
+        guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, studio?.isOpen != true, let pane,
             let view = services.engine.view(for: pane), window.firstResponder !== view
         else { return }
         window.makeFirstResponder(view)

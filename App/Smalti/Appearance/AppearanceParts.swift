@@ -21,6 +21,14 @@ class PanelButtonView: NSView {
     required init?(coder: NSCoder) { nil }
 
     override var acceptsFirstResponder: Bool { true }
+    /// A drag on it never moves the window (transparent views do by default).
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    /// Its labels are part of it: a click anywhere on it is its click.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) == nil ? nil : self
+    }
+
     override func mouseDown(with event: NSEvent) { action?() }
     override func accessibilityPerformPress() -> Bool {
         action?()
@@ -160,6 +168,16 @@ final class SegmentView: PanelButtonView {
             label.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: inset),
         ])
     }
+
+    /// A choice that cannot be taken (Nerd Font without one installed): dimmed, and disabled for accessibility.
+    var isEnabledChoice = true {
+        didSet {
+            alphaValue = isEnabledChoice ? 1 : Self.disabledAlpha
+            setAccessibilityEnabled(isEnabledChoice)
+        }
+    }
+
+    private static let disabledAlpha = 0.4
 
     func render(isSelected: Bool, theme: Theme) {
         let tokens = theme.appearancePanel
