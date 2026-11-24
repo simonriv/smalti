@@ -22,7 +22,8 @@ struct LibghosttyF5ApiTests {
     }
 
     private static func registerProbeFont() throws {
-        let url = try #require(Bundle.module.url(forResource: "SmaltiProbe", withExtension: "ttf", subdirectory: "Fixtures"))
+        let url = try #require(
+            Bundle.module.url(forResource: "SmaltiProbe", withExtension: "ttf", subdirectory: "Fixtures"))
         var error: Unmanaged<CFError>?
         let registered = CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
         // Already registered by an earlier test of this run is fine: the process keeps it.
