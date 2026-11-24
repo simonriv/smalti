@@ -93,7 +93,9 @@ struct MenuModelTests {
     @Test func smaltiMenuHasTheAppItems() {
         #expect(
             bar().menus[0].items.map(\.title) == [
-                "Acerca de Smalti", "", "Configuración…", "Recargar configuración", "", "Entrada de teclado segura", "",
+                "Acerca de Smalti", "", "Apariencia…", "Estudio de prompt…", "Abrir config.toml",
+                "Recargar configuración",
+                "", "Entrada de teclado segura", "",
                 "Servicios", "", "Ocultar Smalti", "Ocultar otros", "Mostrar todo", "", "Salir de Smalti",
             ])
         #expect(item("Salir de Smalti", in: "Smalti", of: bar())?.action == .system(.quit))
