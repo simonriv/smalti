@@ -22,7 +22,8 @@ final class SmaltiWindow: NSWindow {
     /// F5.5 ⌘Y: the Quick Look panel's source while this window controls it.
     let quickLook = QuickLookPresenter()
 
-    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+    /// Only while it has an image to show: another window clicked while the panel is open does not take it over empty.
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { quickLook.url != nil }
 
     override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
         panel.dataSource = quickLook
@@ -30,6 +31,7 @@ final class SmaltiWindow: NSWindow {
 
     override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
         panel.dataSource = nil
+        quickLook.clear()
     }
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
     var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?

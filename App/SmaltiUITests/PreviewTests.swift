@@ -85,12 +85,32 @@ final class PreviewTests: SmaltiUITestCase {
         XCTAssertTrue(waitForCardToGo())
     }
 
+    /// Top and left edges: a word on the second row at the first column puts the card under it, inside the pane.
     func testCardGoesUnderTheWord() {
         showCard()
 
         let word = cellPoint(row: 1, column: 0)
         XCTAssertGreaterThan(card.frame.minY, word.y)
         XCTAssertGreaterThanOrEqual(card.frame.width, 210)
+        XCTAssertGreaterThanOrEqual(card.frame.minX, terminal.frame.minX)
+        XCTAssertGreaterThanOrEqual(card.frame.minY, terminal.frame.minY)
+    }
+
+    /// Block 4 review I1/I2 (C5 "al cambiar de panel"): a shortcut that changes the panes takes the card away.
+    func testNewPaneHidesCard() {
+        showCard()
+
+        app.typeKey("d", modifierFlags: .command)
+
+        XCTAssertTrue(waitForCardToGo())
+    }
+
+    func testNewWorkspaceHidesCard() {
+        showCard()
+
+        app.typeKey("n", modifierFlags: [.control, .command])
+
+        XCTAssertTrue(waitForCardToGo())
     }
 
     func testCardFlipsAboveAtBottomEdge() {
@@ -213,10 +233,14 @@ final class PreviewTests: SmaltiUITestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 5))
     }
 
+    /// "celda 8 × 21" (`-SmaltiExposeCellSize`); a test that cannot read it fails instead of guessing.
     private var cellSize: CGSize {
-        // "celda 8 × 21" (`-SmaltiExposeCellSize`).
         let numbers = terminal.title.split(separator: " ").compactMap { Double($0) }
-        return CGSize(width: numbers.first ?? 8, height: numbers.last ?? 21)
+        guard numbers.count == 2 else {
+            XCTFail("no cell size in the terminal's title: \(terminal.title)")
+            return CGSize(width: 1, height: 1)
+        }
+        return CGSize(width: numbers[0], height: numbers[1])
     }
 
     /// The middle of a cell, in screen points.

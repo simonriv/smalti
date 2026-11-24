@@ -10,6 +10,8 @@ public struct PreviewCardTokens: Equatable, Sendable {
     public let captionFontSize = 10.5
     public let shadowRadius = 40.0
     public let shadowOffsetY = 18.0
+    /// Between the hovered word and the card, above or below it.
+    public let anchorGap = 4.0
     /// The board's `rgba(18,20,27,0.92)`: the completion menu's color, a little more transparent.
     static let backgroundAlpha = 0.92
 

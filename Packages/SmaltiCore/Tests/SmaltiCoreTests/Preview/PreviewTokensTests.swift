@@ -16,6 +16,7 @@ struct PreviewTokensTests {
         #expect(tokens.captionFontSize == 10.5)
         #expect(tokens.shadowRadius == 40)
         #expect(tokens.shadowOffsetY == 18)
+        #expect(tokens.anchorGap == 4)
     }
 
     @Test func obsidianColorsAreTheBoards() {

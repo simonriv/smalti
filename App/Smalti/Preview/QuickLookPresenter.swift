@@ -5,7 +5,7 @@ import Quartz
 /// it shows one file; ⌘Y again (or Esc, the panel's own) closes it.
 @MainActor
 final class QuickLookPresenter: NSObject, QLPreviewPanelDataSource {
-    private var url: URL?
+    private(set) var url: URL?
 
     /// Closes the panel when it shows; otherwise opens it on `path`, if any.
     func toggle(_ path: String?) {
@@ -20,6 +20,12 @@ final class QuickLookPresenter: NSObject, QLPreviewPanelDataSource {
         panel.reloadData()
     }
 
+    /// The window gave the panel up (another window took it): this source has nothing to show any more.
+    func clear() {
+        url = nil
+    }
+
+    // Quick Look asks its data source on the main thread, as AppKit does with every panel delegate.
     nonisolated func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
         MainActor.assumeIsolated { url == nil ? 0 : 1 }
     }

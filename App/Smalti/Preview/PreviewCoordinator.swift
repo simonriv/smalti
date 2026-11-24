@@ -1,4 +1,5 @@
 import AppKit
+import GhosttyAdapter
 import SmaltiCore
 
 /// One window's image preview (spec F5.5): turns the panes' pointer words into `PreviewUnderPointer` calls with each
@@ -18,6 +19,8 @@ final class PreviewCoordinator {
     private var preview: PreviewUnderPointer?
     private var cardView: PreviewCardView?
     private var pane: PaneID?
+    /// The pane of the word being looked up, before its card shows.
+    private var pendingPane: PaneID?
     /// Each pointer word is numbered: an answer for an older one, which the async lookup can deliver late, is dropped.
     private var requests = 0
     private var monitor: Any?
@@ -28,7 +31,8 @@ final class PreviewCoordinator {
         self.window = window
         self.controller = controller
         self.dependencies = dependencies
-        let scale = window.backingScaleFactor
+        // Retina's scale whatever screen the window opens on: a sharper thumbnail on a 1x screen costs nothing.
+        let scale = Self.thumbnailScale
         let box = controller.theme.previewCard.imageSize
         let wait = TimerDebouncer(delay: PreviewUnderPointer.delay)
         let debouncer: any Debouncer = timings.map { TimedDebouncer(wait, timings: $0) } ?? wait
@@ -54,12 +58,16 @@ final class PreviewCoordinator {
     }
 
     func pointerWordChanged(_ word: PointerWord?, in pane: PaneID) {
+        // Panes report on streams of their own: a late "nothing" from another pane must not drop this one's word.
+        guard word != nil || pane == self.pane || pane == pendingPane else { return }
         requests += 1
         let request = requests
         guard let word else {
+            pendingPane = nil
             preview?.pointerMoved(nil, context: Self.noContext)
             return
         }
+        pendingPane = pane
         let directory = controller.set.workspaces.lazy.flatMap(\.panes).first { $0.id == pane }?.workingDirectory.path
         Task { [weak self, dependencies, home = controller.home.path] in
             let lastCommand = await dependencies.lastCommand(pane)
@@ -76,12 +84,13 @@ final class PreviewCoordinator {
     }
 
     private static let noContext = PreviewContext(workingDirectory: nil, home: "", lastCommand: nil)
+    private static let thumbnailScale = 2.0
 
     private func watchForDismissal() {
-        // A shortcut (⌘Y above all) is a command, not typing: it leaves the card for the command to use.
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .scrollWheel]) { [weak self] event in
-            let isShortcut = event.type == .keyDown && event.modifierFlags.contains(.command)
-            if event.window === self?.window, !isShortcut { self?.hide() }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .scrollWheel, .leftMouseDown, .rightMouseDown])
+        {
+            [weak self] event in
+            if let self, event.window === window, !isQuickLookKey(event) { hide() }
             return event
         }
         resignObserver = NotificationCenter.default.addObserver(
@@ -91,19 +100,24 @@ final class PreviewCoordinator {
         }
     }
 
+    /// ⌘Y (or what the keymap binds to Quick Look) uses the card; every other key, shortcuts included, hides it.
+    private func isQuickLookKey(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown, let chord = KeyChordTranslator.chord(from: event) else { return false }
+        return controller.config.keys.command(for: chord) == .previewQuickLook
+    }
+
     private func show(_ card: PreviewCard?) {
-        guard let card, let pane, let terminal = dependencies.views.view(for: pane),
+        // A pane that left the window (another workspace, closed) has nowhere to show a card.
+        guard let card, let pane, let terminal = dependencies.views.view(for: pane), terminal.window === window,
             let content = window.contentView
         else {
-            cardView?.removeFromSuperview()
-            cardView = nil
+            removeCard()
             return
         }
+        if let view = cardView, view.theme != controller.theme { removeCard() }
         let view = cardView ?? PreviewCardView(theme: controller.theme)
         view.show(card)
-        view.frame = CardPlacement.frame(
-            size: view.cardSize, anchor: anchorRect(card.anchor, in: terminal, to: content),
-            pane: terminal.convert(terminal.bounds, to: content))
+        view.frame = frame(of: view, for: card, in: terminal, to: content)
         if cardView == nil {
             content.addSubview(view)
             cardView = view
@@ -112,24 +126,24 @@ final class PreviewCoordinator {
         timings?.cardShown()
     }
 
-    /// The word's frame (top-left points of the terminal view) in the content view's coordinates.
-    private func anchorRect(_ anchor: Rect, in terminal: NSView, to content: NSView) -> NSRect {
-        let flipped = NSRect(
-            x: anchor.origin.x, y: terminal.bounds.height - anchor.origin.y - anchor.size.height,
-            width: anchor.size.width, height: anchor.size.height)
-        return terminal.convert(flipped, to: content)
+    private func removeCard() {
+        cardView?.removeFromSuperview()
+        cardView = nil
     }
-}
 
-/// Where the card goes (spec F5.5): under the word, aligned to its start; over it when there is no room below; never
-/// out of the pane. AppKit coordinates (y grows up).
-enum CardPlacement {
-    static let gap: CGFloat = 4
-
-    static func frame(size: NSSize, anchor: NSRect, pane: NSRect) -> NSRect {
-        let below = anchor.minY - gap - size.height
-        let y = below >= pane.minY ? below : min(anchor.maxY + gap, pane.maxY - size.height)
-        let x = max(pane.minX, min(anchor.minX, pane.maxX - size.width))
-        return NSRect(origin: NSPoint(x: x, y: y), size: size)
+    /// The card's frame from `PreviewCardPlacement`, worked out in the terminal's top-left points and turned into the
+    /// content view's.
+    private func frame(of view: PreviewCardView, for card: PreviewCard, in terminal: NSView, to content: NSView)
+        -> NSRect
+    {
+        let bounds = terminal.bounds
+        let size = view.cardSize
+        let placed = PreviewCardPlacement.frame(
+            size: Size(width: size.width, height: size.height), word: card.anchor,
+            pane: Rect(x: 0, y: 0, width: bounds.width, height: bounds.height), gap: view.theme.previewCard.anchorGap)
+        let flipped = NSRect(
+            x: placed.origin.x, y: bounds.height - placed.origin.y - placed.size.height, width: placed.size.width,
+            height: placed.size.height)
+        return terminal.convert(flipped, to: content)
     }
 }

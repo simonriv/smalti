@@ -8,8 +8,11 @@ final class PreviewCardView: NSView {
     private let imageView = NSImageView()
     private let caption = NSTextField(labelWithString: "")
     private let tokens: PreviewCardTokens
+    /// The theme it was styled with: a card shown after a theme change is built again.
+    let theme: Theme
 
     init(theme: Theme) {
+        self.theme = theme
         tokens = theme.previewCard
         super.init(frame: .zero)
         wantsLayer = true
@@ -62,7 +65,10 @@ final class PreviewCardView: NSView {
 
     /// Fades in (`overlayAppearDuration`), or appears at once with "Reducir movimiento".
     func appear(isMotionReduced: Bool) {
-        setAccessibilityValue(isMotionReduced ? "sin fundido" : "con fundido")
+        // Only for UI tests that stand in for "Reducir movimiento"; VoiceOver never hears it otherwise.
+        if UserDefaults.standard.object(forKey: Motion.reduceMotionKey) != nil {
+            setAccessibilityValue(isMotionReduced ? "sin fundido" : "con fundido")
+        }
         guard !isMotionReduced else {
             alphaValue = 1
             return
@@ -74,16 +80,24 @@ final class PreviewCardView: NSView {
         }
     }
 
+    /// The thumbnail fitted in the board's 194 × 104 box, centered, so its own corners are the ones rounded.
+    private func fittedImageFrame(in inner: NSRect) -> NSRect {
+        let box = NSSize(width: min(tokens.imageSize.width, inner.width), height: tokens.imageSize.height)
+        let image = imageView.image?.size ?? box
+        let scale = min(box.width / max(image.width, 1), box.height / max(image.height, 1), 1)
+        let size = NSSize(width: image.width * scale, height: image.height * scale)
+        let top = inner.maxY - tokens.imageSize.height
+        return NSRect(
+            x: inner.midX - size.width / 2, y: top + (tokens.imageSize.height - size.height) / 2, width: size.width,
+            height: size.height)
+    }
+
     override func layout() {
         super.layout()
         let inner = bounds.insetBy(dx: tokens.padding, dy: tokens.padding)
         let captionHeight = caption.intrinsicContentSize.height
         caption.frame = NSRect(x: inner.minX, y: inner.minY, width: inner.width, height: captionHeight)
-        // The image box stays the board's (194 × 104), centered when the caption made the card wider.
-        let imageWidth = tokens.imageSize.width
-        imageView.frame = NSRect(
-            x: inner.midX - imageWidth / 2, y: inner.maxY - tokens.imageSize.height, width: imageWidth,
-            height: tokens.imageSize.height)
+        imageView.frame = fittedImageFrame(in: inner)
         imageView.isHidden = imageView.image == nil
         layer?.shadowPath = CGPath(
             roundedRect: bounds, cornerWidth: tokens.cornerRadius, cornerHeight: tokens.cornerRadius, transform: nil)
