@@ -8,8 +8,9 @@ enum SmaltiPromptScript {
     static let functions = #"""
                 typeset -g _smalti_prompt_on=0 _smalti_prompt_seq=-1 _smalti_prompt_immediate= _smalti_prompt_started=
                 typeset -g _smalti_prompt_saved=0 _smalti_prompt_user= _smalti_prompt_user_right=
-                typeset -g _smalti_dir= _smalti_duration= _smalti_ghost_color=
+                typeset -g _smalti_dir= _smalti_duration= _smalti_ghost_color= _smalti_prompt_style_values=
                 typeset -gA _smalti_prompt_labels
+                typeset -ga _smalti_prompt_user_psvar
 
                 # Milliseconds as the prompt shows them, like DurationModule: nothing under 2 s, "4.2s", then "2m 5s".
                 _smalti_prompt_format() {
@@ -43,12 +44,18 @@ enum SmaltiPromptScript {
                     done
                 }
 
+                # The style's slots (the symbol) are set again for every prompt: a user's `precmd() { psvar=(…) }` runs
+                # before the hooks and would leave the immediate prompt without its symbol (block 3 review, I4). Ghostty's
+                # saved prompt becomes this one, so its precmd marks the second line too (M2).
                 _smalti_prompt_show() {
                     emulate -L zsh
+                    _smalti_prompt_assign "$_smalti_prompt_style_values"
                     psvar[2]=$_smalti_dir
                     psvar[3]=$_smalti_duration
                     PROMPT=$1
                     RPROMPT=
+                    (( ${+functions[_ghostty_precmd]} )) && typeset -g _ghostty_saved_ps1=$1
+                    return 0
                 }
 
                 # A prompt set outside precmd (Smalti's answer, a new style) carries Ghostty's OSC 133 marks itself, as
@@ -66,17 +73,24 @@ enum SmaltiPromptScript {
                 }
 
                 # The user's prompt is kept the first time Smalti's takes over, and given back when asked.
+                # The user's prompt and psvar are kept the first time Smalti's takes over, and given back when asked. A
+                # prompt Ghostty already marked is kept clean, so giving it back never doubles the marks (M1).
                 _smalti_prompt_save() {
                     (( _smalti_prompt_saved )) && return 0
                     _smalti_prompt_user=$PROMPT
+                    if (( ${+functions[_ghostty_precmd]} )) && [[ $PROMPT == "${_ghostty_marked_ps1-}" ]]; then
+                        _smalti_prompt_user=${_ghostty_saved_ps1-}
+                    fi
                     _smalti_prompt_user_right=$RPROMPT
+                    _smalti_prompt_user_psvar=("${psvar[@]}")
                     _smalti_prompt_saved=1
                 }
 
                 _smalti_prompt_restore() {
                     _smalti_prompt_on=0
                     (( _smalti_prompt_saved )) || return 0
-                    PROMPT=$_smalti_prompt_user
+                    psvar=("${_smalti_prompt_user_psvar[@]}")
+                    _smalti_prompt_mark "$_smalti_prompt_user"
                     RPROMPT=$_smalti_prompt_user_right
                     _smalti_prompt_saved=0
                 }
@@ -96,9 +110,10 @@ enum SmaltiPromptScript {
                                 _smalti_prompt_restore
                             else
                                 _smalti_prompt_immediate=$_smalti_input_text
-                                _smalti_input_unescape "$fields[4]"
-                                _smalti_prompt_assign "$_smalti_input_text"
                                 _smalti_prompt_save
+                                _smalti_input_unescape "$fields[4]"
+                                _smalti_prompt_style_values=$_smalti_input_text
+                                _smalti_prompt_assign "$_smalti_input_text"
                                 _smalti_prompt_on=1
                                 psvar[2]=$_smalti_dir
                                 psvar[3]=$_smalti_duration
@@ -131,7 +146,12 @@ enum SmaltiPromptScript {
                 # The last precmd hook but Ghostty's (it moves itself there each time), so a framework's prompt set
                 # earlier is replaced and Ghostty, last, adds its OSC 133 marks to Smalti's prompt.
                 _smalti_prompt_precmd() {
-                    local code=$?
+                    _smalti_prompt_context $?
+                }
+
+                # Paints the immediate prompt and tells Smalti the context; `$1` is the last command's status.
+                _smalti_prompt_context() {
+                    local code=$1
                     emulate -L zsh
                     local -a hooks
                     hooks=(${precmd_functions:#(_smalti_prompt_precmd|_ghostty_precmd)} _smalti_prompt_precmd)

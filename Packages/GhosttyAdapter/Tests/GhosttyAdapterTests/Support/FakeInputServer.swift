@@ -23,6 +23,7 @@ final class FakeInputServer: @unchecked Sendable {
     private var lines: [String] = []
     private let listening: Int32
     private var client: Int32 = -1
+    private var isMuted = false
 
     init(mode: Mode = .normal, reply: @escaping @Sendable ([String]) -> [String] = { _ in [] }) throws {
         self.mode = mode
@@ -93,11 +94,16 @@ final class FakeInputServer: @unchecked Sendable {
         }
         var fields = line.components(separatedBy: "\t")
         if case .staleSeq = mode, fields.count > 1, let seq = Int(fields[1]) { fields[1] = String(seq - 1) }
-        let answers = reply(fields)
+        let answers = lock.withLock { isMuted } ? [] : reply(fields)
         if case .slow = mode, !answers.isEmpty { Thread.sleep(forTimeInterval: 2) }
         // "RAW:" answers go out verbatim, without the newline (a partial answer).
         for answer in answers { send(answer.hasPrefix("RAW:") ? String(answer.dropFirst(4)) : answer + "\n", to: fd) }
         return true
+    }
+
+    /// F5: from now on, received lines get no answer (the channel stays open).
+    func stopAnswering() {
+        lock.withLock { isMuted = true }
     }
 
     /// F5: a message Smalti sends without being asked (the spontaneous `prompt`, a new `promptstyle`).

@@ -188,11 +188,11 @@ enum SmaltiInputScript {
                 if [[ $_smalti_input_inbox == *$'\n'* ]]; then
                     lines=${_smalti_input_inbox%$'\n'*}
                     _smalti_input_inbox=${_smalti_input_inbox##*$'\n'}
-                    if [[ $1 != discard ]]; then
-                        for line in "${(@f)lines}"; do
-                            _smalti_input_apply "$line"
-                        done
-                    fi
+                    for line in "${(@f)lines}"; do
+                        # Away from the prompt (vared, select) only a new style still counts (block 3 review, M4).
+                        [[ $1 == discard && $line != promptstyle$'\t'* ]] && continue
+                        _smalti_input_apply "$line"
+                    done
                 fi
                 (( closed )) && _smalti_input_disable
             }
@@ -348,6 +348,7 @@ enum SmaltiInputScript {
         \#(SmaltiPromptScript.functions)
 
             _smalti_input_install() {
+                local code=$?
                 emulate -L zsh
                 precmd_functions=(${precmd_functions:#_smalti_input_install})
                 zmodload zsh/net/socket zsh/zselect zsh/system zsh/datetime 2>/dev/null || return 0
@@ -366,8 +367,9 @@ enum SmaltiInputScript {
                 zshexit_functions+=(_smalti_input_bye)
                 _smalti_input_prompt=1
                 _smalti_input_send "hello"$'\t'"$SMALTI_PANE_ID"
-                # The first prompt is on screen already: its context goes now; later ones from the last precmd hook.
-                _smalti_prompt_precmd
+                # The first prompt is on screen already: its context goes now, with the startup files' last status
+                # (block 3 review, M3); it also puts the precmd hook in place for the later ones.
+                _smalti_prompt_context $code
                 return 0
             }
 

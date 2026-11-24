@@ -74,7 +74,8 @@ struct PromptScriptIntegrationTests {
 
         let shown = try #require(zsh.dumpPrompt()?.shown)
         #expect(shown.hasPrefix("IMM:"))
-        #expect(shown.contains(" 2.1s ›") || shown.contains(" 2.2s ›"), "\(shown)")
+        // A loaded machine may add a few tenths (block 3 review, M12): any "2.x s" or "3.x s" proves format and threshold.
+        #expect(shown.firstMatch(of: #/IMM:\S+ [23]\.\ds › /#) != nil, "\(shown)")
     }
 
     @Test func silentServerDoesNotDelayPrompt() throws {
@@ -271,5 +272,93 @@ struct PromptScriptIntegrationTests {
         #expect(raw.contains("FULL:"))
         #expect(raw.contains("]133;A"))
         #expect(raw.contains("]133;B"))
+    }
+}
+
+/// Block 3 review (I4, M1–M4): the user's psvar, Ghostty's marks, the first prompt's exit and styles sent during vared.
+@Suite("zsh prompt from Smalti · review", .serialized)
+struct PromptScriptReviewTests {
+    private typealias Base = PromptScriptIntegrationTests
+
+    private func styled() throws -> FakeInputServer {
+        try FakeInputServer { fields in fields.first == "hello" ? [Base.style()] : [] }
+    }
+
+    @Test func userPrecmdClearingPsvarKeepsTheSymbol() throws {
+        let server = try styled()
+        let zsh = try ZshHarness(socket: server.path, zshrc: "precmd() { psvar=(rama) }")
+        defer { zsh.close() }
+
+        zsh.type("cd /usr/local/bin\r", settle: 0.5)
+
+        #expect(zsh.dumpPrompt()?.shown == "IMM:local/bin › ")
+    }
+
+    @Test func shellSourceGivesTheUserPsvarBack() throws {
+        let server = try styled()
+        let zsh = try ZshHarness(socket: server.path, zshrc: "psvar=(mio)\nPS1='u%1v '")
+        defer { zsh.close() }
+        zsh.type("\r", settle: 0.4)
+
+        server.push(Base.style(immediate: ""))
+        zsh.type("\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.shown == "umio ")
+    }
+
+    @Test func restoredUserPromptHasOneSetOfMarks() throws {
+        let server = try styled()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+        zsh.type("\r", settle: 0.4)
+
+        server.push(Base.style(immediate: ""))
+        zsh.type("\r", settle: 0.4)
+        zsh.type("\r", settle: 0.4)
+        let raw = zsh.dumpPrompt()?.raw ?? ""
+
+        #expect(raw.components(separatedBy: "133;A").count == 2, "\(raw)")
+    }
+
+    @Test func twoLineImmediatePromptMarksItsSecondLine() throws {
+        let server = try FakeInputServer { fields in
+            switch fields.first {
+            case "hello": ["promptstyle\tIMM:%2v\\n%1v \t#5f6672\t1=›"]
+            case "context": [Base.prompt(seq: fields[1], branch: "main")]
+            default: []
+            }
+        }
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("\r", settle: 0.4)
+        server.stopAnswering()
+        zsh.type("\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.raw.contains("133;P;k=s") == true)
+    }
+
+    @Test func firstContextCarriesTheLastStartupStatus() throws {
+        let server = try styled()
+        let zsh = try ZshHarness(socket: server.path, zshrc: "false")
+        defer { zsh.close() }
+
+        _ = server.waitFor { $0.contains { $0.hasPrefix("context\t") } }
+        let first = server.received.first { $0.hasPrefix("context\t") }?.components(separatedBy: "\t")
+
+        #expect(first?[3] == "1")
+    }
+
+    @Test func styleSentDuringVaredStillApplies() throws {
+        let server = try FakeInputServer()
+        let zsh = try ZshHarness(socket: server.path)
+        defer { zsh.close() }
+
+        zsh.type("vared -c answer\r", settle: 0.4)
+        server.push(Base.style())
+        zsh.type("x\r", settle: 0.4)
+        zsh.type("\r", settle: 0.4)
+
+        #expect(zsh.dumpPrompt()?.shown.hasPrefix("IMM:") == true)
     }
 }
