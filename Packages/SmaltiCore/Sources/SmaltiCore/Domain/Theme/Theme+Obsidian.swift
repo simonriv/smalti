@@ -17,7 +17,8 @@ extension Theme {
                 blurRadius: 28,
                 border: line(0.09),
                 borderWidth: 1,
-                cornerRadius: 16),
+                cornerRadius: 16,
+                shadow: WindowShadowTokens(offsetY: 30, blur: 90, opacity: c.windowShadowOpacity)),
             panel: PanelTokens(
                 background: c.panel.withAlpha(0.34),
                 border: line(0.07),

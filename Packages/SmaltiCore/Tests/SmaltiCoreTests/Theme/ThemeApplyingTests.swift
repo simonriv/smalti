@@ -26,6 +26,12 @@ struct ThemeApplyingTests {
         #expect(AppearanceSettings.obsidian.accent == nil)
     }
 
+    @Test func appliedThemeKeepsItsWindowShadow() {
+        let applied = ThemeCatalog.apply(settings { $0.theme = .niebla })
+
+        #expect(applied.theme.window.shadow == ThemeCatalog.theme(.niebla).window.shadow)
+    }
+
     @Test func protectionRaisesPanelTo66InObsidian() {
         let applied = ThemeCatalog.apply(settings())
 

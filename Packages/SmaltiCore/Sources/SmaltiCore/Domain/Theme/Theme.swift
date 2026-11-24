@@ -134,6 +134,20 @@ public struct WindowTokens: Equatable, Sendable {
     public let border: RGBAColor
     public let borderWidth: Double
     public let cornerRadius: Double
+    public let shadow: WindowShadowTokens
+}
+
+/// Black shadow under the glass window, in CSS `box-shadow` terms: `0 <offsetY>px <blur>px rgba(0,0,0,<opacity>)`.
+public struct WindowShadowTokens: Equatable, Sendable {
+    public let offsetY: Double
+    public let blur: Double
+    public let opacity: Double
+
+    public init(offsetY: Double, blur: Double, opacity: Double) {
+        self.offsetY = offsetY
+        self.blur = blur
+        self.opacity = opacity
+    }
 }
 
 public struct PanelTokens: Equatable, Sendable {
@@ -458,7 +472,7 @@ extension Theme {
             window: WindowTokens(
                 background: window.background.withAlpha(appearance.glassOpacity),
                 blurRadius: appearance.blur, border: window.border, borderWidth: window.borderWidth,
-                cornerRadius: window.cornerRadius),
+                cornerRadius: window.cornerRadius, shadow: window.shadow),
             panel: PanelTokens(
                 background: panel.background, border: panel.border, borderWidth: panel.borderWidth,
                 cornerRadius: appearance.radius, gap: appearance.gap, areaPadding: panel.areaPadding),

@@ -33,6 +33,8 @@ struct ThemeColors: Equatable, Sendable {
     /// Black shadow under the ⌘K box and under the completion menu; softer on the light theme.
     var overlayShadowOpacity = 0.55
     var menuShadowOpacity = 0.45
+    /// Under the glass window (boards: `0 30px 90px rgba(0,0,0,0.5)`).
+    var windowShadowOpacity = 0.5
 }
 
 /// `0xrrggbb` as an opaque color.

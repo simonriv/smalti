@@ -11,6 +11,9 @@ final class SmaltiWindow: NSWindow {
     let strip: WorkspaceStripView
     let statusBar: StatusBarView
     private let content: WindowContentView
+    /// Drawn once in a child window instead of the system shadow (issue #5, F5 T13).
+    private let shadow: WindowShadow
+    private var resizeObserver: NSObjectProtocol?
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
     var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 
@@ -20,6 +23,7 @@ final class SmaltiWindow: NSWindow {
         paneGrid = content.paneGrid
         strip = content.strip
         statusBar = content.statusBar
+        shadow = WindowShadow(tokens: theme.window)
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
             // No `.closable`: windows close only through ⇧⌘W, which asks first and closes their panes (F4.5).
@@ -35,7 +39,7 @@ final class SmaltiWindow: NSWindow {
         isReleasedWhenClosed = false
         isOpaque = GlassProbe.current == .opaque
         backgroundColor = GlassProbe.current == .opaque ? .black : .clear
-        hasShadow = GlassProbe.current != .noShadow
+        hasShadow = GlassProbe.current == .systemShadow
         contentMinSize = Self.minimumContentSize
         contentView = content
         setContentSize(Self.defaultContentSize)
@@ -43,11 +47,22 @@ final class SmaltiWindow: NSWindow {
         // F4.5: native full screen (⌃⌘F); the traffic lights stay hidden (window buttons are F5).
         collectionBehavior.insert(.fullScreenPrimary)
         center()
+        resizeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification, object: self, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self.map { $0.shadow.follow($0.frame) } }
+        }
+    }
+
+    override func close() {
+        shadow.close()
+        super.close()
     }
 
     /// In full screen the glass loses its rounded corners and border: they would frame the whole screen.
     func showsFullScreenChrome(_ isFullScreen: Bool) {
         content.showsFullScreenChrome(isFullScreen)
+        shadow.setVisible(!isFullScreen)
     }
 
     /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
@@ -55,6 +70,8 @@ final class SmaltiWindow: NSWindow {
         let radius = GlassProbe.current == .noBlur ? 0 : theme.window.blurRadius
         let blur = WindowGlass.apply(blurRadius: radius, to: self)
         content.apply(theme.window, blur: blur)
+        shadow.restyle(theme.window)
+        if GlassProbe.current.paintsOwnShadow { shadow.attach(to: self) }
     }
 
     /// ⌘ shortcuts arrive here first, before the menu and the terminal's own key equivalents.

@@ -15,6 +15,7 @@ extension ThemeColors {
             working: rgb(0x2f9e44), waiting: rgb(0xc77c02), failed: rgb(0xe03131), stopped: rgb(0x868e96))
         colors.overlayShadowOpacity = 0.18
         colors.menuShadowOpacity = 0.15
+        colors.windowShadowOpacity = 0.18
         return colors
     }()
 }

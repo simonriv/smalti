@@ -98,6 +98,20 @@ struct ThemeCatalogTests {
         #expect(niebla.inputMenu.shadowOpacity == 0.15)
     }
 
+    /// Boards: `box-shadow: 0 30px 90px rgba(0,0,0,0.5)` under the glass window (F5 T13 paints it itself, issue #5).
+    @Test(arguments: [ThemeID.obsidiana, .ambarNocturno, .bosque])
+    func darkThemesKeepTheBoardWindowShadow(_ id: ThemeID) {
+        let shadow = ThemeCatalog.theme(id).window.shadow
+
+        #expect(shadow == WindowShadowTokens(offsetY: 30, blur: 90, opacity: 0.5))
+    }
+
+    @Test func nieblaWindowShadowIsSofter() {
+        let shadow = ThemeCatalog.theme(.niebla).window.shadow
+
+        #expect(shadow == WindowShadowTokens(offsetY: 30, blur: 90, opacity: 0.18))
+    }
+
     @Test(arguments: [ThemeID.obsidiana, .ambarNocturno, .bosque])
     func darkThemesKeepTheDesignShadow(_ id: ThemeID) {
         let theme = ThemeCatalog.theme(id)
