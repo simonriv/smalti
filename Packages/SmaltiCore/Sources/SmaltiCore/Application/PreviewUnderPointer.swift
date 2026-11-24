@@ -21,6 +21,7 @@ public final class PreviewUnderPointer {
     private let thumbnailSize: Size
     private let show: @MainActor (PreviewCard?) -> Void
     private var word: PointerWord?
+    private var context: PreviewContext?
     private var load: Task<Void, Never>?
 
     public init(ports: Ports, thumbnailSize: Size, show: @escaping @MainActor (PreviewCard?) -> Void) {
@@ -31,8 +32,9 @@ public final class PreviewUnderPointer {
 
     /// The pointer is over `word` (nil: over nothing, or out of the pane).
     public func pointerMoved(_ word: PointerWord?, context: PreviewContext) {
-        guard word != self.word else { return }
+        guard word != self.word || context != self.context else { return }
         self.word = word
+        self.context = context
         reset()
         guard let word else { return }
         ports.debouncer.schedule { [weak self] in self?.start(word, context: context) }
@@ -78,6 +80,8 @@ public final class PreviewUnderPointer {
             } catch {
                 continue
             }
+            // ImageIO cannot stop a decode once started: a load cancelled while describing never starts one.
+            guard !Task.isCancelled else { return nil }
             do {
                 return .image(image, thumbnail: try await files.thumbnail(of: path, fitting: size), anchor: anchor)
             } catch {

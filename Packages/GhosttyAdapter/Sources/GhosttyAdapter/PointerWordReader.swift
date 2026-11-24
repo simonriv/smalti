@@ -17,9 +17,19 @@ enum PointerWordGeometry {
         return Rect(x: baseline.x, y: top, width: width, height: cell.height)
     }
 
-    static func cell(at point: Point, cell: Size) -> PointerCell? {
-        guard cell.width > 0, cell.height > 0 else { return nil }
-        return PointerCell(column: Int(point.x / cell.width), row: Int(point.y / cell.height))
+}
+
+/// The terminal's cell grid in the view: it starts after the window padding (`window-padding-x/y`, unbalanced, so
+/// the top-left padding is exactly the configured one) and has the surface's cell size, both in points.
+struct PointerGrid: Equatable {
+    let origin: Point
+    let cell: Size
+
+    /// The cell under `point`; nil over the padding or when the cell size is not known yet.
+    func cell(at point: Point) -> PointerCell? {
+        guard cell.width > 0, cell.height > 0, point.x >= origin.x, point.y >= origin.y else { return nil }
+        return PointerCell(
+            column: Int((point.x - origin.x) / cell.width), row: Int((point.y - origin.y) / cell.height))
     }
 }
 

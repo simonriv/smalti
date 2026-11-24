@@ -23,13 +23,22 @@ struct PointerWordGeometryTests {
         #expect(frame.size.width == 64)
     }
 
-    @Test func pointMapsToItsCell() {
-        #expect(PointerWordGeometry.cell(at: Point(x: 17, y: 41), cell: cell) == PointerCell(column: 2, row: 2))
-        #expect(PointerWordGeometry.cell(at: Point(x: 23.9, y: 59.9), cell: cell) == PointerCell(column: 2, row: 2))
+    private let grid = PointerGrid(origin: Point(x: 12, y: 4), cell: Size(width: 8, height: 20))
+
+    @Test func pointMapsToItsCellAfterThePadding() {
+        #expect(grid.cell(at: Point(x: 12, y: 4)) == PointerCell(column: 0, row: 0))
+        #expect(grid.cell(at: Point(x: 19.9, y: 23.9)) == PointerCell(column: 0, row: 0))
+        #expect(grid.cell(at: Point(x: 20, y: 24)) == PointerCell(column: 1, row: 1))
+    }
+
+    @Test func paddingHasNoCell() {
+        #expect(grid.cell(at: Point(x: 11.9, y: 10)) == nil)
+        #expect(grid.cell(at: Point(x: 30, y: 3.9)) == nil)
     }
 
     @Test func emptyCellSizeHasNoCell() {
-        #expect(PointerWordGeometry.cell(at: Point(x: 1, y: 1), cell: Size(width: 0, height: 0)) == nil)
+        #expect(
+            PointerGrid(origin: Point(x: 0, y: 0), cell: Size(width: 0, height: 0)).cell(at: Point(x: 1, y: 1)) == nil)
     }
 }
 
@@ -161,6 +170,47 @@ struct PointerWordSurfaceTests {
         #expect(await wait { pane.words.last??.text == "foto.png" })
 
         pane.view.pointerLeft()
+
+        #expect(await wait { pane.words.last == .some(nil) })
+    }
+
+    /// Block 2 review I2: turning hover off hides the word at once, and back on reads it again.
+    @Test func turningReportsOffSendsNil() async throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        let cell = try await printNames(in: pane)
+        move(pane, toColumn: 2, cell: cell)
+        #expect(await wait { pane.words.last??.text == "foto.png" })
+
+        pane.view.reportsPointerWords = false
+
+        #expect(await wait { pane.words.last == .some(nil) })
+    }
+
+    /// Block 2 review I3: scrolling moves the text under a still pointer, so the word it showed goes away.
+    @Test func scrollingClearsTheWord() async throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        let cell = try await printNames(in: pane)
+        move(pane, toColumn: 2, cell: cell)
+        #expect(await wait { pane.words.last??.text == "foto.png" })
+
+        pane.view.contentScrolled()
+        move(pane, toColumn: 2, cell: cell)
+
+        #expect(await wait { pane.words.count == 3 })
+        #expect(pane.words.map { $0?.text } == ["foto.png", nil, "foto.png"])
+    }
+
+    /// Block 2 review m3: dragging selects text; no word (and no card) while a button is down.
+    @Test func draggingReportsNoWord() async throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        let cell = try await printNames(in: pane)
+        move(pane, toColumn: 2, cell: cell)
+        #expect(await wait { pane.words.last??.text == "foto.png" })
+
+        pane.view.pointerMoved(to: Point(x: cell.size.width * 12.5, y: cell.size.height / 2), isDragging: true)
 
         #expect(await wait { pane.words.last == .some(nil) })
     }

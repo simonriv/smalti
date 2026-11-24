@@ -29,41 +29,62 @@ public struct ImageIOImageFiles: ImageFiles {
         return try Self.png(image, path: path)
     }
 
-    private struct Opened {
+    /// The open file and ImageIO's source over it; the descriptor lives as long as the source reads through it.
+    private final class Opened {
         let source: CGImageSource
         let description: ImageDescription
+        private let descriptor: Int32
+
+        init(source: CGImageSource, description: ImageDescription, descriptor: Int32) {
+            self.source = source
+            self.description = description
+            self.descriptor = descriptor
+        }
+
+        deinit { close(descriptor) }
     }
 
+    /// Opens once, checks that very file, and hands ImageIO the same descriptor (`/dev/fd/N`): a file swapped for a
+    /// FIFO or a device after the check is never what ImageIO reads (block 2 review m2).
     private func open(_ path: String) throws(ImagePreviewError) -> Opened {
-        try checkFile(path)
-        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+        let descriptor = try openChecked(path)
+        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: "/dev/fd/\(descriptor)") as CFURL, nil),
             CGImageSourceGetType(source) != nil,
             let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
             let width = properties[kCGImagePropertyPixelWidth] as? Int,
             let height = properties[kCGImagePropertyPixelHeight] as? Int
-        else { throw .notImage(path: path) }
-        let megapixels = Int64(width) * Int64(height) / 1_000_000
-        guard megapixels <= maxMegapixels else {
-            throw .tooLarge(path: path, reason: "\(megapixels) megapixels (max \(maxMegapixels))")
+        else {
+            close(descriptor)
+            throw .notImage(path: path)
         }
-        let name = URL(fileURLWithPath: path).lastPathComponent
-        return Opened(
-            source: source,
-            description: ImageDescription(path: path, name: name, pixelWidth: width, pixelHeight: height))
+        let pixels = Int64(width) * Int64(height)
+        let maxPixels = Int64(maxMegapixels) * 1_000_000
+        guard pixels <= maxPixels else {
+            close(descriptor)
+            throw .tooLarge(path: path, reason: "\(pixels) pixels (max \(maxPixels))")
+        }
+        let name = String(path.split(separator: "/").last ?? "")
+        let description = ImageDescription(path: path, name: name, pixelWidth: width, pixelHeight: height)
+        return Opened(source: source, description: description, descriptor: descriptor)
     }
 
-    /// `stat` follows links without opening anything, so a FIFO or a device never blocks or streams.
-    private func checkFile(_ path: String) throws(ImagePreviewError) {
-        var info = stat()
-        guard stat(path, &info) == 0 else {
+    /// `O_NONBLOCK`: opening a FIFO or a device returns at once; `fstat` on the descriptor then refuses it.
+    private func openChecked(_ path: String) throws(ImagePreviewError) -> Int32 {
+        let descriptor = Darwin.open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else {
             if errno == ENOENT || errno == ENOTDIR { throw .notFound(path: path) }
             throw .unreadable(path: path, reason: String(cString: strerror(errno)))
         }
-        guard info.st_mode & S_IFMT == S_IFREG else { throw .notImage(path: path) }
-        guard access(path, R_OK) == 0 else { throw .unreadable(path: path, reason: "permission denied") }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, info.st_mode & S_IFMT == S_IFREG else {
+            close(descriptor)
+            throw .notImage(path: path)
+        }
         guard info.st_size <= maxBytes else {
+            close(descriptor)
             throw .tooLarge(path: path, reason: "\(info.st_size) bytes (max \(maxBytes))")
         }
+        return descriptor
     }
 
     /// The longest side of the image fitted in `size`, never larger than the image itself.

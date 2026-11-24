@@ -176,6 +176,60 @@ struct PreviewUnderPointerTests {
         #expect(shown.cards.isEmpty)
     }
 
+    /// Block 2 review I1: a load cancelled while describing never starts the (uncancellable) thumbnail.
+    @Test func cancelledLoadNeverStartsThumbnail() async {
+        let files = InMemoryImageFiles(["/w/a.png": .image(width: 1, height: 1)])
+        files.hold("/w/a.png", at: .describe)
+        let preview = preview(files)
+        preview.pointerMoved(word("a.png"), context: context)
+        debouncer.fire()
+        await files.waitUntilRequested("/w/a.png", at: .describe)
+
+        preview.pointerMoved(nil, context: context)
+        files.release("/w/a.png")
+        await preview.settle()
+
+        #expect(files.thumbnailed.isEmpty)
+    }
+
+    /// Block 2 review m4: after `cd` or another command the same word may name another file.
+    @Test func sameWordInOtherContextReloads() async {
+        let files = InMemoryImageFiles([
+            "/w/a.png": .image(width: 1, height: 1), "/x/a.png": .image(width: 2, height: 2),
+        ])
+        let preview = preview(files)
+        preview.pointerMoved(
+            word("a.png"), context: PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: nil))
+        debouncer.fire()
+        await preview.settle()
+
+        preview.pointerMoved(
+            word("a.png"), context: PreviewContext(workingDirectory: "/x", home: "/h", lastCommand: nil))
+        debouncer.fire()
+        await preview.settle()
+
+        #expect(preview.current?.path == "/x/a.png")
+    }
+
+    @Test func goingBackToAWordShowsItOnce() async {
+        let files = InMemoryImageFiles([
+            "/w/a.png": .image(width: 1, height: 1), "/w/b.png": .image(width: 1, height: 1),
+        ])
+        files.hold("/w/a.png")
+        let preview = preview(files)
+        preview.pointerMoved(word("a.png"), context: context)
+        debouncer.fire()
+        await files.waitUntilRequested("/w/a.png")
+
+        preview.pointerMoved(word("b.png", x: 200), context: context)
+        preview.pointerMoved(word("a.png"), context: context)
+        files.release("/w/a.png")
+        debouncer.fire()
+        await preview.settle()
+
+        #expect(shown.cards.compactMap { $0?.path } == ["/w/a.png"])
+    }
+
     @Test func sameWordDoesNotReload() async {
         let files = InMemoryImageFiles(["/w/a.png": .image(width: 1, height: 1)])
         let preview = preview(files)

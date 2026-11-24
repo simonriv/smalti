@@ -24,6 +24,11 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         didSet { views.values.forEach { $0.reportsPointerWords = reportsPointerWords } }
     }
 
+    /// The terminal padding in points (the theme's `paddingX`/`paddingY`): where the cell grid starts.
+    public var gridPadding = Point(x: 0, y: 0) {
+        didSet { views.values.forEach { $0.gridPadding = gridPadding } }
+    }
+
     /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
     /// a restore can fall back to the workspace root or the home directory.
     public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
@@ -37,6 +42,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
             view.exposesCellSize = exposesCellSize
             view.reportsPointerWords = reportsPointerWords
+            view.gridPadding = gridPadding
             views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.

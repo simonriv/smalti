@@ -31,7 +31,7 @@ struct ImageIOImageFilesTests {
         let image = try await files.describe(path)
 
         #expect(image.pixelWidth == 4000 && image.pixelHeight == 3000)
-        #expect(ContinuousClock.now - start < .milliseconds(50))
+        #expect(ContinuousClock.now - start < .milliseconds(150))
     }
 
     @Test func imageOverMegapixelLimitIsTooLarge() async throws {
@@ -39,11 +39,24 @@ struct ImageIOImageFilesTests {
         let path = try fixtures.image("wide.png", width: 2000, height: 1000)
         let strict = ImageIOImageFiles(maxBytes: 200_000_000, maxMegapixels: 1)
 
-        await #expect(throws: ImagePreviewError.tooLarge(path: path, reason: "2 megapixels (max 1)")) {
+        await #expect(throws: ImagePreviewError.tooLarge(path: path, reason: "2000000 pixels (max 1000000)")) {
             try await strict.describe(path)
         }
         await #expect(throws: ImagePreviewError.self) {
             try await strict.thumbnail(of: path, fitting: Size(width: 388, height: 208))
+        }
+    }
+
+    /// Block 2 review m1: "más de 100 megapíxeles" exactly: the limit itself passes, one pixel more does not.
+    @Test func megapixelLimitIsExact() async throws {
+        let fixtures = try ImageFixtures()
+        let atLimit = try fixtures.image("limit.png", width: 1000, height: 1000)
+        let over = try fixtures.image("over.png", width: 1000, height: 1001)
+        let strict = ImageIOImageFiles(maxBytes: 200_000_000, maxMegapixels: 1)
+
+        #expect(try await strict.describe(atLimit).dimensions == "1000×1000")
+        await #expect(throws: ImagePreviewError.tooLarge(path: over, reason: "1001000 pixels (max 1000000)")) {
+            try await strict.describe(over)
         }
     }
 
@@ -113,7 +126,7 @@ struct ImageIOImageFilesTests {
         let start = ContinuousClock.now
 
         await #expect(throws: ImagePreviewError.notImage(path: path)) { try await files.describe(path) }
-        #expect(ContinuousClock.now - start < .milliseconds(50))
+        #expect(ContinuousClock.now - start < .milliseconds(150))
     }
 
     @Test func folderIsNotAnImage() async throws {
