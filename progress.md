@@ -216,10 +216,10 @@
 - [x] T3 · Cuatro temas (`ThemeColors` + `Theme.make`), ANSI por tema, `ThemeCatalog.apply` con la protección (colores inalcanzables ajustados sin forzar panel opaco)
 - [x] T4 · `PromptConfig`, `WindowButtons`, 8 comandos nuevos, ⌘, Apariencia, ⌥⌘, config.toml, ⇧⌘P Estudio (en ⌘K, ayuda y menú)
 #### Bloque 2 · Dominio del prompt
-- [ ] T5 · Módulos, estilos y contexto
-- [ ] T6 · `ZshPromptRenderer` y escapado
-- [ ] T7 · Canal, `RenderPrompt` y `PromptFacts`
-- [ ] T8 · `AppearanceStore`, `ChangeAppearance`, `EditPrompt` y `StarshipPreset`
+- [x] T5 · Módulos (un tipo por módulo), estilos Limpio/Píldoras/Solo símbolo, `DirectoryLabel`, `PromptHeaderText`, iconos
+- [x] T6 · `ZshPromptRenderer`: prompt inmediato con expansiones de zsh y completo con valores en `${_smalti_p_N}` (`%` escapado)
+- [x] T7 · Mensajes `context`/`prompt`/`promptstyle`, puerto `PromptFacts`, `RenderPrompt` con reenvío espontáneo
+- [x] T8 · `AppearanceStore`, `ChangeAppearance` (300 ms), `EditPrompt` con las tres vistas previas, `StarshipPreset`
 #### Bloque 3 · Adaptadores
 - [ ] T9 · `TOMLConfigAdapter`: `theme.toml`, escritor y `starship.toml`
 - [ ] T10 · `ProjectContextAdapter`: `PromptFacts`
