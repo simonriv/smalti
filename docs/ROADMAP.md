@@ -8,7 +8,7 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
+F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
 ```
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
@@ -105,6 +105,13 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Entregables:** imágenes inline por el protocolo de gráficos de kitty (lo soporta libghostty); vista previa al pasar el cursor sobre un enlace a imagen; espacio abre Quick Look.
 - **Criterio de cierre:** por definir en su spec.
 - **Dependencias:** F5 (temas y superposiciones). Separada de F5 por Simón (2026-11-23): no comparte nada con temas ni prompt.
+
+## F5.6 · Resaltado del input
+
+- **Objetivo:** que la línea de comando se coloree mientras se escribe, sin plugins de zsh (Simón quitó zsh-syntax-highlighting el 2026-11-23, enmienda 1 de F4) (idea de Simón, 2026-11-24).
+- **Entregables:** resaltado nativo de la línea en el prompt del shell, pintado por zsh con `region_highlight` (como el fantasma de F4): comando existente o desconocido, subcomandos y opciones según las specs de Fig, cadenas, rutas que existen, variables y operadores. Colores de rol del tema activo, con "Proteger legibilidad"; activable en `[input]`.
+- **Criterio de cierre:** por definir en su spec.
+- **Dependencias:** F4 (canal con zsh, specs de Fig, `region_highlight` con `memo=smalti`) y F5 (temas y colores de rol). Separada de F5.5: no comparte nada con las previews.
 
 ## F6 · Multi-harness y Neovim
 
