@@ -76,6 +76,17 @@ struct ChangeAppearanceTests {
         #expect(store.saved.last?.appearance.glassOpacity == 0.8)
     }
 
+    /// A reload shows the file: the change it replaced is not written on quit.
+    @Test func reloadDropsThePendingSave() {
+        let change = make()
+        _ = change.apply { $0.appearance.glassOpacity = 0.8 }
+        change.reload(AppearanceDocument(config: .defaults))
+
+        change.saveIfPending()
+
+        #expect(store.saved.isEmpty)
+    }
+
     @Test func quitWithNothingPendingWritesNothing() {
         let change = make()
 
