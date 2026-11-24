@@ -37,6 +37,9 @@ public final class RenderPrompt {
     /// The newest `context` of each shell still waiting for its facts: a slower, older answer is dropped, and `exec`
     /// or `forget` cancel it (block 2 review, I2).
     private var pending: [PaneID: Int] = [:]
+    /// The last `promptstyle` each shell received: a shell busy when a style went out (its socket full) gets it again
+    /// with its next `context` (final review, I3).
+    private var deliveredStyles: [PaneID: SmaltiMessage] = [:]
     /// "Solo símbolo": the last prompt context of each shell, for its pane header; it stays while a command runs.
     private var lastShells: [PaneID: QuietShell] = [:]
     /// Characters a pane header gives the context before trimming the directory from the left.
@@ -93,8 +96,25 @@ public final class RenderPrompt {
         pending[pane] = nil
     }
 
+    /// The style `pane` still has to get: the current one when it never got it or got another; `nil` when up to date.
+    public func pendingStyle(for pane: PaneID) -> SmaltiMessage? {
+        let current = styleMessage()
+        return deliveredStyles[pane] == current ? nil : current
+    }
+
+    public func styleDelivered(_ style: SmaltiMessage, to pane: PaneID) {
+        deliveredStyles[pane] = style
+    }
+
+    /// After a new style the shells quiet at their prompt get their full prompt again, in the new colors: the style
+    /// alone repaints the immediate one (final review, I2).
+    public func quietPrompts() -> [(pane: PaneID, message: SmaltiMessage)] {
+        quiet.keys.compactMap { pane in message(for: pane).map { (pane, $0) } }
+    }
+
     /// The pane or its connection is gone.
     public func forget(pane: PaneID) {
+        deliveredStyles[pane] = nil
         quiet[pane] = nil
         pending[pane] = nil
         lastShells[pane] = nil

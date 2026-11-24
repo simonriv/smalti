@@ -24,6 +24,9 @@ public struct Theme: Equatable, Sendable {
     public let help: HelpTokens
     public let feedback: FeedbackTokens
     public let searchBar: SearchBarTokens
+    /// What text on a panel sits on with "Proteger legibilidad" (the protected panel over the worst desktop); `nil`
+    /// without protection. The prompt's role colors are made legible on it.
+    var legibleGround: RGBAColor? = nil
 }
 
 /// The scrollback search bar (mockup-search.png): the ⌘K glass at this size, top-right of the pane.

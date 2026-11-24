@@ -28,11 +28,12 @@ public actor FilePromptFacts: PromptFacts {
     public func facts(for query: PromptQuery) async -> PromptFactsResult {
         let directory = URL(filePath: query.directory)
         let repository = RepositoryFiles(around: directory)
-        let changes: GitChanges? =
+        // `git status` and `--version` run together: the prompt waits for the slower, not for both (final review, M3).
+        async let changes: GitChanges? =
             if let repository { await changes(in: repository, directory: query.directory) } else { nil }
+        async let runtime = runtime(for: directory, paths: query.runtimePaths)
         return PromptFactsResult(
-            repoRoot: repository?.root, branch: repository?.branch, changes: changes,
-            runtime: await runtime(for: directory, paths: query.runtimePaths),
+            repoRoot: repository?.root, branch: repository?.branch, changes: await changes, runtime: await runtime,
             kubeContext: KubeContext.current(in: query.kubeconfig))
     }
 

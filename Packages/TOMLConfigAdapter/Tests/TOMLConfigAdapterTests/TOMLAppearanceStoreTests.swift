@@ -143,6 +143,26 @@ struct TOMLAppearanceStoreTests {
         #expect(saved.appearance.blur == 12)
     }
 
+    /// Final review (I1): the saved document carries the hand edit, so saving it again keeps the edit.
+    @Test func secondSaveKeepsTheHandEdit() throws {
+        let store = TOMLAppearanceStore(file: themeFile)
+        let base = AppearanceDocument(config: .defaults)
+        try store.save(base)
+        let edited = try String(contentsOf: themeFile, encoding: .utf8).replacingOccurrences(
+            of: "blur = 28", with: "blur = 12")
+        try edited.write(to: themeFile, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: themeFile.path(percentEncoded: false))
+        var ui = base
+        ui.appearance.glassOpacity = 0.7
+
+        var next = try store.save(ui)
+        next.appearance.glassOpacity = 0.8
+        try store.save(next)
+
+        #expect(try readBack().appearance.blur == 12)
+    }
+
     @Test func writeLeavesNoTemporaryFiles() throws {
         try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
 

@@ -70,6 +70,7 @@ final class SmaltiWindow: NSWindow {
         // Block 4 review (M1): the observer goes with the window.
         resizeObserver.map(NotificationCenter.default.removeObserver)
         resizeObserver = nil
+        buttons?.stop()
         super.close()
     }
 

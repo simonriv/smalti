@@ -29,6 +29,12 @@ final class WindowButtonsController {
         setShown(false, faded: false)
     }
 
+    /// The window closes: its observers go with it (final review, M7).
+    func stop() {
+        frameObservers.forEach(NotificationCenter.default.removeObserver)
+        frameObservers = []
+    }
+
     /// Entering or leaving full screen.
     func setFullScreen(_ isFullScreen: Bool) {
         guard isFullScreen != self.isFullScreen else { return }

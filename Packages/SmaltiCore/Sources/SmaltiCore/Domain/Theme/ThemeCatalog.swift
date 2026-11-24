@@ -75,6 +75,7 @@ private struct Protection {
         let panel = protected.raisePanel()
         let adjusted = protected.adjustPanelColors()
         let overlay = protected.raiseOverlay()
+        protected.theme.legibleGround = protected.glassGround.underneath(protected.theme.panel.background)
         let opacities = SurfaceOpacities(panel: panel, chrome: chromeOpacity(), overlay: overlay)
         return AppliedTheme(theme: protected.theme, opacities: opacities, adjustedColorCount: adjusted)
     }

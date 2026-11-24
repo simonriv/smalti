@@ -262,6 +262,10 @@ final class AppComposition {
         sessionKeeper?.changed(set)
         let panes = Set(set.allPanes.map(\.id))
         input?.keepOnly(panes)
+        // A closed pane's agent no longer waits for anyone (final review, M1); unchanged prompts send nothing.
+        for composition in compositions {
+            composition.controller.set.workspaces.forEach { input?.agentsChanged(in: $0.id) }
+        }
         if secureInput.entry.isRequested {
             secureInput.keep(panes: panes)
             compositions.forEach { $0.controller.showSecureInput(secureInput.entry.isRequested) }

@@ -107,10 +107,13 @@ final class PromptStudioController {
 
     private func export(_ draft: PromptConfig) {
         let text = session.starshipText(for: draft)
-        if let folder = UserDefaults.standard.string(forKey: Self.exportDirectoryKey), !folder.isEmpty {
-            write(text, to: URL(filePath: folder).appending(path: Self.exportName))
-            return
-        }
+        #if DEBUG
+            // UI tests only (final review, M9): the daily build always asks with the save panel.
+            if let folder = UserDefaults.standard.string(forKey: Self.exportDirectoryKey), !folder.isEmpty {
+                write(text, to: URL(filePath: folder).appending(path: Self.exportName))
+                return
+            }
+        #endif
         let panel = NSSavePanel()
         panel.nameFieldStringValue = Self.exportName
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".config")

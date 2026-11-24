@@ -6,12 +6,17 @@ import Testing
 public final class InMemoryAppearanceStore: AppearanceStore {
     public private(set) var saved: [AppearanceDocument] = []
     public var failure: ConfigError?
+    /// A hand edit the file had when the next save came: it is merged in, as `TOMLAppearanceStore` does.
+    public var handEdit: ((inout AppearanceDocument) -> Void)?
 
     public init() {}
 
-    public func save(_ document: AppearanceDocument) throws(ConfigError) {
+    public func save(_ document: AppearanceDocument) throws(ConfigError) -> AppearanceDocument {
         if let failure { throw failure }
-        saved.append(document)
+        var merged = document
+        handEdit?(&merged)
+        saved.append(merged)
+        return merged
     }
 }
 

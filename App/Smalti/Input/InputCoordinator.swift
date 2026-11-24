@@ -110,7 +110,7 @@ final class InputCoordinator {
             panes[connection.id] = pane
             connections[pane] = connection
             // F5: the shell paints Smalti's immediate prompt (and takes its answers) once it has the style.
-            if let style = renderPrompt?.styleMessage() { connection.send(style) }
+            deliverStyle(to: pane, over: connection)
         }
         guard let pane = panes[connection.id] else { return }
         if message == .bye { forget(connection, of: pane) }
@@ -127,6 +127,8 @@ final class InputCoordinator {
     private func handlePrompt(_ message: ShellMessage, pane: PaneID, connection: InputConnection) {
         switch message {
         case .context(let seq, let context):
+            // A style that did not fit while the shell was busy goes before its next prompt (final review, I3).
+            deliverStyle(to: pane, over: connection)
             Task { [weak self] in
                 guard let reply = await self?.renderPrompt?.handle(context, seq: seq, pane: pane) else { return }
                 connection.send(reply)
@@ -145,10 +147,25 @@ final class InputCoordinator {
         }
     }
 
-    /// The theme or the prompt changed: every shell gets the new immediate prompt and ghost color.
+    /// The theme or the prompt changed: each shell whose style is out of date gets the new immediate prompt and ghost
+    /// color, and the quiet ones their full prompt again in the new colors (final review, I2). A change that leaves
+    /// the style as it was (the blur, the gap) sends nothing.
     func sendPromptStyle() {
-        guard let message = renderPrompt?.styleMessage() else { return }
-        connections.values.forEach { $0.send(message) }
+        guard let render = renderPrompt else { return }
+        let restyled = connections.filter { pane, connection in deliverStyle(to: pane, over: connection) }
+        for (pane, message) in render.quietPrompts() where restyled[pane] != nil {
+            restyled[pane]?.send(message)
+        }
+    }
+
+    /// Sends the pane's pending style, if any; true when one went out whole.
+    @discardableResult
+    private func deliverStyle(to pane: PaneID, over connection: InputConnection) -> Bool {
+        guard let render = renderPrompt, let style = render.pendingStyle(for: pane), connection.send(style) else {
+            return false
+        }
+        render.styleDelivered(style, to: pane)
+        return true
     }
 
     /// Ends the connections of panes that no longer exist (closed panes or workspaces): a background job that

@@ -368,3 +368,70 @@ struct RenderPromptHeaderTests {
         #expect(render.headerText(for: pane) == "solen · main")
     }
 }
+
+/// Final review (I2, I3): a new style reaches every shell once, even one busy when it went out, and the quiet shells
+/// get their full prompt again instead of being left with the immediate one.
+@MainActor
+@Suite("RenderPrompt · style delivery")
+struct RenderPromptStyleDeliveryTests {
+    private let pane = PaneID()
+
+    private final class Settings {
+        var appearance = AppearanceSettings.obsidian
+    }
+
+    private func make(_ settings: Settings) -> RenderPrompt {
+        RenderPrompt(
+            facts: FakePromptFacts(),
+            environment: PromptEnvironment(
+                settings: { (PromptConfig.standard, ThemeCatalog.apply(settings.appearance)) },
+                agents: { _ in WaitingAgents() }, workspace: { _ in nil }, home: "/Users/simon",
+                now: { Date(timeIntervalSince1970: 0) }))
+    }
+
+    private let shell = ShellContext(
+        pwd: "/tmp", exit: 0, durationMilliseconds: 0, awsProfile: nil, kubeconfig: nil, runtimePaths: [:])
+
+    @Test func styleNeverDeliveredIsPending() {
+        let render = make(Settings())
+
+        #expect(render.pendingStyle(for: pane) == render.styleMessage())
+    }
+
+    @Test func deliveredStyleIsNotPending() {
+        let render = make(Settings())
+
+        render.styleDelivered(render.styleMessage(), to: pane)
+
+        #expect(render.pendingStyle(for: pane) == nil)
+    }
+
+    @Test func newThemeMakesTheStylePendingAgain() {
+        let settings = Settings()
+        let render = make(settings)
+        render.styleDelivered(render.styleMessage(), to: pane)
+
+        settings.appearance.theme = .niebla
+
+        #expect(render.pendingStyle(for: pane) == render.styleMessage())
+    }
+
+    @Test func quietShellsGetTheirPromptAgain() async {
+        let render = make(Settings())
+        _ = await render.handle(shell, seq: 5, pane: pane)
+
+        let prompts = render.quietPrompts()
+
+        #expect(prompts.map(\.pane) == [pane])
+        if case .prompt(let seq, _) = prompts.first?.message { #expect(seq == 5) } else { Issue.record("no prompt") }
+    }
+
+    @Test func busyShellsGetNoPrompt() async {
+        let render = make(Settings())
+        _ = await render.handle(shell, seq: 5, pane: pane)
+
+        render.commandStarted(pane: pane)
+
+        #expect(render.quietPrompts().isEmpty)
+    }
+}

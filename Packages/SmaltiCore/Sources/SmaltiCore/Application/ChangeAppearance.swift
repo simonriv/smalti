@@ -10,6 +10,8 @@ public final class ChangeAppearance {
     private let onSaveError: @MainActor (ConfigError) -> Void
     /// A change waits for its debounced write.
     private var isSavePending = false
+    /// The file had a hand edit when it was saved: the document now carries it (final review, I1).
+    public var onSaved: (@MainActor (AppearanceDocument) -> Void)?
 
     public init(
         document: AppearanceDocument, store: any AppearanceStore, debouncer: any Debouncer,
@@ -47,7 +49,10 @@ public final class ChangeAppearance {
         debouncer.cancel()
         isSavePending = false
         do {
-            try store.save(document)
+            let written = try store.save(document)
+            guard written != document else { return }
+            document = written
+            onSaved?(written)
         } catch {
             onSaveError(error)
         }

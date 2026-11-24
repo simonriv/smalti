@@ -24,7 +24,8 @@ public final class TOMLAppearanceStore: AppearanceStore {
     private var target: URL { file.resolvingSymlinksInPath() }
     private var path: String { target.path(percentEncoded: false) }
 
-    public func save(_ document: AppearanceDocument) throws(ConfigError) {
+    @discardableResult
+    public func save(_ document: AppearanceDocument) throws(ConfigError) -> AppearanceDocument {
         let merged = rebasedOnHandEdit(document)
         do {
             try FileManager.default.createDirectory(
@@ -35,6 +36,7 @@ public final class TOMLAppearanceStore: AppearanceStore {
                 file: path, line: nil, key: nil, reason: "no se pudo escribir: \(error.localizedDescription)")
         }
         baseline = (merged, modificationDate())
+        return merged
     }
 
     /// Keys missing from the edited file read as defaults, so deleting one by hand is respected (M8). A file that no

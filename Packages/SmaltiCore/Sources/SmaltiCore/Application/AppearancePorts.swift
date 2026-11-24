@@ -63,7 +63,10 @@ public struct AppearanceDocument: Equatable, Sendable {
 
 /// Port to where the UI writes (`theme.toml`). It writes the whole document; a failure leaves the file as it was.
 public protocol AppearanceStore: AnyObject {
-    @MainActor func save(_ document: AppearanceDocument) throws(ConfigError)
+    /// Returns what was written: `document` with any edit made by hand to the file since it was read (final review,
+    /// I1), which the caller adopts so its next save keeps it.
+    @discardableResult
+    @MainActor func save(_ document: AppearanceDocument) throws(ConfigError) -> AppearanceDocument
 }
 
 /// Runs only the last action scheduled within its delay (the app waits `ChangeAppearance.saveDelay`).

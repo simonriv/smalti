@@ -23,6 +23,8 @@ final class AppearanceSession {
         change = ChangeAppearance(
             document: document, store: store, debouncer: TimerDebouncer(delay: ChangeAppearance.saveDelay),
             onSaveError: onSaveError)
+        // A hand edit merged on save is painted and shown, like any other change (final review, I1).
+        change.onSaved = { [weak self] _ in self?.publish() }
     }
 
     var document: AppearanceDocument { change.document }

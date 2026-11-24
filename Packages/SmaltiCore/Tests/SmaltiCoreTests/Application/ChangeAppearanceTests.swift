@@ -39,6 +39,33 @@ struct ChangeAppearanceTests {
         #expect(store.saved.last?.appearance.glassOpacity == change.document.appearance.glassOpacity)
     }
 
+    /// Final review (I1): the store merges a hand edit on save; the document takes it, so the next save keeps it.
+    @Test func handEditMergedOnSaveBecomesTheDocument() {
+        let change = make()
+        store.handEdit = { $0.appearance.fontSize = 15 }
+        _ = change.apply { $0.appearance.glassOpacity = 0.8 }
+        debouncer.fire()
+        store.handEdit = nil
+
+        _ = change.apply { $0.appearance.glassOpacity = 0.9 }
+        debouncer.fire()
+
+        #expect(change.document.appearance.fontSize == 15)
+        #expect(store.saved.last?.appearance.fontSize == 15)
+    }
+
+    @Test func mergedSaveIsReported() {
+        var reported: AppearanceDocument?
+        let change = make()
+        change.onSaved = { reported = $0 }
+        store.handEdit = { $0.appearance.fontSize = 15 }
+        _ = change.apply { $0.appearance.glassOpacity = 0.8 }
+
+        debouncer.fire()
+
+        #expect(reported?.appearance.fontSize == 15)
+    }
+
     /// Block 4 review (I1): quitting within 300 ms of the last change still writes it.
     @Test func pendingChangeIsSavedOnQuit() {
         let change = make()
