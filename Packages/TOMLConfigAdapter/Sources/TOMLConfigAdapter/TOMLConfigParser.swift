@@ -17,15 +17,16 @@ enum TOMLConfigParser {
         static let window = "window"
     }
 
+    static let prompt = "prompt"
+
     static func parse(_ text: String, file: String) throws(ConfigError) -> SmaltiConfig {
         let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
         try root.rejectUnknownKeys(allowed: [
             Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input, Table.window,
+            prompt,
         ])
         var config = SmaltiConfig.defaults
-        if let section = try root.section(Table.appearance) {
-            config.appearance = try AppearanceReader.read(section, over: config.appearance)
-        }
+        try readLook(root, into: &config, scope: .config)
         if let section = try root.section(Table.tiling) {
             config.defaultLayout = try TilingReader.read(section) ?? config.defaultLayout
         }
@@ -41,10 +42,79 @@ enum TOMLConfigParser {
         if let section = try root.section(Table.input) {
             config.input = try InputReader.read(section)
         }
-        if let section = try root.section(Table.window) {
-            config.window = try WindowReader.read(section)
-        }
         return config
+    }
+
+    /// `theme.toml` (spec F5): only `[appearance]`, `[window] buttons` and `[prompt]`, read over `base` key by key.
+    static func parseTheme(_ text: String, file: String, over base: SmaltiConfig) throws(ConfigError) -> SmaltiConfig {
+        let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
+        try root.rejectUnknownKeys(allowed: [Table.appearance, Table.window, prompt])
+        var config = base
+        try readLook(root, into: &config, scope: .theme)
+        return config
+    }
+
+    /// The look tables both files share.
+    private static func readLook(_ root: TOMLSection, into config: inout SmaltiConfig, scope: LookScope)
+        throws(ConfigError)
+    {
+        if let section = try root.section(Table.appearance) {
+            config.appearance = try AppearanceReader.read(section, over: config.appearance)
+        }
+        if let section = try root.section(Table.window) {
+            config.window = try WindowReader.read(section, over: config.window, scope: scope)
+        }
+        if let section = try root.section(prompt) {
+            config.prompt = try PromptReader.read(section, over: config.prompt)
+        }
+    }
+
+    /// Dotted keys written in the look tables (`appearance.blur`, `appearance.ansi.bosque.1`…), for the warning on
+    /// keys set in both files.
+    static func lookKeys(_ text: String, file: String) throws(ConfigError) -> Set<String> {
+        let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
+        var keys: Set<String> = []
+        for table in [Table.appearance, Table.window, prompt] {
+            guard let section = try root.section(table) else { continue }
+            try collect(section, into: &keys)
+        }
+        return keys
+    }
+
+    private static func collect(_ section: TOMLSection, into keys: inout Set<String>) throws(ConfigError) {
+        for key in section.keysInFileOrder {
+            // A nested table (`ansi.bosque`) is walked; a scalar key fails `section` and is recorded.
+            if let nested = try? section.section(key) {
+                try collect(nested, into: &keys)
+            } else {
+                keys.insert("\(section.name).\(key)")
+            }
+        }
+    }
+}
+
+/// Which file a look table comes from: `confirm_close` belongs to `config.toml` only (the UI never writes it).
+enum LookScope {
+    case config
+    case theme
+}
+
+/// Reads a word of `T`'s raw values, with the choices in the error ("se esperaba hidden, hover o visible").
+enum Choice {
+    static func read<T: RawRepresentable & CaseIterable>(
+        _ key: String, in section: TOMLSection, as type: T.Type, prefix: String = ""
+    ) throws(ConfigError) -> T? where T.RawValue == String {
+        guard let text = try section.text(key, reason: reason(T.self, prefix: prefix)) else { return nil }
+        guard let value = T(rawValue: text) else { throw section.error(at: key, reason(T.self, prefix: prefix)) }
+        return value
+    }
+
+    static func reason<T: RawRepresentable & CaseIterable>(_ type: T.Type, prefix: String = "") -> String
+    where T.RawValue == String {
+        let words = T.allCases.map(\.rawValue)
+        let list =
+            words.count > 1 ? words.dropLast().joined(separator: ", ") + " o " + (words.last ?? "") : words.joined()
+        return prefix + "se esperaba " + list
     }
 }
 
@@ -76,9 +146,16 @@ private enum AppearanceReader {
         -> AppearanceSettings
     {
         try section.rejectUnknownKeys(allowed: [
-            "accent", "glass_opacity", "blur", "font_family", "font_size", "gap", "radius",
+            "accent", "glass_opacity", "blur", "font_family", "font_size", "gap", "radius", "theme",
+            "protect_legibility", "ansi",
         ])
         var appearance = defaults
+        appearance.theme =
+            try Choice.read("theme", in: section, as: ThemeID.self, prefix: "tema desconocido; ") ?? appearance.theme
+        appearance.protectLegibility = try section.flag("protect_legibility") ?? appearance.protectLegibility
+        if let ansi = try section.section("ansi") {
+            appearance.ansiOverrides.merge(try ANSIReader.read(ansi)) { _, written in written }
+        }
         appearance.accent = try accent(in: section) ?? appearance.accent
         appearance.glassOpacity = try number("glass_opacity", in: section, glassOpacity) ?? appearance.glassOpacity
         appearance.blur = try number("blur", in: section, blur) ?? appearance.blur
@@ -155,14 +232,19 @@ private enum ShellReader {
     }
 }
 
-/// `[window]` (F4.5): `confirm_close`, a boolean.
+/// `[window]`: `confirm_close` (F4.5, `config.toml` only) and `buttons` (F5).
 private enum WindowReader {
     private static let confirmCloseKey = "confirm_close"
+    private static let buttonsKey = "buttons"
 
-    static func read(_ section: TOMLSection) throws(ConfigError) -> WindowSettings {
-        try section.rejectUnknownKeys(allowed: [confirmCloseKey])
-        var settings = WindowSettings.standard
+    static func read(_ section: TOMLSection, over base: WindowSettings, scope: LookScope) throws(ConfigError)
+        -> WindowSettings
+    {
+        let allowed: Set<String> = scope == .config ? [confirmCloseKey, buttonsKey] : [buttonsKey]
+        try section.rejectUnknownKeys(allowed: allowed)
+        var settings = base
         settings.confirmClose = try section.flag(confirmCloseKey) ?? settings.confirmClose
+        settings.buttons = try Choice.read(buttonsKey, in: section, as: WindowButtons.self) ?? settings.buttons
         return settings
     }
 }
