@@ -39,3 +39,40 @@ public enum InputRouting {
         }
     }
 }
+
+/// F5.6: a `line` to highlight, with the shell's `seq` and where relative paths and `~` resolve.
+public struct HighlightRequest: Sendable {
+    public let line: InputLine
+    public let seq: Int
+    public let directory: String
+    public let home: String
+
+    public init(line: InputLine, seq: Int, directory: String, home: String) {
+        self.line = line
+        self.seq = seq
+        self.directory = directory
+        self.home = home
+    }
+}
+
+extension InputRouting {
+    /// The highlight to send right away; `needsFollowUp` when a spec or a slow path was still missing.
+    public static func highlight(_ request: HighlightRequest, using highlighter: HighlightLine) async
+        -> (first: SmaltiMessage, needsFollowUp: Bool)
+    {
+        let answer = await highlighter.firstAnswer(request.line, directory: request.directory, home: request.home)
+        return (.highlight(seq: request.seq, answer.spans), !answer.isComplete)
+    }
+
+    /// The complete highlight, replacing the first one in zsh when it is still about the same line.
+    public static func followUp(_ request: HighlightRequest, using highlighter: HighlightLine) async -> SmaltiMessage {
+        .highlight(
+            seq: request.seq,
+            await highlighter.completeAnswer(request.line, directory: request.directory, home: request.home))
+    }
+
+    /// A late answer is only worth sending while its line is still the shell's last one.
+    public static func shouldSendFollowUp(seq: Int, latest: Int?) -> Bool {
+        latest == seq
+    }
+}
