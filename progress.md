@@ -226,13 +226,13 @@
 - [x] T11 · Script de zsh del prompt con `psvar` (enmienda 1), hook antes del de Ghostty con marcas OSC 133, input opcional; corregido un fallo de F4 (respuestas junto al EOF)
 - [x] T12 · `SmaltiSymbols.ttf` (9 iconos de trazo fino) y lámina `F5-assets/icons-sheet.png` para aprobar
 #### Bloque 4 · App: vidrio, temas y ventana
-- [ ] T13 · GPU en reposo (#5)
-- [ ] T14 · Tema en vivo y capas de legibilidad
-- [ ] T15 · Botones de ventana
-- [ ] T16 · Panel Apariencia
+- [x] T13 · GPU en reposo (#5): la causa es la sombra del sistema de una ventana no opaca (WindowServer la recalcula en cada cambio de contenido); sombra propia en una ventana hija: 2,2 % en reposo (antes 29,5 %), 38,5 % con contenido moviéndose detrás (antes 71,1 %). El script activa la app y tapa el escritorio (T1 midió con la ventana detrás de la terminal)
+- [x] T14 · Tema en vivo y capas de legibilidad (C2 medido en pantalla con calibración por parches de gris; C12 en dos ventanas)
+- [x] T15 · Botones de ventana (ocultos, al pasar el cursor, visibles; cerrar pregunta; Zoom con `performZoom`)
+- [x] T16 · Panel Apariencia (revisión del bloque 4: 1 crítico, 4 importantes y 6 menores corregidos; regresión 68/68)
 #### Bloque 5 · App: prompt
-- [ ] T17 · Prompt conectado y contexto en la cabecera
-- [ ] T18 · Estudio de prompt
-- [ ] T19 · Capturas y comparación con los tableros
+- [x] T17 · Prompt conectado y contexto en la cabecera (hallazgo: `/usr/bin/git` es el shim de xcrun y nunca llegaba a los 300 ms; `GitLocator`)
+- [x] T18 · Estudio de prompt (`KeyContext.panel` para ⌘↑ ⌘↓)
+- [x] T19 · Capturas y comparación con los tableros (hallazgo: `SmaltiSymbols` sin nombre PostScript; revisión del bloque 5: 4 importantes y 9 menores corregidos; regresión 72/72)
 #### Bloque 6 · Cierre
-- [ ] T20 · Checklist, revisión final, mutación, PR y despliegue
+- [x] T20 · Checklist (`docs/specs/F5-checklist.md`), revisión final (4 importantes y 4 menores corregidos), mutación 99,5 %, XCUITest 191/191 con el diario intacto, C6 2,6 % al cierre, PR y despliegue 0.5.0
