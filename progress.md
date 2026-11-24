@@ -257,9 +257,9 @@
 - [x] T6 · `ImageIOAdapter`
 - [x] T7 · Palabra bajo el ratón en `GhosttyAdapter`
 #### Bloque 3 · Config, CLI y kitty de terceros
-- [ ] T8 · `[preview]` en `TOMLConfigAdapter`
-- [ ] T9 · `ShowImageGrid` y `smalti img`
-- [ ] T10 · Imágenes kitty de terceros y lista de render
+- [x] T8 · `[preview]` en `TOMLConfigAdapter`
+- [x] T9 · `ShowImageGrid` y `smalti img`
+- [x] T10 · Imágenes kitty de terceros y lista de render
 #### Bloque 4 · App
 - [ ] T11 · Tarjeta de vista previa
 - [ ] T12 · ⌘Y abre Quick Look
