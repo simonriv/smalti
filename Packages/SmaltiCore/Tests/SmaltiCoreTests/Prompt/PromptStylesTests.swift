@@ -17,6 +17,7 @@ struct PromptStylesTests {
             switch run.content {
             case .text(let text): text
             case .icon(let icon): "<\(icon)>"
+            case .symbol(let symbol): symbol.rawValue
             }
         }.joined()
     }

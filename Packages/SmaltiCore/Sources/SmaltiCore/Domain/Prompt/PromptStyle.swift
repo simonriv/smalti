@@ -3,6 +3,8 @@ public struct StyledRun: Equatable, Sendable {
     public enum Content: Equatable, Sendable {
         case text(String)
         case icon(PromptIcon)
+        /// The prompt symbol, kept apart so the renderer can name it once for every prompt (`_smalti_sym`).
+        case symbol(PromptSymbol)
     }
 
     public let content: Content
@@ -30,7 +32,7 @@ public struct SymbolSegment: Equatable, Sendable {
     var runs: [StyledRun] {
         let failed = lastExit != 0
         let exit = failed ? [StyledRun(.text(" exit \(lastExit)"), .secondary)] : []
-        return [StyledRun(.text(symbol.rawValue), failed ? .failed : .accent)] + exit
+        return [StyledRun(.symbol(symbol), failed ? .failed : .accent)] + exit
             + [StyledRun(.text(" "), .secondary)]
     }
 }

@@ -1,0 +1,179 @@
+import SmaltiCore
+import Testing
+
+/// Spec F5, "Del dominio a zsh": the immediate and full prompt strings, with outside text only in `values`.
+@Suite("ZshPromptRenderer")
+struct ZshPromptRendererTests {
+    private func hex(_ value: String) -> RGBAColor {
+        (try? RGBAColor(hex: value)) ?? RGBAColor(red: 0, green: 0, blue: 0, alpha: 1)
+    }
+
+    /// "Proyecto Node con git" of the board.
+    private func nodeProject(_ change: (inout PromptContext) -> Void = { _ in }) -> PromptContext {
+        var context = PromptContext(directory: "/Users/simon/dev/solen/apps/api", home: "/Users/simon")
+        context.repoRoot = "/Users/simon/dev/solen"
+        context.branch = "feat/reminders"
+        context.changes = GitChanges(modified: 2, staged: 1)
+        context.runtime = RuntimeVersion(kind: .node, version: "22.11")
+        change(&context)
+        return context
+    }
+
+    private func theme(protected: Bool = false, _ change: (inout AppearanceSettings) -> Void = { _ in })
+        -> AppliedTheme
+    {
+        var appearance = AppearanceSettings.obsidian
+        appearance.protectLegibility = protected
+        change(&appearance)
+        return ThemeCatalog.apply(appearance)
+    }
+
+    private func render(
+        _ config: PromptConfig = .standard, _ context: PromptContext? = nil, theme applied: AppliedTheme? = nil
+    ) -> RenderedPrompt {
+        ZshPromptRenderer.render(config, context: context ?? nodeProject(), theme: applied ?? theme())
+    }
+
+    @Test func cleanTwoLinesMatchesGolden() {
+        let rendered = render()
+
+        #expect(
+            rendered.full
+                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_p_1}%f   %F{#bb9af7}\u{E901}%f %F{#bb9af7}${_smalti_p_2}%f "
+                + "%F{#e0af68}${_smalti_p_3}%f%F{#9ece6a}${_smalti_p_4}%f   %F{#8b919c}\u{E902}%f %F{#8b919c}${_smalti_p_5}%f"
+                + "\n%F{#7aa2f7}${_smalti_sym}%f ")
+        #expect(
+            rendered.values == [
+                "_smalti_p_1": "solen/apps/api", "_smalti_p_2": "feat/reminders", "_smalti_p_3": "●2",
+                "_smalti_p_4": " +1", "_smalti_p_5": "22.11", "_smalti_sym": "›",
+            ])
+        #expect(rendered.directoryLabel == "solen/apps/api")
+    }
+
+    @Test func oneLineMatchesGolden() {
+        var config = PromptConfig.standard.applying(.singleLine)
+        config.modules = [.directory]
+
+        let rendered = render(config)
+
+        #expect(rendered.full == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_p_1}%f %F{#7aa2f7}${_smalti_sym}%f ")
+    }
+
+    @Test func immediateHasOnlyLocalSegments() {
+        let rendered = render()
+
+        #expect(
+            rendered.immediate
+                == "%F{#7aa2f7}\u{E900}%f %F{#7aa2f7}${_smalti_dir}%f${_smalti_duration:+   %F{#8b919c}${_smalti_duration}%f}"
+                + "\n%(?.%F{#7aa2f7}.%F{#f7768e})${_smalti_sym}%f%(?.. %F{#8b919c}exit %?%f) ")
+    }
+
+    @Test func immediateTimeUsesZshClock() {
+        var config = PromptConfig.standard
+        config.modules = [.time]
+
+        #expect(render(config).immediate.hasPrefix("%F{#8b919c}\u{E906}%f %F{#8b919c}%D{%H:%M}%f\n"))
+    }
+
+    @Test func fullWithFailedExitPaintsSymbolRedAndAddsExit() {
+        let rendered = render(.standard, nodeProject { $0.lastExit = 1 })
+
+        #expect(rendered.full.hasSuffix("\n%F{#f7768e}${_smalti_sym}%f%F{#8b919c}${_smalti_p_6}%f "))
+        #expect(rendered.values["_smalti_p_6"] == " exit 1")
+    }
+
+    @Test func branchWithSubstitutionStaysLiteral() {
+        let rendered = render(.standard, nodeProject { $0.branch = "$(touch pwned)%F{red}" })
+
+        #expect(rendered.values["_smalti_p_2"] == "$(touch pwned)%%F{red}")
+        #expect(!rendered.full.contains("touch"))
+        #expect(!rendered.full.contains("%F{red}"))
+    }
+
+    @Test func percentInDirectoryIsEscaped() {
+        let rendered = render(
+            .standard,
+            nodeProject {
+                $0.repoRoot = nil
+                $0.directory = "/tmp/100%"
+            })
+
+        // Two levels in all: zsh's `%2~` shows the whole path, as for `/usr`.
+        #expect(rendered.values["_smalti_p_1"] == "/tmp/100%%")
+    }
+
+    @Test func newlineInNameIsReplaced() {
+        let rendered = render(.standard, nodeProject { $0.branch = "a\nb\tc" })
+
+        #expect(rendered.values["_smalti_p_2"] == "a␤b c")
+    }
+
+    @Test func dollarSymbolNeverAppearsBareInThePrompt() {
+        var config = PromptConfig.standard
+        config.symbol = .dollar
+
+        let rendered = render(config)
+        let bare = rendered.full.split(separator: "$", omittingEmptySubsequences: false).dropFirst()
+            .filter { !$0.hasPrefix("{") }
+
+        #expect(bare.isEmpty)
+        #expect(rendered.values["_smalti_sym"] == "$")
+    }
+
+    @Test func protectedColorsAreUsed() throws {
+        let overrides = try ANSIOverrides([5: hex("#15161e")])
+        let applied = theme(protected: true) { $0.ansiOverrides = [.obsidiana: overrides] }
+
+        let full = render(.standard, nil, theme: applied).full
+
+        #expect(full.contains("%F{\(applied.theme.terminal.palette[5].hexString)}${_smalti_p_2}"))
+        #expect(!full.contains("#15161e"))
+    }
+
+    @Test func noIconsLeaveNoGapsOrGlyphs() {
+        var config = PromptConfig.standard
+        config.icons = .none
+        config.modules = [.directory]
+
+        #expect(render(config).full == "%F{#7aa2f7}${_smalti_p_1}%f\n%F{#7aa2f7}${_smalti_sym}%f ")
+    }
+
+    @Test func nerdIconsUseNerdGlyphs() {
+        var config = PromptConfig.standard
+        config.icons = .nerd
+
+        #expect(render(config).full.hasPrefix("%F{#7aa2f7}\u{F07B}%f "))
+    }
+
+    @Test func pillsPaintTintedBackgrounds() {
+        var config = PromptConfig.standard.applying(.pills)
+        config.modules = [.directory]
+        let applied = theme()
+        let panel = applied.theme.panel.background
+        let tint = PillsStyle.background(of: applied.theme.accent, over: panel).hexString
+
+        let full = render(config, nil, theme: applied).full
+
+        #expect(full.hasPrefix("%K{\(tint)} %k%K{\(tint)}%F{#7aa2f7}\u{E900}%f%k"))
+    }
+
+    @Test func symbolOnlyRendersOnlyTheSymbol() {
+        #expect(render(PromptConfig.standard.applying(.symbolOnly)).full == "%F{#7aa2f7}${_smalti_sym}%f ")
+    }
+
+    @Test func messageStaysUnder2000Bytes() {
+        let long = "/" + String(repeating: "a", count: 1500) + "/b"
+        let rendered = render(
+            .standard,
+            nodeProject {
+                $0.repoRoot = nil
+                $0.directory = long
+            })
+        let size =
+            rendered.full.utf8.count + rendered.immediate.utf8.count
+            + rendered.values.map { $0.key.utf8.count + $0.value.utf8.count }.reduce(0, +)
+
+        #expect(size < 2000)
+        #expect(rendered.values["_smalti_p_1"]?.hasPrefix("…") == true)
+    }
+}
