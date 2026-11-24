@@ -17,6 +17,10 @@ enum SmaltiInputScript {
             typeset -g _smalti_input_exec=0 _smalti_input_have_specs=0 _smalti_input_inbox= _smalti_input_text=
             typeset -g _smalti_input_prompt=0 _smalti_input_refuse_enter=0 _smalti_input_pwd=
             typeset -ga _smalti_input_specs
+            # F5.6: role → color of the highlight (empty: off), the last spans (`start,end,role`) and their line.
+            typeset -gA _smalti_hl_style
+            typeset -ga _smalti_hl_spans
+            typeset -g _smalti_hl_buffer=
             typeset -gA _smalti_input_previous
 
             _smalti_input_escape() {
@@ -73,10 +77,82 @@ enum SmaltiInputScript {
                 _smalti_input_fd=
                 _smalti_input_ghost=
                 _smalti_input_inbox=
+                _smalti_hl_spans=()
                 if zle; then
                     POSTDISPLAY=
                     region_highlight=("${(@)region_highlight:#*memo=smalti}")
+                    region_highlight=("${(@)region_highlight:#*memo=smaltihl}")
                 fi
+            }
+
+            # F5.6: whether a word names something the shell can run. Only lookups and file tests on the literal
+            # word: never `eval`, globbing or expansion, so `$(…)` or backticks in it are just text.
+            _smalti_hl_known() {
+                emulate -L zsh
+                local word=$1
+                [[ -n $word ]] || return 1
+                (( $+aliases[$word] || $+functions[$word] || $+builtins[$word] || $+commands[$word] )) && return 0
+                (( ${reswords[(Ie)$word]} )) && return 0
+                [[ $word == */* ]] || return 1
+                [[ $word == '~/'* ]] && word=$HOME${word#\~}
+                [[ -x $word && ! -d $word ]]
+            }
+
+            # F5.6: paints the spans Smalti gave for this line. A command that does not exist turns red only once
+            # the cursor has left it; a path is underlined over the color it already has.
+            _smalti_hl_paint() {
+                emulate -L zsh
+                region_highlight=("${(@)region_highlight:#*memo=smaltihl}")
+                (( ${#_smalti_hl_style} )) || return 0
+                local span start end role rest attr
+                for span in $_smalti_hl_spans; do
+                    start=${span%%,*}
+                    rest=${span#*,}
+                    end=${rest%%,*}
+                    role=${rest#*,}
+                    [[ $start == <-> && $end == <-> ]] && (( start < end && end <= ${#BUFFER} )) || continue
+                    case $role in
+                        p) attr=underline ;;
+                        c)
+                            if _smalti_hl_known "${(Q)BUFFER[start+1,end]}"; then
+                                attr="fg=$_smalti_hl_style[c]"
+                            elif (( CURSOR >= start && CURSOR <= end )); then
+                                continue
+                            else
+                                attr="fg=$_smalti_hl_style[u]"
+                            fi
+                            ;;
+                        v) attr="fg=$_smalti_hl_style[o]" ;;
+                        s|o|q|x) attr="fg=$_smalti_hl_style[$role]" ;;
+                        *) continue ;;
+                    esac
+                    region_highlight+=("$start $end $attr memo=smaltihl")
+                done
+            }
+
+            # F5.6: before the answer for a new line arrives, keep only the spans that end before the first changed
+            # character, so no color ever sits on text that is no longer its own; a cursor move only repaints.
+            _smalti_hl_keep_prefix() {
+                emulate -L zsh
+                (( ${#_smalti_hl_spans} )) || { region_highlight=("${(@)region_highlight:#*memo=smaltihl}"); return 0 }
+                if [[ $BUFFER != "$_smalti_hl_buffer" ]]; then
+                    local old=$_smalti_hl_buffer first i span rest
+                    if [[ $BUFFER == "$old"* ]]; then
+                        first=${#old}
+                    else
+                        i=1
+                        while (( i <= ${#old} && i <= ${#BUFFER} )) && [[ ${BUFFER[i]} == "${old[i]}" ]]; do (( i++ )); done
+                        first=$(( i - 1 ))
+                    fi
+                    local -a kept
+                    for span in $_smalti_hl_spans; do
+                        rest=${span#*,}
+                        (( ${rest%%,*} < first )) && kept+=($span)
+                    done
+                    _smalti_hl_spans=($kept)
+                    _smalti_hl_buffer=$BUFFER
+                fi
+                _smalti_hl_paint
             }
 
             _smalti_input_paint() {
@@ -102,6 +178,7 @@ enum SmaltiInputScript {
                 [[ $state == "$_smalti_input_state" ]] && return 0
                 local previous=${_smalti_input_state#*:}
                 _smalti_input_state=$state
+                _smalti_hl_keep_prefix
                 local expected=$previous$_smalti_input_ghost
                 if (( CURSOR == ${#BUFFER} )) && [[ -n $_smalti_input_ghost && $expected == "$BUFFER"?* ]]; then
                     _smalti_input_paint "${expected#"$BUFFER"}"
@@ -119,6 +196,8 @@ enum SmaltiInputScript {
             _smalti_input_line_init() {
                 _smalti_input_state=
                 _smalti_input_ghost=
+                _smalti_hl_spans=()
+                _smalti_hl_buffer=
                 _smalti_input_refuse_enter=0
             }
 
@@ -166,6 +245,20 @@ enum SmaltiInputScript {
                     prompt|promptstyle)
                         _smalti_prompt_apply "$1"
                         ;;
+                    highlight)
+                        _smalti_input_is_current "$fields[2]" || return 0
+                        _smalti_hl_spans=(${(s: :)fields[3]})
+                        _smalti_hl_buffer=$BUFFER
+                        _smalti_hl_paint
+                        ;;
+                    highlightstyle)
+                        if [[ $fields[2] == off ]]; then
+                            _smalti_hl_style=()
+                        else
+                            _smalti_hl_style=(c "$fields[2]" u "$fields[3]" s "$fields[4]" o "$fields[5]" q "$fields[6]" x "$fields[7]")
+                        fi
+                        zle && _smalti_hl_paint
+                        ;;
                 esac
                 return 0
             }
@@ -190,7 +283,7 @@ enum SmaltiInputScript {
                     _smalti_input_inbox=${_smalti_input_inbox##*$'\n'}
                     for line in "${(@f)lines}"; do
                         # Away from the prompt (vared, select) only a new style still counts (block 3 review, M4).
-                        [[ $1 == discard && $line != promptstyle$'\t'* ]] && continue
+                        [[ $1 == discard && $line != promptstyle$'\t'* && $line != highlightstyle$'\t'* ]] && continue
                         _smalti_input_apply "$line"
                     done
                 fi
@@ -351,7 +444,7 @@ enum SmaltiInputScript {
                 local code=$?
                 emulate -L zsh
                 precmd_functions=(${precmd_functions:#_smalti_input_install})
-                zmodload zsh/net/socket zsh/zselect zsh/system zsh/datetime 2>/dev/null || return 0
+                zmodload zsh/net/socket zsh/zselect zsh/system zsh/datetime zsh/parameter 2>/dev/null || return 0
                 zsocket "$SMALTI_INPUT_SOCKET" 2>/dev/null || return 0
                 # Moved to a descriptor of ten or more: the user's `exec 3>file` must never receive Smalti's lines.
                 local low=$REPLY
