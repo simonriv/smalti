@@ -96,7 +96,8 @@ struct ZshHighlightTests {
         defer { zsh.close() }
         let tool = zsh.work.appending(path: "tool")
         try Data("#!/bin/sh\n".utf8).write(to: tool)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tool.path(percentEncoded: false))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: tool.path(percentEncoded: false))
 
         zsh.type(word + " ")
 
