@@ -6,6 +6,9 @@ import SmaltiCore
 @MainActor
 final class WorkspaceStripView: NSView {
     var onCommand: ((CommandID) -> Void)?
+    /// F5: the cursor entered (true) or left (false) the strip, for the window buttons in `hover` mode.
+    var onCursor: ((Bool) -> Void)?
+    private var pillsLeading: NSLayoutConstraint?
 
     private let pills = NSStackView()
     private let counters = NSStackView()
@@ -42,8 +45,10 @@ final class WorkspaceStripView: NSView {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        let pillsLeading = pills.leadingAnchor.constraint(equalTo: leadingAnchor, constant: theme.strip.paddingLeading)
+        self.pillsLeading = pillsLeading
         NSLayoutConstraint.activate([
-            pills.leadingAnchor.constraint(equalTo: leadingAnchor, constant: theme.strip.paddingLeading),
+            pillsLeading,
             pills.centerYAnchor.constraint(equalTo: centerYAnchor),
             paletteHint.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -theme.strip.paddingTrailing),
             counters.trailingAnchor.constraint(equalTo: paletteHint.leadingAnchor, constant: -theme.agent.counterGap),
@@ -62,6 +67,9 @@ final class WorkspaceStripView: NSView {
 
     func render(_ state: TilingState) {
         layer?.backgroundColor = state.chromeBackground.nsColor.cgColor
+        let strip = state.theme.strip
+        let shift = state.config.window.buttons.reservesStripMargin ? strip.windowButtons.pillShift : 0
+        pillsLeading?.constant = strip.paddingLeading + shift
         let model = StripModel(
             pills: state.set.workspaces.map {
                 .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID, status: $0.agentStatus)
@@ -91,6 +99,16 @@ final class WorkspaceStripView: NSView {
     override func mouseDown(with event: NSEvent) {
         window?.performDrag(with: event)
     }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(
+            NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { onCursor?(true) }
+    override func mouseExited(with event: NSEvent) { onCursor?(false) }
 }
 
 /// A workspace pill: status dot (neutral until F2) and name; the active one carries the accent ring and glow.

@@ -43,6 +43,12 @@ public enum WindowButtons: String, CaseIterable, Sendable {
     case hidden
     case hover
     case visible
+
+    /// The strip's left margin widens for the buttons; with `hover` it is there before they appear (Claude).
+    public var reservesStripMargin: Bool { self != .hidden }
+    public var isAlwaysShown: Bool { self == .visible }
+    /// Shown while the cursor is on the strip, with a fade.
+    public var followsCursor: Bool { self == .hover }
 }
 
 /// Decides whether closing needs the user's confirmation, and with which words.

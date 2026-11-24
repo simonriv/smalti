@@ -215,6 +215,23 @@ public struct StripTokens: Equatable, Sendable {
     public let addButtonIconSize: Double
     public let addButtonIconStroke: Double
     public let addButtonColor: RGBAColor
+    /// F5 window buttons (`mockup-buttons`).
+    public let windowButtons: WindowButtonTokens
+}
+
+/// Where the native window buttons sit in the strip (`mockup-buttons`): 12 px circles from x = 14, every 20 px.
+public struct WindowButtonTokens: Equatable, Sendable {
+    /// How far the pills move right when the buttons have their margin.
+    public let pillShift: Double
+    /// Center of the close button from the window's left edge; the strip centers them vertically.
+    public let firstCenterX: Double
+    public let spacing: Double
+
+    public init(pillShift: Double, firstCenterX: Double, spacing: Double) {
+        self.pillShift = pillShift
+        self.firstCenterX = firstCenterX
+        self.spacing = spacing
+    }
 }
 
 /// The bar above each pane.
@@ -462,6 +479,8 @@ public struct MotionTokens: Equatable, Sendable {
     public let rearrangeDuration: Double
     /// Seconds F4's menu and ⌃R palette take to fade in (spec: 120 ms); none with "Reducir movimiento".
     public let overlayAppearDuration: Double
+    /// Seconds the window buttons take to fade in and out with `hover` (spec: 150 ms); none with "Reducir movimiento".
+    public let windowButtonsFade: Double
 }
 
 extension Theme {

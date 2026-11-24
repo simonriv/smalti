@@ -58,7 +58,7 @@ final class PaneGridView: NSView {
         emptyState.isHidden = !active.panes.isEmpty
         let keys = state.config.keys
         emptyState.show(newPane: keys.chord(for: .paneNew), palette: keys.chord(for: .paletteOpen))
-        place(animated: isRearrangement && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        place(animated: isRearrangement && !Motion.isReduced)
     }
 
     func container(for pane: PaneID) -> PaneContainerView? { containers[pane] }

@@ -201,6 +201,7 @@ final class WindowComposition {
         controller.onChange = { [weak self] state in
             guard let self else { return }
             applyGlass(state.theme)
+            window.buttons?.apply(state.config.window.buttons, theme: state.theme)
             window.strip.render(state)
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
@@ -218,6 +219,14 @@ final class WindowComposition {
         }
         grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        window.strip.onCursor = { [weak window] isInside in window?.buttons?.cursorOnStrip(isInside) }
+        window.buttons?.onShow = { [weak window] faded in
+            window?.strip.setAccessibilityValue(faded ? "botones con fundido" : "botones sin fundido")
+        }
+        window.onCloseRequest = { [weak self] in
+            guard let self else { return }
+            services.appCommand(.windowClose, self)
+        }
         controller.onAppCommand = { [weak self] command in
             guard let self else { return }
             services.appCommand(command, self)

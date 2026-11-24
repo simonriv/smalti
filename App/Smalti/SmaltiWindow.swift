@@ -14,6 +14,10 @@ final class SmaltiWindow: NSWindow {
     /// Drawn once in a child window instead of the system shadow (issue #5, F5 T13).
     private let shadow: WindowShadow
     private var resizeObserver: NSObjectProtocol?
+    /// F5 window buttons; created once the window exists.
+    private(set) var buttons: WindowButtonsController?
+    /// The close button asks like ⇧⌘W (spec F5); AppKit never closes the window by itself.
+    var onCloseRequest: (() -> Void)?
     /// Smalti shortcuts are routed before AppKit or the terminal see the key (`KeyRouter`).
     var routeKey: ((NSEvent, _ isComposing: Bool) -> Bool)?
 
@@ -26,15 +30,12 @@ final class SmaltiWindow: NSWindow {
         shadow = WindowShadow(tokens: theme.window)
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultContentSize),
-            // No `.closable`: windows close only through ⇧⌘W, which asks first and closes their panes (F4.5).
-            styleMask: [.titled, .miniaturizable, .resizable, .fullSizeContentView],
+            // `.closable` for the F5 close button; `performClose` routes it through ⇧⌘W's question.
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
         titlebarAppearsTransparent = true
         titleVisibility = .hidden
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            standardWindowButton(button)?.isHidden = true
-        }
         // AppComposition owns the window; AppKit must not release it again on close.
         isReleasedWhenClosed = false
         isOpaque = GlassProbe.current == .opaque
@@ -44,14 +45,24 @@ final class SmaltiWindow: NSWindow {
         contentView = content
         setContentSize(Self.defaultContentSize)
         setAccessibilityIdentifier("smalti.window")
-        // F4.5: native full screen (⌃⌘F); the traffic lights stay hidden (window buttons are F5).
+        // F4.5: native full screen (⌃⌘F); F5 window buttons follow `[window] buttons` (WindowButtonsController).
         collectionBehavior.insert(.fullScreenPrimary)
         center()
+        buttons = WindowButtonsController(window: self, theme: theme)
         resizeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResizeNotification, object: self, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self.map { $0.shadow.follow($0.frame) } }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.shadow.follow(self.frame)
+                self.buttons?.place()
+            }
         }
+    }
+
+    /// The close button and the Window menu's "Cerrar" ask first (spec F5); the app decides and closes.
+    override func performClose(_ sender: Any?) {
+        onCloseRequest?()
     }
 
     override func close() {
@@ -63,6 +74,7 @@ final class SmaltiWindow: NSWindow {
     func showsFullScreenChrome(_ isFullScreen: Bool) {
         content.showsFullScreenChrome(isFullScreen)
         shadow.setVisible(!isFullScreen)
+        buttons?.place()
     }
 
     /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.

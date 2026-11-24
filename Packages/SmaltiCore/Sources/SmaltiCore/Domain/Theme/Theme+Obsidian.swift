@@ -46,7 +46,8 @@ extension Theme {
                 fontSize: 12,
                 fontWeight: 500, dotSize: 6, dot: c.neutralDot,
                 bottomBorder: line(0.05), addButtonIconSize: 12, addButtonIconStroke: 1.4,
-                addButtonColor: c.secondary),
+                addButtonColor: c.secondary,
+                windowButtons: WindowButtonTokens(pillShift: 72, firstCenterX: 20, spacing: 20)),
             header: HeaderTokens(
                 height: 30, padding: 12, gap: 8, fontSize: 11.5, dotSize: 7, dot: c.neutralDot,
                 directory: c.muted,
@@ -73,7 +74,7 @@ extension Theme {
                 listPaddingBottom: 8, rowPadding: 12, shadowOffsetY: 40, shadowBlur: 100,
                 shadowOpacity: c.overlayShadowOpacity,
                 markerFontSize: 11.5, footerGap: 16),
-            motion: MotionTokens(rearrangeDuration: 0.15, overlayAppearDuration: 0.12),
+            motion: MotionTokens(rearrangeDuration: 0.15, overlayAppearDuration: 0.12, windowButtonsFade: 0.15),
             emptyState: EmptyStateTokens(fontSize: 13, lineGap: 8, text: c.secondary),
             resume: ResumeTokens(
                 contentWidth: 908, paddingVertical: 28, paddingHorizontal: 32, blockGap: 18, titleFontSize: 20,
