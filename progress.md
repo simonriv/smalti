@@ -266,3 +266,33 @@
 - [x] T13 · Capturas, mediciones y reposo
 #### Bloque 5 · Cierre
 - [x] T14 · Checklist (`docs/specs/F5.5-checklist.md`), revisión final (3 importantes y 9 menores corregidos), mutación 100 %, XCUITest de la fase 79/79 + 22/22 y 12/12 tras los últimos cambios, versión 0.5.5
+
+## F5.6 · Resaltado del input
+
+### Spec
+- [x] `docs/specs/F5.6-resaltado.md` aprobada (2026-11-24): resaltado calculado en Smalti y pintado por zsh, una sola acción de integración en ⌘K, scroll de toda la lista, iconos a la altura de las mayúsculas
+
+### Plan
+- [x] `docs/plans/F5.6-resaltado.md`: 14 tareas en 4 bloques
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · `HighlightLexer`
+- [ ] T2 · `LineHighlighter`, `HighlightSpan` e `isCommand`
+- [ ] T3 · `PathFacts`, `loadedSpec`, `HighlightCodec` y `HighlightLine`
+- [ ] T4 · `HighlightPalette`, `[input] highlighting` y estilo
+- [ ] T5 · `IntegrationState` y catálogo con una sola acción
+#### Bloque 2 · Adaptadores
+- [ ] T6 · `FigSpecs.loadedSpec` e `isCommand`
+- [ ] T7 · `FileSystemPathFacts`
+- [ ] T8 · Lado zsh del resaltado
+- [ ] T9 · Iconos del prompt a la altura de las mayúsculas
+- [ ] T10 · `ClaudePluginInstaller.installState` y binario configurable
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App
+- [ ] T11 · Resaltado en la app
+- [ ] T12 · Estado de la integración con Claude en la app
+- [ ] T13 · Lista de ⌘K con `NSTableView`
+- [ ] Revisión intermedia 2 + mutación incremental
+#### Bloque 4 · Cierre
+- [ ] T14 · Mediciones, capturas, checklist, revisión final, mutación completa, PRs y despliegue
