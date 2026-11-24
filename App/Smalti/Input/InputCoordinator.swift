@@ -132,7 +132,9 @@ final class InputCoordinator {
 
     private static func seq(of message: ShellMessage) -> Int? {
         switch message {
-        case .line(let seq, _), .exec(let seq, _), .done(let seq, _), .complete(let seq, _), .history(let seq, _): seq
+        case .line(let seq, _), .exec(let seq, _), .done(let seq, _), .complete(let seq, _), .history(let seq, _),
+            .context(let seq, _):
+            seq
         case .hello, .bye: nil
         }
     }

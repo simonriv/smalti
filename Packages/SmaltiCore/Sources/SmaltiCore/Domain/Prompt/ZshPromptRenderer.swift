@@ -38,6 +38,13 @@ public struct RenderedPrompt: Equatable, Sendable {
     public let full: String
     public let values: [String: String]
     public let directoryLabel: String
+
+    public init(immediate: String, full: String, values: [String: String], directoryLabel: String) {
+        self.immediate = immediate
+        self.full = full
+        self.values = values
+        self.directoryLabel = directoryLabel
+    }
 }
 
 /// `_smalti_p_1`, `_smalti_p_2`… in order of appearance.

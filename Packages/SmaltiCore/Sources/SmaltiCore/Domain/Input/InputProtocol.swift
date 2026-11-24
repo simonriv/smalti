@@ -8,6 +8,8 @@ public enum ShellMessage: Equatable, Sendable {
     case done(seq: Int, exit: Int)
     case complete(seq: Int, InputLine)
     case history(seq: Int, query: String)
+    /// F5: sent in `precmd` after `done`; Smalti answers with `prompt`.
+    case context(seq: Int, ShellContext)
     case bye
 }
 
@@ -30,6 +32,34 @@ public enum SmaltiMessage: Equatable, Sendable {
     case suggest(seq: Int, String)
     case edit(seq: Int, InputLine, thenEnter: Bool = false)
     case fallback(seq: Int)
+    /// F5: the full prompt for the `context` with this `seq` (also re-sent when an agent of the workspace starts
+    /// waiting, with the last `context`'s `seq`).
+    case prompt(seq: Int, RenderedPrompt)
+    /// F5: the immediate prompt and the ghost color, at connection and whenever the configuration changes.
+    case promptStyle(RenderedPrompt, ghost: RGBAColor)
+}
+
+/// What zsh knows at `precmd` (spec F5): the directory, the last exit and duration, and its environment.
+public struct ShellContext: Equatable, Sendable {
+    public let pwd: String
+    public let exit: Int
+    public let durationMilliseconds: Int
+    public let awsProfile: String?
+    public let kubeconfig: String?
+    /// The executables zsh resolves (`$commands[node]`…), so versions match the shell's `PATH`.
+    public let runtimePaths: [RuntimeKind: String]
+
+    public init(
+        pwd: String, exit: Int, durationMilliseconds: Int, awsProfile: String?, kubeconfig: String?,
+        runtimePaths: [RuntimeKind: String]
+    ) {
+        self.pwd = pwd
+        self.exit = exit
+        self.durationMilliseconds = durationMilliseconds
+        self.awsProfile = awsProfile
+        self.kubeconfig = kubeconfig
+        self.runtimePaths = runtimePaths
+    }
 }
 
 public struct InputProtocolError: Error, Equatable, Sendable {
@@ -86,6 +116,9 @@ public enum InputProtocol {
         case "history":
             let (seq, directory) = (try fields.int(), try fields.next())
             return ShellPacket(.history(seq: seq, query: try fields.next()), directory: directory)
+        case "context":
+            let context = try fields.shellContext()
+            return ShellPacket(.context(seq: context.seq, context.context), directory: context.context.pwd)
         case "bye": return ShellPacket(.bye)
         default: throw InputProtocolError(line: line, cause: "unknown message \"\(verb)\"")
         }
@@ -98,7 +131,15 @@ public enum InputProtocol {
         case .edit(let seq, let line, let thenEnter):
             join(thenEnter ? "editrun" : "edit", String(seq), String(line.cursor), line.text)
         case .fallback(let seq): join("fallback", String(seq))
+        case .prompt(let seq, let prompt):
+            join("prompt", String(seq), prompt.directoryLabel, prompt.immediate, prompt.full, values(prompt))
+        case .promptStyle(let prompt, let ghost): join("promptstyle", prompt.immediate, ghost.hexString, values(prompt))
         }
+    }
+
+    /// `name=value` pairs sorted by name, separated by U+001F (escaped values never contain control characters).
+    private static func values(_ prompt: RenderedPrompt) -> String {
+        prompt.values.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "\u{1f}")
     }
 
     /// The shell side's encoding, for tests and the benchmark; nil when the line exceeds `maxLineBytes`.
@@ -115,7 +156,24 @@ public enum InputProtocol {
         case .done(let seq, let exit): join("done", String(seq), String(exit))
         case .complete(let seq, let line): join("complete", String(seq), directory, String(line.cursor), line.text)
         case .history(let seq, let query): join("history", String(seq), directory, query)
+        case .context(let seq, let context):
+            join(
+                "context", String(seq), context.pwd, String(context.exit), String(context.durationMilliseconds),
+                context.awsProfile ?? "", context.kubeconfig ?? "", runtimes(context.runtimePaths))
         case .bye: "bye"
+        }
+    }
+
+    private static func runtimes(_ paths: [RuntimeKind: String]) -> String {
+        paths.sorted { $0.key.rawValue < $1.key.rawValue }.map { "\($0.key.rawValue)=\($0.value)" }
+            .joined(separator: ";")
+    }
+
+    static func runtimePaths(_ field: String) -> [RuntimeKind: String] {
+        field.split(separator: ";").reduce(into: [:]) { paths, pair in
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2, let kind = RuntimeKind(rawValue: String(parts[0])) else { return }
+            paths[kind] = String(parts[1])
         }
     }
 
@@ -174,6 +232,20 @@ public enum InputProtocol {
                 throw InputProtocolError(line: line, cause: "\"\(field)\" is not a pane id")
             }
             return PaneID(rawValue: uuid)
+        }
+
+        mutating func shellContext() throws(InputProtocolError) -> (seq: Int, context: ShellContext) {
+            let seq = try int()
+            let pwd = try next()
+            let exit = try int()
+            let duration = try int()
+            let aws = try next()
+            let kubeconfig = try next()
+            let runtimes = InputProtocol.runtimePaths(try next())
+            let context = ShellContext(
+                pwd: pwd, exit: exit, durationMilliseconds: duration, awsProfile: aws.isEmpty ? nil : aws,
+                kubeconfig: kubeconfig.isEmpty ? nil : kubeconfig, runtimePaths: runtimes)
+            return (seq, context)
         }
 
         mutating func inputLine() throws(InputProtocolError) -> InputLine {
