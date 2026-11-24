@@ -20,7 +20,8 @@ struct ProjectContextAdapterGuardTests {
 
     @Test func noProcessIsUsed() throws {
         let files = try FileManager.default.subpathsOfDirectory(atPath: sources.path(percentEncoded: false))
-        let offenders = try files.filter { $0.hasSuffix(".swift") && !$0.hasSuffix("/CommandRunner.swift") }.filter { file in
+        let offenders = try files.filter { $0.hasSuffix(".swift") && !$0.hasSuffix("/CommandRunner.swift") }.filter {
+            file in
             try String(contentsOf: sources.appending(path: file), encoding: .utf8).contains("Process(")
         }
 
@@ -28,7 +29,8 @@ struct ProjectContextAdapterGuardTests {
     }
 
     @Test func theKeystrokePathNeverRunsCommands() throws {
-        let source = try String(contentsOf: sources.appending(path: "ProjectContextAdapter/FileProjectContext.swift"), encoding: .utf8)
+        let source = try String(
+            contentsOf: sources.appending(path: "ProjectContextAdapter/FileProjectContext.swift"), encoding: .utf8)
 
         #expect(!source.contains("CommandRunner"))
     }
