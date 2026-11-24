@@ -16,6 +16,7 @@ final class StatusBarView: NSView {
     init(theme: Theme) {
         self.theme = theme
         super.init(frame: .zero)
+        wantsLayer = true
         label.translatesAutoresizingMaskIntoConstraints = false
         label.lineBreakMode = .byTruncatingTail
         addSubview(label)
@@ -57,6 +58,7 @@ final class StatusBarView: NSView {
 
     func render(_ state: TilingState) {
         theme = state.theme
+        layer?.backgroundColor = state.chromeBackground.nsColor.cgColor
         label.font = theme.interfaceFont(size: theme.statusBar.fontSize)
         label.textColor = theme.statusBar.text.nsColor
         label.stringValue = state.message?.text ?? state.set.active.statusLine

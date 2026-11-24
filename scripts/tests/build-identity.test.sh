@@ -39,8 +39,8 @@ expect debug_display_name "$products/Debug/Smalti Dev.app/Contents/Info.plist" C
 expect release_bundle_id "$products/Release/Smalti.app/Contents/Info.plist" CFBundleIdentifier dev.simonriv.smalti
 expect release_bundle_name "$products/Release/Smalti.app/Contents/Info.plist" CFBundleName Smalti
 expect release_display_name "$products/Release/Smalti.app/Contents/Info.plist" CFBundleDisplayName Smalti
-expect debug_version "$products/Debug/Smalti Dev.app/Contents/Info.plist" CFBundleShortVersionString 0.4.5
-expect release_version "$products/Release/Smalti.app/Contents/Info.plist" CFBundleShortVersionString 0.4.5
+expect debug_version "$products/Debug/Smalti Dev.app/Contents/Info.plist" CFBundleShortVersionString 0.5.0
+expect release_version "$products/Release/Smalti.app/Contents/Info.plist" CFBundleShortVersionString 0.5.0
 commit debug_commit "$products/Debug/Smalti Dev.app/Contents/Info.plist"
 commit release_commit "$products/Release/Smalti.app/Contents/Info.plist"
 exit "$failures"

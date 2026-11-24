@@ -155,7 +155,8 @@ private struct Builder {
 
     var app: [MenuItem] {
         [
-            item(.appAbout), .separator, item(.configOpen), item(.configReload), .separator, item(.secureInputToggle),
+            item(.appAbout), .separator, item(.appearanceOpen), item(.promptStudio), item(.configOpen),
+            item(.configReload), .separator, item(.secureInputToggle),
             .separator, system("Servicios", .services), .separator, system("Ocultar Smalti", .hide, "cmd+h"),
             system("Ocultar otros", .hideOthers, "cmd+opt+h"), system("Mostrar todo", .showAll), .separator,
             system("Salir de Smalti", .quit, "cmd+q"),

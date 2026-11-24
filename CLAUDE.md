@@ -27,7 +27,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -94,6 +94,9 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `swift test --package-path Packages/<ClaudeTelemetryAdapter|OllamaAdapter|DarwinMetricsAdapter>`: adaptadores del Observatorio (F3). Las pruebas nunca leen el `~/.claude` real; las de UI pasan `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales.
 - `cd scripts/observatory && python3 -m unittest test_sum_transcripts test_sanitize_fixture`: oráculo de tokens y saneador de fixtures. `scripts/observatory/record-fixtures.sh <dir>` regraba los fixtures reales con `claude -p` (API de pago) y exige los marcadores personales en `scripts/observatory/markers.local`, que no se versiona.
 - `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-observatory.sh 5`: C10 de F3 sobre el `~/.claude` real, solo lectura.
+- `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/check-daily-untouched.sh scripts/measure-gpu-idle.sh 5 [probe]`: C6 de F5, GPU en reposo de Smalti Dev delante de `scripts/gpu-backdrop.swift` (estático por defecto; `BACKDROP=moving` con contenido que cambia detrás, `BACKDROP=none` sin tapar el escritorio). Activa la app (roba el foco unos segundos por corrida) y deja una captura por corrida en `build/`.
+- `cd scripts/fonts && python3 -m unittest test_build_symbols_font`: fuente `SmaltiSymbols` (iconos del prompt, U+E900–U+E91F). Se regenera con `swift outline-icons.swift icons icons.txt > icons.json && python3 build-symbols-font.py icons.json ../../App/Smalti/Fonts/SmaltiSymbols.ttf`.
+- Apariencia y prompt (F5): la UI escribe solo `~/.config/smalti/theme.toml` (junto a `config.toml`, que nunca toca); en pruebas va junto al config temporal. `-SmaltiPickedColor`, `-SmaltiExportDirectory`, `-SmaltiNerdFontAvailable` y `-SmaltiReduceMotion` sustituyen al panel de color, al panel de guardado, a la detección de Nerd Font y a "Reducir movimiento" en las UI tests.
 - `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app de desarrollo `build/Build/Products/Debug/Smalti Dev.app` (`dev.simonriv.smalti.dev`, estado propio); el Release (`Smalti.app`, `dev.simonriv.smalti`) es el diario.
 - `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
 - `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.

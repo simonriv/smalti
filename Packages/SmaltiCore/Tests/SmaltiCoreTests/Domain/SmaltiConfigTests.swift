@@ -6,7 +6,9 @@ struct SmaltiConfigTests {
     @Test func defaultsMatchObsidianTokens() throws {
         let config = SmaltiConfig.defaults
 
-        #expect(config.appearance.accent == (try RGBAColor(hex: "#7aa2f7")))
+        // F5: no accent of its own; the theme supplies #7aa2f7.
+        #expect(config.appearance.accent == nil)
+        #expect(ThemeCatalog.apply(config.appearance).theme.accent == (try RGBAColor(hex: "#7aa2f7")))
         #expect(config.appearance.glassOpacity == 0.62)
         #expect(config.appearance.blur == 28)
         #expect(config.appearance.fontFamily == "JetBrains Mono")

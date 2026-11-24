@@ -83,7 +83,7 @@ final class ObservatoryController {
 
     /// The same 150 ms fade as opening, then gone.
     private func remove(_ view: NSView) {
-        guard let duration = theme?.observatory.fadeDuration, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        guard let duration = theme?.observatory.fadeDuration, !Motion.isReduced
         else {
             view.removeFromSuperview()
             return
@@ -144,7 +144,7 @@ final class ObservatoryController {
     /// 150 ms fade, none with "Reducir movimiento".
     private func fade(_ view: NSView, to alpha: Double, from start: Double) {
         guard let duration = theme?.observatory.fadeDuration,
-            !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            !Motion.isReduced
         else { return }
         view.alphaValue = start
         NSAnimationContext.runAnimationGroup { context in

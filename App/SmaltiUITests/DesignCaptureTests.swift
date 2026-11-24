@@ -227,6 +227,81 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    // MARK: - F5 (C4)
+
+    private func smaltiWindow(_ app: XCUIApplication) -> XCUIElement {
+        app.windows.matching(identifier: "smalti.window").firstMatch
+    }
+
+    func testCaptureF5Themes() throws {
+        for theme in ["obsidiana", "niebla", "ambar-nocturno", "bosque"] {
+            let app = XCUIApplication.isolatedSmalti()
+            app.writeTheme("[appearance]\ntheme = \"\(theme)\"\n")
+            launch(app)
+            app.typeKey("d", modifierFlags: .command)
+            waitForShells(count: 2)
+            app.run("ls /")
+            sleep(1)
+            try save(smaltiWindow(app).screenshot(), as: "f5-theme-\(theme).png")
+            app.terminate()
+        }
+    }
+
+    func testCaptureF5Appearance() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        app.typeKey(",", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.appearance").waitForExistence(timeout: 5))
+        sleep(1)
+        try save(smaltiWindow(app).screenshot(), as: "f5-apariencia.png")
+    }
+
+    func testCaptureF5Studio() throws {
+        let app = XCUIApplication.isolatedSmaltiWithIntegration(smaltiPrompt: true)
+        launch(app)
+        sleep(2)
+        app.typeKey("p", modifierFlags: [.shift, .command])
+        XCTAssertTrue(app.element("smalti.studio").waitForExistence(timeout: 5))
+        sleep(1)
+        try save(smaltiWindow(app).screenshot(), as: "f5-prompt.png")
+    }
+
+    func testCaptureF5Buttons() throws {
+        for mode in ["hidden", "hover", "visible"] {
+            let app = XCUIApplication.isolatedSmalti(config: "[window]\nbuttons = \"\(mode)\"\n")
+            launch(app)
+            app.element(mode == "hover" ? "smalti.dragStrip" : "smalti.terminal").hover()
+            sleep(1)
+            try save(smaltiWindow(app).screenshot(), as: "f5-buttons-\(mode).png")
+            app.terminate()
+        }
+    }
+
+    func testCaptureF5SymbolOnly() throws {
+        let app = XCUIApplication.isolatedSmaltiWithIntegration(smaltiPrompt: true)
+        app.writeTheme("[prompt]\nstyle = \"symbol-only\"\n")
+        launch(app)
+        sleep(2)
+        app.run("cd /tmp")
+        sleep(1)
+        try save(smaltiWindow(app).screenshot(), as: "f5-symbol-only.png")
+    }
+
+    /// The default theme with "Proteger legibilidad" over a white desktop (`mockup-legibility`).
+    func testCaptureF5Legibility() throws {
+        guard let screen = NSScreen.main else { return XCTFail("no main screen") }
+        let white = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        white.backgroundColor = .white
+        white.isReleasedWhenClosed = false
+        white.orderFrontRegardless()
+        defer { white.orderOut(nil) }
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        app.run("ls /")
+        sleep(1)
+        try save(smaltiWindow(app).screenshot(), as: "f5-legibility.png")
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

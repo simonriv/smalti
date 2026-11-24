@@ -34,6 +34,12 @@ public struct KeyContext: Equatable, Sendable {
     /// Copy, paste and select all: Smalti commands for the terminal, but a text field's own keys inside an overlay.
     public static let textEditing: Set<CommandID> = [.terminalCopy, .terminalPaste, .terminalSelectAll]
 
+    /// A panel with its own controls (F5's prompt studio): only `allowing` runs, and every other shortcut reaches the
+    /// focused control (⌘↑ ⌘↓ move a module) as if unbound.
+    public static func panel(allowing: Set<CommandID>) -> KeyContext {
+        KeyContext(allowing: allowing, passingThrough: Set(CommandID.allStandard).subtracting(allowing))
+    }
+
     /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys.
     public static func overlay(allowing: Set<CommandID>) -> KeyContext {
         KeyContext(allowing: allowing, passingThrough: textEditing)

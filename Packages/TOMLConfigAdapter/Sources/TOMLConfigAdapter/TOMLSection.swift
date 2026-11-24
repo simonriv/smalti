@@ -82,6 +82,19 @@ struct TOMLSection {
         }
     }
 
+    /// An array of strings at `key`, or `nil` when it is not written.
+    func texts(_ key: String, reason: String = "se esperaba una lista de textos") throws(ConfigError) -> [String]? {
+        try value(
+            at: key,
+            read: { (table) throws(TOMLError) in
+                let array = try table.array(forKey: key)
+                var texts: [String] = []
+                for index in 0..<array.count { texts.append(try array.string(atIndex: index)) }
+                return texts
+            },
+            reason: { _ in reason })
+    }
+
     /// Reads `key` with `read`, or `nil` when it is not written; a failure becomes a `ConfigError` at `key`.
     private func value<Value>(
         at key: String, read: (TOMLTable) throws(TOMLError) -> Value, reason: (TOMLError) -> String

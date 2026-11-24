@@ -58,7 +58,7 @@ final class PaneGridView: NSView {
         emptyState.isHidden = !active.panes.isEmpty
         let keys = state.config.keys
         emptyState.show(newPane: keys.chord(for: .paneNew), palette: keys.chord(for: .paletteOpen))
-        place(animated: isRearrangement && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        place(animated: isRearrangement && !Motion.isReduced)
     }
 
     func container(for pane: PaneID) -> PaneContainerView? { containers[pane] }
@@ -88,6 +88,7 @@ final class PaneGridView: NSView {
         let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
         var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now)
         context.agentDetails = state.observatory?.paneDetails ?? [:]
+        context.promptHeaders = state.promptHeaders
         for pane in workspace.panes.map(\.id) {
             let container = containers[pane] ?? newContainer(for: pane, at: frames[pane])
             if let view = views(pane) { container.embed(view) }

@@ -37,8 +37,11 @@ extension XCUIApplication {
     /// the user's `.zshrc` (tmux, plugins) nor their history is ever read.
     static let integratedShell = "/bin/zsh -d"
 
-    static func isolatedSmaltiWithIntegration() -> XCUIApplication {
+    /// F5: the shell keeps the `.zshrc`'s `p% ` prompt (`[prompt] source = "shell"`) unless `smaltiPrompt` is true,
+    /// so F4's tests read the prompt they were written for; PromptTests turn Smalti's on.
+    static func isolatedSmaltiWithIntegration(smaltiPrompt: Bool = false) -> XCUIApplication {
         let app = isolatedSmalti(shell: integratedShell)
+        if !smaltiPrompt { app.writeTheme("[prompt]\nsource = \"shell\"\n") }
         let zdotdir = app.configFile.deletingLastPathComponent().appending(path: "zdotdir")
         try? FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)
         try? Data("PS1='p%% '\n".utf8).write(to: zdotdir.appending(path: ".zshrc"))
@@ -71,6 +74,18 @@ extension XCUIApplication {
             try text.write(to: file, atomically: true, encoding: .utf8)
         } catch {
             XCTFail("could not write the fixture config at \(file.path(percentEncoded: false)): \(error)")
+        }
+    }
+
+    /// F5: `theme.toml` next to the config file, as the app looks for it.
+    func writeTheme(_ text: String) {
+        let file = configFile.deletingLastPathComponent().appending(path: "theme.toml")
+        do {
+            try FileManager.default.createDirectory(
+                at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try text.write(to: file, atomically: true, encoding: .utf8)
+        } catch {
+            XCTFail("could not write the fixture theme at \(file.path(percentEncoded: false)): \(error)")
         }
     }
 

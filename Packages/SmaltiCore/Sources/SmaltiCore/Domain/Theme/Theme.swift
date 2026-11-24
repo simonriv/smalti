@@ -2,28 +2,31 @@
 public struct Theme: Equatable, Sendable {
     public let name: String
     public let window: WindowTokens
-    public let panel: PanelTokens
+    public internal(set) var panel: PanelTokens
     public let chrome: ChromeTokens
-    public let text: TextTokens
+    public internal(set) var text: TextTokens
     public let accent: RGBAColor
-    public let terminal: TerminalAppearance
+    public internal(set) var terminal: TerminalAppearance
     public let strip: StripTokens
     public let header: HeaderTokens
     public let kbd: KbdTokens
     public let statusBar: StatusBarTokens
     public let focus: FocusTokens
-    public let palette: PaletteTokens
+    public internal(set) var palette: PaletteTokens
     public let motion: MotionTokens
     public let emptyState: EmptyStateTokens
-    public let resume: ResumeTokens
+    public internal(set) var resume: ResumeTokens
     public let agent: AgentStatusTokens
-    public let observatory: ObservatoryTokens
+    public internal(set) var observatory: ObservatoryTokens
     public let inputMenu: InputMenuTokens
     public let historyPalette: HistoryPaletteTokens
     /// F4.5 (mockup-help, mockup-feedback): the ⌘K box with these sizes.
     public let help: HelpTokens
     public let feedback: FeedbackTokens
     public let searchBar: SearchBarTokens
+    /// What text on a panel sits on with "Proteger legibilidad" (the protected panel over the worst desktop); `nil`
+    /// without protection. The prompt's role colors are made legible on it.
+    var legibleGround: RGBAColor? = nil
 }
 
 /// The scrollback search bar (mockup-search.png): the ⌘K glass at this size, top-right of the pane.
@@ -134,10 +137,24 @@ public struct WindowTokens: Equatable, Sendable {
     public let border: RGBAColor
     public let borderWidth: Double
     public let cornerRadius: Double
+    public let shadow: WindowShadowTokens
+}
+
+/// Black shadow under the glass window, in CSS `box-shadow` terms: `0 <offsetY>px <blur>px rgba(0,0,0,<opacity>)`.
+public struct WindowShadowTokens: Equatable, Sendable {
+    public let offsetY: Double
+    public let blur: Double
+    public let opacity: Double
+
+    public init(offsetY: Double, blur: Double, opacity: Double) {
+        self.offsetY = offsetY
+        self.blur = blur
+        self.opacity = opacity
+    }
 }
 
 public struct PanelTokens: Equatable, Sendable {
-    public let background: RGBAColor
+    public internal(set) var background: RGBAColor
     public let border: RGBAColor
     public let borderWidth: Double
     public let cornerRadius: Double
@@ -158,7 +175,7 @@ public struct TextTokens: Equatable, Sendable {
     public let secondary: RGBAColor
     /// F4's prediction after the cursor (`Main.dc.html`). About 3:1 on the glass: an accepted exception to the 4.5:1
     /// rule until F5's "Proteger legibilidad", because it is a hint nobody has to read to use the terminal.
-    public let ghostText: RGBAColor
+    public internal(set) var ghostText: RGBAColor
 }
 
 public struct TerminalAppearance: Equatable, Sendable {
@@ -168,7 +185,7 @@ public struct TerminalAppearance: Equatable, Sendable {
     public let foreground: RGBAColor
     public let cursor: RGBAColor
     /// The 16 ANSI colors, normal 0–7 then bright 8–15.
-    public let palette: [RGBAColor]
+    public internal(set) var palette: [RGBAColor]
     public let paddingX: Double
     public let paddingY: Double
 
@@ -201,6 +218,23 @@ public struct StripTokens: Equatable, Sendable {
     public let addButtonIconSize: Double
     public let addButtonIconStroke: Double
     public let addButtonColor: RGBAColor
+    /// F5 window buttons (`mockup-buttons`).
+    public let windowButtons: WindowButtonTokens
+}
+
+/// Where the native window buttons sit in the strip (`mockup-buttons`): 12 px circles from x = 14, every 20 px.
+public struct WindowButtonTokens: Equatable, Sendable {
+    /// How far the pills move right when the buttons have their margin.
+    public let pillShift: Double
+    /// Center of the close button from the window's left edge; the strip centers them vertically.
+    public let firstCenterX: Double
+    public let spacing: Double
+
+    public init(pillShift: Double, firstCenterX: Double, spacing: Double) {
+        self.pillShift = pillShift
+        self.firstCenterX = firstCenterX
+        self.spacing = spacing
+    }
 }
 
 /// The bar above each pane.
@@ -267,7 +301,7 @@ public struct FocusTokens: Equatable, Sendable {
 public struct PaletteTokens: Equatable, Sendable {
     public let width: Double
     public let cornerRadius: Double
-    public let background: RGBAColor
+    public internal(set) var background: RGBAColor
     public let blurRadius: Double
     public let border: RGBAColor
     public let fieldHeight: Double
@@ -360,7 +394,7 @@ public struct ResumeTokens: Equatable, Sendable {
     public let buttonCornerRadius: Double
     public let buttonFontSize: Double
     public let buttonGap: Double
-    public let primaryButtonText: RGBAColor
+    public internal(set) var primaryButtonText: RGBAColor
     public let secondaryButtonBorder: RGBAColor
     public let tertiaryButtonText: RGBAColor
     public let hintFontSize: Double
@@ -448,6 +482,8 @@ public struct MotionTokens: Equatable, Sendable {
     public let rearrangeDuration: Double
     /// Seconds F4's menu and ⌃R palette take to fade in (spec: 120 ms); none with "Reducir movimiento".
     public let overlayAppearDuration: Double
+    /// Seconds the window buttons take to fade in and out with `hover` (spec: 150 ms); none with "Reducir movimiento".
+    public let windowButtonsFade: Double
 }
 
 extension Theme {
@@ -458,17 +494,18 @@ extension Theme {
             window: WindowTokens(
                 background: window.background.withAlpha(appearance.glassOpacity),
                 blurRadius: appearance.blur, border: window.border, borderWidth: window.borderWidth,
-                cornerRadius: window.cornerRadius),
+                cornerRadius: window.cornerRadius, shadow: window.shadow),
             panel: PanelTokens(
                 background: panel.background, border: panel.border, borderWidth: panel.borderWidth,
                 cornerRadius: appearance.radius, gap: appearance.gap, areaPadding: panel.areaPadding),
-            chrome: chrome, text: text, accent: appearance.accent,
+            chrome: chrome, text: text, accent: appearance.accent ?? accent,
             terminal: TerminalAppearance(
                 fontFamily: appearance.fontFamily, fontSize: appearance.fontSize, lineHeight: terminal.lineHeight,
-                foreground: terminal.foreground, cursor: appearance.accent, palette: terminal.palette,
+                foreground: terminal.foreground, cursor: appearance.accent ?? accent, palette: terminal.palette,
                 paddingX: terminal.paddingX, paddingY: terminal.paddingY),
             strip: strip, header: header, kbd: kbd, statusBar: statusBar,
-            focus: focus.following(appearance.accent), palette: palette.following(appearance.accent),
+            focus: focus.following(appearance.accent ?? accent),
+            palette: palette.following(appearance.accent ?? accent),
             motion: motion, emptyState: emptyState, resume: resume, agent: agent, observatory: observatory,
             inputMenu: inputMenu, historyPalette: historyPalette, help: help, feedback: feedback,
             searchBar: searchBar)
@@ -495,7 +532,7 @@ public struct ObservatoryTokens: Equatable, Sendable {
     public let gap: Double
     public let sideColumnWidth: Double
     public let cardGap: Double
-    public let cardBackground: RGBAColor
+    public internal(set) var cardBackground: RGBAColor
     public let cardBorder: RGBAColor
     public let cardRadius: Double
     public let cardPaddingVertical: Double

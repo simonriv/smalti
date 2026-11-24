@@ -152,3 +152,14 @@ public struct Workspace: Sendable, Equatable {
         return updated
     }
 }
+
+extension Workspace {
+    /// Spec F5, "Agentes que esperan": the agents of the other panes that wait for the user or failed, by harness.
+    public func waitingAgents(besides pane: PaneID) -> WaitingAgents {
+        let agents = panes.filter { $0.id != pane }.compactMap(\.agent)
+        let names = { (kind: AgentStateKind) in
+            agents.filter { $0.state.kind == kind }.map(\.harness.rawValue)
+        }
+        return WaitingAgents(waiting: names(.waiting), failed: names(.failed))
+    }
+}

@@ -54,6 +54,21 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let promptNext = CommandID(rawValue: "prompt.next")
     public static let secureInputToggle = CommandID(rawValue: "secureInput.toggle")
 
+    // F5: appearance and prompt (spec F5, "Comandos y atajos nuevos").
+    public static let appearanceOpen = CommandID(rawValue: "appearance.open")
+    public static let promptStudio = CommandID(rawValue: "prompt.studio")
+    public static let themeOpen = CommandID(rawValue: "theme.open")
+    public static let themeNext = CommandID(rawValue: "theme.next")
+    public static let ansiReset = CommandID(rawValue: "ansi.reset")
+    public static let promptApply = CommandID(rawValue: "prompt.apply")
+    public static let promptExport = CommandID(rawValue: "prompt.export")
+    public static let legibilityToggle = CommandID(rawValue: "legibility.toggle")
+
+    /// The F5 commands, in the order ⌘K, the help and the menu list them.
+    static let appearance: [CommandID] = [
+        appearanceOpen, promptStudio, themeOpen, themeNext, ansiReset, promptApply, promptExport, legibilityToggle,
+    ]
+
     /// The F4.5 commands, in the order the help and the menus list them.
     static let basics: [CommandID] = [
         windowNew, windowClose, windowFullscreen, windowMinimize, helpShow, feedbackReport, logsShow, appAbout,
@@ -112,6 +127,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             observatoryPeriod, historySearch,
         ]
         + basics
+        + appearance
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }

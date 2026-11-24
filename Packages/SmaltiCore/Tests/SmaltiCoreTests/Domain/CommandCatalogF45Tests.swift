@@ -31,7 +31,7 @@ struct CommandCatalogF45Tests {
         (.scrollPageUp, "Página arriba", .terminal), (.scrollPageDown, "Página abajo", .terminal),
         (.scrollTop, "Al principio", .terminal), (.scrollBottom, "Al final", .terminal),
         (.promptPrevious, "Prompt anterior", .terminal), (.promptNext, "Prompt siguiente", .terminal),
-        (.configOpen, "Configuración…", .configuration),
+        (.configOpen, "Abrir config.toml", .configuration),
         (.secureInputToggle, "Entrada de teclado segura", .configuration),
         (.helpShow, "Ayuda de Smalti", .help), (.feedbackReport, "Reportar un problema o una idea…", .help),
         (.logsShow, "Mostrar registros…", .help), (.appAbout, "Acerca de Smalti", .help),

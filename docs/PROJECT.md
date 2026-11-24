@@ -114,7 +114,7 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 
 ### 7. Estudio de prompt
 
-- Prompt nativo dibujado por Smalti como UI, con iconos SVG de trazo fino; no depende de Nerd Fonts.
+- Prompt generado por Smalti y pintado por zsh, con iconos de trazo fino de una fuente propia (`SmaltiSymbols`); no depende de Nerd Fonts (spec F5).
 - Módulos que aparecen solo cuando aplican: directorio, rama y cambios de git, runtime (Node, Bun, Python, Go), duración si pasa de 2 s, estado del agente del panel, hora, contexto de Kubernetes o AWS.
 - Plantillas minimalistas por defecto: Línea limpia, Una sola línea, Píldoras y Solo símbolo.
 - Editor visual: arrastrar para ordenar, activar o desactivar módulos, elegir símbolo e iconos, con vista previa en tres situaciones reales.
@@ -236,18 +236,18 @@ Estas decisiones están cerradas; cambiarlas exige volver a este documento.
 | Autocompletado | Solo en el prompt del shell | Dentro de Claude Code: el input es de Claude |
 | Input en el prompt | zsh (ZLE) edita; Smalti sugiere por un widget y un socket | Editor propio estilo Warp: pierde ZLE y rompe TUIs (spec F4) |
 | Procesos al reabrir | Se relanzan (shell, agentes con su comando) | Revivirlos en vivo: requiere el daemon, queda para después |
-| Prompt | Nativo, dibujado por Smalti, exportable a Starship | Powerlevel10k: lento y genérico |
+| Prompt | Generado por Smalti (zsh lo pinta; datos de git y runtime asíncronos), exportable a Starship (spec F5) | Powerlevel10k: lento y genérico. Capa AppKit sobre la terminal: frágil con el scroll y el scrollback guardaría un prompt vacío |
 
 ## Fases propuestas
 
-Ocho fases; Smalti se vuelve la terminal diaria al cerrar la fase 2, y cada fase termina con una terminal usable. Es un borrador: Claude Code lo convierte en roadmap y specs.
+Nueve fases (más F4.5 y F5.5, intercaladas); Smalti se vuelve la terminal diaria al cerrar la fase 2, y cada fase termina con una terminal usable. Es un borrador: Claude Code lo convierte en roadmap y specs.
 
 ```text
 F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
+F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
 ```
 
 1. **F0 · Spike.** App Swift con ventana de vidrio sin botones, un panel libghostty y zsh.
@@ -260,12 +260,15 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras
     - Cierre: los tokens coinciden con los transcripts de Claude Code.
 5. **F4 · Input inteligente.** Editor en el prompt del shell, completions con specs de Fig, historial por directorio, ⌃R difuso y predicción heurística.
     - Cierre: sugerencias en menos de 16 ms y ninguna regresión en programas de pantalla completa.
-6. **F5 · Apariencia y prompt.** Temas, vidrio ajustable, protección de legibilidad, estudio de prompt, exportación a Starship y previews de imágenes.
+6. **F5 · Apariencia y prompt.** Temas, vidrio ajustable, protección de legibilidad, estudio de prompt y exportación a Starship.
     - Cierre: tema, prompt y layout se cambian sin editar archivos.
+    - **F5.5 · Previews.** Imágenes inline (kitty), vista previa sobre enlaces y Quick Look (separada de F5 por Simón, 2026-11-23).
 7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Gemini CLI, Antigravity y OpenCode; buscador de sesiones; puente con Neovim e instalador de claudecode.nvim.
     - Cierre: se retoman sesiones de los 5 harnesses y los diffs de Claude se aprueban en Neovim.
 8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
+9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
+    - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
 
 ## Riesgos y preguntas abiertas
 

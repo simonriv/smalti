@@ -24,10 +24,13 @@ public enum CommandCatalog {
         .searchNext: "Buscar siguiente", .searchPrevious: "Buscar anterior", .fontIncrease: "Aumentar letra",
         .fontDecrease: "Reducir letra", .fontReset: "Tamaño real", .scrollPageUp: "Página arriba",
         .scrollPageDown: "Página abajo", .scrollTop: "Al principio", .scrollBottom: "Al final",
-        .promptPrevious: "Prompt anterior", .promptNext: "Prompt siguiente", .configOpen: "Configuración…",
+        .promptPrevious: "Prompt anterior", .promptNext: "Prompt siguiente", .configOpen: "Abrir config.toml",
         .secureInputToggle: "Entrada de teclado segura", .helpShow: "Ayuda de Smalti",
         .feedbackReport: "Reportar un problema o una idea…", .logsShow: "Mostrar registros…",
-        .appAbout: "Acerca de Smalti",
+        .appAbout: "Acerca de Smalti", .appearanceOpen: "Apariencia…", .promptStudio: "Estudio de prompt…",
+        .themeOpen: "Abrir theme.toml", .themeNext: "Siguiente tema", .ansiReset: "Restablecer paleta ANSI",
+        .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
+        .legibilityToggle: "Proteger legibilidad",
     ]
 
     static let terminalIDs: [CommandID] = [
@@ -167,7 +170,7 @@ public enum CommandCatalog {
                 .claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration),
             context.titled(.configOpen, group: .configuration),
             context.titled(.secureInputToggle, group: .configuration),
-        ]
+        ] + CommandID.appearance.map { context.titled($0, group: .configuration) }
     }
 }
 

@@ -28,7 +28,7 @@ final class PaneContainerView: NSView {
         layer?.addSublayer(glow)
         clip.wantsLayer = true
         clip.layer?.cornerCurve = .continuous
-        clip.layer?.masksToBounds = true
+        clip.layer?.masksToBounds = GlassProbe.current != .noPaneMask
         addSubview(clip)
         clip.addSubview(header)
         setAccessibilityElement(true)
