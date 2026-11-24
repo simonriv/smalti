@@ -30,6 +30,9 @@ struct ThemeColors: Equatable, Sendable {
     let waiting: RGBAColor
     let failed: RGBAColor
     let stopped: RGBAColor
+    /// Black shadow under the ⌘K box and under the completion menu; softer on the light theme.
+    var overlayShadowOpacity = 0.55
+    var menuShadowOpacity = 0.45
 }
 
 /// `0xrrggbb` as an opaque color.

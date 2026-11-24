@@ -90,6 +90,22 @@ struct ThemeCatalogTests {
         #expect(border == RGBAColor(red: 0, green: 0, blue: 0, alpha: 0.09))
     }
 
+    /// Block 1 review (I2): a black shadow at 0.55 is heavy on a light theme; Niebla's is 0.18 (menus 0.15).
+    @Test func nieblaShadowIsSofter() {
+        let niebla = ThemeCatalog.theme(.niebla)
+
+        #expect(niebla.palette.shadowOpacity == 0.18)
+        #expect(niebla.inputMenu.shadowOpacity == 0.15)
+    }
+
+    @Test(arguments: [ThemeID.obsidiana, .ambarNocturno, .bosque])
+    func darkThemesKeepTheDesignShadow(_ id: ThemeID) {
+        let theme = ThemeCatalog.theme(id)
+
+        #expect(theme.palette.shadowOpacity == 0.55)
+        #expect(theme.inputMenu.shadowOpacity == 0.45)
+    }
+
     @Test func sizesAreSharedByEveryTheme() {
         let obsidian = Theme.obsidian
         for id in ThemeID.allCases {
