@@ -38,7 +38,12 @@ struct FilePromptFactsTests {
         }
     }
 
-    private static let gitStatus = "/usr/bin/git status --porcelain=v2 --untracked-files=no"
+    private final class Clock: @unchecked Sendable {
+        // Safe: tests set it between awaits, never concurrently.
+        var value = Date(timeIntervalSince1970: 100)
+    }
+
+    private static let gitStatus = "/usr/bin/git --no-optional-locks status --porcelain=v2 --untracked-files=no"
     private let root = FileManager.default.temporaryDirectory.appending(path: "smalti-facts-\(UUID())")
 
     private func makeRepo(head: String = "ref: refs/heads/feat/reminders\n") throws -> String {
@@ -109,10 +114,12 @@ struct FilePromptFactsTests {
         #expect(facts.branch == "feat/reminders")
     }
 
-    @Test func indexUnchangedUsesCache() async throws {
+    /// Block 3 review (I1): only requests within a second share one `git status`; editing a file never touches the
+    /// index, so the index cannot be the key.
+    @Test func requestsWithinASecondShareOneRun() async throws {
         let directory = try makeRepo()
         let runner = FakeRunner([Self.gitStatus: ""])
-        let facts = FilePromptFacts(runner: runner)
+        let facts = FilePromptFacts(runner: runner, clock: { Date(timeIntervalSince1970: 100) })
 
         _ = await facts.facts(for: query(directory))
         _ = await facts.facts(for: query(directory))
@@ -120,14 +127,14 @@ struct FilePromptFactsTests {
         #expect(runner.callCount == 1)
     }
 
-    @Test func indexChangeRunsGitAgain() async throws {
+    @Test func laterPromptRunsGitAgainWithIndexUnchanged() async throws {
         let directory = try makeRepo()
         let runner = FakeRunner([Self.gitStatus: ""])
-        let facts = FilePromptFacts(runner: runner)
+        let now = Clock()
+        let facts = FilePromptFacts(runner: runner, clock: { now.value })
         _ = await facts.facts(for: query(directory))
 
-        try "index changed".write(
-            to: root.appending(path: "repo/.git/index"), atomically: true, encoding: .utf8)
+        now.value = now.value.addingTimeInterval(1.5)
         _ = await facts.facts(for: query(directory))
 
         #expect(runner.callCount == 2)

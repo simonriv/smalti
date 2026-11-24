@@ -255,7 +255,7 @@ Todos aparecen en la ayuda (⌘?). Los atajos nuevos no usan ⌥ sin ⌘.
 | --- | --- | --- |
 | `font-codepoint-map` no alcanza una fuente registrada solo para el proceso | Sin iconos de trazo fino | Primera tarea del bloque del prompt: verificarlo con libghostty v1.4.0 (como hizo F4 con JetBrains Mono). Plan B: instalar `SmaltiSymbols` en `~/Library/Fonts` con aviso, o caer a `none` |
 | El parpadeo entre el prompt inmediato y el completo molesta | Prompt que "salta" | Lo inmediato reserva el hueco de los módulos de Smalti con lo último conocido para ese directorio (caché en el script). Se mide en C7 |
-| `git status` lento en repos grandes | Sin "Cambios git" | Tiempo máximo de 300 ms y caché por directorio con la firma de `.git/index`; el módulo no sale si no hay dato |
+| `git status` lento en repos grandes | Sin "Cambios git" | Tiempo máximo de 300 ms, `--no-optional-locks` y una sola consulta por repo cada segundo (enmienda 2: la firma de `.git/index` no cambia al editar un archivo); el módulo no sale si no hay dato |
 | La protección deja el vidrio casi opaco | El tablero se ve distinto | Decidido por Simón; los huecos conservan el vidrio, y la UI muestra la opacidad efectiva junto al deslizador ("62 % · 65 % bajo el texto") **(Claude)** |
 | La causa de #5 es el desenfoque privado | No se llega al 10 % sin perder el vidrio | Se para y se decide con el dato (ver #5) |
 | Cambiar ⌘, rompe la costumbre de F4.5 | Molestia | La convención de macOS manda; ⌥⌘, y ⌘K siguen abriendo el TOML |
@@ -287,3 +287,4 @@ Todos aparecen en la ayuda (⌘?). Los atajos nuevos no usan ⌥ sin ⌘.
 ## Enmiendas
 
 1. **2026-11-23 · Bloque 3 (T11), Claude.** El prompt muestra el texto de fuera con `psvar` y `%Nv` en lugar de variables `${…}` con `PROMPT_SUBST`. Motivo: el script corre con `emulate -L zsh`, que devuelve las opciones al salir, así que activar `PROMPT_SUBST` de forma global desde ahí no era fiable y un redibujado podía mostrar `${…}` literal. Con `psvar`, zsh inserta el texto tal cual sin ninguna opción, y la garantía de seguridad es más fuerte (comprobado en zsh 5.9, incluso con `PROMPT_SUBST` activo). Con `source = "shell"`, Smalti sigue enviando `promptstyle` con el prompt inmediato vacío, para devolver el prompt del usuario y seguir mandando el color del fantasma.
+2. **2026-11-23 · Revisión del bloque 3, Claude.** La caché de "Cambios git" deja de usar la firma de `.git/index` (editar un archivo no la cambia y el prompt mentía): las consultas de un mismo repo dentro de un segundo comparten una sola ejecución de `git --no-optional-locks status`, que tampoco toma `index.lock`.

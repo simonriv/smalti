@@ -7,14 +7,19 @@ import SmaltiCore
 public actor FilePromptFacts: PromptFacts {
     public static let gitTimeout = Duration.milliseconds(300)
     public static let versionTimeout = Duration.seconds(1)
+    /// Prompts this close share one `git status` (block 3 review, I1): editing a file touches no git file, so no file
+    /// date can say the answer is still good; time can.
+    public static let changesWindow: TimeInterval = 1
     private static let git = "/usr/bin/git"
 
     private let runner: any CommandRunner
-    private var changesCache: [String: (signature: [String: Date], changes: GitChanges)] = [:]
+    private let clock: @Sendable () -> Date
+    private var changesCache: [String: (at: Date, changes: GitChanges)] = [:]
     private var versions: [String: (date: Date?, version: String?)] = [:]
 
-    public init(runner: any CommandRunner = SystemCommandRunner()) {
+    public init(runner: any CommandRunner = SystemCommandRunner(), clock: @escaping @Sendable () -> Date = { Date() }) {
         self.runner = runner
+        self.clock = clock
     }
 
     public func facts(for query: PromptQuery) async -> PromptFactsResult {
@@ -29,14 +34,17 @@ public actor FilePromptFacts: PromptFacts {
     }
 
     private func changes(in repository: RepositoryFiles, directory: String) async -> GitChanges? {
-        let signature = repository.signature()
-        if let cached = changesCache[repository.root], cached.signature == signature { return cached.changes }
-        let arguments = ["status", "--porcelain=v2", "--untracked-files=no"]
+        let now = clock()
+        if let cached = changesCache[repository.root], now.timeIntervalSince(cached.at) < Self.changesWindow {
+            return cached.changes
+        }
+        // `--no-optional-locks`: never take `index.lock` from under the user's own `git commit` (block 3 review, I2).
+        let arguments = ["--no-optional-locks", "status", "--porcelain=v2", "--untracked-files=no"]
         guard let output = await runner.run(Self.git, arguments, in: directory, timeout: Self.gitTimeout) else {
             return nil
         }
         let changes = GitStatusReader.changes(in: output)
-        changesCache[repository.root] = (signature, changes)
+        changesCache[repository.root] = (now, changes)
         return changes
     }
 
@@ -87,15 +95,6 @@ struct RepositoryFiles {
         guard let head = try? String(contentsOf: git.head.appending(path: "HEAD"), encoding: .utf8) else { return nil }
         let sha = head.trimmingCharacters(in: .whitespacesAndNewlines)
         return sha.count >= 7 && sha.allSatisfy(\.isHexDigit) ? String(sha.prefix(7)) : nil
-    }
-
-    func signature() -> [String: Date] {
-        [git.head.appending(path: "index"), git.head.appending(path: "HEAD")].reduce(into: [:]) { dates, file in
-            let path = file.path(percentEncoded: false)
-            let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-            let size = (attributes?[.size] as? Int) ?? -1
-            dates["\(path)#\(size)"] = attributes?[.modificationDate] as? Date
-        }
     }
 }
 
