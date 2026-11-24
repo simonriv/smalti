@@ -37,6 +37,10 @@ public enum ConfigTemplate {
             # Preguntar antes de cerrar un panel, un workspace o una ventana, o de salir, con procesos en marcha.
             # confirm_close = \(defaults.window.confirmClose)
 
+            [preview]
+            # Miniatura al pasar el cursor sobre un nombre de imagen; ⌘Y la abre en Quick Look.
+            # hover = \(defaults.preview.hover)
+
             [observatory]
             # Precios en dólares por millón de tokens y ventana de contexto; un modelo que Smalti no conoce necesita
             # todas las claves. Por ejemplo:

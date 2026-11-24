@@ -15,7 +15,7 @@ struct ConfigTemplateTests {
     @Test(arguments: [
         "[appearance]", "# font_size = 13", "# glass_opacity = 0.62", "# accent = \"#7aa2f7\"", "[tiling]",
         "# default_layout = \"dwindle\"", "[shell]", "# command = \"login\"", "[input]", "# history_limit = 100000",
-        "[window]", "# confirm_close = true", "[keys]",
+        "[window]", "# confirm_close = true", "[preview]", "# hover = true", "[keys]",
     ])
     func templateNamesEveryTableAndDefault(_ line: String) {
         #expect(text.split(separator: "\n").contains { $0 == line })
