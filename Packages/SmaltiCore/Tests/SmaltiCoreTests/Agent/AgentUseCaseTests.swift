@@ -138,7 +138,7 @@ struct AgentUseCaseTests {
         #expect(
             await InstallClaudeIntegration(integration: integration).execute()
                 == "Integración con Claude Code instalada")
-        #expect(await integration.isInstalled)
+        #expect(await integration.installState == .installed)
     }
 
     @Test func installReportsMissingClaude() async {
@@ -166,7 +166,7 @@ struct AgentUseCaseTests {
         #expect(
             await UninstallClaudeIntegration(integration: integration).execute()
                 == "Integración con Claude Code desinstalada")
-        #expect(await !integration.isInstalled)
+        #expect(await integration.installState == .notInstalled)
     }
 }
 
@@ -188,6 +188,17 @@ struct AgentContractTests {
     }
 
     @Test func fakeIntegrationSatisfiesContract() async {
+        await HarnessIntegrationContract.verify(FakeHarnessIntegration())
+    }
+
+    @Test func missingHarnessIsUnknownState() async {
+        let integration = FakeHarnessIntegration()
+        integration.isMissing = true
+
+        #expect(await integration.installState == .unknown)
+    }
+
+    @Test func fakeHonoursIntegrationContract() async {
         await HarnessIntegrationContract.verify(FakeHarnessIntegration())
     }
 }

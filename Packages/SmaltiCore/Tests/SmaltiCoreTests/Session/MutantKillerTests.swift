@@ -155,8 +155,10 @@ struct MutantKillerTests {
         let set = WorkspaceSet(
             first: .empty(name: "w", rootDirectory: SessionFixtures.directory("/tmp"), layout: DwindleLayout()))
         let commands = CommandCatalog.commands(
-            for: set, keymap: .standard, layouts: .standard,
-            savedLayouts: [NamedLayoutSummary(name: try LayoutName("x"), paneCount: 1, agentCount: 0)])
+            for: CatalogState(
+                workspaces: set,
+                savedLayouts: [NamedLayoutSummary(name: try LayoutName("x"), paneCount: 1, agentCount: 0)]),
+            keymap: .standard, layouts: .standard)
 
         #expect(commands.first { $0.title.hasPrefix("Restaurar layout") }?.isCurrent == false)
         #expect(CommandCatalog.saveCommand(named: "nuevo")?.isCurrent == false)

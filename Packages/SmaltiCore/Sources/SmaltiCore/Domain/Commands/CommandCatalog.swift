@@ -2,15 +2,13 @@
 public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
-    public static func commands(
-        for set: WorkspaceSet, keymap: Keymap, layouts: LayoutCatalog, savedLayouts: [NamedLayoutSummary] = []
-    ) -> [Command] {
-        let context = Context(workspaces: set, keymap: keymap)
+    public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
+        let context = Context(workspaces: state.workspaces, keymap: keymap, claudeIntegration: state.claudeIntegration)
         return tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
             + workspaceCommands(context)
-            + savedLayouts.map(restoreCommand)
+            + state.savedLayouts.map(restoreCommand)
             + windowCommands(context)
             + configurationCommands(context)
             + helpCommands(context)
@@ -72,9 +70,10 @@ public enum CommandCatalog {
             subtitle: "— \(panes)\(agents)", group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
-    private struct Context {
+    fileprivate struct Context {
         let workspaces: WorkspaceSet
         let keymap: Keymap
+        let claudeIntegration: IntegrationState
 
         var paneCount: Int { workspaces.active.panes.count }
 
@@ -164,13 +163,39 @@ public enum CommandCatalog {
     private static func configurationCommands(_ context: Context) -> [Command] {
         [
             context.command(
-                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration),
-            context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration),
-            context.command(
-                .claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration),
+                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
+        ] + claudeIntegrationCommands(context) + [
             context.titled(.configOpen, group: .configuration),
             context.titled(.secureInputToggle, group: .configuration),
         ] + CommandID.appearance.map { context.titled($0, group: .configuration) }
+    }
+}
+
+/// Only the action that applies to the integration's state; none while it is unknown (spec F5.6).
+private func claudeIntegrationCommands(_ context: CommandCatalog.Context) -> [Command] {
+    switch context.claudeIntegration {
+    case .notInstalled:
+        [context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration)]
+    case .installed:
+        [context.command(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration)]
+    case .unknown: []
+    }
+}
+
+/// What the catalog needs from the app besides the keymap and the layouts: the workspaces, the saved layouts and the
+/// Claude integration's state.
+public struct CatalogState: Sendable {
+    public let workspaces: WorkspaceSet
+    public let savedLayouts: [NamedLayoutSummary]
+    public let claudeIntegration: IntegrationState
+
+    public init(
+        workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
+        claudeIntegration: IntegrationState = .unknown
+    ) {
+        self.workspaces = workspaces
+        self.savedLayouts = savedLayouts
+        self.claudeIntegration = claudeIntegration
     }
 }
 

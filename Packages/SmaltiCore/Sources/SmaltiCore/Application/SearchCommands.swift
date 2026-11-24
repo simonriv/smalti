@@ -8,11 +8,8 @@ public struct SearchCommands {
     }
 
     /// Saving under the typed name comes last, so typing a command still finds it first.
-    public func execute(
-        _ query: String, set: WorkspaceSet, keymap: Keymap, savedLayouts: [NamedLayoutSummary] = []
-    ) -> [RankedCommand] {
-        let ranked = fuzzyMatch(
-            query, in: CommandCatalog.commands(for: set, keymap: keymap, layouts: layouts, savedLayouts: savedLayouts))
+    public func execute(_ query: String, state: CatalogState, keymap: Keymap) -> [RankedCommand] {
+        let ranked = fuzzyMatch(query, in: CommandCatalog.commands(for: state, keymap: keymap, layouts: layouts))
         guard let save = CommandCatalog.saveCommand(named: query) else { return ranked }
         return ranked + [RankedCommand(command: save, score: 0)]
     }

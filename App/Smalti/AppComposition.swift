@@ -436,8 +436,8 @@ final class AppComposition {
     private func menuBar() -> MenuBar {
         guard let controller else { return .empty }
         let commands = CommandCatalog.commands(
-            for: controller.set, keymap: controller.config.keys, layouts: .standard,
-            savedLayouts: controller.savedLayouts())
+            for: CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts()),
+            keymap: controller.config.keys, layouts: .standard)
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(

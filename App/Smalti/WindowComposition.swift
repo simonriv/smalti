@@ -310,9 +310,9 @@ final class WindowComposition {
             actions: .init(
                 search: { [weak controller] query in
                     guard let controller else { return [] }
+                    let state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
                     return SearchCommands(layouts: .standard).execute(
-                        query, set: controller.set, keymap: controller.config.keys,
-                        savedLayouts: controller.savedLayouts())
+                        query, state: state, keymap: controller.config.keys)
                 },
                 perform: { [weak controller] command in controller?.perform(command) },
                 rename: { [weak controller] name in controller?.rename(to: name) },
