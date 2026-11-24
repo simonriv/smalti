@@ -17,6 +17,7 @@
 		B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */; };
 		0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 6432A366F755335850ECF0B4 /* FileSessionAdapter */; };
 		DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */; };
+		F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */; };
 		CCAE7CE9FD1DE6F6FCBA1E75 /* SmaltiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45270719A545F7E15F22D287 /* SmaltiCore */; };
 		C853E75E3E8EB204BD82233F /* GhosttyAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 2753D9DBD5538DF9B71ABCC7 /* GhosttyAdapter */; };
 		81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */; };
@@ -60,6 +61,7 @@
 				B75D69E2262B0BA3A6C2A856 /* ClaudeHarnessAdapter in Frameworks */,
 				0E68980B201330C550F27833 /* FileSessionAdapter in Frameworks */,
 				DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */,
+				F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,6 +130,7 @@
 				D289C5F58E14CE67D3E27AFB /* ClaudeHarnessAdapter */,
 				6432A366F755335850ECF0B4 /* FileSessionAdapter */,
 				DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */,
+				F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */,
 			);
 			productName = Smalti;
 			productReference = 81918909E83595C8F4212CCC /* Smalti.app */;
@@ -196,6 +199,7 @@
 				BD746B0AC85E207C0E38A3C3 /* XCLocalSwiftPackageReference "../Packages/ClaudeHarnessAdapter" */,
 				595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */,
 				DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */,
+				F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
@@ -488,6 +492,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/DiagnosticsAdapter;
 		};
+		F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/ImageIOAdapter;
+		};
 		595F0C9C9C9A2F796EB040CF /* XCLocalSwiftPackageReference "../Packages/FileSessionAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/FileSessionAdapter;
@@ -543,6 +551,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */;
 			productName = DiagnosticsAdapter;
+		};
+		F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */;
+			productName = ImageIOAdapter;
 		};
 		6432A366F755335850ECF0B4 /* FileSessionAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

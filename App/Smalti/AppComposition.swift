@@ -6,6 +6,7 @@ import DiagnosticsAdapter
 import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
+import ImageIOAdapter
 import IPCAdapter
 import OllamaAdapter
 import ProjectContextAdapter
@@ -143,12 +144,15 @@ final class AppComposition {
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
-            applyAppearance: { [weak self, weak runtime] appearance throws(TerminalEngineError) in
+            applyAppearance: { [weak self, weak runtime, weak engine] appearance throws(TerminalEngineError) in
                 guard let self else { return }
+                engine?.gridPadding = Point(x: appearance.paddingX, y: appearance.paddingY)
                 fontScale = fontScale.rebased(appearance.fontSize)
                 try runtime?.apply(appearance.withFontSize(fontScale.size))
             })
         fontScale = FontScale(base: startup.theme.terminal.fontSize)
+        engine.gridPadding = Point(x: startup.theme.terminal.paddingX, y: startup.theme.terminal.paddingY)
+        engine.reportsPointerWords = startup.initial.config.preview.hover
         controllerDependencies = dependencies
         configStore = startup.store
         configFile = startup.settings.configFile
@@ -290,6 +294,7 @@ final class AppComposition {
             // Block 4 review (C1): only a reload that loaded replaces the panel's document.
             if isReloaded, let config = compositions.first?.controller.config {
                 appearance?.reload(config)
+                engine?.reportsPointerWords = config.preview.hover
                 input?.sendPromptStyle()
             }
             mainMenu?.refresh()
@@ -615,7 +620,9 @@ final class AppComposition {
             historyPalette: { [weak self] in self?.historyPalette },
             openHistory: { [weak self] pane in self?.input?.openHistory(for: pane) },
             observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() },
-            secureInputRequested: { [weak self] isOn, pane in self?.secureInputRequested(isOn, in: pane) })
+            secureInputRequested: { [weak self] isOn, pane in self?.secureInputRequested(isOn, in: pane) },
+            imageFiles: ImageIOImageFiles(),
+            lastCommand: { [weak self] pane in await self?.input?.lastCommand(in: pane) })
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's
