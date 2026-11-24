@@ -211,7 +211,7 @@
 
 ### Tareas
 #### Bloque 1 · Verificaciones y dominio de apariencia
-- [ ] T1 · Verificar `font-codepoint-map` y medir la GPU (#5)
+- [x] T1 · `font-codepoint-map` alcanza una fuente registrada solo para el proceso (captura de la propia ventana: 3565 píxeles con el map frente a 1929 sin él). GPU en reposo (`scripts/measure-gpu-idle.sh`, 3 × 10 s, diario cerrado): base 6,8/5,9 %, por defecto 9,1 %, sin sombra 4,8 %, sin recorte de paneles 9,5 %; sin máscara 20,7 % y sin desenfoque 20,3 % por un pico aislado (las otras muestras, 8–10 %). El desenfoque no es la causa; el ~25 % del issue no aparece en reposo limpio (hipótesis: recomposición del vidrio con contenido que cambia detrás). T13 añade ese escenario y ataca la sombra
 - [ ] T2 · Contraste y `LegibilityGuard`
 - [ ] T3 · Catálogo de temas y `Theme.applying`
 - [ ] T4 · Ajustes, `PromptConfig`, comandos y atajos

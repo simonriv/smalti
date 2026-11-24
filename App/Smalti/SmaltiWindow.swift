@@ -33,9 +33,9 @@ final class SmaltiWindow: NSWindow {
         }
         // AppComposition owns the window; AppKit must not release it again on close.
         isReleasedWhenClosed = false
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = true
+        isOpaque = GlassProbe.current == .opaque
+        backgroundColor = GlassProbe.current == .opaque ? .black : .clear
+        hasShadow = GlassProbe.current != .noShadow
         contentMinSize = Self.minimumContentSize
         contentView = content
         setContentSize(Self.defaultContentSize)
@@ -52,7 +52,8 @@ final class SmaltiWindow: NSWindow {
 
     /// Paints the glass (tint, border, blur) from `theme.window`. Needs the window on screen for the blur.
     func applyGlass(_ theme: Theme) {
-        let blur = WindowGlass.apply(blurRadius: theme.window.blurRadius, to: self)
+        let radius = GlassProbe.current == .noBlur ? 0 : theme.window.blurRadius
+        let blur = WindowGlass.apply(blurRadius: radius, to: self)
         content.apply(theme.window, blur: blur)
     }
 
@@ -87,7 +88,7 @@ final class WindowContentView: NSView {
         wantsLayer = true
         layer?.cornerRadius = theme.window.cornerRadius
         layer?.cornerCurve = .continuous
-        layer?.masksToBounds = true
+        layer?.masksToBounds = GlassProbe.current != .noMask
         paint(theme.window)
         layoutChrome(theme: theme)
         setAccessibilityElement(true)

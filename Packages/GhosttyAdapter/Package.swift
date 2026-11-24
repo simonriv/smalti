@@ -33,6 +33,7 @@ let package = Package(
             dependencies: [
                 "GhosttyAdapter", "GhosttyKit", "SmaltiCore",
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
-            ]),
+            ],
+            resources: [.copy("Fixtures")]),
     ]
 )
