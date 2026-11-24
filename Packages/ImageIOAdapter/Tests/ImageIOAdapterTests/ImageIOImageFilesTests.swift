@@ -1,3 +1,4 @@
+import AppKit
 import Darwin
 import Foundation
 import ImageIO
@@ -161,6 +162,20 @@ struct ImageIOImageFilesTests {
 
         let size = try pixelSize(png)
         #expect(abs(size.width - 277) <= 1 && size.height == 208)
+    }
+
+    /// XCUITest of F5.5 drew black thumbnails from a broken fixture; the adapter itself must keep the colors.
+    @Test func thumbnailKeepsTheImageColors() async throws {
+        let fixtures = try ImageFixtures()
+        let path = try fixtures.image("blue.png", width: 320, height: 200)
+
+        let png = try await files.thumbnail(of: path, fitting: Size(width: 96, height: 64))
+
+        let source = try #require(CGImageSourceCreateWithData(png as CFData, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let pixel = try #require(NSBitmapImageRep(cgImage: image).colorAt(x: 10, y: 10)?.usingColorSpace(.sRGB))
+        // The fixture is drawn in the device space, so the sRGB values shift a little: blue stays dominant.
+        #expect(pixel.blueComponent > 0.8 && pixel.redComponent < 0.4, "\(pixel)")
     }
 
     @Test func smallImageIsNotEnlarged() async throws {
