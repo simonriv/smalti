@@ -33,6 +33,10 @@ final class GhosttySurfaceView: NSView {
     /// Timestamp of a ⌘/⌃ key equivalent AppKit should bounce back to `keyDown` (see `performKeyEquivalent`).
     private var lastPerformKeyEvent: TimeInterval?
     private var trackingArea: NSTrackingArea?
+    /// F5.5: whether moving the pointer reports the word under it (`[preview] hover`).
+    var reportsPointerWords = true
+    private var pointerCell: PointerCell?
+    private var pointerWord: PointerWord?
     private var screenObserver: NSObjectProtocol?
     /// Display last given to libghostty (drives its CVDisplayLink / vsync) and how many times it was applied.
     private(set) var appliedDisplayID: UInt32?
@@ -429,10 +433,41 @@ final class GhosttySurfaceView: NSView {
     override func otherMouseDragged(with event: NSEvent) { mouseMoved(with: event) }
 
     override func mouseMoved(with event: NSEvent) {
-        guard let surface else { return }
         let point = convert(event.locationInWindow, from: nil)
         // libghostty uses a top-left origin.
-        ghostty_surface_mouse_pos(surface, point.x, frame.height - point.y, GhosttyInput.mods(event.modifierFlags))
+        pointerMoved(to: Point(x: point.x, y: frame.height - point.y), mods: GhosttyInput.mods(event.modifierFlags))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        pointerLeft()
+    }
+
+    /// Main thread. Tells libghostty where the pointer is (top-left points) and, when it reaches another cell,
+    /// reports the word under it if that word changed (spec F5.5). The pointer standing still costs nothing.
+    func pointerMoved(to point: Point, mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE) {
+        guard let surface else { return }
+        ghostty_surface_mouse_pos(surface, point.x, point.y, mods)
+        guard reportsPointerWords else { return }
+        let size = ghostty_surface_size(surface)
+        let scale = Double(window?.backingScaleFactor ?? 2)
+        let cell = Size(width: Double(size.cell_width_px) / scale, height: Double(size.cell_height_px) / scale)
+        let current = PointerWordGeometry.cell(at: point, cell: cell)
+        guard current != pointerCell else { return }
+        pointerCell = current
+        report(current == nil ? nil : PointerWordReader.word(in: surface, cell: cell))
+    }
+
+    /// The pointer left the view: no word under it any more.
+    func pointerLeft() {
+        pointerCell = nil
+        report(nil)
+    }
+
+    private func report(_ word: PointerWord?) {
+        guard word != pointerWord else { return }
+        pointerWord = word
+        continuation.yield(.pointerWordChanged(word))
     }
 
     override func scrollWheel(with event: NSEvent) {

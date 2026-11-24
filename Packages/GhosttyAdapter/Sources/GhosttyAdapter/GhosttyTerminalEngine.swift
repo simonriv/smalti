@@ -19,6 +19,11 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         self.userZdotdir = userZdotdir
     }
 
+    /// F5.5 `[preview] hover`: whether panes report the word under the pointer; applies to open panes at once.
+    public var reportsPointerWords = true {
+        didSet { views.values.forEach { $0.reportsPointerWords = reportsPointerWords } }
+    }
+
     /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
     /// a restore can fall back to the workspace root or the home directory.
     public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {
@@ -31,6 +36,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
             let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
             view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
             view.exposesCellSize = exposesCellSize
+            view.reportsPointerWords = reportsPointerWords
             views[pane] = view
         } catch {
             // The launcher never ran, so nobody else removes the saved scrollback.
