@@ -25,7 +25,7 @@ struct KeyRoutingTests {
     }
 
     @Test func unboundChordPassesThrough() throws {
-        #expect(KeyRouting.decide(KeyPress(try chord("cmd+y"), isRepeat: false), keymap: .standard) == .passThrough)
+        #expect(KeyRouting.decide(KeyPress(try chord("cmd+u"), isRepeat: false), keymap: .standard) == .passThrough)
     }
 
     /// Holding ⌘W must not close pane after pane (and kill their processes).
@@ -44,7 +44,7 @@ struct KeyRoutingTests {
     }
 
     @Test func repeatOfUnboundChordPassesThrough() throws {
-        #expect(KeyRouting.decide(KeyPress(try chord("cmd+y"), isRepeat: true), keymap: .standard) == .passThrough)
+        #expect(KeyRouting.decide(KeyPress(try chord("cmd+u"), isRepeat: true), keymap: .standard) == .passThrough)
     }
 
     /// While the palette is open only ⌘K (to close it) runs; other shortcuts must not act behind it.
@@ -66,7 +66,7 @@ struct KeyRoutingTests {
 
     @Test func restrictedRoutingLetsTypingThrough() throws {
         let decision = KeyRouting.decide(
-            KeyPress(try chord("cmd+y"), isRepeat: false), keymap: .standard,
+            KeyPress(try chord("cmd+u"), isRepeat: false), keymap: .standard,
             context: KeyContext(allowing: [.paletteOpen]))
 
         #expect(decision == .passThrough)

@@ -30,13 +30,13 @@ public enum CommandCatalog {
         .appAbout: "Acerca de Smalti", .appearanceOpen: "Apariencia…", .promptStudio: "Estudio de prompt…",
         .themeOpen: "Abrir theme.toml", .themeNext: "Siguiente tema", .ansiReset: "Restablecer paleta ANSI",
         .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
-        .legibilityToggle: "Proteger legibilidad",
+        .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
     ]
 
     static let terminalIDs: [CommandID] = [
         .terminalCopy, .terminalPaste, .terminalSelectAll, .terminalClear, .searchOpen, .searchNext, .searchPrevious,
         .fontIncrease, .fontDecrease, .fontReset, .scrollPageUp, .scrollPageDown, .scrollTop, .scrollBottom,
-        .promptPrevious, .promptNext,
+        .promptPrevious, .promptNext, .previewQuickLook,
     ]
 
     private static func terminalCommands(_ context: Context) -> [Command] {

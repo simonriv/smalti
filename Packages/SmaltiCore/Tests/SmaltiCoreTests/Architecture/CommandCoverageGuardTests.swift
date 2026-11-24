@@ -47,7 +47,8 @@ struct CommandCoverageGuardTests {
     }
 
     /// Commands of a phase in progress whose app action lands in a later task; empty between phases.
-    static let pendingInApp: Set<CommandID> = []
+    /// F5.5: Quick Look gets its action with the preview card (plan T12).
+    static let pendingInApp: Set<CommandID> = [.previewQuickLook]
 
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue

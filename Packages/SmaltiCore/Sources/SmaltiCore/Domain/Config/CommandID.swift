@@ -63,6 +63,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let promptApply = CommandID(rawValue: "prompt.apply")
     public static let promptExport = CommandID(rawValue: "prompt.export")
     public static let legibilityToggle = CommandID(rawValue: "legibility.toggle")
+    /// F5.5: opens the image of the visible preview card in Quick Look; without a card it does nothing.
+    public static let previewQuickLook = CommandID(rawValue: "preview.quickLook")
 
     /// The F5 commands, in the order ⌘K, the help and the menu list them.
     static let appearance: [CommandID] = [
@@ -128,6 +130,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         ]
         + basics
         + appearance
+        + [previewQuickLook]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }
