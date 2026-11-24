@@ -76,6 +76,23 @@ struct PreviewCandidatesTests {
         #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/shots/a.png", "/w/a.png"])
     }
 
+    @Test func wordAfterRedirectTargetIsCandidate() {
+        let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: "ls > out.txt shots")
+
+        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/shots/a.png", "/w/a.png"])
+    }
+
+    @Test(arguments: ["ls shots <in", "ls shots &>log", "ls shots 2>err"])
+    func attachedRedirectionsAreNotCandidates(_ command: String) {
+        let context = PreviewContext(workingDirectory: "/w", home: "/h", lastCommand: command)
+
+        #expect(PreviewCandidates.paths(for: "a.png", in: context) == ["/w/shots/a.png", "/w/a.png"])
+    }
+
+    @Test func folderNamedLikeAnImageIsNotAnImage() {
+        #expect(!ImageFileKind.isImage("shots.png/"))
+    }
+
     @Test func trailingPeriodIsTrimmed() {
         #expect(PreviewCandidates.paths(for: "out.png.", in: context) == ["/w/out.png"])
     }

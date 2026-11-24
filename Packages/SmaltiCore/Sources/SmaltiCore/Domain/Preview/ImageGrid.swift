@@ -88,27 +88,28 @@ enum NaturalOrder {
     private static func chunks(_ text: String) -> [Chunk] {
         var chunks: [Chunk] = []
         var current = ""
-        var isDigits = false
         for character in text.lowercased() {
-            let digit = character.isASCII && character.isNumber
-            if !current.isEmpty && digit != isDigits {
-                chunks.append(Chunk(current, isNumber: isDigits))
+            if let last = current.last, isDigit(last) != isDigit(character) {
+                chunks.append(Chunk(current))
                 current = ""
             }
             current.append(character)
-            isDigits = digit
         }
-        if !current.isEmpty { chunks.append(Chunk(current, isNumber: isDigits)) }
+        if !current.isEmpty { chunks.append(Chunk(current)) }
         return chunks
+    }
+
+    private static func isDigit(_ character: Character) -> Bool {
+        character.isASCII && character.isNumber
     }
 
     private struct Chunk: Comparable {
         let text: String
         let number: String?
 
-        init(_ text: String, isNumber: Bool) {
+        init(_ text: String) {
             self.text = text
-            number = isNumber ? String(text.drop { $0 == "0" }) : nil
+            number = text.first.map(NaturalOrder.isDigit) == true ? String(text.drop { $0 == "0" }) : nil
         }
 
         /// Digits without leading zeros: a longer run is a bigger number, equal lengths compare as text, at any length.

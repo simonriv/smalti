@@ -55,6 +55,14 @@ struct PreviewCommandsTests {
         #expect(entry.keys == "⌘Y")
     }
 
+    @Test func keymapsBindingTheSameChordToOtherCommandsDiffer() throws {
+        let y = try KeyChord.parse("cmd+y")
+
+        let other = try Keymap.standard.overriding([y: .paletteOpen])
+
+        #expect(other != Keymap.standard)
+    }
+
     @Test func previewDefaultsToHover() {
         #expect(PreviewSettings.standard.hover)
         #expect(SmaltiConfig.defaults.preview == .standard)

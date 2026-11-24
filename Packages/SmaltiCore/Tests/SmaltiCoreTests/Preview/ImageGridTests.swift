@@ -172,6 +172,44 @@ struct ImageGridTests {
         #expect(grid.rows.flatMap(\.cells).map(\.image.name) == [small, big])
     }
 
+    private func order(_ names: [String]) -> [String] {
+        ImageGrid.layout(names.map { image($0) }, skipped: 0, in: wide).rows.flatMap(\.cells).map(\.image.name)
+    }
+
+    @Test func caseIsIgnored() {
+        #expect(order(["B.png", "a.png"]) == ["a.png", "B.png"])
+    }
+
+    @Test func sameNameInOtherCaseOrdersByText() {
+        #expect(order(["img1.png", "IMG1.png"]) == ["IMG1.png", "img1.png"])
+        #expect(order(["IMG1.png", "img1.png"]) == ["IMG1.png", "img1.png"])
+    }
+
+    @Test func shorterNameThatIsAPrefixComesFirst() {
+        #expect(order(["photo2", "photo"]) == ["photo", "photo2"])
+    }
+
+    @Test func lettersDecideBeforeNumberLength() {
+        #expect(order(["b1.png", "a10.png"]) == ["a10.png", "b1.png"])
+    }
+
+    @Test func numbersCompareByValueNotByDigits() {
+        #expect(order(["img12.png", "img3.png"]) == ["img3.png", "img12.png"])
+    }
+
+    @Test func leadingZerosOrderBeforeSameValue() {
+        #expect(order(["img1.png", "img01.png"]) == ["img01.png", "img1.png"])
+    }
+
+    @Test func numberChunkComesBeforeText() {
+        #expect(order(["a.png", "1a.png"]) == ["1a.png", "a.png"])
+        #expect(order(["1a.png", "a.png"]) == ["1a.png", "a.png"])
+    }
+
+    @Test func nonASCIIDigitsAreText() {
+        #expect(order(["a²b.png", "a1b.png"]) == ["a1b.png", "a²b.png"])
+    }
+
     @Test func noImagesGiveNoRows() {
         #expect(ImageGrid.layout([], skipped: 2, in: wide).rows.isEmpty)
     }
