@@ -6,6 +6,16 @@ import SmaltiCore
 typealias PaneEngine = TerminalEngine & TerminalViewProvider
 
 /// What the views draw after every change.
+extension TilingController.Dependencies {
+    /// The same dependencies with this window's agents (F4.5: what counts as visible is per window).
+    func with(agents: TilingController.AgentDependencies) -> TilingController.Dependencies {
+        TilingController.Dependencies(
+            engine: engine, configStore: configStore, paneEnvironment: paneEnvironment, transcripts: transcripts,
+            namedLayouts: namedLayouts, harnesses: harnesses, agents: agents, home: home, shellOverride: shellOverride,
+            applyAppearance: applyAppearance)
+    }
+}
+
 struct TilingState {
     let set: WorkspaceSet
     let config: SmaltiConfig
@@ -15,6 +25,10 @@ struct TilingState {
     let home: WorkingDirectory
     /// The observatory's latest refresh (F3): status-bar figures and the agents' model and context.
     var observatory: ObservatoryFrame?
+    /// F4.5: secure keyboard entry is on (the menu or a password prompt).
+    var isSecureInput = false
+    /// F4.5: the link under the pointer while ⌘ is held.
+    var hoveredLink: String?
 }
 
 /// Primary adapter between AppKit and the use cases: turns a `CommandID` (from a shortcut, the palette or a click)
@@ -50,6 +64,18 @@ final class TilingController {
     var area: () -> Rect = { .zero }
     /// Commands that open UI instead of changing tiling (the palette, the rename prompt) go to the views.
     var onViewCommand: ((CommandID) -> Void)?
+    /// F4.5: commands about the app's windows (⌘N, ⇧⌘W, ⌘J across windows…) go to the app.
+    var onAppCommand: ((CommandID) -> Void)?
+    /// F4.5: terminal events only the views use (search progress, link hover, secure input), with their pane.
+    var onViewEvent: ((TerminalEvent, PaneID) -> Void)?
+    /// F4.5: asks the user before closing a running program; `proceed` runs only if they confirm.
+    var onConfirmClose: ((CloseQuestion, _ proceed: @escaping () -> Void) -> Void)?
+
+    /// What `onAppCommand` receives: they act on several windows or on the window itself.
+    static let appCommands: Set<CommandID> = [
+        .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
+        .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
+    ]
 
     private let deps: Dependencies
     private let layouts = LayoutCatalog.standard
@@ -87,19 +113,12 @@ final class TilingController {
         publish()
     }
 
-    /// Starts from what the last run left: a fresh window, or the restored workspaces.
-    func start(from choice: StartupChoice, onAsk: (SessionSnapshot) -> Void) {
-        switch choice {
-        case .startFresh:
-            start()
-        case .startFreshAfterUnreadable(let reason):
-            start()
-            report(.unreadableSession(reason))
-        case .restoreAll(let snapshot):
-            restore(snapshot, mode: .full, selection: .defaults(for: snapshot))
-        case .ask(let snapshot):
-            onAsk(snapshot)
-        }
+    /// F4.5 ⌘N: a new window starts with one workspace rooted at `directory` (the focused pane's of the window it came
+    /// from) and its first pane.
+    func start(in directory: WorkingDirectory) {
+        let layout = layouts.strategyOrDefault(for: config.defaultLayout)
+        set = WorkspaceSet(first: .empty(name: directory.lastComponent, rootDirectory: directory, layout: layout))
+        start()
     }
 
     /// An agent's hook event, from the IPC socket.
@@ -118,8 +137,8 @@ final class TilingController {
         return true
     }
 
-    private func jumpToWaitingAgent() {
-        if JumpToWaitingAgent(engine: deps.engine).execute(in: &set) == .nobodyWaiting { show(.nobodyWaiting) }
+    func reportNobodyWaiting() {
+        show(.nobodyWaiting)
     }
 
     private func runIntegration(_ command: IntegrationCommand.Type) {
@@ -169,11 +188,10 @@ final class TilingController {
                 environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
     }
 
-    /// Rebuilds the saved workspaces; if none could open, starts as usual.
-    func restore(_ snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection) {
+    /// Rebuilds one saved window's workspaces; if none could open, starts as usual.
+    func restore(_ plan: RestorePlan, savedAt: Date) {
         let interval = signposter.beginInterval("restore", id: signposter.makeSignpostID())
-        let plan = RestorePlan.make(from: snapshot, mode: mode, selection: selection)
-        let result = restoreSession.execute(plan, savedAt: snapshot.savedAt, home: deps.home)
+        let result = restoreSession.execute(plan, savedAt: savedAt, home: deps.home)
         guard let restored = result.set else {
             signposter.endInterval("restore", interval)
             start()
@@ -188,12 +206,18 @@ final class TilingController {
     }
 
     func perform(_ command: CommandID) {
+        if Self.appCommands.contains(command) {
+            onAppCommand?(command)
+            return
+        }
         if Self.viewCommands.contains(command) {
             onViewCommand?(command)
             return
         }
         guard let action = action(for: command) else {
-            logger.error("unknown command \(command.rawValue, privacy: .public)")
+            // A `CommandID` names an action, never typed text; bound to its own name for the log guard (F4.5).
+            let commandID = command.rawValue
+            logger.error("unknown command \(commandID, privacy: .public)")
             return
         }
         action()
@@ -220,7 +244,8 @@ final class TilingController {
     // MARK: - Commands
 
     private static let viewCommands: Set<CommandID> = [
-        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch,
+        .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
+        .searchOpen, .searchNext, .searchPrevious,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
@@ -239,10 +264,18 @@ final class TilingController {
             .panesEqualize: { [unowned self] in EqualizePanes().execute(in: &set) },
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
-            .configReload: { [unowned self] in reloadConfig() },
-            .agentJump: { [unowned self] in jumpToWaitingAgent() },
             .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
             .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
+            .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
+            .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
+            .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
+            .terminalClear: { [unowned self] in performInFocusedPane(.clear) },
+            .scrollPageUp: { [unowned self] in performInFocusedPane(.scroll(.pageUp)) },
+            .scrollPageDown: { [unowned self] in performInFocusedPane(.scroll(.pageDown)) },
+            .scrollTop: { [unowned self] in performInFocusedPane(.scroll(.top)) },
+            .scrollBottom: { [unowned self] in performInFocusedPane(.scroll(.bottom)) },
+            .promptPrevious: { [unowned self] in performInFocusedPane(.jumpToPrompt(.previous)) },
+            .promptNext: { [unowned self] in performInFocusedPane(.jumpToPrompt(.next)) },
         ]
         for number in NumberedShortcuts.range {
             actions[.paneFocus(number)] = { [unowned self] in
@@ -255,6 +288,12 @@ final class TilingController {
         for direction in Direction.allCases { actions.merge(directionActions(direction)) { $1 } }
         return actions
     }()
+
+    /// F4.5: ⌘C, ⌘V and ⌘A are Smalti commands now; the engine runs them in the focused pane.
+    private func performInFocusedPane(_ action: TerminalAction) {
+        guard let pane = set.active.focusedPane else { return }
+        deps.engine.perform(action, in: pane)
+    }
 
     private func directionActions(_ direction: Direction) -> [CommandID: () -> Void] {
         [
@@ -309,7 +348,24 @@ final class TilingController {
 
     private func closeFocusedPane() {
         guard let pane = set.active.focusedPane else { return }
-        close(pane)
+        let panes = set.active.panes.filter { $0.id == pane }
+        confirmClosing(.pane, panes) { [weak self] in self?.close(pane) }
+    }
+
+    /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
+    /// then publishes itself, since the question returns after `perform` did.
+    private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
+        let busy = RunningPrograms(engine: deps.engine).busy(in: panes)
+        guard let question = CloseGuard.question(for: scope, busy: busy, settings: config.window),
+            let onConfirmClose
+        else {
+            close()
+            return
+        }
+        onConfirmClose(question) { [weak self] in
+            close()
+            self?.publish()
+        }
     }
 
     private func close(_ pane: PaneID) {
@@ -320,8 +376,19 @@ final class TilingController {
     /// The only workspace cannot close; a shortcut bound in config.toml can still ask, and the refusal leaves
     /// everything as it was (the palette does not offer the command then).
     private func closeActiveWorkspace() {
+        let workspace = set.active
+        guard set.workspaces.count > 1 else {
+            logger.debug("refused to close the last workspace")
+            return
+        }
+        confirmClosing(.workspace(name: workspace.name), workspace.panes) { [weak self] in
+            self?.closeWorkspace(workspace.id)
+        }
+    }
+
+    private func closeWorkspace(_ id: WorkspaceID) {
         do {
-            let closed = try CloseWorkspace(engine: deps.engine).execute(set.activeID, in: &set)
+            let closed = try CloseWorkspace(engine: deps.engine).execute(id, in: &set)
             closed.forEach { openedAt[$0] = nil }
         } catch {
             switch error {
@@ -330,19 +397,33 @@ final class TilingController {
         }
     }
 
-    private func reloadConfig() {
-        let reload = ReloadConfig(store: deps.configStore).execute()
-        config = reload.config.withShell(overriddenBy: deps.shellOverride)
-        if let error = reload.error {
-            show(.invalidConfig(error))
-            return
-        }
-        status = status.withPersistent(nil)
+    /// "Recargar configuración" in the window that also reloads the terminal engine (it is the app's).
+    func reloadConfig() {
+        guard applyReloadedConfig() else { return publish() }
         do {
             try deps.applyAppearance(theme.terminal)
         } catch {
             show(.engineFailure(error))
         }
+        publish()
+    }
+
+    /// "Recargar configuración" in the other windows: they read the file again; the engine is already reloaded.
+    func rereadConfig() {
+        _ = applyReloadedConfig()
+        publish()
+    }
+
+    /// Reads the file; false when it was invalid (the status bar says so and the last good config stays).
+    private func applyReloadedConfig() -> Bool {
+        let reload = ReloadConfig(store: deps.configStore).execute()
+        config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        if let error = reload.error {
+            show(.invalidConfig(error))
+            return false
+        }
+        status = status.withPersistent(nil)
+        return true
     }
 
     private static func message(for error: OpenPaneError) -> StatusMessage {
@@ -371,6 +452,9 @@ final class TilingController {
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
+        case .searchTotal, .searchSelected, .linkHovered, .secureInputRequested:
+            onViewEvent?(event, pane)
+            return
         default:
             guard let owner = set.workspace(containing: pane) else { return }
             set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
@@ -436,7 +520,25 @@ final class TilingController {
 
     private var state: TilingState {
         TilingState(
-            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory)
+            set: set, config: config, theme: theme, message: status.showing, home: deps.home, observatory: observatory,
+            isSecureInput: isSecureInput, hoveredLink: hoveredLink)
+    }
+
+    private var isSecureInput = false
+    private var hoveredLink: String?
+
+    /// F4.5: the status bar says "Entrada segura" while it is on; nothing is saved for it.
+    func showSecureInput(_ isOn: Bool) {
+        guard isOn != isSecureInput else { return }
+        isSecureInput = isOn
+        onObservatoryChange?(state)
+    }
+
+    /// F4.5: the link under the pointer, in the status bar while ⌘ is held over it.
+    func showHoveredLink(_ url: String?) {
+        guard url != hoveredLink else { return }
+        hoveredLink = url
+        onObservatoryChange?(state)
     }
 
     func show(_ frame: ObservatoryFrame) {

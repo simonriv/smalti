@@ -17,6 +17,14 @@ struct PaneTests {
         #expect(pane.lastCommand == nil)
     }
 
+    /// F4.5: search, link and secure-input events are for the view; the pane's model stays as it was.
+    @Test(arguments: [
+        TerminalEvent.searchTotal(3), .searchSelected(1), .linkHovered("https://a.b"), .secureInputRequested(true),
+    ])
+    func viewOnlyEventsLeavePaneUnchanged(_ event: TerminalEvent) {
+        #expect(pane.applying(event) == pane)
+    }
+
     @Test func titleChangedUpdatesTitle() {
         #expect(pane.applying(.titleChanged("claude")).title == "claude")
     }
@@ -76,5 +84,33 @@ struct PaneTests {
 
     @Test func paneRunningAProgramIsNotAtShell() {
         #expect(!pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "nvim"))).isAtShell)
+    }
+}
+
+@Suite("Pane · busy")
+struct PaneBusyTests {
+    private let pane: Pane
+
+    init() throws {
+        pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp"))
+    }
+
+    @Test func freshPaneIsNotBusy() {
+        #expect(!pane.isBusy)
+    }
+
+    @Test func shellInForegroundIsNotBusy() {
+        #expect(!pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "zsh"))).isBusy)
+    }
+
+    @Test func programInForegroundIsBusy() {
+        #expect(pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "claude"))).isBusy)
+    }
+
+    @Test func exitedPaneIsNotBusy() {
+        let finished = pane.applying(.foregroundProcessChanged(ForegroundProcess(name: "sleep"))).applying(
+            .exited(code: 0))
+
+        #expect(!finished.isBusy)
     }
 }

@@ -26,6 +26,42 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     /// F4: opens the ⌃R history palette for the focused pane (⌃R itself is zsh's key there, not Smalti's).
     public static let historySearch = CommandID(rawValue: "history.search")
 
+    // F4.5: windows, help, feedback, the app and the terminal's basic commands.
+    public static let windowNew = CommandID(rawValue: "window.new")
+    public static let windowClose = CommandID(rawValue: "window.close")
+    public static let windowFullscreen = CommandID(rawValue: "window.fullscreen")
+    public static let windowMinimize = CommandID(rawValue: "window.minimize")
+    public static let helpShow = CommandID(rawValue: "help.show")
+    public static let feedbackReport = CommandID(rawValue: "feedback.report")
+    public static let logsShow = CommandID(rawValue: "logs.show")
+    public static let appAbout = CommandID(rawValue: "app.about")
+    public static let configOpen = CommandID(rawValue: "config.open")
+    public static let terminalCopy = CommandID(rawValue: "terminal.copy")
+    public static let terminalPaste = CommandID(rawValue: "terminal.paste")
+    public static let terminalSelectAll = CommandID(rawValue: "terminal.selectAll")
+    public static let terminalClear = CommandID(rawValue: "terminal.clear")
+    public static let searchOpen = CommandID(rawValue: "search.open")
+    public static let searchNext = CommandID(rawValue: "search.next")
+    public static let searchPrevious = CommandID(rawValue: "search.previous")
+    public static let fontIncrease = CommandID(rawValue: "font.increase")
+    public static let fontDecrease = CommandID(rawValue: "font.decrease")
+    public static let fontReset = CommandID(rawValue: "font.reset")
+    public static let scrollPageUp = CommandID(rawValue: "scroll.pageUp")
+    public static let scrollPageDown = CommandID(rawValue: "scroll.pageDown")
+    public static let scrollTop = CommandID(rawValue: "scroll.top")
+    public static let scrollBottom = CommandID(rawValue: "scroll.bottom")
+    public static let promptPrevious = CommandID(rawValue: "prompt.previous")
+    public static let promptNext = CommandID(rawValue: "prompt.next")
+    public static let secureInputToggle = CommandID(rawValue: "secureInput.toggle")
+
+    /// The F4.5 commands, in the order the help and the menus list them.
+    static let basics: [CommandID] = [
+        windowNew, windowClose, windowFullscreen, windowMinimize, helpShow, feedbackReport, logsShow, appAbout,
+        configOpen, terminalCopy, terminalPaste, terminalSelectAll, terminalClear, searchOpen, searchNext,
+        searchPrevious, fontIncrease, fontDecrease, fontReset, scrollPageUp, scrollPageDown, scrollTop, scrollBottom,
+        promptPrevious, promptNext, secureInputToggle,
+    ]
+
     /// Focus the nth pane, `number` in `NumberedShortcuts.range`.
     public static func paneFocus(_ number: Int) -> CommandID { CommandID(rawValue: "pane.focus.\(number)") }
     public static func paneFocus(_ direction: Direction) -> CommandID {
@@ -75,6 +111,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
             observatoryPeriod, historySearch,
         ]
+        + basics
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }

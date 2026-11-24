@@ -30,6 +30,14 @@ public struct KeyContext: Equatable, Sendable {
     }
 
     public static let unrestricted = KeyContext()
+
+    /// Copy, paste and select all: Smalti commands for the terminal, but a text field's own keys inside an overlay.
+    public static let textEditing: Set<CommandID> = [.terminalCopy, .terminalPaste, .terminalSelectAll]
+
+    /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys.
+    public static func overlay(allowing: Set<CommandID>) -> KeyContext {
+        KeyContext(allowing: allowing, passingThrough: textEditing)
+    }
 }
 
 /// One key press as routing sees it.

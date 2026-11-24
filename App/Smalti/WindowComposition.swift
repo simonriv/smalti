@@ -1,0 +1,397 @@
+import AppKit
+import GhosttyAdapter
+import SmaltiCore
+
+/// What a window needs from the app's shared services. The app builds it once; every window gets the same one.
+@MainActor
+struct WindowServices {
+    let engine: GhosttyTerminalEngine
+    let harnesses: HarnessRegistry
+    /// The window's workspaces, frame or full screen changed: the session keeper and the input coordinator follow.
+    let changed: () -> Void
+    /// The user chose on the resume screen of the window passed; the app restores every window from it.
+    let restoreChosen: (RestoreChoice, SessionSnapshot, WindowComposition) -> Void
+    /// ⌘N, ⇧⌘W, ⌘J… (`TilingController.appCommands`), from this window.
+    let appCommand: (CommandID, WindowComposition) -> Void
+    /// The window became key: it is the front one now.
+    let becameFront: (WindowComposition) -> Void
+    /// The Tab menu and the ⌃R palette are the app's (one input coordinator for every pane).
+    let completionMenu: () -> CompletionMenuController?
+    let historyPalette: () -> HistoryPaletteController?
+    let openHistory: (PaneID) -> Void
+    /// A window opened or closed its observatory; the app counts them all.
+    let observatoryOpenChanged: () -> Void
+    /// A password prompt in one of this window's panes asks for secure keyboard entry, or releases it.
+    let secureInputRequested: (Bool, PaneID) -> Void
+}
+
+/// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
+/// keyboard routing. Only `AppComposition` creates it; it builds no infrastructure.
+@MainActor
+final class WindowComposition {
+    let id = WindowID()
+    let window: SmaltiWindow
+    let controller: TilingController
+    private let services: WindowServices
+    private var palette: CommandPaletteController?
+    private var observatoryScreen: ObservatoryController?
+    private var help: HelpController?
+    private var search: SearchBarController?
+    private var feedback: FeedbackController?
+    private var restoreScreen: RestoreController?
+    /// What the glass was last painted with, so a publish that does not change it repaints nothing.
+    private var appliedWindowTokens: WindowTokens?
+    private var observers: [NSObjectProtocol] = []
+    /// The frame outside full screen: what the session saves while the window is full screen, and what ⌘N cascades
+    /// from, so leaving full screen after a restore gives the window its own size back.
+    private(set) var windowedFrame: Rect
+
+    init(window: SmaltiWindow, controller: TilingController, services: WindowServices) {
+        self.window = window
+        self.controller = controller
+        self.services = services
+        windowedFrame = Rect(window.frame)
+        applyGlass(controller.theme)
+        connect()
+        observeWindow()
+    }
+
+    isolated deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    /// What the session saves of this window. Frames are AppKit screen coordinates (`WindowFrame`).
+    var state: WindowState {
+        WindowState(
+            id: id, workspaces: controller.set, frame: windowedFrame,
+            isFullScreen: window.styleMask.contains(.fullScreen))
+    }
+
+    /// Moves the window to a saved frame, refitted to the visible part of the screens there are now (below the menu
+    /// bar, beside the Dock), and lays it out so panes restored next get the right area.
+    func place(at saved: Rect) {
+        let screens = NSScreen.screens.map { Rect($0.visibleFrame) }
+        let fitted = WindowFrame.fitted(saved, screens: screens, main: screens.first ?? saved)
+        window.setFrame(NSRect(fitted), display: true)
+        windowedFrame = fitted
+        window.contentView?.layoutSubtreeIfNeeded()
+    }
+
+    /// Tells the app when the user moves, resizes, focuses or takes the window full screen.
+    private func observeWindow() {
+        let center = NotificationCenter.default
+        let changes: [Notification.Name] = [
+            NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
+            NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification,
+        ]
+        observers = changes.map { name in
+            center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.windowChanged() }
+            }
+        }
+        for (name, isChanging) in [
+            (NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, true),
+            (NSWindow.didEnterFullScreenNotification, false), (NSWindow.didExitFullScreenNotification, false),
+        ] {
+            observers.append(
+                center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.isChangingFullScreen = isChanging }
+                })
+        }
+        observers.append(
+            center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) {
+                [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.services.becameFront(self)
+                }
+            })
+    }
+
+    private func windowChanged() {
+        let isFullScreen = window.styleMask.contains(.fullScreen)
+        window.showsFullScreenChrome(isFullScreen)
+        // Entering and leaving full screen also move and resize the window: only frames outside it are kept.
+        if !isFullScreen, !isChangingFullScreen { windowedFrame = Rect(window.frame) }
+        services.changed()
+    }
+
+    /// Between `willEnter`/`willExit` and `didEnter`/`didExit` full screen, the frame is the animation's.
+    private var isChangingFullScreen = false
+
+    var isAskingToRestore: Bool { restoreScreen != nil }
+
+    var isObservatoryOpen: Bool { observatoryScreen?.isOpen == true }
+
+    /// A palette, the observatory or the ⌃R palette owns the keyboard.
+    var hasOverlayOpen: Bool {
+        palette?.isOpen == true || observatoryScreen?.isOpen == true || hasHistoryPaletteOpen
+            || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
+    }
+
+    /// "Reportar un problema o una idea" in this window; `submit` gets the kind and whether to save the logs.
+    func showFeedback(summary: String, submit: @escaping (FeedbackKind, Bool) -> Void) {
+        closeOverlays(keeping: .feedback)
+        feedback?.open(theme: controller.theme, summary: summary, submit: submit)
+    }
+
+    /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
+    /// single place to go when the top one closes (block 4 review).
+    enum Overlay {
+        case palette, help, search, feedback
+    }
+
+    func closeOverlays(keeping kept: Overlay? = nil) {
+        if kept != .palette { palette?.close() }
+        if kept != .help { help?.close() }
+        if kept != .search { search?.dismiss() }
+        if kept != .feedback { feedback?.close() }
+    }
+
+    func dismissObservatory() {
+        observatoryScreen?.dismiss()
+    }
+
+    func show(_ frame: ObservatoryFrame) {
+        controller.show(frame)
+        observatoryScreen?.show(frame.snapshot)
+    }
+
+    // MARK: - Resume screen
+
+    /// "Retomar donde quedaste": shown instead of the strip and the panes until the user chooses.
+    func ask(_ snapshot: SessionSnapshot, preferences: any RestorePreferenceStore) {
+        guard let content = window.contentView else {
+            // Without a place to ask, restore what the defaults would: never start empty over a saved session.
+            services.restoreChosen(.restore(.defaults(for: snapshot)), snapshot, self)
+            return
+        }
+        let listing = RestoreController.Content(
+            snapshot: snapshot,
+            windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
+            closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
+        let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
+            [weak self] choice in self?.finishAsking(choice, snapshot: snapshot)
+        }
+        screen.view.frame = content.bounds
+        screen.view.autoresizingMask = [.width, .height]
+        content.addSubview(screen.view)
+        setTilingHidden(true)
+        window.makeFirstResponder(screen.view)
+        restoreScreen = screen
+    }
+
+    private func finishAsking(_ choice: RestoreChoice, snapshot: SessionSnapshot) {
+        restoreScreen?.view.removeFromSuperview()
+        restoreScreen = nil
+        setTilingHidden(false)
+        services.restoreChosen(choice, snapshot, self)
+    }
+
+    private func setTilingHidden(_ hidden: Bool) {
+        [window.strip, window.paneGrid, window.statusBar].forEach { $0.isHidden = hidden }
+    }
+
+    // MARK: - Wiring
+
+    private func connect() {
+        let grid = window.paneGrid
+        let engine = services.engine
+        controller.area = { [weak grid] in grid?.area ?? .zero }
+        controller.onChange = { [weak self] state in
+            guard let self else { return }
+            applyGlass(state.theme)
+            window.strip.render(state)
+            window.paneGrid.render(state) { engine.view(for: $0) }
+            window.statusBar.render(state)
+            // The Window menu's list of windows names each by its active workspace.
+            window.title = state.set.active.name
+            labelTerminals(state.set.active)
+            search?.follow(state.set)
+            focusKeyboard(on: state.set.active.focusedPane)
+            services.changed()
+        }
+        controller.onObservatoryChange = { [weak self] state in
+            guard let self else { return }
+            window.paneGrid.render(state) { engine.view(for: $0) }
+            window.statusBar.render(state)
+        }
+        grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
+        window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
+        controller.onAppCommand = { [weak self] command in
+            guard let self else { return }
+            services.appCommand(command, self)
+        }
+        controller.onConfirmClose = { [weak self] question, proceed in
+            guard let self else { return }
+            CloseConfirmation.ask(question, in: window) { confirmed in if confirmed { proceed() } }
+        }
+        connectPalette()
+        connectKeyboard()
+    }
+
+    /// ⌘K and "Renombrar workspace…" open the palette; while it is open the panes dim and keep their processes.
+    private func connectPalette() {
+        let palette = CommandPaletteController(
+            window: window,
+            actions: .init(
+                search: { [weak controller] query in
+                    guard let controller else { return [] }
+                    return SearchCommands(layouts: .standard).execute(
+                        query, set: controller.set, keymap: controller.config.keys,
+                        savedLayouts: controller.savedLayouts())
+                },
+                perform: { [weak controller] command in controller?.perform(command) },
+                rename: { [weak controller] name in controller?.rename(to: name) },
+                currentWorkspaceName: { [weak controller] in controller?.set.active.name ?? "" }))
+        palette.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+            // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
+            if isOpen { services.completionMenu()?.close() }
+        }
+        let help = HelpController(
+            window: window, keymap: { [weak controller] in controller?.config.keys ?? .standard },
+            perform: { [weak controller] command in controller?.perform(command) })
+        help.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+            if isOpen { services.completionMenu()?.close() }
+        }
+        self.help = help
+        let search = SearchBarController(window: window, engine: services.engine)
+        search.onClose = { [weak self] pane in self?.focusKeyboard(on: pane) }
+        self.search = search
+        let feedback = FeedbackController(window: window)
+        feedback.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+        }
+        self.feedback = feedback
+        controller.onViewEvent = { [weak self, weak search] event, pane in
+            switch event {
+            case .linkHovered(let url): self?.controller.showHoveredLink(url)
+            case .secureInputRequested(let isOn): self?.services.secureInputRequested(isOn, pane)
+            default: search?.progress(event, from: pane)
+            }
+        }
+        let screen = makeObservatoryScreen()
+        observatoryScreen = screen
+        controller.onViewCommand = { [weak self, weak palette, weak screen] command in
+            guard let self, let palette else { return }
+            let theme = controller.theme
+            switch command {
+            case .workspaceRename: palette.beginRename(theme: theme)
+            case .observatoryToggle: screen?.toggle(theme: theme)
+            case .observatoryPeriod: screen?.cyclePeriod()
+            case .historySearch:
+                if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
+            case .helpShow:
+                closeOverlays(keeping: .help)
+                self.help?.toggle(theme: theme)
+            case .searchOpen:
+                closeOverlays(keeping: .search)
+                if let pane = controller.set.active.focusedPane { self.search?.open(on: pane, theme: theme) }
+            case .searchNext, .searchPrevious:
+                guard let search = self.search, let pane = controller.set.active.focusedPane else { return }
+                closeOverlays(keeping: .search)
+                if !search.isOpen { search.open(on: pane, theme: theme) }
+                search.navigate(command == .searchNext ? .next : .previous)
+            case .paletteOpen:
+                closeOverlays(keeping: .palette)
+                palette.toggle(theme: theme)
+            default: break
+            }
+        }
+        self.palette = palette
+    }
+
+    /// ⌘⇧A: the observatory over the window; the panes stay alive and get the focus back when it closes.
+    private func makeObservatoryScreen() -> ObservatoryController {
+        ObservatoryController(
+            window: window,
+            actions: .init(
+                setTilingHidden: { [weak self] hidden in self?.setTilingHidden(hidden) },
+                didClose: { [weak self] pane in
+                    guard let self else { return }
+                    // A pane that closed meanwhile cannot be activated: the focused one gets the keyboard back.
+                    if pane.map(controller.activate) != true {
+                        focusKeyboard(on: controller.set.active.focusedPane)
+                    }
+                },
+                openChanged: { [weak self] isOpen in
+                    self?.services.observatoryOpenChanged()
+                    if isOpen { self?.services.completionMenu()?.close() }
+                }))
+    }
+
+    private func connectKeyboard() {
+        let router = KeyRouter(
+            keymap: { [weak controller] in controller?.config.keys ?? .standard },
+            context: { [weak self] in self?.keyContext ?? .unrestricted },
+            perform: { [weak controller] command in controller?.perform(command) })
+        // The resume screen owns the keyboard: no tiling shortcut acts, and its own keys reach it untouched.
+        window.routeKey = { [weak self] event, composing in
+            guard let self, restoreScreen == nil else { return false }
+            // The Tab menu and the ⌃R palette are shared by every window: only their own window's keys are theirs.
+            if !composing, services.completionMenu()?.handle(event, in: window) == true { return true }
+            if hasHistoryPaletteOpen, services.historyPalette()?.handle(event) == true { return true }
+            return router.route(event, composing: composing)
+        }
+    }
+
+    /// An open palette lets only ⌘K through; an open observatory only ⌘⇧A and ⌘P (its own keys reach its view); ⌘P
+    /// reaches the terminal while the observatory is closed.
+    /// What the menu bar may do on this window: what its keyboard may, and on the resume screen only what does not
+    /// touch the workspaces it is about to replace.
+    var menuContext: KeyContext {
+        restoreScreen == nil ? keyContext : KeyContext(allowing: Self.allowedOnResumeScreen)
+    }
+
+    private static let allowedOnResumeScreen: Set<CommandID> = [.windowNew, .appAbout, .configOpen]
+
+    /// The ⌃R palette is open in this window (it is shared by all of them).
+    private var hasHistoryPaletteOpen: Bool {
+        services.historyPalette()?.isOpen(in: window) == true
+    }
+
+    private var keyContext: KeyContext {
+        if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
+        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
+        if feedback?.isOpen == true { return KeyContext(allowing: []) }
+        if search?.isOpen == true {
+            return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
+        }
+        // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
+        if hasHistoryPaletteOpen { return .overlay(allowing: []) }
+        if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
+        return KeyContext(passingThrough: [.observatoryPeriod])
+    }
+
+    /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).
+    private func labelTerminals(_ workspace: Workspace) {
+        for (index, pane) in workspace.panes.enumerated() {
+            services.engine.view(for: pane.id)?.setAccessibilityLabel(
+                "Terminal, panel \(index + 1), \(pane.headerName.isEmpty ? "shell" : pane.headerName)")
+        }
+    }
+
+    /// At startup and whenever "Recargar configuración" changes `glass_opacity` or `blur`.
+    private func applyGlass(_ theme: Theme) {
+        guard theme.window != appliedWindowTokens else { return }
+        window.applyGlass(theme)
+        appliedWindowTokens = theme.window
+    }
+
+    /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
+    /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
+    func focusKeyboard(on pane: PaneID?) {
+        guard !hasOverlayOpen, let pane, let view = services.engine.view(for: pane), window.firstResponder !== view
+        else { return }
+        window.makeFirstResponder(view)
+    }
+}

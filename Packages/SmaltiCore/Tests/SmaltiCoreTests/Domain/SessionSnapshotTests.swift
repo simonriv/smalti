@@ -30,7 +30,7 @@ struct SessionSnapshotTests {
         #expect(snapshot.version == SessionSnapshot.formatVersion)
         #expect(snapshot.savedAt == now)
         #expect(snapshot.workspaces.map(\.name) == ["solen", "rizaria"])
-        #expect(snapshot.activeIndex == 0)
+        #expect(snapshot.windows[0].activeIndex == 0)
         let saved = snapshot.workspaces[0]
         #expect(saved.layout == "dwindle")
         #expect(saved.panes.map(\.workingDirectory) == (0..<paneCount).map { "/tmp/p\($0)" })

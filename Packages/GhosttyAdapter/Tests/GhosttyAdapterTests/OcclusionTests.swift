@@ -1,4 +1,5 @@
 import AppKit
+import GhosttyKit
 import Foundation
 import SmaltiCore
 import Testing
@@ -53,6 +54,39 @@ struct OcclusionTests {
 
         #expect(view.isVisible)
         #expect(view.isPollingForegroundProcess)
+    }
+
+    /// Final review (minor 2): closing asks what runs now, even in a hidden pane that no longer polls. A program
+    /// started from the shell leads its own process group, so it is the one named.
+    @Test func hiddenPaneStillTellsItsForegroundProcessWhenAsked() throws {
+        let pane = try engine.open(spec)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        #expect(wait { (view.surface.map(ghostty_surface_foreground_pid) ?? 0) > 0 })
+        try type("sleep 30\r", into: view)
+        engine.hide(pane)
+
+        #expect(wait { engine.foregroundProcess(of: pane)?.name == "sleep" })
+        #expect(engine.foregroundProcess(of: pane)?.commandLine == ["sleep", "30"])
+    }
+
+    private func wait(_ condition: () -> Bool, timeout: TimeInterval = 10) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return true }
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        }
+        return condition()
+    }
+
+    private func type(_ text: String, into view: GhosttySurfaceView) throws {
+        let surface = try #require(view.surface)
+        var key = ghostty_input_key_s()
+        key.action = GHOSTTY_ACTION_PRESS
+        text.withCString { pointer in
+            key.text = pointer
+            _ = ghostty_surface_key(surface, key)
+        }
     }
 
     @Test func shutDownStopsPolling() throws {

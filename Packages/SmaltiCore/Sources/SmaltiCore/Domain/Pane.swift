@@ -26,6 +26,10 @@ public struct Pane: Equatable, Sendable {
     /// The shell itself is in the foreground (or nothing else was ever reported).
     public var isAtShell: Bool { processName.map(ShellNames.contains) ?? true }
 
+    /// F4.5: a program other than the shell runs in the foreground, so closing the pane would end it. Decided from
+    /// the foreground process, not OSC 133, so it holds for shells without Smalti's integration.
+    public var isBusy: Bool { isRunning && !isAtShell }
+
     /// An agent event: starts the agent if the event names a session, then applies it.
     public func applying(_ event: AgentEvent) -> (Pane, AttentionReason?) {
         if event.isCompaction, agent != nil { return (self, nil) }
@@ -78,7 +82,7 @@ public struct Pane: Equatable, Sendable {
         case .foregroundProcessChanged(let process):
             updated.processName = process.name
             updated.foregroundCommandLine = process.commandLine
-        case .bell, .closeRequested: break
+        case .bell, .closeRequested, .searchTotal, .searchSelected, .linkHovered, .secureInputRequested: break
         }
         return updated
     }

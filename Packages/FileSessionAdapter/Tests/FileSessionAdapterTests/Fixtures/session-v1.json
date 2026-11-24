@@ -1,0 +1,60 @@
+{
+  "activeIndex" : 1,
+  "savedAt" : "2026-11-23T18:42:53Z",
+  "version" : 1,
+  "workspaces" : [
+    {
+      "focusedIndex" : 1,
+      "layout" : "dwindle",
+      "name" : "solen",
+      "panes" : [
+        {
+          "commandCount" : 38,
+          "id" : "304B91D1-6030-4199-941D-F3A4D5F98BEE",
+          "processName" : "zsh",
+          "scrollbackLines" : 1240,
+          "workingDirectory" : "\/Users\/s\/dev\/solen"
+        },
+        {
+          "agent" : {
+            "harness" : "claude",
+            "lastState" : "waiting",
+            "sessionID" : "7f3a9c21",
+            "title" : "Agendar recordatorios al crear eventos"
+          },
+          "commandCount" : 0,
+          "id" : "8C2D4A10-7B1E-4F55-9A3C-2E6B0D9F1A77",
+          "processName" : "claude",
+          "scrollbackLines" : 0,
+          "workingDirectory" : "\/Users\/s\/dev\/solen"
+        }
+      ],
+      "rootDirectory" : "\/Users\/s\/dev\/solen",
+      "tree" : {
+        "split" : {
+          "axis" : "sideBySide",
+          "first" : { "leaf" : { "index" : 0 } },
+          "ratio" : 0.5,
+          "second" : { "leaf" : { "index" : 1 } }
+        }
+      }
+    },
+    {
+      "focusedIndex" : 0,
+      "layout" : "columns",
+      "name" : "billi",
+      "panes" : [
+        {
+          "commandCount" : 2,
+          "id" : "C1E5F7A3-2D4B-4E6F-8A9B-0C1D2E3F4A5B",
+          "processName" : "nvim",
+          "relaunch" : { "arguments" : [ "nvim", "+42" ] },
+          "scrollbackLines" : 0,
+          "workingDirectory" : "\/Users\/s\/dev\/billi"
+        }
+      ],
+      "rootDirectory" : "\/Users\/s\/dev\/billi",
+      "tree" : { "leaf" : { "index" : 0 } }
+    }
+  ]
+}

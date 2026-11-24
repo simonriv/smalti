@@ -78,3 +78,30 @@ struct KeyRoutingTests {
         #expect(decision == .perform(.observatoryPeriod))
     }
 }
+
+/// F4.5: ⌘C, ⌘V and ⌘A are Smalti commands, but an overlay with a text field (⌘K, ⌃R, the help) must still get them.
+@Suite("KeyRouting · overlays")
+struct KeyRoutingOverlayTests {
+    @Test(arguments: ["cmd+c", "cmd+v", "cmd+a"])
+    func overlayLetsTextEditingKeysReachItsField(_ text: String) throws {
+        let context = KeyContext.overlay(allowing: [.paletteOpen])
+
+        #expect(
+            KeyRouting.decide(KeyPress(try KeyChord.parse(text)), keymap: .standard, context: context) == .passThrough)
+    }
+
+    @Test func overlayStillSwallowsOtherShortcuts() throws {
+        let context = KeyContext.overlay(allowing: [.paletteOpen])
+
+        #expect(
+            KeyRouting.decide(KeyPress(try KeyChord.parse("cmd+d")), keymap: .standard, context: context) == .swallow)
+    }
+
+    @Test func overlayRunsWhatItAllows() throws {
+        let context = KeyContext.overlay(allowing: [.paletteOpen])
+
+        #expect(
+            KeyRouting.decide(KeyPress(try KeyChord.parse("cmd+k")), keymap: .standard, context: context)
+                == .perform(.paletteOpen))
+    }
+}

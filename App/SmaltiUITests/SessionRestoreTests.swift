@@ -146,6 +146,25 @@ final class SessionRestoreTests: SmaltiUITestCase {
         XCTAssertTrue(preferences.contains("always"))
     }
 
+    /// Final review: the menu bar does not act behind the resume screen (⌘D, ⌃⌘N reach the menu when the screen
+    /// owns the keyboard).
+    func testShortcutsDoNothingBehindTheResumeScreen() {
+        let app = XCUIApplication.isolatedSmalti()
+        SessionState.seed(
+            [.init(name: "solen", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")])],
+            alwaysRestore: false, in: app)
+        launchToResumeScreen(app)
+
+        app.typeKey("d", modifierFlags: .command)
+        app.typeKey("n", modifierFlags: [.control, .command])
+        app.typeKey(.escape, modifierFlags: [])
+
+        waitForShells(count: 1)
+        sleep(1)
+        XCTAssertEqual(app.elements("smalti.paneHeader").count, 1)
+        XCTAssertEqual(app.elements("smalti.workspace").count, 1)
+    }
+
     // MARK: - Helpers
 
     private func launchToResumeScreen(_ app: XCUIApplication) {

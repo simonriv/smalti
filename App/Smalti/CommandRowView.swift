@@ -4,19 +4,24 @@ import SmaltiCore
 /// A palette group label: uppercase, 10.5 pt, 0.06 em tracking, secondary color.
 @MainActor
 final class CommandGroupLabel: NSView {
-    init(_ group: CommandGroup, theme: Theme) {
+    convenience init(_ group: CommandGroup, theme: Theme) {
+        self.init(text: group.rawValue, theme: theme, identifier: "smalti.paletteGroup")
+    }
+
+    /// Also titles the windows of "Retomar donde quedaste" (F4.5), with the palette's group style.
+    init(text: String, theme: Theme, identifier: String) {
         super.init(frame: .zero)
         let palette = theme.palette
         let font = theme.interfaceFont(size: palette.groupFontSize)
         let label = NSTextField(
             labelWithAttributedString: NSAttributedString(
-                string: group.rawValue.uppercased(),
+                string: text.uppercased(),
                 attributes: [
                     .font: font, .foregroundColor: theme.text.secondary.nsColor,
                     .kern: palette.groupTracking * palette.groupFontSize,
                 ]))
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.setAccessibilityIdentifier("smalti.paletteGroup")
+        label.setAccessibilityIdentifier(identifier)
         addSubview(label)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: palette.groupPaddingHorizontal),

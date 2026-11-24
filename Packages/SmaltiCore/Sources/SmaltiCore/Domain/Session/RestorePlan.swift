@@ -62,13 +62,14 @@ public struct RestorePlan: Equatable, Sendable {
         self.activeIndex = activeIndex
     }
 
-    public static func make(from snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection)
+    /// The plan of one saved window.
+    public static func make(from window: WindowSnapshot, mode: RestoreMode, selection: RestoreSelection)
         -> RestorePlan
     {
-        let planned = snapshot.workspaces.enumerated().compactMap { index, workspace in
+        let planned = window.workspaces.enumerated().compactMap { index, workspace in
             plan(workspace, mode: mode, selection: selection).map { (savedIndex: index, workspace: $0) }
         }
-        let active = planned.firstIndex { $0.savedIndex == snapshot.activeIndex } ?? 0
+        let active = planned.firstIndex { $0.savedIndex == window.activeIndex } ?? 0
         return RestorePlan(workspaces: planned.map(\.workspace), activeIndex: active)
     }
 
@@ -96,5 +97,25 @@ public struct RestorePlan: Equatable, Sendable {
             id: pane.id, workingDirectory: pane.workingDirectory,
             restoresScrollback: launch == .shell && pane.scrollbackLines > 0,
             restoresHistory: true, launch: launch)
+    }
+}
+
+/// One saved window to reopen: where it was, whether it was full screen, its plan and whether it goes in front.
+public struct WindowRestorePlan: Equatable, Sendable {
+    public let saved: WindowSnapshot
+    public let plan: RestorePlan
+    public let isFront: Bool
+
+    /// The windows with something chosen, in their saved order; the front one is the saved front if it opens, else
+    /// the first. Empty when nothing was chosen at all (the app starts fresh).
+    public static func make(from snapshot: SessionSnapshot, mode: RestoreMode, selection: RestoreSelection)
+        -> [WindowRestorePlan]
+    {
+        let opened = snapshot.windows.enumerated().compactMap { index, saved in
+            let plan = RestorePlan.make(from: saved, mode: mode, selection: selection)
+            return plan.workspaces.isEmpty ? nil : (index: index, saved: saved, plan: plan)
+        }
+        let front = opened.first { $0.index == snapshot.frontIndex }?.index ?? opened.first?.index
+        return opened.map { WindowRestorePlan(saved: $0.saved, plan: $0.plan, isFront: $0.index == front) }
     }
 }

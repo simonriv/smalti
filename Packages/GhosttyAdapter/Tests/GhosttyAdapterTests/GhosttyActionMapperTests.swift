@@ -70,3 +70,64 @@ struct GhosttyActionMapperTests {
         #expect(GhosttyActionMapper.event(for: action(GHOSTTY_ACTION_NEW_SPLIT)) == nil)
     }
 }
+
+@Suite("Ghostty action mapper · F4.5")
+struct GhosttyActionMapperF45Tests {
+    private func action(_ tag: ghostty_action_tag_e, _ fill: (inout ghostty_action_u) -> Void = { _ in })
+        -> ghostty_action_s
+    {
+        var payload = ghostty_action_u()
+        fill(&payload)
+        return ghostty_action_s(tag: tag, action: payload)
+    }
+
+    @Test func searchTotalBecomesSearchTotal() {
+        let event = GhosttyActionMapper.event(for: action(GHOSTTY_ACTION_SEARCH_TOTAL) { $0.search_total.total = 3 })
+        #expect(event == .searchTotal(3))
+    }
+
+    @Test func negativeSearchTotalMeansNoSearch() {
+        let event = GhosttyActionMapper.event(for: action(GHOSTTY_ACTION_SEARCH_TOTAL) { $0.search_total.total = -1 })
+        #expect(event == .searchTotal(nil))
+    }
+
+    @Test func searchSelectedBecomesSearchSelected() {
+        let event = GhosttyActionMapper.event(
+            for: action(GHOSTTY_ACTION_SEARCH_SELECTED) { $0.search_selected.selected = 1 })
+        #expect(event == .searchSelected(1))
+    }
+
+    @Test func negativeSearchSelectedMeansNone() {
+        let event = GhosttyActionMapper.event(
+            for: action(GHOSTTY_ACTION_SEARCH_SELECTED) { $0.search_selected.selected = -1 })
+        #expect(event == .searchSelected(nil))
+    }
+
+    @Test func mouseOverLinkCarriesTheURL() {
+        let url = "https://example.com/a"
+        url.withCString { pointer in
+            let event = GhosttyActionMapper.event(
+                for: action(GHOSTTY_ACTION_MOUSE_OVER_LINK) {
+                    $0.mouse_over_link.url = pointer
+                    $0.mouse_over_link.len = url.utf8.count
+                })
+            #expect(event == .linkHovered(url))
+        }
+    }
+
+    @Test func mouseOverNothingClearsTheLink() {
+        let event = GhosttyActionMapper.event(for: action(GHOSTTY_ACTION_MOUSE_OVER_LINK))
+        #expect(event == .linkHovered(nil))
+    }
+
+    @Test func secureInputOnAndOff() {
+        #expect(
+            GhosttyActionMapper.event(
+                for: action(GHOSTTY_ACTION_SECURE_INPUT) { $0.secure_input = GHOSTTY_SECURE_INPUT_ON })
+                == .secureInputRequested(true))
+        #expect(
+            GhosttyActionMapper.event(
+                for: action(GHOSTTY_ACTION_SECURE_INPUT) { $0.secure_input = GHOSTTY_SECURE_INPUT_OFF })
+                == .secureInputRequested(false))
+    }
+}

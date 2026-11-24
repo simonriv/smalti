@@ -42,6 +42,8 @@ final class HistoryPaletteController: NSObject, NSTextFieldDelegate {
     /// Open while its view is still in a window (its pane may have closed underneath).
     var isOpen: Bool { view?.window != nil }
 
+    func isOpen(in window: NSWindow) -> Bool { view?.window === window }
+
     /// ⌘↩ is also a Smalti shortcut; while the palette is open it is the palette's.
     func handle(_ event: NSEvent) -> Bool {
         guard isOpen, event.type == .keyDown, HistoryPaletteView.isCommandReturn(event) else { return false }

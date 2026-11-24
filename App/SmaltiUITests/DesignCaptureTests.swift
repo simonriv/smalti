@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 /// C18: window captures to lay over the boards (Reanudar.dc.html, Main.dc.html). They run only on demand:
@@ -141,6 +142,89 @@ final class DesignCaptureTests: SmaltiUITestCase {
         app.typeKey("a", modifierFlags: .command)
         app.typeText("solen")
         app.typeKey(.return, modifierFlags: [])
+    }
+
+    /// F4.5: "Retomar donde quedaste" grouped by window, then the two restored windows (mockup-windows.png). Only
+    /// Smalti's windows are captured, never the whole screen.
+    func testCaptureTwoWindows() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        let mainHeight = NSScreen.screens.first?.frame.height ?? 900
+        SessionState.seed(
+            windows: [
+                .init(
+                    frame: (x: 40, y: mainHeight - 600, width: 760, height: 560),
+                    workspaces: [
+                        .init(name: "solen", root: "/tmp", layout: "dwindle", panes: [.init(directory: "/tmp")]),
+                        .init(name: "billi", root: "/usr", layout: "dwindle", panes: [.init(directory: "/usr")]),
+                    ]),
+                .init(
+                    frame: (x: 560, y: mainHeight - 820, width: 760, height: 560),
+                    workspaces: [
+                        .init(name: "smalti", root: "/tmp", layout: "columns", panes: [.init(directory: "/tmp")])
+                    ]),
+            ], frontIndex: 1, alwaysRestore: false, in: app)
+        self.app = app
+        app.launch()
+        XCTAssertTrue(app.element("smalti.restore").waitForExistence(timeout: 10))
+        try save(app.windows.firstMatch.screenshot(), as: "f45-resume-windows.png")
+
+        app.typeKey(.return, modifierFlags: [])
+        waitForShells(count: 2)
+        let windows = app.windows.matching(identifier: "smalti.window").allElementsBoundByIndex
+        for (index, window) in windows.enumerated() {
+            // Committed captures show no host name or login banner (see `neutralPrompt`).
+            window.click()
+            app.run("PS1='%# '; clear")
+            try save(window.screenshot(), as: "f45-window-\(index + 1).png")
+        }
+    }
+
+    /// F4.5: the help over the window (mockup-help.png), with a neutral prompt behind it.
+    func testCaptureHelp() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        app.typeKey("?", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.help").waitForExistence(timeout: 5))
+        try save(app.windows.firstMatch.screenshot(), as: "f45-help.png")
+    }
+
+    /// F4.5: ⌘F over a pane with matches (mockup-search.png).
+    func testCaptureSearch() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        app.run("printf 'warn  - Using edge runtime\\nok\\nwarn  - Unused export\\nok\\nwarn  - Image without alt\\n'")
+        app.typeKey("f", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.search").waitForExistence(timeout: 5))
+        app.typeText("warn")
+        let counted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value CONTAINS ' de '"), object: app.element("smalti.searchCount"))
+        wait(for: [counted], timeout: 5)
+        try save(app.windows.firstMatch.screenshot(), as: "f45-search.png")
+    }
+
+    /// F4.5: "Reportar un problema o una idea" over the window (mockup-feedback.png).
+    func testCaptureFeedback() throws {
+        launch(.isolatedSmalti())
+        neutralPrompt(app)
+        openPalette()
+        app.typeText("reportar")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.feedback").waitForExistence(timeout: 5))
+        app.typeKey(.space, modifierFlags: [])
+        try save(app.windows.firstMatch.screenshot(), as: "f45-feedback.png")
+    }
+
+    /// F4.5: each menu of the bar open, captured alone (mockup-menu.png).
+    func testCaptureMenus() throws {
+        launch(.isolatedSmalti())
+        let bar = app.menuBars.firstMatch.children(matching: .menuBarItem).allElementsBoundByIndex.dropFirst()
+        for (index, item) in bar.enumerated() {
+            item.click()
+            let menu = item.children(matching: .menu).firstMatch
+            XCTAssertTrue(menu.waitForExistence(timeout: 5))
+            try save(menu.screenshot(), as: "f45-menu-\(index + 1).png")
+            app.typeKey(.escape, modifierFlags: [])
+        }
     }
 
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {

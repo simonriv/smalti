@@ -3,7 +3,16 @@ import Foundation
 /// Panes whose agent waits or failed, the longest waiting first; ties keep workspace and pane order.
 public enum AttentionQueue {
     public static func panes(in set: WorkspaceSet) -> [PaneID] {
-        let waiting = set.workspaces.flatMap(\.panes).enumerated().compactMap { position, pane in
+        panes(set.workspaces.flatMap(\.panes))
+    }
+
+    /// F4.5 ⌘J: every window's panes, longest waiting first; ties go by window, then position.
+    public static func panes(in windows: WindowSet) -> [PaneID] {
+        panes(windows.allPanes)
+    }
+
+    private static func panes(_ panes: [Pane]) -> [PaneID] {
+        let waiting = panes.enumerated().compactMap { position, pane in
             pane.agent?.state.since.map { (since: $0, position: position, id: pane.id) }
         }
         return waiting.sorted { ($0.since, $0.position) < ($1.since, $1.position) }.map(\.id)

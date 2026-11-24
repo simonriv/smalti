@@ -15,6 +15,18 @@ public protocol TerminalEngine: AnyObject {
     func hide(_ pane: PaneID)
     /// The pane's events. The stream has a single consumer: iterate it once per pane.
     func events(for pane: PaneID) -> AsyncStream<TerminalEvent>
+
+    // F4.5. An unknown or closed pane is ignored: these come from keys and menus, never from the engine itself.
+    func perform(_ action: TerminalAction, in pane: PaneID)
+    /// Searches the pane's scrollback; progress arrives as `.searchTotal` and `.searchSelected`.
+    func search(_ text: String, in pane: PaneID)
+    func navigateSearch(_ direction: SearchDirection, in pane: PaneID)
+    func endSearch(in pane: PaneID)
+    /// The text on screen, for VoiceOver; empty for an unknown pane.
+    func visibleText(of pane: PaneID) -> String
+    /// What runs in the pane's foreground now, read on demand (hidden panes stop reporting it); nil for an unknown
+    /// pane or when the engine cannot tell.
+    func foregroundProcess(of pane: PaneID) -> ForegroundProcess?
 }
 
 public enum TerminalEngineError: Error, Equatable, Sendable {

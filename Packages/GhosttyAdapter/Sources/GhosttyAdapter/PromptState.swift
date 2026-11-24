@@ -10,6 +10,19 @@ extension GhosttySurfaceView {
         return !ghostty_surface_process_exited(surface) && !ghostty_surface_needs_confirm_quit(surface)
     }
 
+    /// Runs a libghostty binding action (F4.5: copy, search, scroll…). Main thread, like every surface call. False
+    /// when there is no surface or libghostty did not run it (an unknown name, a search with nothing active).
+    @discardableResult
+    func bind(_ action: String) -> Bool {
+        guard let surface else { return false }
+        return ghostty_surface_binding_action(surface, action, UInt(action.utf8.count))
+    }
+
+    /// What is on screen as plain text; empty without a surface.
+    var visibleText: String {
+        surface.flatMap(ScrollbackExporter.visibleText) ?? ""
+    }
+
     /// Presses Return in the terminal, as the keyboard would (F4: ⌘↩ in the history palette runs the line).
     func pressReturn() {
         guard let surface else { return }
