@@ -261,7 +261,7 @@ final class TilingController {
 
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
-        .searchOpen, .searchNext, .searchPrevious,
+        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
@@ -494,7 +494,7 @@ final class TilingController {
         switch event {
         case .exited(let code): paneExited(pane, code: code)
         case .closeRequested: close(pane)
-        case .searchTotal, .searchSelected, .linkHovered, .secureInputRequested:
+        case .searchTotal, .searchSelected, .linkHovered, .secureInputRequested, .pointerWordChanged:
             onViewEvent?(event, pane)
             return
         default:

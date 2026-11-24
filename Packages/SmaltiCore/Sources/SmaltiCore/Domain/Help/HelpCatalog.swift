@@ -57,6 +57,7 @@ private struct Rows {
         [
             .terminalCopy, .terminalPaste, .terminalSelectAll, .terminalClear, .fontIncrease, .fontDecrease, .fontReset,
             .scrollPageUp, .scrollPageDown, .scrollTop, .scrollBottom, .promptPrevious, .promptNext, .secureInputToggle,
+            .previewQuickLook,
         ].map(titled)
     }
 

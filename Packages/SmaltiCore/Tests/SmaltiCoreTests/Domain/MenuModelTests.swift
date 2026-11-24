@@ -82,7 +82,7 @@ struct MenuModelTests {
         #expect(
             menus[3].items.map(\.title) == [
                 "Paleta de comandos", "Observatorio", "", "Layout", "Igualar paneles", "", "Aumentar letra",
-                "Reducir letra", "Tamaño real", "", "Desplazamiento", "", "Pantalla completa",
+                "Reducir letra", "Tamaño real", "", "Desplazamiento", "Abrir en Quick Look", "", "Pantalla completa",
             ])
         #expect(
             menus[5].items.map(\.title) == [

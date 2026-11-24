@@ -68,6 +68,11 @@ final class InputCoordinator {
         onHistory?(Request(pane: pane, seq: latestSeq[pane] ?? 0, connection: connection, directory: path), "")
     }
 
+    /// F5.5: the pane's command in flight or last finished one, where the preview also looks for image names.
+    func lastCommand(in pane: PaneID) async -> String? {
+        await session.lastCommand(in: pane)
+    }
+
     /// True while no command was ever recorded (⌃R says "Historial vacío").
     var isHistoryEmpty: Bool {
         get async { await session.isHistoryEmpty }

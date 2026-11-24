@@ -98,6 +98,8 @@ public struct Keymap: Sendable, Equatable {
         (chord(",", .command), .appearanceOpen),
         (chord(",", .option, .command), .configOpen),
         (chord("p", .shift, .command), .promptStudio),
+        // F5.5: Finder's Quick Look key; space belongs to the shell.
+        (chord("y", .command), .previewQuickLook),
         (chord("c", .command), .terminalCopy),
         (chord("v", .command), .terminalPaste),
         (chord("a", .command), .terminalSelectAll),

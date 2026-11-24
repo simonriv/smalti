@@ -59,18 +59,27 @@ enum ShellWords {
         let tokens: [Token]
     }
 
+    /// Every simple command of `text` (split at `;`, `|`, `&`, `&&`, `||` and newlines), empty ones left out.
+    static func commands(in text: String) -> [[Token]] {
+        let scalars = Array(text.unicodeScalars)
+        var splitter = Splitter(scalars: scalars, stop: scalars.count)
+        for offset in scalars.indices { splitter.consume(at: offset) }
+        return splitter.finishAll(at: scalars.count)
+    }
+
     /// The command that contains `limit` (or `stoppingAfter`, when given), with its words cut at `limit`.
     static func command(in scalars: [Unicode.Scalar], upTo limit: Int, stoppingAfter stop: Int? = nil) -> Command {
         var splitter = Splitter(scalars: scalars, stop: stop ?? limit)
-        for offset in 0..<limit where !splitter.isDone { splitter.consume(at: offset) }
+        for offset in 0..<limit { splitter.consume(at: offset) }
         return Command(tokens: splitter.finish(at: limit))
     }
 
     private struct Splitter {
         let scalars: [Unicode.Scalar]
         let stop: Int
-        private(set) var isDone = false
         private var tokens: [Token] = []
+        /// The commands before the current one, kept only for `finishAll`.
+        private var completed: [[Token]] = []
         private var word = String.UnicodeScalarView()
         private var start: Int?
         private var quote: Unicode.Scalar?
@@ -97,6 +106,11 @@ enum ShellWords {
         mutating func finish(at end: Int) -> [Token] {
             closeWord(at: end)
             return tokens
+        }
+
+        mutating func finishAll(at end: Int) -> [[Token]] {
+            closeWord(at: end)
+            return (completed + [tokens]).filter { !$0.isEmpty }
         }
 
         private mutating func consumeQuoted(_ scalar: Unicode.Scalar, open: Unicode.Scalar, at offset: Int) {
@@ -136,14 +150,15 @@ enum ShellWords {
             return previous == ">" || previous == "<" || next == ">"
         }
 
-        /// A separator past `stop` ends the command that contains `stop`; one before it starts a new command.
+        /// A separator past `stop` ends the command that contains `stop` (what follows only adds words past it, which
+        /// no caller looks up); one before it starts a new command.
         private mutating func separate(at offset: Int) {
             if offset >= stop {
                 closeWord(at: offset)
-                isDone = true
                 return
             }
             closeWord(at: offset)
+            completed.append(tokens)
             tokens.removeAll()
         }
 

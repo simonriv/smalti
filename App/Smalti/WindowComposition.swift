@@ -23,6 +23,9 @@ struct WindowServices {
     let observatoryOpenChanged: () -> Void
     /// A password prompt in one of this window's panes asks for secure keyboard entry, or releases it.
     let secureInputRequested: (Bool, PaneID) -> Void
+    /// F5.5: the image files the preview reads and the panes' last commands.
+    let imageFiles: any ImageFiles
+    let lastCommand: (PaneID) async -> String?
 }
 
 /// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
@@ -42,6 +45,8 @@ final class WindowComposition {
     private var studio: PromptStudioController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
+    /// F5.5: the image preview card over this window's panes.
+    private(set) var preview: PreviewCoordinator?
     private var restoreScreen: RestoreController?
     /// What the glass was last painted with, so a publish that does not change it repaints nothing.
     private var appliedWindowTokens: WindowTokens?
@@ -339,9 +344,14 @@ final class WindowComposition {
             if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
         }
         self.feedback = feedback
+        preview = PreviewCoordinator(
+            window: window, controller: controller,
+            dependencies: .init(
+                files: services.imageFiles, views: services.engine, lastCommand: services.lastCommand))
         controller.onViewEvent = { [weak self, weak search] event, pane in
             switch event {
             case .linkHovered(let url): self?.controller.showHoveredLink(url)
+            case .pointerWordChanged(let word): self?.preview?.pointerWordChanged(word, in: pane)
             case .secureInputRequested(let isOn): self?.services.secureInputRequested(isOn, pane)
             default: search?.progress(event, from: pane)
             }
@@ -357,6 +367,8 @@ final class WindowComposition {
             case .observatoryPeriod: screen?.cyclePeriod()
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
+            case .previewQuickLook:
+                self.preview?.toggleQuickLook()
             case .helpShow:
                 closeOverlays(keeping: .help)
                 self.help?.toggle(theme: theme)
