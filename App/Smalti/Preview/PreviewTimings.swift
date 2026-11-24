@@ -25,13 +25,23 @@ final class PreviewTimings {
         let elapsed = ContinuousClock.now - start
         let milliseconds = Double(elapsed.components.seconds) * 1000 + Double(elapsed.components.attoseconds) / 1e15
         let line = Data(String(format: "%.2f\n", milliseconds).utf8)
-        guard let handle = try? FileHandle(forWritingTo: output) else {
-            try? line.write(to: output)
+        do {
+            try append(line)
+        } catch {
+            // A measurement hook: the run that asked for it reads stderr.
+            FileHandle.standardError.write(Data("preview timings: \(error)\n".utf8))
+        }
+    }
+
+    private func append(_ line: Data) throws {
+        guard FileManager.default.fileExists(atPath: output.path(percentEncoded: false)) else {
+            try line.write(to: output)
             return
         }
+        let handle = try FileHandle(forWritingTo: output)
         defer { try? handle.close() }
-        _ = try? handle.seekToEnd()
-        try? handle.write(contentsOf: line)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: line)
     }
 }
 

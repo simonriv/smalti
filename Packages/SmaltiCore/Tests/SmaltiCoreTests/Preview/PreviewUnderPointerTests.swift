@@ -150,7 +150,7 @@ struct PreviewUnderPointerTests {
         debouncer.fire()
         await preview.settle()
 
-        #expect(preview.current?.caption == "a.png · No se pudo leer la imagen")
+        #expect(preview.current?.caption(shortcut: "⌘Y") == "a.png · No se pudo leer la imagen")
         #expect(preview.current?.thumbnail == nil)
     }
 
@@ -161,7 +161,7 @@ struct PreviewUnderPointerTests {
         debouncer.fire()
         await preview.settle()
 
-        #expect(preview.current?.caption == "a.png · Imagen demasiado grande")
+        #expect(preview.current?.caption(shortcut: "⌘Y") == "a.png · Imagen demasiado grande")
         #expect(preview.current?.path == "/w/shots/a.png")
     }
 

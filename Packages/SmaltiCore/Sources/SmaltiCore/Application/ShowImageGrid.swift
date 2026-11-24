@@ -14,93 +14,76 @@ public struct ImageListing: Equatable, Sendable {
     }
 }
 
-/// What the CLI writes and exits with.
-public struct GridOutput: Equatable, Sendable {
-    public let stdout: String
-    public let stderr: String
-    public let exitCode: Int32
-
-    public init(stdout: String, stderr: String = "", exitCode: Int32 = 0) {
-        self.stdout = stdout
-        self.stderr = stderr
-        self.exitCode = exitCode
-    }
+/// Where `smalti img` writes: the terminal's cell sizes (nil when the output is not a terminal that draws images)
+/// and its output.
+public protocol GridSink: AnyObject, Sendable {
+    var metrics: CellMetrics? { get }
+    func write(_ text: String)
 }
 
-/// `smalti img` (spec F5.5): the images' grid as kitty graphics in a terminal, or a plain list of names and sizes when
-/// the output is not one (`metrics` nil). Images that cannot be described or reduced count as skipped.
+/// `smalti img` (spec F5.5): the images' grid as kitty graphics, written row by row as each row's thumbnails are ready
+/// (final review m3: a large folder never leaves the screen blank), or a plain list of names and sizes when the
+/// output is not a terminal. Images that cannot be described or reduced count as skipped.
 public enum ShowImageGrid {
     /// Only for the order, the limit and the summary of the plain list.
     private static let listMetrics = CellMetrics(columns: 80, cellWidth: 1, cellHeight: 1)
 
-    public static func render(_ listing: ImageListing, metrics: CellMetrics?, files: any ImageFiles) async
-        -> GridOutput
-    {
-        let (images, unreadable) = await describe(listing.images, files: files)
-        guard !images.isEmpty else {
-            return GridOutput(stdout: "Sin imágenes en \(TerminalText.sanitized(listing.source))\n")
-        }
-        let skipped = listing.skipped + unreadable
-        guard let metrics else {
-            return GridOutput(stdout: GridText.list(ImageGrid.layout(images, skipped: skipped, in: listMetrics)))
-        }
-        let (grid, thumbnails) = await thumbnailed(images, skipped: skipped, in: metrics, files: files)
-        return GridOutput(stdout: GridText.drawing(grid, thumbnails: thumbnails))
-    }
-
-    private static func describe(_ paths: [String], files: any ImageFiles) async -> ([ImageDescription], Int) {
+    public static func render(_ listing: ImageListing, to sink: any GridSink, files: any ImageFiles) async {
         var images: [ImageDescription] = []
-        for path in paths {
+        for path in listing.images {
             if let image = try? await files.describe(path) { images.append(image) }
         }
-        return (images, paths.count - images.count)
+        guard !images.isEmpty else {
+            sink.write("Sin imágenes en \(TerminalText.sanitized(listing.source))\n")
+            return
+        }
+        let skipped = listing.skipped + listing.images.count - images.count
+        guard let metrics = sink.metrics else {
+            sink.write(GridText.list(ImageGrid.layout(images, skipped: skipped, in: listMetrics)))
+            return
+        }
+        let grid = ImageGrid.layout(images, skipped: skipped, in: metrics)
+        var drawn = 0
+        for row in grid.rows {
+            let ready = await thumbnails(of: row, in: metrics, files: files)
+            drawn += ready.count
+            if !ready.isEmpty { sink.write(GridText.drawing(ready)) }
+        }
+        let shown = grid.rows.flatMap(\.cells).count
+        let hidden = images.count - shown
+        sink.write(Summary.text(shown: drawn, skipped: skipped + shown - drawn, hidden: hidden) + "\n")
     }
 
-    /// The grid and a thumbnail for each of its cells: an image whose thumbnail fails leaves the grid (it counts as
-    /// skipped) and the next one past the limit, if any, takes its place.
-    private static func thumbnailed(
-        _ images: [ImageDescription], skipped: Int, in metrics: CellMetrics, files: any ImageFiles
-    ) async -> (ImageGrid, [String: Data]) {
-        var kept = images
-        var thumbnails: [String: Data] = [:]
-        while true {
-            let grid = ImageGrid.layout(kept, skipped: skipped + images.count - kept.count, in: metrics)
-            var failed: Set<String> = []
-            for cell in grid.rows.flatMap(\.cells) where thumbnails[cell.image.path] == nil {
-                let box = Size(
-                    width: Double(ImageGrid.cellColumns) * metrics.cellWidth,
-                    height: Double(cell.rows) * metrics.cellHeight)
-                do {
-                    thumbnails[cell.image.path] = try await files.thumbnail(of: cell.image.path, fitting: box)
-                } catch {
-                    failed.insert(cell.image.path)
-                }
-            }
-            guard !failed.isEmpty else { return (grid, thumbnails) }
-            kept.removeAll { failed.contains($0.path) }
+    /// The row's cells whose thumbnail could be made, each with its PNG; the others are left out (and counted as
+    /// skipped).
+    private static func thumbnails(of row: GridRow, in metrics: CellMetrics, files: any ImageFiles) async
+        -> [(cell: GridCell, png: Data)]
+    {
+        var ready: [(cell: GridCell, png: Data)] = []
+        for cell in row.cells {
+            let box = Size(
+                width: Double(cell.columns) * metrics.cellWidth, height: Double(cell.rows) * metrics.cellHeight)
+            if let png = try? await files.thumbnail(of: cell.image.path, fitting: box) { ready.append((cell, png)) }
         }
+        return ready
     }
 }
 
 /// The text of the grid: per row, room for its tallest thumbnail, the thumbnails side by side (the cursor stays put
 /// after each, `C=1`), then the names and the sizes in secondary text, each padded to its column.
 enum GridText {
-    private static let column = ImageGrid.cellColumns + ImageGrid.gap
     private static let escape = "\u{1B}"
 
-    static func drawing(_ grid: ImageGrid, thumbnails: [String: Data]) -> String {
-        var text = ""
-        for row in grid.rows {
-            text += String(repeating: "\n", count: row.height) + "\(escape)[\(row.height)A"
-            for cell in row.cells {
-                let png = thumbnails[cell.image.path] ?? Data()
-                text += KittyPlacement.sequences(png: png, columns: ImageGrid.cellColumns, rows: cell.rows).joined()
-                text += "\(escape)[\(column)C"
-            }
-            text += "\r\(escape)[\(row.height)B"
-            text += secondary(row.cells.map(\.label)) + secondary(row.cells.map(\.dimensions))
+    static func drawing(_ row: [(cell: GridCell, png: Data)]) -> String {
+        let height = row.map(\.cell.rows).max() ?? 1
+        var text = String(repeating: "\n", count: height) + "\(escape)[\(height)A"
+        for (cell, png) in row {
+            text += KittyPlacement.sequences(png: png, fitting: cell.box).joined()
+            text += "\(escape)[\(cell.columns + ImageGrid.gap)C"
         }
-        return text + grid.summary + "\n"
+        text += "\r\(escape)[\(height)B"
+        let cells = row.map(\.cell)
+        return text + secondary(cells, \.label) + secondary(cells, \.dimensions)
     }
 
     static func list(_ grid: ImageGrid) -> String {
@@ -108,9 +91,11 @@ enum GridText {
         return (lines + [grid.summary]).joined(separator: "\n") + "\n"
     }
 
-    private static func secondary(_ parts: [String]) -> String {
-        let padded = parts.enumerated().map { index, part in
-            index == parts.count - 1 ? part : part + String(repeating: " ", count: column - TerminalText.width(part))
+    private static func secondary(_ cells: [GridCell], _ text: KeyPath<GridCell, String>) -> String {
+        let padded = cells.enumerated().map { index, cell in
+            let part = cell[keyPath: text]
+            guard index < cells.count - 1 else { return part }
+            return part + String(repeating: " ", count: cell.columns + ImageGrid.gap - TerminalText.width(part))
         }
         return "\(escape)[2m\(padded.joined())\(escape)[0m\n"
     }

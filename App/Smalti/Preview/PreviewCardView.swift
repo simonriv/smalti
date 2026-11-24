@@ -56,10 +56,12 @@ final class PreviewCardView: NSView {
         return NSSize(width: width, height: height)
     }
 
-    func show(_ card: PreviewCard) {
+    /// `shortcut`: what opens Quick Look, as the keymap binds it ("⌘Y" by default).
+    func show(_ card: PreviewCard, shortcut: String?) {
         imageView.image = card.thumbnail.flatMap(NSImage.init(data:))
-        caption.stringValue = card.caption
-        setAccessibilityLabel(card.caption)
+        let text = card.caption(shortcut: shortcut)
+        caption.stringValue = text
+        setAccessibilityLabel(text)
         needsLayout = true
     }
 

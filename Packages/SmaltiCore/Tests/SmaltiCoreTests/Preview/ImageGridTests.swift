@@ -230,6 +230,42 @@ struct ImageGridTests {
         #expect(cell.rows == 1)
     }
 
+    /// Final review I1: a wide image is sent by its width (the terminal keeps its proportion), its rows rounded up.
+    @Test func wideImageFitsTheWidth() throws {
+        let cell = try #require(ImageGrid.layout([image("a.png")], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.fit == .width)
+        #expect(cell.columns == 12)
+    }
+
+    @Test func cappedPortraitFitsTheHeight() throws {
+        let cell = try #require(
+            ImageGrid.layout([image("a.png", 1000, 2000)], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.fit == .height)
+        #expect(cell.rows == 6)
+    }
+
+    @Test func partialRowIsRoundedUp() throws {
+        // 12 × 8 px wide → 37.5 px tall → 2.34 cells of 16 px: three rows reserved, none stretched.
+        let cell = try #require(
+            ImageGrid.layout([image("a.png", 1280, 500)], skipped: 0, in: wide).rows.first?.cells.first)
+
+        #expect(cell.rows == 3)
+        #expect(cell.fit == .width)
+    }
+
+    /// Final review m1: in a terminal narrower than 12 columns the cell is the terminal's width.
+    @Test func narrowTerminalNarrowsTheCell() throws {
+        let metrics = CellMetrics(columns: 10, cellWidth: 8, cellHeight: 16)
+
+        let cell = try #require(
+            ImageGrid.layout([image("landing-v3-final.png")], skipped: 0, in: metrics).rows.first?.cells.first)
+
+        #expect(cell.columns == 10)
+        #expect(cell.label == "landing-v…")
+    }
+
     @Test func noImagesGiveNoRows() {
         #expect(ImageGrid.layout([], skipped: 2, in: wide).rows.isEmpty)
     }

@@ -39,6 +39,22 @@ final class ImageFixtures {
         return url.path
     }
 
+    /// A JPEG stored `width × height` with an EXIF orientation (6: shown rotated 90°, as iPhone portraits are saved).
+    func orientedJPEG(_ name: String, width: Int, height: Int, orientation: Int) throws -> String {
+        let source = try image("plain-\(name).png", width: width, height: height)
+        guard let input = CGImageSourceCreateWithURL(URL(fileURLWithPath: source) as CFURL, nil),
+            let pixels = CGImageSourceCreateImageAtIndex(input, 0, nil)
+        else { throw FixtureError.cannotDraw }
+        let url = folder.appending(path: name)
+        guard
+            let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil)
+        else { throw FixtureError.cannotDraw }
+        CGImageDestinationAddImage(
+            destination, pixels, [kCGImagePropertyOrientation: orientation] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { throw FixtureError.cannotDraw }
+        return url.path
+    }
+
     func text(_ name: String) throws -> String {
         let url = folder.appending(path: name)
         try Data("not an image\n".utf8).write(to: url)

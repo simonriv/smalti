@@ -474,6 +474,12 @@ final class GhosttySurfaceView: NSView {
         pointerLeft()
     }
 
+    /// The app hid the card for a key: the next move reads the word again and reports it, even if it is the same one.
+    func forgetPointerWord() {
+        pointerCell = nil
+        pointerWord = nil
+    }
+
     /// The pointer left the view: no word under it any more.
     func pointerLeft() {
         pointerCell = nil

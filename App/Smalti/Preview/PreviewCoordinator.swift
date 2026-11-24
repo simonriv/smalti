@@ -54,8 +54,12 @@ final class PreviewCoordinator {
     /// ⌘Y: closes Quick Look when it shows (the card hid when the panel took the keyboard), or opens it on the card's
     /// image; without either, nothing.
     func toggleQuickLook() {
-        (window as? SmaltiWindow)?.quickLook.toggle(visibleCard?.path)
+        (window as? SmaltiWindow)?.quickLook.toggle(visibleCard?.path ?? lastShown)
     }
+
+    /// The image of the last card shown, kept after keys hide it so ⌘K and the menu can still open it (final review
+    /// I2: opening either hides the card first). A new hover replaces it.
+    private var lastShown: String?
 
     func pointerWordChanged(_ word: PointerWord?, in pane: PaneID) {
         // Panes report on streams of their own: a late "nothing" from another pane must not drop this one's word.
@@ -68,6 +72,7 @@ final class PreviewCoordinator {
             return
         }
         pendingPane = pane
+        lastShown = nil
         let directory = controller.set.workspaces.lazy.flatMap(\.panes).first { $0.id == pane }?.workingDirectory.path
         Task { [weak self, dependencies, home = controller.home.path] in
             let lastCommand = await dependencies.lastCommand(pane)
@@ -80,6 +85,7 @@ final class PreviewCoordinator {
 
     func hide() {
         requests += 1
+        if let pane { dependencies.views.forgetPointerWord(in: pane) }
         preview?.pointerMoved(nil, context: Self.noContext)
     }
 
@@ -116,7 +122,8 @@ final class PreviewCoordinator {
         }
         if let view = cardView, view.theme != controller.theme { removeCard() }
         let view = cardView ?? PreviewCardView(theme: controller.theme)
-        view.show(card)
+        view.show(card, shortcut: controller.config.keys.chord(for: .previewQuickLook)?.display)
+        if card.thumbnail != nil { lastShown = card.path }
         view.frame = frame(of: view, for: card, in: terminal, to: content)
         if cardView == nil {
             content.addSubview(view)

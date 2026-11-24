@@ -29,6 +29,11 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         didSet { views.values.forEach { $0.gridPadding = gridPadding } }
     }
 
+    /// F5.5: the pane's next pointer move reports its word even if it did not change (the card was hidden for a key).
+    public func forgetPointerWord(in pane: PaneID) {
+        views[pane]?.forgetPointerWord()
+    }
+
     /// Fails when the working directory is gone (libghostty would start the shell elsewhere without saying so), so
     /// a restore can fall back to the workspace root or the home directory.
     public func open(_ spec: TerminalSessionSpec, as pane: PaneID) throws(TerminalEngineError) {

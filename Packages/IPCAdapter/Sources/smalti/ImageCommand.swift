@@ -46,11 +46,23 @@ enum ImageCommand {
         if terminal.metrics != nil, listing.images.count > announcedFileCount {
             terminal.writeError("Leyendo \(listing.images.count) archivos…\n")
         }
-        let output = await ShowImageGrid.render(listing, metrics: terminal.metrics, files: ImageIOImageFiles())
-        terminal.write(output.stdout)
-        if !output.stderr.isEmpty { terminal.writeError(output.stderr) }
-        return output.exitCode
+        await ShowImageGrid.render(listing, to: TerminalSink(terminal), files: ImageIOImageFiles())
+        return 0
     }
+}
+
+/// The grid's rows go straight to the terminal as they are ready.
+final class TerminalSink: GridSink, @unchecked Sendable {
+    // Unchecked: the CLI writes from one task at a time, in order.
+    private let terminal: any CommandTerminal
+
+    init(_ terminal: any CommandTerminal) {
+        self.terminal = terminal
+    }
+
+    var metrics: CellMetrics? { terminal.metrics }
+
+    func write(_ text: String) { terminal.write(text) }
 }
 
 enum ImageArgumentError: Error, Equatable {

@@ -196,6 +196,43 @@ final class PreviewTests: SmaltiUITestCase {
         XCTAssertTrue(app.staticTexts["Abrir en Quick Look"].waitForExistence(timeout: 5))
     }
 
+    /// Final review I2: the palette's "Abrir en Quick Look" opens the image even though opening the palette hid it.
+    func testQuickLookFromThePaletteOpensIt() {
+        showCard()
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.palette").waitForExistence(timeout: 5))
+
+        app.typeText("quick")
+        app.typeKey(.return, modifierFlags: [])
+
+        XCTAssertTrue(quickLookWindows.firstMatch.waitForExistence(timeout: 5))
+        app.typeKey("y", modifierFlags: .command)
+        XCTAssertTrue(waitUntil(timeout: 5) { self.quickLookWindows.count == 0 })
+    }
+
+    /// Final review m4: after a key hid it, hovering the same word again shows the card again.
+    func testCardShowsAgainAfterTyping() {
+        showCard()
+        app.typeText("x")
+        XCTAssertTrue(waitForCardToGo())
+
+        hover(row: 1, column: 5)
+
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+    }
+
+    /// Final review m2 (C11): `hover = false` written and reloaded turns the preview off without relaunching shells.
+    func testReloadingHoverOffStopsTheCard() {
+        launchPreview()
+        app.writeConfig("[preview]\nhover = false\n")
+        reloadConfigFromPalette()
+        list("ls -1")
+
+        hover(row: 1, column: 3)
+
+        XCTAssertFalse(card.waitForExistence(timeout: 2))
+    }
+
     // MARK: - Capture
 
     /// C4, on demand (`TEST_RUNNER_SMALTI_CAPTURE=1`): the card, to lay beside `Main.dc.html`'s. The PNG lands in

@@ -178,6 +178,35 @@ struct ImageIOImageFilesTests {
         #expect(pixel.blueComponent > 0.8 && pixel.redComponent < 0.4, "\(pixel)")
     }
 
+    /// Final review I1: a photo saved sideways (EXIF 6) is described as it is shown, like its thumbnail.
+    @Test func orientedPhotoDescribesItsShownSize() async throws {
+        let fixtures = try ImageFixtures()
+        let path = try fixtures.orientedJPEG("portrait.jpg", width: 300, height: 200, orientation: 6)
+
+        #expect(try await files.describe(path).dimensions == "200×300")
+        let png = try await files.thumbnail(of: path, fitting: Size(width: 388, height: 388))
+        let size = try pixelSize(png)
+        #expect(size.height > size.width)
+    }
+
+    /// Final review I3: one decode at a time; a request cancelled while it waits its turn never decodes.
+    @Test func cancelledRequestWaitingItsTurnNeverDecodes() async throws {
+        let fixtures = try ImageFixtures()
+        fixtures.isNoisy = true
+        let path = try fixtures.image("big.png", width: 3000, height: 3000)
+        let box = Size(width: 3000, height: 3000)
+
+        let first = Task { try await files.thumbnail(of: path, fitting: box) }
+        try await Task.sleep(for: .milliseconds(5))
+        let second = Task { try await files.thumbnail(of: path, fitting: box) }
+        second.cancel()
+
+        _ = try await first.value
+        await #expect(throws: ImagePreviewError.unreadable(path: path, reason: "cancelled")) {
+            try await second.value
+        }
+    }
+
     @Test func smallImageIsNotEnlarged() async throws {
         let fixtures = try ImageFixtures()
         let path = try fixtures.image("small.png", width: 40, height: 30)

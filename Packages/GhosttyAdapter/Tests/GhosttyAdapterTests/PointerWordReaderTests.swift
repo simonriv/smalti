@@ -215,6 +215,20 @@ struct PointerWordSurfaceTests {
         #expect(await wait { pane.words.last == .some(nil) })
     }
 
+    /// Final review m4: after the app hid the card for a key, the same word is reported again on the next move.
+    @Test func forgottenWordIsReportedAgain() async throws {
+        let pane = try openPane()
+        defer { pane.close() }
+        let cell = try await printNames(in: pane)
+        move(pane, toColumn: 2, cell: cell)
+        #expect(await wait { pane.words.last??.text == "foto.png" })
+
+        pane.view.forgetPointerWord()
+        move(pane, toColumn: 3, cell: cell)
+
+        #expect(await wait { pane.words.compactMap { $0?.text } == ["foto.png", "foto.png"] })
+    }
+
     @Test func disabledSendsNothing() async throws {
         let pane = try openPane()
         defer { pane.close() }

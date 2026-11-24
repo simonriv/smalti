@@ -1,5 +1,6 @@
-/// The thumbnail grid of `smalti img` (spec F5.5): images in natural name order, 12 cells wide, as many per row as
-/// fit, each as tall as its proportion asks (1 to 6 rows), with a name and a size below, and a summary at the end.
+/// The thumbnail grid of `smalti img` (spec F5.5): images in natural name order, 12 cells wide (or the terminal's
+/// width when narrower), as many per row as fit, each as tall as its proportion asks (1 to 6 rows), with a name and a
+/// size below, and a summary at the end.
 public struct ImageGrid: Equatable, Sendable {
     public static let cellColumns = 12
     public static let gap = 2
@@ -15,8 +16,9 @@ public struct ImageGrid: Equatable, Sendable {
     public static func layout(_ images: [ImageDescription], skipped: Int, in metrics: CellMetrics) -> ImageGrid {
         let sorted = images.sorted { NaturalOrder.precedes($0.name, $1.name) }
         let shown = Array(sorted.prefix(limit))
-        let perRow = max(1, (metrics.columns + gap) / (cellColumns + gap))
-        let cells = shown.map { GridCell(image: $0, rows: rows(of: $0, in: metrics)) }
+        let columns = max(1, min(cellColumns, metrics.columns))
+        let perRow = max(1, (metrics.columns + gap) / (columns + gap))
+        let cells = shown.map { cell(for: $0, columns: columns, in: metrics) }
         let rows = stride(from: 0, to: cells.count, by: perRow).map {
             GridRow(cells: Array(cells[$0..<min($0 + perRow, cells.count)]))
         }
@@ -24,15 +26,17 @@ public struct ImageGrid: Equatable, Sendable {
         return ImageGrid(rows: rows, columnsPerRow: perRow, summary: summary)
     }
 
-    /// Clamped as a `Double` before becoming an `Int`: a zero, infinite or NaN cell size (a terminal that reports no
-    /// pixels) or an absurd header gives 1 to 6 rows, never a trap.
-    private static func rows(of image: ImageDescription, in metrics: CellMetrics) -> Int {
+    /// A wide image fills the cell's width and reserves its height rounded up; one taller than the cap fills the cap
+    /// and is narrower than the cell. Clamped as a `Double` before becoming an `Int`: a zero, infinite or NaN cell
+    /// size (a terminal that reports no pixels) or an absurd header gives 1 to 6 rows, never a trap.
+    private static func cell(for image: ImageDescription, columns: Int, in metrics: CellMetrics) -> GridCell {
         let rows =
-            Double(cellColumns) * metrics.cellWidth * Double(image.pixelHeight)
+            Double(columns) * metrics.cellWidth * Double(image.pixelHeight)
             / (Double(image.pixelWidth) * metrics.cellHeight)
         let cap = max(1, min(maxRows, metrics.visibleRows - reservedRows))
-        guard rows.isFinite, rows > 0 else { return 1 }
-        return Int(min(Double(cap), max(1, rows.rounded())))
+        guard rows.isFinite, rows > 0 else { return GridCell(image: image, rows: 1, columns: columns, fit: .width) }
+        guard rows <= Double(cap) else { return GridCell(image: image, rows: cap, columns: columns, fit: .height) }
+        return GridCell(image: image, rows: Int(max(1, rows.rounded(.up))), columns: columns, fit: .width)
     }
 }
 
@@ -44,19 +48,31 @@ public struct GridRow: Equatable, Sendable {
 }
 
 public struct GridCell: Equatable, Sendable {
+    /// Which side of the cell the thumbnail fills; the terminal keeps its proportion on the other.
+    public enum Fit: Equatable, Sendable {
+        case width
+        case height
+    }
+
     public let image: ImageDescription
     /// Terminal rows the thumbnail takes.
     public let rows: Int
+    /// Terminal columns of the cell.
+    public let columns: Int
+    public let fit: Fit
+
+    /// What the kitty command is told: the filled side only.
+    public var box: KittyBox { fit == .width ? .columns(columns) : .rows(rows) }
 
     /// The name, without control characters, cut to the cell's width in terminal cells, ending in "…" when cut.
     public var label: String {
         let name = TerminalText.sanitized(image.name)
-        guard TerminalText.width(name) > ImageGrid.cellColumns else { return name }
+        guard TerminalText.width(name) > columns else { return name }
         var label = ""
         var width = 0
         for character in name {
             width += TerminalText.width(of: character)
-            if width > ImageGrid.cellColumns - 1 { break }
+            if width > columns - 1 { break }
             label.append(character)
         }
         return label + "…"

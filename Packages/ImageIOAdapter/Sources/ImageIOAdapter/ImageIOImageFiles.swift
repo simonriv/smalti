@@ -10,6 +10,9 @@ import SmaltiCore
 public struct ImageIOImageFiles: ImageFiles {
     private let maxBytes: Int
     private let maxMegapixels: Int
+    /// One decode at a time across every caller of this instance (final review I3): ImageIO cannot stop a decode once
+    /// started, so a mouse moving over large images must not start several at once.
+    private let gate = DecodeGate()
 
     public init(maxBytes: Int = 200_000_000, maxMegapixels: Int = 100) {
         self.maxBytes = maxBytes
@@ -21,12 +24,14 @@ public struct ImageIOImageFiles: ImageFiles {
     }
 
     public func thumbnail(of path: String, fitting size: Size) async throws(ImagePreviewError) -> Data {
-        let opened = try open(path)
-        guard
-            let image = CGImageSourceCreateThumbnailAtIndex(
-                opened.source, 0, Self.thumbnailOptions(Self.maxPixelSize(of: opened.description, fitting: size)))
-        else { throw .unreadable(path: path, reason: "ImageIO could not decode it") }
-        return try Self.png(image, path: path)
+        try await gate.run(path) { () throws(ImagePreviewError) -> Data in
+            let opened = try open(path)
+            guard
+                let image = CGImageSourceCreateThumbnailAtIndex(
+                    opened.source, 0, Self.thumbnailOptions(Self.maxPixelSize(of: opened.description, fitting: size)))
+            else { throw .unreadable(path: path, reason: "ImageIO could not decode it") }
+            return try Self.png(image, path: path)
+        }
     }
 
     /// The open file and ImageIO's source over it; the descriptor lives as long as the source reads through it.
@@ -51,12 +56,15 @@ public struct ImageIOImageFiles: ImageFiles {
         guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: "/dev/fd/\(descriptor)") as CFURL, nil),
             CGImageSourceGetType(source) != nil,
             let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-            let width = properties[kCGImagePropertyPixelWidth] as? Int,
-            let height = properties[kCGImagePropertyPixelHeight] as? Int
+            let storedWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+            let storedHeight = properties[kCGImagePropertyPixelHeight] as? Int
         else {
             close(descriptor)
             throw .notImage(path: path)
         }
+        // EXIF 5–8 turn the image a quarter: it is shown (and its thumbnail made) with the sides swapped.
+        let isTurned = (5...8).contains(properties[kCGImagePropertyOrientation] as? Int ?? 1)
+        let (width, height) = isTurned ? (storedHeight, storedWidth) : (storedWidth, storedHeight)
         let pixels = Int64(width) * Int64(height)
         let maxPixels = Int64(maxMegapixels) * 1_000_000
         guard pixels <= maxPixels else {
@@ -114,5 +122,13 @@ public struct ImageIOImageFiles: ImageFiles {
             throw .unreadable(path: path, reason: "cannot write a PNG")
         }
         return data as Data
+    }
+}
+
+/// Runs one decode at a time. A request cancelled while it waited its turn ends without decoding.
+private actor DecodeGate {
+    func run(_ path: String, _ work: () throws(ImagePreviewError) -> Data) throws(ImagePreviewError) -> Data {
+        guard !Task.isCancelled else { throw .unreadable(path: path, reason: "cancelled") }
+        return try work()
     }
 }
