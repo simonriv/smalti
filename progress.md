@@ -207,4 +207,32 @@
 - [x] Aprobada (`docs/specs/F5-apariencia-prompt.md`, 2026-11-23): prompt generado por Smalti (A), previews a F5.5, `theme.toml`, "Proteger legibilidad" activa sobre el peor escritorio, AppKit, agentes que esperan en vivo, prompt de Smalti por defecto
 
 ### Plan
-- [ ] Plan de implementación (`docs/plans/F5-apariencia-prompt.md`)
+- [x] Plan de implementación (`docs/plans/F5-apariencia-prompt.md`)
+
+### Tareas
+#### Bloque 1 · Verificaciones y dominio de apariencia
+- [ ] T1 · Verificar `font-codepoint-map` y medir la GPU (#5)
+- [ ] T2 · Contraste y `LegibilityGuard`
+- [ ] T3 · Catálogo de temas y `Theme.applying`
+- [ ] T4 · Ajustes, `PromptConfig`, comandos y atajos
+#### Bloque 2 · Dominio del prompt
+- [ ] T5 · Módulos, estilos y contexto
+- [ ] T6 · `ZshPromptRenderer` y escapado
+- [ ] T7 · Canal, `RenderPrompt` y `PromptFacts`
+- [ ] T8 · `AppearanceStore`, `ChangeAppearance`, `EditPrompt` y `StarshipPreset`
+#### Bloque 3 · Adaptadores
+- [ ] T9 · `TOMLConfigAdapter`: `theme.toml`, escritor y `starship.toml`
+- [ ] T10 · `ProjectContextAdapter`: `PromptFacts`
+- [ ] T11 · `GhosttyAdapter`: config por tema y script del prompt
+- [ ] T12 · Fuente `SmaltiSymbols`
+#### Bloque 4 · App: vidrio, temas y ventana
+- [ ] T13 · GPU en reposo (#5)
+- [ ] T14 · Tema en vivo y capas de legibilidad
+- [ ] T15 · Botones de ventana
+- [ ] T16 · Panel Apariencia
+#### Bloque 5 · App: prompt
+- [ ] T17 · Prompt conectado y contexto en la cabecera
+- [ ] T18 · Estudio de prompt
+- [ ] T19 · Capturas y comparación con los tableros
+#### Bloque 6 · Cierre
+- [ ] T20 · Checklist, revisión final, mutación, PR y despliegue
