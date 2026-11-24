@@ -37,6 +37,8 @@ public enum SmaltiMessage: Equatable, Sendable {
     case prompt(seq: Int, RenderedPrompt)
     /// F5: the immediate prompt and the ghost color, at connection and whenever the configuration changes.
     case promptStyle(RenderedPrompt, ghost: RGBAColor)
+    /// F5.6: the whole line's highlight spans; a later one for the same `seq` replaces it.
+    case highlight(seq: Int, [HighlightSpan])
 }
 
 /// What zsh knows at `precmd` (spec F5): the directory, the last exit and duration, and its environment.
@@ -134,6 +136,7 @@ public enum InputProtocol {
         case .prompt(let seq, let prompt):
             join("prompt", String(seq), prompt.directoryLabel, prompt.immediate, prompt.full, values(prompt))
         case .promptStyle(let prompt, let ghost): join("promptstyle", prompt.immediate, ghost.hexString, values(prompt))
+        case .highlight(let seq, let spans): HighlightCodec.encode(spans, seq: seq)
         }
     }
 

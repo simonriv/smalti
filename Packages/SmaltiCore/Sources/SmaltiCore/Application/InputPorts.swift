@@ -41,9 +41,22 @@ public protocol CompletionProvider: Sendable {
     /// The commands that have a spec, user specs included.
     var commands: [String] { get async }
     func spec(for command: String) async -> CompletionSpec?
+    /// The spec only if it is already loaded: never loads, so highlighting never waits for JavaScript.
+    func loadedSpec(for command: String) async -> CompletionSpec?
     /// Runs a generator for the words typed so far (`tokens`, the last one possibly partial) in `directory`.
     func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
         -> [Suggestion]
     /// Entries of the directory named by `prefix` (relative to `directory`), folders with a trailing `/`.
     func paths(matching prefix: String, in directory: String, foldersOnly: Bool) async -> [Suggestion]
+}
+
+public enum PathKind: Equatable, Sendable {
+    case file
+    case directory
+}
+
+/// What is at a path, for highlighting the words that name files (spec F5.6). The path is absolute; `nil` means it
+/// does not exist or cannot be read. A symbolic link is followed one level only, and no file is ever opened.
+public protocol PathFacts: Sendable {
+    func kind(of path: String) async -> PathKind?
 }
