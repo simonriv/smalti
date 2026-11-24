@@ -51,6 +51,9 @@ public actor HighlightLine {
         self.timing = timing
     }
 
+    /// Paths remembered now; expired ones are dropped at the next lookup, so a long session does not grow it.
+    public var cachedPathCount: Int { cache.count }
+
     public func firstAnswer(_ line: InputLine, directory: String, home: String) async -> HighlightAnswer {
         let plan = await plan(for: line.text, loading: false)
         let resolved = await kinds(
