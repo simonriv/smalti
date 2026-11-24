@@ -32,7 +32,8 @@ struct ZshExpansionTests {
         var appearance = AppearanceSettings.obsidian
         appearance.protectLegibility = false
         return ZshPromptRenderer.render(
-            config, context: PromptContext(directory: "/tmp", home: "/Users/simon"), theme: ThemeCatalog.apply(appearance))
+            config, context: PromptContext(directory: "/tmp", home: "/Users/simon"),
+            theme: ThemeCatalog.apply(appearance))
     }
 
     @Test func immediateWithoutDurationShowsDirectoryAndSymbol() throws {
@@ -46,13 +47,15 @@ struct ZshExpansionTests {
     @Test func immediateWithDurationShowsIt() throws {
         let prompt = immediate()
 
-        let shown = try expand(prompt.immediate, ["_smalti_dir": "solen", "_smalti_duration": "4.2s", "_smalti_sym": "›"])
+        let shown = try expand(
+            prompt.immediate, ["_smalti_dir": "solen", "_smalti_duration": "4.2s", "_smalti_sym": "›"])
 
         #expect(shown == "\u{E900} solen   4.2s\n› ")
     }
 
     @Test func failedExitShowsExitCode() throws {
-        let shown = try expand(immediate().immediate, ["_smalti_dir": "x", "_smalti_duration": "", "_smalti_sym": "›"], exit: 3)
+        let shown = try expand(
+            immediate().immediate, ["_smalti_dir": "x", "_smalti_duration": "", "_smalti_sym": "›"], exit: 3)
 
         #expect(shown == "\u{E900} x\n› exit 3 ")
     }

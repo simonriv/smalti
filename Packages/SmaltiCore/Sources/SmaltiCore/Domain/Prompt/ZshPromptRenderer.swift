@@ -91,7 +91,7 @@ private struct ZshPalette {
             body = foreground(run.color, String(character))
         case .symbol:
             body = foreground(run.color, "${\(ZshPromptRenderer.symbolVariable)}")
-        case .text(let text) where text.allSatisfy(\.isWhitespace):
+        case .text(let text) where text.allSatisfy { $0 == " " }:
             body = text
         case .text(let text):
             body = foreground(run.color, values.reference(text))

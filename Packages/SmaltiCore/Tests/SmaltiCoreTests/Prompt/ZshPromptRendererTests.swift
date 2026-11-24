@@ -177,3 +177,51 @@ struct ZshPromptRendererTests {
         #expect(rendered.values["_smalti_p_1"]?.hasPrefix("…") == true)
     }
 }
+
+/// Block 2 review (I3): the worst `prompt` answer still fits what Smalti may send in one write.
+@Suite("ZshPromptRenderer · size")
+struct ZshPromptSizeTests {
+    @Test func worstCaseFitsAnAnswer() {
+        var config = PromptConfig.standard.applying(.pills)
+        config.modules = PromptModuleID.allCases
+        let emoji = String(repeating: "🎉%", count: 200)
+        var context = PromptContext(directory: "/" + emoji + "/" + emoji, home: "/Users/simon")
+        context.branch = emoji
+        context.changes = GitChanges(modified: 999_999, staged: 999_999)
+        context.runtime = RuntimeVersion(kind: .node, version: emoji)
+        context.duration = .seconds(99_999)
+        context.agents = WaitingAgents(waiting: [emoji])
+        context.awsProfile = emoji
+        context.kubeContext = emoji
+        context.lastExit = 255
+        let rendered = ZshPromptRenderer.render(config, context: context, theme: ThemeCatalog.apply(.obsidian))
+
+        let bytes = InputProtocol.encode(.prompt(seq: Int.max, rendered)).utf8.count + 1
+
+        #expect(bytes <= InputProtocol.maximumAnswerBytes, "\(bytes) bytes")
+    }
+
+    @Test func trimmedValueKeepsWholeCharacters() {
+        let literal = ZshEscaping.literal(String(repeating: "👩‍👩‍👧", count: 100))
+
+        #expect(literal.utf8.count <= ZshEscaping.maximumBytes)
+        #expect(literal.hasPrefix("…"))
+        #expect(literal.dropFirst().allSatisfy { $0 == "👩‍👩‍👧" })
+    }
+}
+
+@Suite("ZshPromptRenderer · whitespace")
+struct ZshPromptWhitespaceTests {
+    /// Block 2 review (M2): only plain spaces go raw; a name made of `\r` or U+2028 goes through the values.
+    @Test func whitespaceNamesGoThroughValues() {
+        var config = PromptConfig.standard
+        config.modules = [.gitBranch]
+        var context = PromptContext(directory: "/tmp", home: "/Users/simon")
+        context.branch = "\r"
+
+        let rendered = ZshPromptRenderer.render(config, context: context, theme: ThemeCatalog.apply(.obsidian))
+
+        #expect(!rendered.full.contains("\r"))
+        #expect(rendered.values["_smalti_p_1"] == "␤")
+    }
+}
