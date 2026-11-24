@@ -72,7 +72,8 @@ final class WindowButtonsController {
         guard mode != self.mode else { return place() }
         self.mode = mode
         guard !isFullScreen else { return }
-        setShown(mode.isAlwaysShown, faded: false)
+        // Block 4 review (M4): switching to `hover` with the cursor already on the strip shows them now.
+        setShown(mode.isAlwaysShown || (mode.followsCursor && isCursorOnStrip), faded: false)
     }
 
     /// The cursor entered or left the strip.
@@ -96,6 +97,13 @@ final class WindowButtonsController {
             // Setting the same origin posts nothing; a different one moves it back once.
             if button.frame.origin != origin { button.setFrameOrigin(origin) }
         }
+    }
+
+    /// The cursor is over the top strip of the window (window coordinates grow upward).
+    private var isCursorOnStrip: Bool {
+        let point = window.mouseLocationOutsideOfEventStream
+        let size = window.frame.size
+        return (0...size.width).contains(point.x) && (size.height - stripHeight...size.height).contains(point.y)
     }
 
     private var buttons: [NSButton] { Self.types.compactMap { window.standardWindowButton($0) } }

@@ -25,6 +25,8 @@ final class AppearanceSession {
             onSaveError: onSaveError)
     }
 
+    var document: AppearanceDocument { change.document }
+
     var state: AppearancePanelState {
         AppearancePanelState(
             document: change.document, applied: ThemeCatalog.apply(change.document.appearance),

@@ -154,6 +154,19 @@ final class WindowButtonsTests: SmaltiUITestCase {
         sleep(1)
     }
 
+    /// Block 4 review (M4): switching to `hover` with the cursor already on the strip shows them at once.
+    func testSwitchingToHoverWithTheCursorOnTheStripShowsThem() {
+        launch(buttons: "hidden")
+        app.element("smalti.dragStrip").hover()
+        app.writeTheme("[window]\nbuttons = \"hover\"\n")
+
+        app.typeKey("k", modifierFlags: .command)
+        app.typeText("recargar")
+        app.typeKey(.return, modifierFlags: [])
+
+        waitUntil(close, exists: true)
+    }
+
     func testMinimizeButtonMinimizes() {
         launch(buttons: "visible")
 

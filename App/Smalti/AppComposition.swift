@@ -239,6 +239,8 @@ final class AppComposition {
     private func makeWindow() -> WindowComposition? {
         guard let dependencies = controllerDependencies, let store = configStore, let engine else { return nil }
         let (controller, visibility) = makeController(dependencies, initial: ReloadConfig(store: store).execute())
+        // Block 4 review (M2): painted with the panel's document, also before theme.toml has it.
+        if let document = appearance?.document { controller.adopt(document) }
         return makeComposition(controller, visibility: visibility, engine: engine)
     }
 

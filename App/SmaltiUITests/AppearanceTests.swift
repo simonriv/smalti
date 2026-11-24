@@ -116,6 +116,33 @@ final class AppearanceTests: SmaltiUITestCase {
         XCTAssertTrue(themeText().contains("theme = \"bosque\""), "theme.toml:\n\(themeText())")
     }
 
+    /// Block 4 review (M2): a window opened while theme.toml could not be written (or within 300 ms) is painted
+    /// with the panel's document, not with the file.
+    func testNewWindowTakesTheEditedAppearance() throws {
+        launchIsolated()
+        openPanel()
+        let folder = app.configFile.deletingLastPathComponent()
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o555], ofItemAtPath: folder.path(percentEncoded: false))
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: folder.path(percentEncoded: false))
+        }
+        control("opacity").click()
+        app.typeKey(.rightArrow, modifierFlags: .shift)
+        let chosen = number(of: control("opacity"))
+        XCTAssertGreaterThan(chosen, 70)
+
+        app.typeKey("n", modifierFlags: .command)
+
+        let windows = app.windows.matching(identifier: "smalti.window")
+        let two = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in windows.count == 2 }, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [two], timeout: 10), .completed)
+        let glasses = app.elements("smalti.glass").allElementsBoundByIndex.map { text(of: $0) }
+        XCTAssertTrue(
+            glasses.allSatisfy { $0.hasPrefix(String(format: "vidrio %.2f", Double(chosen) / 100)) }, "\(glasses)")
+    }
+
     // MARK: - C14
 
     func testConfigTomlHashUnchanged() throws {

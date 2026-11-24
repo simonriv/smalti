@@ -67,6 +67,9 @@ final class SmaltiWindow: NSWindow {
 
     override func close() {
         shadow.close()
+        // Block 4 review (M1): the observer goes with the window.
+        resizeObserver.map(NotificationCenter.default.removeObserver)
+        resizeObserver = nil
         super.close()
     }
 
