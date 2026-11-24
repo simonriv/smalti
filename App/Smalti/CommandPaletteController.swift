@@ -33,6 +33,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private var items: [PaletteItem] = []
     /// The selected result; ↑↓ wrap at the ends.
     private var selection = 0
+    /// A group label's height in this theme, measured once per opening rather than per keystroke.
+    private var groupLabelHeight = 0.0
     private var mode = Mode.searching
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "palette")
     private var outsideClicks: Any?
@@ -85,6 +87,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     private func present(theme: Theme, mode: Mode) {
         self.theme = theme
+        groupLabelHeight = CommandGroupLabel(.tiling, theme: theme).fittingSize.height
         let view = CommandPaletteView(theme: theme)
         place(view, theme: theme)
         view.field.delegate = self
@@ -175,7 +178,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     private func listContent() -> PaletteListContent {
         let rowHeight = theme.palette.rowHeight
-        let labelHeight = CommandGroupLabel(.tiling, theme: theme).fittingSize.height
+        let labelHeight = groupLabelHeight
         return PaletteListContent(
             count: items.count,
             height: { [items] in

@@ -62,7 +62,7 @@ extension XCUIApplication {
         let text = """
             #!/bin/sh
             state="$(dirname "$0")/claude-state"
-            echo "$* · HOME=$HOME" >> "$(dirname "$0")/claude-calls"
+            echo "$*" >> "$(dirname "$0")/claude-calls"
             case "$*" in
               "plugin list") [ -f "$state" ] && echo "  ❯ smalti@smalti"; exit 0 ;;
               "plugin install smalti@smalti") touch "$state" ;;
@@ -82,6 +82,8 @@ extension XCUIApplication {
         if let position = launchArguments.firstIndex(of: "-SmaltiClaudeCommand") {
             launchArguments[position + 1] = script.path(percentEncoded: false)
         }
+        // Every ⌘K asks again, so a test sees an external change on its next opening.
+        launchArguments += ["-SmaltiIntegrationRecheckSeconds", "0"]
         return state
     }
 

@@ -93,7 +93,7 @@ final class WindowComposition {
             NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
             NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification,
         ]
-        observers = changes.map { name in
+        observers += changes.map { name in
             center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.windowChanged() }
             }

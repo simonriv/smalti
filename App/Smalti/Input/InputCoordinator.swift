@@ -37,6 +37,9 @@ final class InputCoordinator {
     private var server: InputSocketServer?
     private var panes: [UUID: PaneID] = [:]
     private var latestSeq: [PaneID: Int] = [:]
+    /// F5.6: the `seq` of each pane's last `line`; a highlight follow-up is sent only for it (Tab or ⌃R on the same
+    /// line do not make it stale).
+    private var latestLine: [PaneID: Int] = [:]
     private var connections: [PaneID: InputConnection] = [:]
     private var events: AsyncStream<(InputConnection, ShellPacket)>.Continuation?
 
@@ -128,27 +131,17 @@ final class InputCoordinator {
         handlePrompt(message, pane: pane, connection: connection)
         let path = packet.directory ?? directory(pane) ?? Self.home
         if case .line(let seq, let line) = message {
-            await highlight(
-                HighlightRequest(line: line, seq: seq, directory: path, home: Self.home), pane: pane, over: connection)
+            // F5.6: the ghost and the highlight each go out when ready; neither waits for the other.
+            latestLine[pane] = seq
+            let answers = LineAnswers(session: session, highlighter: isHighlighting() ? highlighter : nil)
+            await answers.answer(
+                HighlightRequest(line: line, seq: seq, directory: path, home: Self.home), pane: pane,
+                channel: LineChannel(
+                    send: { connection.send($0) }, isLatest: { [weak self] in self?.latestLine[pane] == $0 }))
+            return
         }
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
-    }
-
-    // MARK: - Highlighting (F5.6)
-
-    /// The first answer goes out before the ghost's; a follow-up (a spec that loaded, a slow path) only while the
-    /// line is still the shell's latest.
-    private func highlight(_ request: HighlightRequest, pane: PaneID, over connection: InputConnection) async {
-        guard let highlighter, isHighlighting() else { return }
-        let answer = await InputRouting.highlight(request, using: highlighter)
-        connection.send(answer.first)
-        guard answer.needsFollowUp else { return }
-        Task { [weak self] in
-            let followUp = await InputRouting.followUp(request, using: highlighter)
-            guard let self, InputRouting.shouldSendFollowUp(seq: request.seq, latest: latestSeq[pane]) else { return }
-            connection.send(followUp)
-        }
     }
 
     // MARK: - Prompt (F5)
@@ -212,6 +205,7 @@ final class InputCoordinator {
         guard connections[pane] == connection else { return }
         connections[pane] = nil
         latestSeq[pane] = nil
+        latestLine[pane] = nil
     }
 
     private static func seq(of message: ShellMessage) -> Int? {

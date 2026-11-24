@@ -165,7 +165,7 @@ final class TilingController {
         Task { [weak self] in
             let line = await command.init(integration: integration).execute()
             self?.report(.integration(line))
-            status.refresh()
+            status.refresh(forced: true)
         }
     }
 
@@ -177,7 +177,7 @@ final class TilingController {
 
     /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
     func refreshIntegrationState() {
-        deps.agents.integrationStatus.refresh()
+        deps.agents.integrationStatus.refresh(forced: false)
     }
 
     /// The saved layouts as the palette lists them.

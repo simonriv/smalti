@@ -789,7 +789,7 @@ final class AppComposition {
     private static func agentDependencies(notifier: any Notifier) -> TilingController.AgentDependencies {
         let integration = claudeIntegration()
         let status = ClaudeIntegrationStatus(integration: integration)
-        status.refresh()
+        status.refresh(forced: true)
         return TilingController.AgentDependencies(
             notifier: notifier, integration: integration, integrationStatus: status,
             // Replaced per window in `makeController`: "visible" is that window's, not the app's.
@@ -802,14 +802,17 @@ final class AppComposition {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let source = Bundle.main.resourceURL?.appending(path: "claude-plugin") ?? home
         let environment = ProcessInfo.processInfo.environment.merging(["SMALTI": "1"]) { _, smalti in smalti }
+        // UI tests: a fake `claude` run by a shell without startup files, never the user's login shell (F5.6).
+        let fake = UserDefaults.standard.string(forKey: "SmaltiClaudeCommand")
         // Shared by both builds on purpose; an isolated launch (`-SmaltiStatePath`, UI tests) keeps it in its own
         // state, so installing from a test never rewrites the daily Smalti's copy (F5.6).
         let shared = home.appending(path: "Library/Application Support/Smalti")
         let state = UserDefaults.standard.string(forKey: "SmaltiStatePath").map { URL(filePath: $0) } ?? shared
         return ClaudePluginInstaller(
             pluginSource: source, installDirectory: state.appending(path: "claude-plugin"),
-            runner: ShellCommandRunner(shell: ["/bin/zsh", "-lic"], environment: environment),
-            command: UserDefaults.standard.string(forKey: "SmaltiClaudeCommand").map { ["/bin/sh", $0] } ?? ["claude"])
+            runner: ShellCommandRunner(
+                shell: fake == nil ? ["/bin/zsh", "-lic"] : ["/bin/zsh", "-fc"], environment: environment),
+            command: fake.map { ["/bin/sh", $0] } ?? ["claude"])
     }
 
     /// The observatory refreshes fast while any window shows it.

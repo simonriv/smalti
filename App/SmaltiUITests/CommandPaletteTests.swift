@@ -214,18 +214,21 @@ final class CommandPaletteTests: SmaltiUITestCase {
         XCTAssertFalse(row(Self.uninstall).exists)
     }
 
+    /// The palette opens with the last known state ("Desinstalar") and rebuilds its open list when the check made
+    /// on opening finds the plugin gone (`catalogChanged`), without closing.
     func testExternalUninstallUpdatesOpenPalette() throws {
         var state: URL?
         relaunch { state = $0.useFakeClaude(installed: true) }
         openPaletteOnIntegration()
-        XCTAssertTrue(row(Self.uninstall).waitForExistence(timeout: 10))
+        XCTAssertTrue(row(Self.uninstall).waitForExistence(timeout: 10), claudeCalls)
         app.typeKey(.escape, modifierFlags: [])
         try FileManager.default.removeItem(at: try XCTUnwrap(state))
 
         openPaletteOnIntegration()
 
-        XCTAssertTrue(row(Self.install).waitForExistence(timeout: 10))
+        XCTAssertTrue(row(Self.install).waitForExistence(timeout: 10), claudeCalls)
         XCTAssertFalse(row(Self.uninstall).exists)
+        XCTAssertTrue(app.element("smalti.palette").exists, "the list changed with the palette open")
     }
 
     private var selectedRow: XCUIElement {
