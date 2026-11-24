@@ -96,6 +96,64 @@ final class WindowButtonsTests: SmaltiUITestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [zoomed], timeout: 5), .completed, "frame \(window.frame)")
     }
 
+    /// Block 4 review (I3): AppKit lays the traffic lights out again; they stay centered in the strip at x = 20.
+    func testButtonsStayInTheStripAfterResizeAndFullScreen() {
+        launch(buttons: "visible")
+        zoom.click()
+        expectCloseCentered()
+
+        app.typeKey("f", modifierFlags: [.control, .command])
+        waitForFullScreen(true)
+        app.typeKey("f", modifierFlags: [.control, .command])
+        waitForFullScreen(false)
+
+        expectCloseCentered()
+        let before = window.frame
+        zoom.click()
+        let zoomed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { [window] _, _ in
+                window.frame != before && window.frame.height < (NSScreen.main?.frame.height ?? 0)
+            },
+            object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [zoomed], timeout: 5), .completed, "green still zooms after full screen")
+    }
+
+    /// Block 4 review (I4): full screen hands the buttons to macOS (its own title bar, which accessibility does not
+    /// expose while hidden); coming back, `hidden` hides them again.
+    func testLeavingFullScreenHidesTheButtonsAgain() {
+        launch(buttons: "hidden")
+
+        app.typeKey("f", modifierFlags: [.control, .command])
+        waitForFullScreen(true)
+        app.typeKey("f", modifierFlags: [.control, .command])
+        waitForFullScreen(false)
+
+        waitUntil(close, exists: false)
+        XCTAssertEqual(pillOffset, Self.pillOffset, accuracy: 1)
+    }
+
+    private func expectCloseCentered() {
+        let centered = XCTNSPredicateExpectation(
+            predicate: NSPredicate { [self] _, _ in
+                abs(close.frame.midX - window.frame.minX - 20) < 2 && abs(close.frame.midY - window.frame.minY - 20) < 2
+            }, object: nil)
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [centered], timeout: 5), .completed,
+            "close at \(close.frame), window \(window.frame)")
+    }
+
+    /// The glass says " · pantalla completa" while in full screen; one more second for the animation to end.
+    private func waitForFullScreen(_ isFullScreen: Bool) {
+        let glass = app.element("smalti.glass")
+        let changed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                ((glass.value as? String) ?? "").hasSuffix(" · pantalla completa") == isFullScreen
+            }, object: nil)
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [changed], timeout: 10), .completed, "full screen should be \(isFullScreen)")
+        sleep(1)
+    }
+
     func testMinimizeButtonMinimizes() {
         launch(buttons: "visible")
 

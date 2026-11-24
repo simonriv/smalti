@@ -60,6 +60,9 @@ final class AppearanceSession {
         URLOpener.open(themeFile)
     }
 
+    /// Quitting: the change still waiting for its 300 ms is written.
+    func saveIfPending() { change.saveIfPending() }
+
     private func publish() {
         onApply?(change.document)
         onRefresh?()

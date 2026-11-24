@@ -39,6 +39,34 @@ struct ChangeAppearanceTests {
         #expect(store.saved.last?.appearance.glassOpacity == change.document.appearance.glassOpacity)
     }
 
+    /// Block 4 review (I1): quitting within 300 ms of the last change still writes it.
+    @Test func pendingChangeIsSavedOnQuit() {
+        let change = make()
+        _ = change.apply { $0.appearance.glassOpacity = 0.8 }
+
+        change.saveIfPending()
+
+        #expect(store.saved.last?.appearance.glassOpacity == 0.8)
+    }
+
+    @Test func quitWithNothingPendingWritesNothing() {
+        let change = make()
+
+        change.saveIfPending()
+
+        #expect(store.saved.isEmpty)
+    }
+
+    @Test func quitAfterTheDebouncedSaveWritesNothingMore() {
+        let change = make()
+        _ = change.apply { $0.appearance.glassOpacity = 0.8 }
+        debouncer.fire()
+
+        change.saveIfPending()
+
+        #expect(store.saved.count == 1)
+    }
+
     @Test func applyWithoutChangesDoesNotSave() {
         let change = make()
 

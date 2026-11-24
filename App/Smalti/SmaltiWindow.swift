@@ -74,6 +74,7 @@ final class SmaltiWindow: NSWindow {
     func showsFullScreenChrome(_ isFullScreen: Bool) {
         content.showsFullScreenChrome(isFullScreen)
         shadow.setVisible(!isFullScreen)
+        buttons?.setFullScreen(isFullScreen)
         buttons?.place()
     }
 
@@ -143,7 +144,15 @@ final class WindowContentView: NSView {
     func apply(_ tokens: WindowTokens, blur: GlassBlur) {
         paint(tokens)
         let opacity = layer?.backgroundColor?.alpha ?? 0
-        setAccessibilityValue("vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)")
+        glassDescription = "vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)"
+        describe()
+    }
+
+    private var glassDescription = ""
+
+    /// "vidrio 0.62 · desenfoque 28", plus " · pantalla completa" while in full screen (tests tell it from zoom).
+    private func describe() {
+        setAccessibilityValue(glassDescription + (isFullScreen ? " · pantalla completa" : ""))
     }
 
     /// F4.5: square and borderless in full screen; the tokens again when it leaves.
@@ -151,6 +160,7 @@ final class WindowContentView: NSView {
         self.isFullScreen = isFullScreen
         if let tokens = paintedTokens { paint(tokens) }
         setAccessibilityHelp(isFullScreen ? "pantalla completa" : nil)
+        describe()
     }
 
     private var isFullScreen = false

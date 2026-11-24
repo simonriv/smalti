@@ -103,7 +103,7 @@ final class ThemeCardView: PanelButtonView {
             preview.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
             preview.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
             preview.heightAnchor.constraint(equalToConstant: tokens.previewHeight),
-            name.topAnchor.constraint(equalTo: preview.bottomAnchor, constant: tokens.previewBarGap + 2),
+            name.topAnchor.constraint(equalTo: preview.bottomAnchor, constant: tokens.cardInnerGap),
             name.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padding),
             name.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padding),
         ]
@@ -148,7 +148,7 @@ final class SwatchView: PanelButtonView {
 final class SegmentView: PanelButtonView {
     private let label = NSTextField(labelWithString: "")
 
-    init(identifier: String, title: String) {
+    init(identifier: String, title: String, inset: Double) {
         super.init(identifier: identifier, label: title)
         label.stringValue = title
         label.alignment = .center
@@ -157,7 +157,7 @@ final class SegmentView: PanelButtonView {
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: centerXAnchor),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
-            label.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 4),
+            label.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: inset),
         ])
     }
 
@@ -231,10 +231,10 @@ final class StepperValueView: NSStackView {
     let value = NSTextField(labelWithString: "")
     var onChange: ((Double) -> Void)?
 
-    init(identifier: String, range: ClosedRange<Double>) {
+    init(identifier: String, range: ClosedRange<Double>, gap: Double) {
         super.init(frame: .zero)
         orientation = .horizontal
-        spacing = 4
+        spacing = gap
         stepper.minValue = range.lowerBound
         stepper.maxValue = range.upperBound
         stepper.increment = 1

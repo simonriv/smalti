@@ -134,6 +134,20 @@ struct AppearancePanelTokensTests {
         #expect(tokens.segmentHeight == 30)
     }
 
+    /// Block 4 review (M3): the board's inner gaps and borders, no loose numbers in the views.
+    @Test func innerGapsAreTheBoards() {
+        let tokens = Theme.obsidian.appearancePanel
+
+        #expect(tokens.cardInnerGap == 7)
+        #expect(tokens.noteGap == 2)
+        #expect(tokens.sliderGap == 6)
+        #expect(tokens.footerGap == 4)
+        #expect(tokens.stepperGap == 4)
+        #expect(tokens.segmentLabelInset == 4)
+        #expect(tokens.segmentContainerBorderWidth == 1)
+        #expect(tokens.borderWidth == 1)
+    }
+
     @Test func colorsFollowTheTheme() {
         let theme = ThemeCatalog.theme(.niebla)
         let tokens = theme.appearancePanel

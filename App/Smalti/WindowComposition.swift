@@ -167,6 +167,10 @@ final class WindowComposition {
         panel.toggle()
     }
 
+    func closeAppearancePanel() {
+        appearancePanel?.close()
+    }
+
     func refreshAppearancePanel() {
         appearancePanel?.refresh()
     }

@@ -67,6 +67,10 @@ final class AppearancePanelController: NSObject {
         isOpen = false
         escapeMonitor.map(NSEvent.removeMonitor)
         escapeMonitor = nil
+        if pickingIndex != nil {
+            NSColorPanel.shared.setTarget(nil)
+            NSColorPanel.shared.setAction(nil)
+        }
         pickingIndex = nil
         onOpenChange?(false)
     }

@@ -88,6 +88,34 @@ final class AppearanceTests: SmaltiUITestCase {
         expectValue(control("buttons.hover"), "seleccionado")
     }
 
+    /// Block 4 review (C1): a reload that fails (a typo in config.toml) keeps what the panel wrote; the next edit
+    /// does not write the old appearance back.
+    func testFailedReloadKeepsPanelEdits() {
+        launchIsolated()
+        openPanel()
+        control("theme.niebla").click()
+        expectThemeFile(contains: ["theme = \"niebla\""])
+        app.writeConfig("[appearance]\nblur = 99\n")
+
+        reloadConfigFromPalette()
+        control("gap").incrementArrows.firstMatch.click()
+
+        expectValue(control("theme.niebla"), "seleccionado")
+        expectThemeFile(contains: ["theme = \"niebla\"", "gap = 9"])
+    }
+
+    /// Block 4 review (I1): quitting right after a change still writes it.
+    func testQuitRightAfterAChangeSavesIt() {
+        launchIsolated()
+        openPanel()
+
+        control("theme.bosque").click()
+        app.typeKey("q", modifierFlags: .command)
+
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+        XCTAssertTrue(themeText().contains("theme = \"bosque\""), "theme.toml:\n\(themeText())")
+    }
+
     // MARK: - C14
 
     func testConfigTomlHashUnchanged() throws {

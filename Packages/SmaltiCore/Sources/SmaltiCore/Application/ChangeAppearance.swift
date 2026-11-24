@@ -8,6 +8,8 @@ public final class ChangeAppearance {
     private let store: any AppearanceStore
     private let debouncer: any Debouncer
     private let onSaveError: @MainActor (ConfigError) -> Void
+    /// A change waits for its debounced write.
+    private var isSavePending = false
 
     public init(
         document: AppearanceDocument, store: any AppearanceStore, debouncer: any Debouncer,
@@ -26,6 +28,7 @@ public final class ChangeAppearance {
         change(&updated)
         if updated != document {
             document = updated
+            isSavePending = true
             debouncer.schedule { [weak self] in self?.saveNow() }
         }
         return ThemeCatalog.apply(document.appearance)
@@ -42,6 +45,7 @@ public final class ChangeAppearance {
 
     public func saveNow() {
         debouncer.cancel()
+        isSavePending = false
         do {
             try store.save(document)
         } catch {
@@ -49,9 +53,16 @@ public final class ChangeAppearance {
         }
     }
 
+    /// Quitting (block 4 review, I1): the change of the last 300 ms is written; with none pending, nothing is.
+    public func saveIfPending() {
+        guard isSavePending else { return }
+        saveNow()
+    }
+
     /// The file changed outside the UI ("Recargar configuración"): show it, do not write it back.
     public func reload(_ document: AppearanceDocument) {
         debouncer.cancel()
+        isSavePending = false
         self.document = document
     }
 }

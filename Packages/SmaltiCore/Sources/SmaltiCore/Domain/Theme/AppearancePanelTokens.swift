@@ -33,6 +33,21 @@ public struct AppearancePanelTokens: Equatable, Sendable {
     public let segmentContainerCornerRadius = 9.0
     public let segmentFontSize = 12.0
     public let checkboxSize = 18.0
+    /// Between a card's preview and its name (`gap: 7px`).
+    public let cardInnerGap = 7.0
+    /// Above the note under "Proteger legibilidad" (`margin-top: 2px`).
+    public let noteGap = 2.0
+    /// Between a slider's title row and the slider (`gap: 6px`).
+    public let sliderGap = 6.0
+    /// Between a footer label and its value (`gap: 4px`).
+    public let footerGap = 4.0
+    /// Between a value and its stepper (not on the board: the steppers are Smalti's).
+    public let stepperGap = 4.0
+    /// Least space between a segment's text and its edges.
+    public let segmentLabelInset = 4.0
+    public let segmentContainerBorderWidth = 1.0
+    /// The aside's left border (`border-left: 1px`).
+    public let borderWidth = 1.0
 
     public let title: RGBAColor
     public let text: RGBAColor

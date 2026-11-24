@@ -51,13 +51,25 @@ final class AppearancePanelView: NSView {
     private let segmentContainer = NSView()
     private let segments: [(WindowButtons, SegmentView)] = [
         (.hidden, "Ocultos"), (.hover, "Al pasar el cursor"), (.visible, "Visibles"),
-    ].map { mode, title in (mode, SegmentView(identifier: "smalti.appearance.buttons.\(mode.rawValue)", title: title)) }
+    ].map { mode, title in
+        (
+            mode,
+            SegmentView(
+                identifier: "smalti.appearance.buttons.\(mode.rawValue)", title: title,
+                inset: Theme.obsidian.appearancePanel.segmentLabelInset)
+        )
+    }
     private let footerLabels = ["Fuente", "Espacio", "Radio"].map { NSTextField(labelWithString: $0) }
     private let fontFamily = NSPopUpButton()
     private let fontSize = StepperValueView(
-        identifier: "smalti.appearance.fontSize", range: AppearanceSettings.fontSizeRange)
-    private let gap = StepperValueView(identifier: "smalti.appearance.gap", range: AppearanceSettings.gapRange)
-    private let radius = StepperValueView(identifier: "smalti.appearance.radius", range: AppearanceSettings.radiusRange)
+        identifier: "smalti.appearance.fontSize", range: AppearanceSettings.fontSizeRange,
+        gap: Theme.obsidian.appearancePanel.stepperGap)
+    private let gap = StepperValueView(
+        identifier: "smalti.appearance.gap", range: AppearanceSettings.gapRange,
+        gap: Theme.obsidian.appearancePanel.stepperGap)
+    private let radius = StepperValueView(
+        identifier: "smalti.appearance.radius", range: AppearanceSettings.radiusRange,
+        gap: Theme.obsidian.appearancePanel.stepperGap)
     private var theme: Theme
 
     init(theme: Theme) {
@@ -162,10 +174,13 @@ final class AppearancePanelView: NSView {
     private static func monospacedFamilies(including current: String) -> [String] {
         let installed = Set(
             (NSFontManager.shared.availableFontNames(with: .fixedPitchFontMask) ?? []).compactMap {
-                NSFont(name: $0, size: 12)?.familyName
+                NSFont(name: $0, size: Self.familyLookupSize)?.familyName
             })
         return installed.union([current]).sorted()
     }
+
+    /// Any size reads a font's family name; it is never drawn.
+    private static let familyLookupSize = 12.0
 
     private static func percent(_ range: ClosedRange<Double>) -> ClosedRange<Double> {
         (range.lowerBound * 100).rounded()...(range.upperBound * 100).rounded()
@@ -225,7 +240,7 @@ final class AppearancePanelView: NSView {
             border.leadingAnchor.constraint(equalTo: leadingAnchor),
             border.topAnchor.constraint(equalTo: topAnchor),
             border.bottomAnchor.constraint(equalTo: bottomAnchor),
-            border.widthAnchor.constraint(equalToConstant: 1),
+            border.widthAnchor.constraint(equalToConstant: tokens.borderWidth),
             column.topAnchor.constraint(equalTo: topAnchor, constant: tokens.paddingVertical),
             column.leadingAnchor.constraint(equalTo: leadingAnchor, constant: tokens.paddingHorizontal),
             column.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -tokens.paddingHorizontal),
@@ -262,7 +277,7 @@ final class AppearancePanelView: NSView {
         let legibilityText = NSStackView(views: [legibilityTitle, legibilityNote])
         legibilityText.orientation = .vertical
         legibilityText.alignment = .leading
-        legibilityText.spacing = 2
+        legibilityText.spacing = tokens.noteGap
         let legibilityRow = NSStackView(views: [legibilityText, NSView(), legibility])
         legibilityRow.orientation = .horizontal
         let rows = NSStackView(views: [
@@ -280,7 +295,7 @@ final class AppearancePanelView: NSView {
         top.orientation = .horizontal
         let stack = NSStackView(views: [top, slider])
         stack.orientation = .vertical
-        stack.spacing = 6
+        stack.spacing = theme.appearancePanel.sliderGap
         top.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         slider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         return stack
@@ -301,7 +316,7 @@ final class AppearancePanelView: NSView {
     private func segmentRow(_ tokens: AppearancePanelTokens) -> NSView {
         segmentContainer.wantsLayer = true
         segmentContainer.layer?.cornerRadius = tokens.segmentContainerCornerRadius
-        segmentContainer.layer?.borderWidth = 1
+        segmentContainer.layer?.borderWidth = tokens.segmentContainerBorderWidth
         let row = NSStackView(views: segments.map(\.1))
         row.orientation = .horizontal
         row.distribution = .fillEqually
@@ -322,12 +337,12 @@ final class AppearancePanelView: NSView {
     private func footer(_ tokens: AppearancePanelTokens) -> NSView {
         let fontRow = NSStackView(views: [fontFamily, fontSize])
         fontRow.orientation = .horizontal
-        fontRow.spacing = 4
+        fontRow.spacing = tokens.stepperGap
         let columns = zip(footerLabels, [fontRow, gap, radius] as [NSView]).map { label, value in
             let column = NSStackView(views: [label, value])
             column.orientation = .vertical
             column.alignment = .leading
-            column.spacing = 4
+            column.spacing = tokens.footerGap
             return column as NSView
         }
         let grid = NSStackView(views: columns)

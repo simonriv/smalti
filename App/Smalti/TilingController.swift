@@ -411,14 +411,19 @@ final class TilingController {
     }
 
     /// "Recargar configuración" in the window that also reloads the terminal engine (it is the app's).
-    func reloadConfig() {
-        guard applyReloadedConfig() else { return publish() }
+    @discardableResult
+    func reloadConfig() -> Bool {
+        guard applyReloadedConfig() else {
+            publish()
+            return false
+        }
         do {
             try deps.applyAppearance(theme.terminal)
         } catch {
             show(.engineFailure(error))
         }
         publish()
+        return true
     }
 
     /// F5 Apariencia: the panel's document, painted at once in this window (keys, shell and the rest stay).
@@ -437,19 +442,23 @@ final class TilingController {
     }
 
     /// "Recargar configuración" in the other windows: they read the file again; the engine is already reloaded.
-    func rereadConfig() {
-        _ = applyReloadedConfig()
+    @discardableResult
+    func rereadConfig() -> Bool {
+        let isReloaded = applyReloadedConfig()
         publish()
+        return isReloaded
     }
 
     /// Reads the file; false when it was invalid (the status bar says so and the last good config stays).
     private func applyReloadedConfig() -> Bool {
         let reload = ReloadConfig(store: deps.configStore).execute()
-        config = reload.config.withShell(overriddenBy: deps.shellOverride)
+        // Block 4 review (C1): a file that does not load keeps what is painted now (Apariencia's edits included),
+        // not the last config the store read.
         if let error = reload.error {
             show(.invalidConfig(error))
             return false
         }
+        config = reload.config.withShell(overriddenBy: deps.shellOverride)
         status = status.withPersistent(nil)
         // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
         if let warning = reload.warnings.first { show(.configWarning(warning.message)) }

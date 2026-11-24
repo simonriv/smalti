@@ -274,9 +274,10 @@ final class AppComposition {
         case .agentJump: jumpToWaitingAgent(from: composition)
         case .configReload:
             // The engine's appearance is the app's: one window applies it, the others follow the file.
-            compositions.first?.controller.reloadConfig()
+            let isReloaded = compositions.first?.controller.reloadConfig() ?? false
             compositions.dropFirst().forEach { $0.controller.rereadConfig() }
-            if let config = compositions.first?.controller.config { appearance?.reload(config) }
+            // Block 4 review (C1): only a reload that loaded replaces the panel's document.
+            if isReloaded, let config = compositions.first?.controller.config { appearance?.reload(config) }
             mainMenu?.refresh()
         case .appAbout: showAbout()
         case .feedbackReport:
@@ -338,6 +339,8 @@ final class AppComposition {
         }
         compositions.removeAll { $0 === composition }
         composition.closeOverlays()
+        // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
+        composition.closeAppearancePanel()
         composition.window.close()
         observatoryOpenChanged()
         frontID = set.frontID
@@ -763,6 +766,8 @@ final class AppComposition {
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
     func saveForQuit() {
+        // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
+        appearance?.saveIfPending()
         secureInput.releaseAll()
         windowsChanged()
         sessionKeeper?.saveForQuit()
