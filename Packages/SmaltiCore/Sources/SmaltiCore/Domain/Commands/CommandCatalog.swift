@@ -41,7 +41,8 @@ public enum CommandCatalog {
         .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
         .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
         .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
-        .editorOpenLastEdited: "Abrir en Neovim el último archivo editado", .observatoryFilter: "Filtrar el Observatorio",
+        .editorOpenLastEdited: "Abrir en Neovim el último archivo editado",
+        .observatoryFilter: "Filtrar el Observatorio",
     ]
 
     static let terminalIDs: [CommandID] = [

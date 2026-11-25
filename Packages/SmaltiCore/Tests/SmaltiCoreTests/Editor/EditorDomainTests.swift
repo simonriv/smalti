@@ -180,7 +180,8 @@ struct EditedFilesPaletteTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     @Test func editedFilesAreAGroupWithLineAndAge() throws {
-        let workspace = Workspace.empty(name: "w", rootDirectory: try WorkingDirectory(path: "/w"), layout: DwindleLayout())
+        let workspace = Workspace.empty(
+            name: "w", rootDirectory: try WorkingDirectory(path: "/w"), layout: DwindleLayout())
         let edited = [
             EditedFile(path: "/w/src/reminder.service.ts", line: 42, at: now.addingTimeInterval(-120)),
             EditedFile(path: "/w/a b.ts", line: 1, at: now.addingTimeInterval(-10)),
@@ -193,7 +194,8 @@ struct EditedFilesPaletteTests {
 
         #expect(commands.map(\.title) == ["reminder.service.ts", "a b.ts"])
         #expect(commands.map(\.subtitle) == ["línea 42 · hace 2 min", "línea 1 · ahora"])
-        #expect(commands.first?.id.editorTarget == EditorTarget(path: "/w/src/reminder.service.ts", line: 42, column: nil))
+        #expect(
+            commands.first?.id.editorTarget == EditorTarget(path: "/w/src/reminder.service.ts", line: 42, column: nil))
         #expect(CommandGroup.editedFiles.rawValue == "Editados por Claude")
     }
 

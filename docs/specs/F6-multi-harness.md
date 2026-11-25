@@ -354,4 +354,5 @@ Según `.claude/rules/`:
 
 ## Enmiendas
 
+2. **2026-11-25 · T15, Claude.** `Reanudar.dc.html` sí tiene un campo de búsqueda en la columna del buscador («Buscar por tema, proyecto o archivo», 34 px de alto): se reproduce tal cual, en lugar de mostrar lo escrito en el lugar del subtítulo como decía «Buscador».
 1. **2026-11-24 · Plan, Claude.** «Locales» se decide solo por `providerID` (`ollama`, `lmstudio`): `opencode.db` no guarda la `baseURL` del proveedor, que vive en la config de OpenCode, y Smalti no la lee.

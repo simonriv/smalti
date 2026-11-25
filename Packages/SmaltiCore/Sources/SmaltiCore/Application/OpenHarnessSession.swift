@@ -35,10 +35,13 @@ public struct OpenHarnessSession {
         let binding =
             forking
             ? nil : HarnessBinding(harness: session.harness, sessionID: session.id, processStartedAt: clock(), pid: nil)
-        return .open(command: command, directory: exists ? session.directory : nil, folderMissing: !exists, binding: binding)
+        return .open(
+            command: command, directory: exists ? session.directory : nil, folderMissing: !exists, binding: binding)
     }
 
-    public static func folderMissingMessage(_ path: String) -> String { "La carpeta de la sesión ya no existe: \(path)" }
+    public static func folderMissingMessage(_ path: String) -> String {
+        "La carpeta de la sesión ya no existe: \(path)"
+    }
 
     public static func cannotForkMessage(_ harness: HarnessID) -> String {
         "\(harness.displayName) no permite bifurcar sesiones"

@@ -33,7 +33,9 @@ public final class OpenInEditor {
                 continue
             }
         }
-        guard let socket = try? EditorSocketPath.make(directory: socketDirectory, pane: PaneID()) else { return .ignored }
+        guard let socket = try? EditorSocketPath.make(directory: socketDirectory, pane: PaneID()) else {
+            return .ignored
+        }
         return .opened(
             socket: socket, command: EditorCommand.launch(nvim: nvim, socket: socket, target: target), beside: pane)
     }

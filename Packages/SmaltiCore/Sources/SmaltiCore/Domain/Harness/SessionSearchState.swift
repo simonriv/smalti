@@ -62,7 +62,8 @@ public struct SessionSearchState: Equatable, Sendable {
         listing.sessions.map { session in
             let detail = [session.harness.displayName, session.project, session.detail].compactMap { $0 }
             return SessionSearchRow(
-                id: session.id, harness: session.harness, title: session.title.isEmpty ? session.project : session.title,
+                id: session.id, harness: session.harness,
+                title: session.title.isEmpty ? session.project : session.title,
                 day: RelativeDay.label(session.updatedAt, now: now, calendar: calendar),
                 detail: detail.joined(separator: " · "))
         }
@@ -85,7 +86,8 @@ public enum RelativeDay {
     static let months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
     public static func label(_ date: Date, now: Date, calendar: Calendar) -> String {
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now))
+        let days =
+            calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now))
             .day ?? 0
         switch days {
         case ...0: return "hoy"
