@@ -5,7 +5,7 @@ set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 rel="$root/scripts/release"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-total=15; n=0; failures=0
+total=16; n=0; failures=0
 report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
 
 # shellcheck source=/dev/null
@@ -40,11 +40,15 @@ report appcast_item_without_signature_is_refused $?
 grep -q '^  version "0.7.6"$' "$work/smalti.rb" \
   && grep -q '^  sha256 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"$' "$work/smalti.rb" \
   && grep -q 'url "https://github.com/simonriv/smalti/releases/download/v#{version}/Smalti.dmg"' "$work/smalti.rb" \
-  && grep -q '^  auto_updates true$' "$work/smalti.rb" && grep -q 'depends_on macos: ">= :golden_gate"' "$work/smalti.rb" \
+  && grep -q '^  auto_updates true$' "$work/smalti.rb" && grep -q 'depends_on macos: :golden_gate$' "$work/smalti.rb" \
   && grep -q 'depends_on arch: :arm64' "$work/smalti.rb" && grep -q '"~/.config/smalti",' "$work/smalti.rb"
 report cask_has_version_sha_and_the_spec_stanzas $?
 
 ! "$rel/cask.sh" 0.7.6 abc > /dev/null 2>&1; report cask_refuses_a_bad_sha256 $?
+
+# The tap's workflow runs `brew style`; the same check here (Homebrew wants `macos: :golden_gate`, not ">= …").
+mkdir -p "$work/style/Casks" && cp "$work/smalti.rb" "$work/style/Casks/smalti.rb"
+(cd "$work/style" && HOMEBREW_NO_AUTO_UPDATE=1 brew style Casks/smalti.rb > /dev/null 2>&1); report cask_passes_brew_style $?
 
 # A fake app, a DMG of it, and its contents.
 mkdir -p "$work/app/Smalti.app/Contents/MacOS" && printf '#!/bin/sh\n' > "$work/app/Smalti.app/Contents/MacOS/Smalti"
