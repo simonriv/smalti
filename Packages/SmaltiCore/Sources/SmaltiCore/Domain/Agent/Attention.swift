@@ -63,6 +63,7 @@ public struct AttentionNotice: Equatable, Sendable {
         case .attention(let message): message
         case .turnFinished: "terminó y te espera"
         case .failure(let message): "error: \(message)"
+        case .approval(let rule, let environment): "Aprobación: `\(rule)` contra \(environment)"
         }
     }
 }

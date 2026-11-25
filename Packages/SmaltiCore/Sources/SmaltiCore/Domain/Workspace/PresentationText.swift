@@ -26,6 +26,9 @@ public struct HeaderDetail: Equatable, Sendable {
     static func of(_ agent: AgentSession?, now: Date) -> HeaderDetail? {
         guard let agent else { return nil }
         switch agent.state {
+        case .waiting(let since, .approval):
+            return HeaderDetail(
+                text: "espera tu aprobación · \(ElapsedText.short(since: since, now: now))", tone: .waiting)
         case .waiting(let since, _):
             return HeaderDetail(text: "te espera · \(ElapsedText.short(since: since, now: now))", tone: .waiting)
         case .failed(let since, _):

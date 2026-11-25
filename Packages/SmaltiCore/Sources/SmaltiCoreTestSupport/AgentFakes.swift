@@ -48,3 +48,17 @@ public final class FakeHarnessIntegration: HarnessIntegration {
         return installed ? .installed : .notInstalled
     }
 }
+
+/// F7.5: guarded tool calls sent by hand.
+@MainActor
+public final class FakeGuardRequests: GuardRequests {
+    private let stream = AsyncStream<GuardRequest>.makeStream()
+
+    public init() {}
+
+    public func requests() -> AsyncStream<GuardRequest> { stream.stream }
+
+    public func send(_ request: GuardRequest) {
+        stream.continuation.yield(request)
+    }
+}

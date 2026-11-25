@@ -133,6 +133,19 @@ public struct Workspace: Sendable, Equatable {
         return (updated, attention)
     }
 
+    /// F7.5: the pane's agent waits for the user's approval of a guarded command.
+    public func waitingForApproval(_ subject: ApprovalSubject, in pane: PaneID, at date: Date) -> Workspace {
+        replacing(pane) { current in
+            guard let agent = current.agent else { return current }
+            return current.attaching(agent.awaitingApproval(subject, at: date).session)
+        }
+    }
+
+    /// F7.5: nothing waits for approval in the pane any more.
+    public func approvalSettled(in pane: PaneID) -> Workspace {
+        replacing(pane) { current in current.agent.map { current.attaching($0.approvalSettled()) } ?? current }
+    }
+
     /// Its most urgent agent (error > te espera > trabajando > detenido); nil without agents.
     public var agentStatus: AgentStateKind? {
         AgentStateKind.mostUrgent(panes.compactMap(\.agent?.state.kind))

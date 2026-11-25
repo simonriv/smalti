@@ -57,6 +57,23 @@ public struct AgentSession: Equatable, Sendable {
         return AgentTransition(session: next, attention: nil)
     }
 
+    /// F7.5: Smalti holds one of its commands until the user approves it.
+    public func awaitingApproval(_ subject: ApprovalSubject, at date: Date) -> AgentTransition {
+        var next = self
+        next.state = .waiting(since: date, reason: .approval(subject.summary))
+        let attention = AttentionReason.approval(
+            rule: subject.headline?.rule ?? "", environment: subject.environment.label)
+        return AgentTransition(session: next, attention: attention)
+    }
+
+    /// Nothing waits for approval any more: the agent goes on. Any other wait stays.
+    public func approvalSettled() -> AgentSession {
+        guard case .waiting(_, .approval) = state else { return self }
+        var next = self
+        next.state = .working
+        return next
+    }
+
     /// A notification while already waiting (Claude's 60 s idle reminder after a stop, or the one that comes with a
     /// permission request) or failed changes nothing: the user was already told, and a reminder is no recovery.
     private func notified(_ event: AgentEvent) -> AgentTransition {
