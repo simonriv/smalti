@@ -414,7 +414,7 @@
 - [x] T8 · Scripts de release y workflow
 - [x] T9 · Repos satélite
 - [x] T10 · Pruebas de instalación y actualización
-- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+- [x] Revisión intermedia 2 (1 crítico, 6 importantes, 10 menores; corregidos) + regresión de UI (86/86) + mutación incremental (sin archivos de SmaltiCore nuevos desde la revisión 1)
 #### Bloque 4 · Cierre
 - [ ] T11 · Verificación, capturas y checklist
 - [ ] T12 · Público, release y despliegue
