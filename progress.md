@@ -295,4 +295,4 @@
 - [x] T13 · Lista de ⌘K con `NSTableView`
 - [x] Revisión intermedia 2 (3 importantes, 6 menores) + mutación incremental (22/22)
 #### Bloque 4 · Cierre
-- [ ] T14 · Mediciones (C1 ✅ con enmienda 6 y repetición limpia, B7 17,8–23,9 ms, C12 ⚠️ no atribuible al resaltado), capturas, checklist (`docs/specs/F5.6-checklist.md`), revisión final acotada (2 importantes, 4 menores), mutación de la fase 100 % (328 mutantes), PRs y despliegue
+- [x] T14 · Mediciones (C1 ✅ con enmienda 6 y repetición limpia, B7 17,8–23,9 ms, C12 ⚠️ no atribuible al resaltado), capturas, checklist (`docs/specs/F5.6-checklist.md`), revisión final acotada (2 importantes, 4 menores), mutación de la fase 100 % (328 mutantes), PRs #30 y #31, versión 0.5.6 desplegada
