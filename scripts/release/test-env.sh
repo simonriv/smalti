@@ -64,10 +64,16 @@ test_env_wait_running() {
   return 1
 }
 
-# PIDs of the test's own app processes (anything run from under the test root), never the daily Smalti.
+# PIDs of the test's own app processes, never the daily Smalti: anything run from under the test root, and the
+# translocated copies macOS makes of a quarantined test app (the daily one runs from /Applications, untranslocated).
 test_env_pids() {
-  ps -axo pid=,command= | awk -v root="$TEST_ROOT/" 'index($0, root) && /Contents\/MacOS\/Smalti/ { print $1 }'
+  ps -axo pid=,command= | awk -v root="$TEST_ROOT/" '
+    (index($0, root) || /\/AppTranslocation\/[^ ]*\/Smalti\.app\/Contents\/MacOS\/Smalti$/) \
+      && /Contents\/MacOS\/Smalti/ { print $1 }'
 }
+
+# Whether the test app got past launch: it writes its engine config into the test state.
+test_env_started() { [[ -f "$TEST_STATE/ghostty.conf" ]]; }
 
 test_env_quit() {
   # Only when it runs: telling a stopped app to quit would launch some other registered copy of it first.
@@ -80,7 +86,7 @@ test_env_quit() {
 # Kills whatever of the test is still running (the app under the test root) and unregisters its copies.
 test_env_teardown() {
   local pid
-  for pid in $(test_env_pids); do kill "$pid" 2>/dev/null; done
+  for pid in $(test_env_pids); do kill -9 "$pid" 2>/dev/null; done
   # Sparkle's installer runs from the test app's cache; it goes before the cache does.
   pkill -f "$HOME/Library/Caches/$TEST_BUNDLE_ID" 2>/dev/null
   [[ -n "${TEST_SOCKETS:-}" ]] && rm -rf "$TEST_SOCKETS"

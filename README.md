@@ -37,13 +37,14 @@ La app queda en `build/Build/Products/Release/Smalti.app`. Lo que compilas en tu
 
 Smalti no lleva firma de desarrollador de Apple (está firmada *ad hoc*) ni está **notarizada** (eso cuesta 99 USD al año y Smalti es gratis); sus actualizaciones sí van firmadas con la clave EdDSA de Smalti. La primera vez que la abras, macOS dirá que no pudo verificarla. Tienes dos formas de abrirla; las dos son de una sola vez.
 
-**Desde Ajustes del Sistema**
+**Desde los ajustes de macOS**
 
-1. Abre Smalti. macOS muestra el aviso; pulsa «Listo» (o «Aceptar», según tu español).
-2. Ve a **Ajustes del Sistema → Privacidad y seguridad**, baja hasta «Seguridad» y pulsa **«Abrir igualmente»** junto al mensaje sobre Smalti.
-3. Confirma con tu contraseña o Touch ID, y pulsa «Abrir igualmente» otra vez.
+1. Abre Smalti. macOS dice «No se abrió "Smalti"»; pulsa **«Listo»** (en español de España, «Aceptar»).
 
-<!-- Capturas de macOS 27: docs/specs/F7.6-assets/ (se añaden al cerrar la fase) -->
+   ![Aviso de macOS 27 al abrir Smalti por primera vez](docs/specs/F7.6-assets/first-open-warning.png)
+
+2. Abre **Configuración del Sistema → Privacidad y seguridad** (en España, **Ajustes del Sistema**), baja hasta «Seguridad» y, junto a «Se bloqueó Smalti para proteger tu Mac.», pulsa **«Abrir de todos modos»** (en España, **«Abrir igualmente»**).
+3. Confirma con tu contraseña o Touch ID. Smalti se abre y macOS no vuelve a preguntar.
 
 **Desde la terminal**
 

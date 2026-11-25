@@ -77,7 +77,7 @@ fi
 # every ad hoc build, quarantined or not, so it does not prove the block by itself.
 if [[ "${SMALTI_TEST_FIRST_OPEN:-0}" == 1 ]]; then
   test_env_open "$apps/Smalti.app"; sleep 8
-  [[ -z "$(test_env_pids)" ]]; step first_open_is_blocked $?
+  ! test_env_started; step first_open_is_blocked $?
   [[ -n "${SMALTI_TEST_CAPTURE:-}" ]] && screencapture -x "$SMALTI_TEST_CAPTURE"
   killall CoreServicesUIAgent 2>/dev/null
 else
