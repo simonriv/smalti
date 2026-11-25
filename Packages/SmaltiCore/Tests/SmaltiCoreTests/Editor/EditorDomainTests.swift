@@ -20,6 +20,8 @@ struct EditorTargetTests {
                     column: nil))
         #expect(EditorTarget.parse("./a.ts", cwd: "/w/") == EditorTarget(path: "/w/a.ts", line: nil, column: nil))
         #expect(EditorTarget.parse("~/a.ts", cwd: "/w", home: "/Users/s")?.path == "/Users/s/a.ts")
+        #expect(EditorTarget.parse("~", cwd: "/w", home: "/Users/s")?.path == "/Users/s")
+        #expect(EditorTarget.parse("src/a.ts", cwd: "/w", home: "/Users/s")?.path == "/w/src/a.ts")
     }
 
     @Test func rejectsUrlsAndEmpty() {

@@ -86,6 +86,23 @@ struct HarnessRestoreTests {
         #expect(result.set?.active.panes.first?.agent?.sessionID == "7f3a")
     }
 
+    @Test func editorIsNotConnectedUnlessAsked() {
+        let restore = RestoreSession(
+            .init(
+                engine: engine, transcripts: archive, harnesses: HarnessRegistry([EditorAwareHarness()]),
+                environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
+                clock: { SessionFixtures.now }))
+        let agent = AgentSnapshot(harness: .claude, sessionID: "7f3a", title: nil, lastState: .waiting)
+
+        _ = restore.execute(
+            RestorePlan(
+                workspaces: [SessionFixtures.workspace("solen", [SessionFixtures.pane(launch: .resume(agent))])],
+                activeIndex: 0),
+            savedAt: SessionFixtures.savedAt, home: home)
+
+        #expect(engine.openedSpecs[0].initialInput == "claude --resume 7f3a\n")
+    }
+
     @Test func editorPaneRelaunchesAtItsLine() {
         _ = run(.editor(EditorPosition(file: "/Users/s/dev/solen/src/a b.ts", line: 42)))
 
@@ -144,6 +161,7 @@ struct HarnessResumeRowTests {
         #expect(listed?.title == "reminder.service.ts")
         #expect(listed?.detail == "línea 42")
         #expect(listed?.code == "nvim +42")
+        #expect(listed?.isFinished == false)
     }
 }
 

@@ -307,22 +307,22 @@
 
 ### Tareas
 #### Bloque 1 · Spike, fixtures y dominio
-- [ ] T1 · Spike de reanudación, nombres de proceso y fixtures reales
-- [ ] T2 · Tipos del multi-harness en el dominio
-- [ ] T3 · Puerto `HarnessAdapter` ampliado, contrato compartido y fake
-- [ ] T4 · Captura del ID y `HarnessBinding`
-- [ ] T5 · Guardar y restaurar con respaldo, y compatibilidad
+- [x] T1 · Spike de reanudación, nombres de proceso y fixtures reales
+- [x] T2 · Tipos del multi-harness en el dominio
+- [x] T3 · Puerto `HarnessAdapter` ampliado, contrato compartido y fake
+- [x] T4 · Captura del ID y `HarnessBinding`
+- [x] T5 · Guardar y restaurar con respaldo, y compatibilidad
 #### Bloque 2 · Adaptadores de harness
-- [ ] T6 · `SQLiteReader`
-- [ ] T7 · `CodexHarnessAdapter`
-- [ ] T8 · `AntigravityHarnessAdapter`
-- [ ] T9 · `OpenCodeHarnessAdapter` y `OpenCodeUsage`
-- [ ] T10 · `ClaudeHarness` completo e integración de reanudación
+- [x] T6 · `SQLiteReader`
+- [x] T7 · `CodexHarnessAdapter`
+- [x] T8 · `AntigravityHarnessAdapter`
+- [x] T9 · `OpenCodeHarnessAdapter` y `OpenCodeUsage`
+- [x] T10 · `ClaudeHarness` completo e integración de reanudación
 #### Bloque 3 · Neovim, instalador e IPC
-- [ ] T11 · `ForegroundProcess` con pid y arranque, `PostToolUse` con archivo
-- [ ] T12 · Dominio de Neovim y `NeovimAdapter`
-- [ ] T13 · Catálogo de integraciones, instalador de claudecode.nvim y prueba del diff (C3)
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T11 · `ForegroundProcess` con pid y arranque, `PostToolUse` con archivo
+- [x] T12 · Dominio de Neovim y `NeovimAdapter`
+- [x] T13 · Catálogo de integraciones, instalador de claudecode.nvim y prueba del diff (C3)
+- [x] Revisión intermedia 1 (1 crítico, 4 importantes, 12 menores; corregidos salvo M11, por decisión) + mutación incremental (96,7 %; 5 sobrevivientes matados y verificados a mano)
 #### Bloque 4 · App
 - [ ] T14 · Composition root, flags y captura en vivo
 - [ ] T15 · Buscador como tarjeta propia (⌘⇧O)

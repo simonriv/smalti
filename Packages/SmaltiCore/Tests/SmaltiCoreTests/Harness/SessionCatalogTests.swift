@@ -91,6 +91,13 @@ struct SessionQueryTests {
         #expect(!SessionQuery(text: "rizaria").matches(session))
     }
 
+    @Test func readLimitGrowsOnlyWhenNarrowed() {
+        #expect(SessionQuery(limit: 10).readLimit == 10)
+        #expect(SessionQuery(text: "x", limit: 10).readLimit == SessionQuery.narrowedReadLimit)
+        #expect(SessionQuery(directory: "/w", limit: 10).readLimit == SessionQuery.narrowedReadLimit)
+        #expect(SessionQuery(text: "x", limit: 900).readLimit == 900)
+    }
+
     @Test func directoryFilterComparesResolvedPaths() {
         let session = HarnessSession(
             harness: .codex, id: "x", directory: "/private/tmp/w", title: "t", createdAt: t0, updatedAt: t0,
