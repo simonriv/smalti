@@ -193,7 +193,9 @@ final class ObservatoryView: NSView {
         table.show(report.rows, selected: report.detail?.sessionID)
         detail.show(report.detail, timeZone: zone)
         localModels.show(LocalModelsFigures.make(snapshot.localModels, now: snapshot.now))
-        system.show(SystemFigures.make(snapshot), cpuHistory: snapshot.cpuHistory, gpuHistory: snapshot.gpuHistory)
+        system.show(
+            SystemFigures.make(snapshot), cpuHistory: snapshot.cpuHistory, gpuHistory: snapshot.gpuHistory,
+            footnote: report.footnote)
     }
 }
 

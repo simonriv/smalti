@@ -49,6 +49,7 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
     /// `-SmaltiExitMarker <path>` (launch argument): UI tests check this file to tell a clean quit from a crash.
     func applicationWillTerminate(_ notification: Notification) {
         latencyProbe?.finish()
+        composition?.stopTelemetry()
         guard let path = UserDefaults.standard.string(forKey: "SmaltiExitMarker"), !path.isEmpty else { return }
         FileManager.default.createFile(atPath: path, contents: Data())
     }

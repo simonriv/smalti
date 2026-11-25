@@ -16,6 +16,7 @@ import OpenCodeHarnessAdapter
 import ProjectContextAdapter
 import UserNotificationsAdapter
 import OSLog
+import OTLPReceiverAdapter
 import SmaltiCore
 import TOMLConfigAdapter
 
@@ -56,6 +57,11 @@ final class AppComposition {
     /// F6: claudecode.nvim is installed right now (`--ide` for the Claude sessions Smalti relaunches).
     private var connectsEditor: () -> Bool = { false }
     private var captures: HarnessCaptures?
+    /// F7: Claude Code's telemetry from the panes, through the local OTLP receiver.
+    private var claudeTelemetry: CollectTelemetry?
+    /// F7: export and import of saved layouts as portable files.
+    private var layoutSharing: LayoutSharing?
+    private var reportedTelemetryFailure: String?
     private static let persistTimeout: Duration = .seconds(1)
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
@@ -100,7 +106,7 @@ final class AppComposition {
             [
                 LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
                 LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
-            ] + LaunchSettings.harnessArgumentKeys
+            ] + LaunchSettings.harnessArgumentKeys + LaunchSettings.telemetryArgumentKeys
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
         let environment = ProcessInfo.processInfo.environment
         for key in [LaunchSettings.claudeConfigDirKey] + LaunchSettings.harnessEnvironmentKeys {
@@ -166,8 +172,11 @@ final class AppComposition {
         let environment = PaneEnvironment(
             version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
             files: PaneFileLocator(stateDirectory: state),
-            ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
+            ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket), telemetry: startTelemetry(startup))
         harnesses = Self.harnessRegistry(startup.settings)
+        layoutSharing = LayoutSharing(
+            layouts: archive, files: SharedLayoutFiles(), harnesses: harnesses,
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
         let captures = HarnessCaptures(registry: harnesses)
         self.captures = captures
         // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
@@ -212,6 +221,8 @@ final class AppComposition {
         sessionKeeper = keeper
         let composition = makeComposition(controller, visibility: visibility, engine: engine)
         installMenus(engine)
+        // The receiver started before any window existed: its first status reaches the bar now.
+        if let claudeTelemetry { telemetryChanged(claudeTelemetry) }
         switch LoadLastSession(archive: archive, preferences: archive).execute() {
         case .startFresh:
             controller.start()
@@ -337,6 +348,7 @@ final class AppComposition {
             if isReloaded, let config = compositions.first?.controller.config {
                 appearance?.reload(config)
                 engine?.reportsPointerWords = config.preview.hover
+                claudeTelemetry?.apply(config.extras)
                 input?.sendPromptStyle()
             }
             mainMenu?.refresh()
@@ -363,7 +375,16 @@ final class AppComposition {
         case .secureInputToggle:
             secureInput.toggle()
             showSecureInput()
-        default: break
+        case .layoutImport:
+            layoutSharing?.importLayout(in: composition.window) { [weak composition] in
+                composition?.controller.report($0)
+            }
+        default:
+            if case .export(let name)? = command.namedLayout {
+                layoutSharing?.export(name, from: composition.window) { [weak composition] in
+                    composition?.controller.report($0)
+                }
+            }
         }
     }
 
@@ -744,9 +765,70 @@ final class AppComposition {
             callbacks: .init(
                 panes: { [weak self] in self?.compositions.flatMap { PaneAgent.all(in: $0.controller.set) } ?? [] },
                 onSnapshot: { [weak self] frame in self?.compositions.forEach { $0.show(frame) } },
-                onError: { [weak self] in self?.controller?.report(.transcriptsUnreadable($0)) }))
+                onError: { [weak self] in self?.controller?.report(.transcriptsUnreadable($0)) },
+                telemetry: { [weak self] in
+                    (self?.claudeTelemetry?.ledger ?? TelemetryLedger(), self?.claudeTelemetry?.status ?? .off)
+                }))
         refresher.start()
         observatory = refresher
+    }
+
+    // MARK: - Telemetry (F7)
+
+    /// Starts the receiver before the first pane opens, so every pane gets the variables from the start.
+    private func startTelemetry(_ startup: Startup) -> CollectTelemetry {
+        let settings = startup.settings
+        let collector = CollectTelemetry(
+            receiver: LoopbackOTLPReceiver(),
+            settings: ClaudeSettingsTelemetryCheck(
+                claudeHome: settings.claudeHome,
+                managedSettings: settings.managedSettings ?? ClaudeSettingsTelemetryCheck.defaultManagedSettings))
+        collector.onChange = { [weak self, weak collector] in
+            guard let self, let collector else { return }
+            telemetryChanged(collector)
+        }
+        collector.apply(startup.initial.config.extras)
+        claudeTelemetry = collector
+        telemetryProbe = settings.telemetryProbe
+        return collector
+    }
+
+    private var telemetryProbe: URL?
+
+    private func telemetryChanged(_ collector: CollectTelemetry) {
+        observatory?.telemetryChanged()
+        writeTelemetryProbe(collector.status)
+        guard case .failed(let reason) = collector.status else {
+            reportedTelemetryFailure = nil
+            return
+        }
+        // Once per failure: a later reload that fails the same way does not repeat it.
+        guard reportedTelemetryFailure != reason, let controller else { return }
+        reportedTelemetryFailure = reason
+        controller.report(.telemetryReceiverFailed(reason))
+    }
+
+    /// `-SmaltiTelemetryProbe <file>` (tests): the receiver's status and port, rewritten on every change.
+    private func writeTelemetryProbe(_ status: TelemetryStatus) {
+        guard let telemetryProbe else { return }
+        let fields: [String: Any] =
+            switch status {
+            case .off: ["status": "off"]
+            case .configuredByUser: ["status": "configuredByUser"]
+            case .listening(let endpoint): ["status": "listening", "port": Int(endpoint.port)]
+            case .failed(let reason): ["status": "failed", "reason": reason]
+            }
+        do {
+            try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]).write(
+                to: telemetryProbe, options: .atomic)
+        } catch {
+            logger.error("telemetry probe not written: \(error.localizedDescription, privacy: .private)")
+        }
+    }
+
+    /// Stops the receiver before the app quits.
+    func stopTelemetry() {
+        claudeTelemetry?.apply(ExtrasSettings(otlp: false))
     }
 
     /// Hooks reach the app through `<state>/smalti.sock`. If another instance of this build owns it, this one runs

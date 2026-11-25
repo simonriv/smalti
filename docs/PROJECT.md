@@ -57,7 +57,7 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 - Layouts automáticos: **Dwindle** (cada panel nuevo divide el último), **Columnas** y **Maestro + pila**. Cambio con atajo o ⌘K.
 - Igualar tamaños, mover y redimensionar paneles por teclado; arrastre con el mouse como opción.
 - Workspaces por proyecto (solen, rizaria, xolken) en la franja superior, con un punto de estado.
-- Layouts guardables y restaurables por nombre ("solen-dev"), con el comando de arranque de cada panel.
+- Layouts guardables y restaurables por nombre ("solen-dev"), con el comando de arranque de cada panel; desde F7 se exportan e importan como archivo portátil (`.smalti-layout.json`).
 - Cabecera mínima por panel: proceso, proyecto, modelo, % de contexto, tiempo de vida y atajo (⌥1…⌥9).
 - Espacios de 8 px entre paneles, radio de 11 px y un brillo sutil en el panel activo.
 
@@ -95,7 +95,7 @@ Gemini CLI quedó fuera: Google retiró su login individual y Antigravity lo cub
 - Detalle de la sesión seleccionada: últimas herramientas usadas y tokens por minuto, con las compactaciones.
 - Modelos locales de Ollama: cargados, tamaño en memoria, contexto y tokens/s.
 - Sistema: CPU, GPU y memoria unificada, desglosada en modelo, agentes y resto.
-- Fuentes: hooks, transcripts en disco (todas las sesiones de Claude de la máquina, por periodos de hoy, 7 y 30 días) y la API local de Ollama. La telemetría OpenTelemetry de Claude Code (receptor OTLP local) queda como extra de F7 (decidido por Simón, 2026-11-22).
+- Fuentes: hooks, transcripts en disco (todas las sesiones de Claude de la máquina, por periodos de hoy, 7 y 30 días) y la API local de Ollama. Desde F7, la telemetría OpenTelemetry de los Claude Code que corren en paneles de Smalti llega a un receptor OTLP local (solo `127.0.0.1`) y añade al detalle de la sesión peticiones, latencia, errores de API y el costo según Claude Code (spec F7).
 
 ### 5. Input inteligente y predicción
 
@@ -208,7 +208,7 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
 - **Adaptadores:**
     - `TerminalEngine` → libghostty.
     - `HarnessAdapter` → Claude Code, Codex, Antigravity, OpenCode. Cada uno implementa `detect`, `captureSessionId`, `listSessions` y `resumeCommand`.
-    - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. Receptor OTLP local en F7.
+    - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. `TelemetryReceiver` → receptor OTLP/HTTP local en `127.0.0.1` (F7).
     - `CompletionProvider` → specs de Fig e historial.
     - `PredictionProvider` → heurístico, local.
     - `EditorBridge` → Neovim por socket.

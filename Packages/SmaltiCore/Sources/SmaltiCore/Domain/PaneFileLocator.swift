@@ -32,24 +32,30 @@ public struct IPCEndpoints: Sendable {
     }
 }
 
-/// The variables every pane's process receives. `SMALTI` and `SMALTI_VERSION` (R1) win over `extra`.
+/// The variables every pane's process receives. `SMALTI` and `SMALTI_VERSION` (R1) win over `extra` and the
+/// telemetry's (F7), which win over `extra`.
 public struct PaneEnvironment: Sendable {
     private let version: String
     private let extra: [String: String]
     private let files: PaneFileLocator?
     private let ipc: IPCEndpoints?
+    private let telemetry: (any TelemetryVariablesSource)?
 
     public init(
-        version: String, extra: [String: String] = [:], files: PaneFileLocator? = nil, ipc: IPCEndpoints? = nil
+        version: String, extra: [String: String] = [:], files: PaneFileLocator? = nil, ipc: IPCEndpoints? = nil,
+        telemetry: (any TelemetryVariablesSource)? = nil
     ) {
         self.version = version
         self.extra = extra
         self.files = files
         self.ipc = ipc
+        self.telemetry = telemetry
     }
 
+    @MainActor
     public func variables(for pane: PaneID) -> [String: String] {
-        var variables = extra.merging(ChildEnvironment.smalti(version: version)) { _, smalti in smalti }
+        var variables = extra.merging(telemetry?.currentVariables() ?? [:]) { _, telemetry in telemetry }
+            .merging(ChildEnvironment.smalti(version: version)) { _, smalti in smalti }
         variables["SMALTI_PANE_ID"] = pane.description
         if let files { variables["SMALTI_HISTORY_FILE"] = files.historyFile(for: pane).path(percentEncoded: false) }
         if let ipc {

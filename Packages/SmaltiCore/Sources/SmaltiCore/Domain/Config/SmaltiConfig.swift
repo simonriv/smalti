@@ -67,6 +67,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var prompt = PromptConfig.standard
     /// `[preview]` (F5.5); like `observatory`, outside the initializer.
     public var preview = PreviewSettings.standard
+    /// `[extras]` (F7); like `observatory`, outside the initializer.
+    public var extras = ExtrasSettings.standard
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

@@ -132,6 +132,42 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "c18-status.png")
     }
 
+    /// F7: the observatory's detail with the telemetry line, fed by `scripts/otlp/fake-claude.py` (never a real Claude).
+    func testCaptureObservatoryTelemetry() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        try app.installObservatoryFixture(
+            from: Bundle(for: Self.self), newestFirst: ["projects/-fixture-work-x/tools-session.jsonl"])
+        launch(app)
+        neutralPrompt(app)
+        let emitter = URL(filePath: #filePath).deletingLastPathComponent()
+            .appending(path: "../../scripts/otlp/fake-claude.py").standardized.path(percentEncoded: false)
+        app.run("/usr/bin/python3 '\(emitter)' --session tools-session --requests 42 --errors 2 --interval 0; clear")
+        app.typeKey("a", modifierFlags: [.command, .shift])
+        let line = app.element("smalti.observatory.telemetry")
+        let shown = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (line.value as? String ?? "").contains("42 peticiones") }, object: nil)
+        wait(for: [shown], timeout: 20)
+        Thread.sleep(forTimeInterval: 1)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f7-observatory-telemetry.png")
+    }
+
+    /// F7: ⌘K with a saved layout's "Exportar layout “…”…" and "Importar layout…".
+    func testCapturePaletteSharing() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        neutralPrompt(app)
+        openPalette()
+        app.typeText("solen-dev")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.palette").waitForNonExistence(timeout: 5))
+        openPalette()
+        app.typeText("layout")
+        Thread.sleep(forTimeInterval: 0.5)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f7-palette-sharing.png")
+    }
+
     /// Committed captures show no host name, user or login banner: a bare prompt, and the workspace (named after the
     /// home folder) renamed to the board's "solen".
     private func neutralPrompt(_ app: XCUIApplication) {

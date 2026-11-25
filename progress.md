@@ -334,3 +334,31 @@
 #### Bloque 5 · Cierre
 - [x] T20 · Mediciones, capturas, checklist y revisión final (C7 p95 53,6 ms; revisión final: 1 crítico, 2 importantes y 6 menores corregidos; mutación completa 99,9 %)
 - [x] T21 · Limpieza (modelo, Codex, OpenCode y Ollama desinstalados; grabaciones crudas borradas), 0.6.0, PRs y despliegue
+
+## F7 · Extras
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7-extras.md`): layouts compartibles en JSON portátil y receptor OTLP en 127.0.0.1 con solo logs `http/json`; Simón aprobó de antemano spec, plan y recomendaciones
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7-extras.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [x] T1 · `SharedLayout`
+- [x] T2 · `ExportLayout`, `ImportLayout`, `LayoutFiles` y ⌘K
+- [x] T3 · Dominio de la telemetría
+- [x] T4 · `[extras]`, puertos, `CollectTelemetry`, entorno y Observatorio
+#### Bloque 2 · Adaptadores
+- [x] T5 · `OTLPReceiverAdapter`: socket y HTTP
+- [x] T6 · `OTLPLogsDecoder`
+- [x] T7 · `ClaudeSettingsTelemetryCheck` y `SharedLayoutFiles`
+- [x] Revisión intermedia 1 (3 críticos, 6 importantes, 8 menores; corregidos, I5 como enmienda) + mutación incremental (97,4 %; 4 sobrevivientes muertos y verificados a mano)
+#### Bloque 3 · App
+- [x] T8 · Telemetría en la app y emisor falso
+- [x] T9 · Exportar e importar layouts en la app
+- [x] T10 · Guardas y documentos
+- [x] Revisión intermedia 2 (0 críticos, 2 importantes, 9 menores; corregidos, I1 como enmienda 7) + regresión de UI (64/65 → 13/13 tras la tanda; 2 pruebas viejas rotas desde F6 arregladas) + mutación incremental (100 %, 107 mutantes)
+#### Bloque 4 · Cierre
+- [x] T11 · Mediciones (C2 ✅: A12/A14 sin cambio, GPU alternada 9,18/8,65/8,28 %, C1 independiente, C13 sin empeorar), capturas, checklist (`docs/specs/F7-checklist.md`), revisión final (2 importantes, 3 menores, corregidos), mutación de la fase 97,8 % (4 sobrevivientes muertos y verificados a mano; completa detenida por decisión de Simón)
+- [ ] T12 · 0.7.0, PRs y despliegue

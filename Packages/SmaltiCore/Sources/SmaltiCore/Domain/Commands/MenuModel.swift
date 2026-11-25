@@ -183,7 +183,9 @@ private struct Builder {
             CommandID.scrollPageUp, .scrollPageDown, .scrollTop, .scrollBottom, .promptPrevious, .promptNext,
         ]
         return [
-            item(.paletteOpen), item(.observatoryToggle), item(.observatoryFilter), item(.harnessSearch), .separator,
+            item(.paletteOpen), item(.observatoryToggle), item(.observatoryFilter), item(.harnessSearch),
+            item(.layoutImport),
+            .separator,
             .submenu("Layout", layouts), item(.panesEqualize),
             .separator, item(.fontIncrease), item(.fontDecrease), item(.fontReset), .separator,
             .submenu("Desplazamiento", scrolling.map { item($0) }), item(.previewQuickLook), item(.editorOpenBeside),

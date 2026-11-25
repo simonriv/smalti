@@ -159,4 +159,23 @@ struct LaunchSettingsTests {
 
         #expect(settings.opencodeDatabase == nil)
     }
+
+    // MARK: F7
+
+    @Test func telemetryFlagsAreAbsentByDefault() {
+        let settings = LaunchSettings(arguments: [:], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.managedSettings == nil)
+        #expect(settings.telemetryProbe == nil)
+    }
+
+    @Test func telemetryFlagsAreRead() {
+        let settings = LaunchSettings(
+            arguments: ["SmaltiManagedSettings": "/t/managed.json", "SmaltiTelemetryProbe": "/t/probe.json"],
+            home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.managedSettings == URL(filePath: "/t/managed.json"))
+        #expect(settings.telemetryProbe == URL(filePath: "/t/probe.json"))
+        #expect(LaunchSettings.telemetryArgumentKeys == ["SmaltiManagedSettings", "SmaltiTelemetryProbe"])
+    }
 }

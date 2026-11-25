@@ -28,11 +28,11 @@ final class NamedLayoutTests: SmaltiUITestCase {
         let layout = #"""
             {"name":"x","rootDirectory":"/tmp","layout":"dwindle","focusedIndex":0,"panes":[{"id":"\#(UUID().uuidString)",
             "workingDirectory":"/tmp","scrollbackLines":0,"commandCount":0,
-            "agent":{"harness":"codex","sessionID":"0198","lastState":"waiting"}}]}
+            "agent":{"harness":"gemini","sessionID":"0198","lastState":"waiting"}}]}
             """#
-        try Data(layout.utf8).write(to: layouts.appending(path: "con-codex.json"))
+        try Data(layout.utf8).write(to: layouts.appending(path: "con-gemini.json"))
 
-        runFromPalette("con-codex")
+        runFromPalette("con-gemini")
 
         let reported = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value BEGINSWITH %@", "No se restauró todo"),

@@ -26,6 +26,7 @@ struct ObservatoryFrame: Sendable {
 final class ObservatoryRefresher {
     private let observe: ObserveAgents
     private let panes: () -> [PaneAgent]
+    private let telemetry: () -> (ledger: TelemetryLedger, status: TelemetryStatus)
     private let onSnapshot: (ObservatoryFrame) -> Void
     private let onError: (String) -> Void
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "observatory")
@@ -37,6 +38,8 @@ final class ObservatoryRefresher {
     private var loggedUsageFailures = 0
     private var lastError: String?
     private var lastHealth = TranscriptHealth.healthy
+    /// F7 review 2: telemetry refreshes the open observatory at most once per open interval.
+    private var telemetryThrottle = RefreshThrottle(interval: TimeInterval(openInterval.components.seconds))
 
     static let openInterval: Duration = .seconds(2)
     static let closedInterval: Duration = .seconds(10)
@@ -54,6 +57,8 @@ final class ObservatoryRefresher {
         let onSnapshot: (ObservatoryFrame) -> Void
         /// A refresh could not read the transcripts; called once per distinct message.
         let onError: (String) -> Void
+        /// F7: what the panes' Claude Code sent to the local receiver.
+        var telemetry: () -> (ledger: TelemetryLedger, status: TelemetryStatus) = { (TelemetryLedger(), .off) }
     }
 
     init(observe: ObserveAgents, callbacks: Callbacks) {
@@ -61,6 +66,7 @@ final class ObservatoryRefresher {
         panes = callbacks.panes
         onSnapshot = callbacks.onSnapshot
         onError = callbacks.onError
+        telemetry = callbacks.telemetry
     }
 
     func start() {
@@ -94,6 +100,12 @@ final class ObservatoryRefresher {
         refreshLoop?.cancel()
     }
 
+    /// F7: new telemetry shows at once while the observatory is open; closed, the next 10 s refresh takes it.
+    func telemetryChanged() {
+        guard isObservatoryOpen, telemetryThrottle.shouldRefresh(at: .now) else { return }
+        refreshNow()
+    }
+
     func agentEvent(_ event: AgentEvent) {
         if Self.refreshingHooks.contains(event.hook) { refreshNow() }
     }
@@ -106,7 +118,9 @@ final class ObservatoryRefresher {
         isRefreshing = true
         Task { [weak self] in
             guard let self else { return }
+            let received = self.telemetry()
             let snapshot = await self.observe.snapshot(panes: self.panes(), now: .now)
+                .adding(telemetry: received.ledger, status: received.status)
             let frame = await Task.detached(priority: .utility) { ObservatoryFrame.make(snapshot) }.value
             self.deliver(frame)
             self.isRefreshing = false

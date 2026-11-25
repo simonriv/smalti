@@ -55,3 +55,8 @@ Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-ass
 
 - `Reanudar.dc.html`: sin el chip ni la fila de Gemini (Gemini CLI quedó fuera). La tarjeta «Todas las sesiones de agentes» también se abre sola, centrada, con ⌘⇧O; escribir filtra y el texto sale en el lugar del subtítulo. Una fila de respaldo dice «`agy -c` · la última del directorio».
 - `Observatorio.dc.html`: los filtros también se cambian con ⌘⇧F; el pie añade «base de OpenCode».
+
+## Extras (F7)
+
+- `Observatorio.dc.html`: con telemetría de Claude Code recibida, el detalle añade bajo la línea de compactación, con su mismo estilo, «Telemetría · desde 10:42 · 42 peticiones · mediana 1,4 s · 2 errores de API · $3.12 según Claude Code», y el pie dice «hooks, transcripts y telemetría de Claude Code». Si la telemetría está configurada fuera de Smalti, el pie lo dice.
+- `Paleta.dc.html`: el grupo «Workspaces y sesiones» añade «Exportar layout “<nombre>”…» tras cada «Restaurar layout» e «Importar layout…»; la confirmación y los paneles de archivo son los del sistema.

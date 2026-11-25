@@ -90,7 +90,7 @@ final class TilingController {
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
         .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
-        .promptExport,
+        .promptExport, .layoutImport,
     ]
 
     private let deps: Dependencies
@@ -215,6 +215,8 @@ final class TilingController {
                 show(.layoutSaveFailed(name.rawValue, reason: error.summary))
             }
         case .restore(let name): restoreLayout(name)
+        // F7: the save panel belongs to the window, so the app runs it.
+        case .export(let name): onAppCommand?(.layoutExport(name))
         }
     }
 
