@@ -26,12 +26,5 @@ test_keys() {
     [[ -s "$cache/keys/$name" ]] || openssl genpkey -algorithm ed25519 2>/dev/null \
       | openssl pkey -outform DER 2>/dev/null | tail -c 32 | base64 > "$cache/keys/$name"
   done
-  python3 - "$cache/keys/good" <<'P'
-import base64, subprocess, sys
-seed = base64.b64decode(open(sys.argv[1]).read())
-der = bytes.fromhex("302e020100300506032b657004220420") + seed
-pem = b"-----BEGIN PRIVATE KEY-----\n" + base64.b64encode(der) + b"\n-----END PRIVATE KEY-----\n"
-out = subprocess.run(["openssl", "pkey", "-pubout", "-outform", "DER"], input=pem, capture_output=True, check=True).stdout
-print(base64.b64encode(out[-32:]).decode())
-P
+  "$(dirname "${BASH_SOURCE[0]}")/public-key.sh" < "$cache/keys/good"
 }

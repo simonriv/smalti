@@ -9,6 +9,10 @@ grep -q "<title>$version</title>" "$item" || die "the item is not version $versi
 grep -q 'sparkle:edSignature="[^"]' "$item" || die "the item has no sparkle:edSignature"
 dir="$(mktemp -d "${TMPDIR:-/tmp}/satellite.XXXXXX")"; trap 'rm -rf "$dir"' EXIT
 clone_satellite "$url" "$dir"
+if grep -q "<title>$version</title>" "$dir/repo/public/appcast.xml"; then
+  echo "the appcast already lists $version"  # a rerun after its PR was merged
+  exit 0
+fi
 python3 - "$dir/repo/public/appcast.xml" "$item" <<'P'
 import sys
 path, item = sys.argv[1], open(sys.argv[2]).read().rstrip("\n") + "\n"

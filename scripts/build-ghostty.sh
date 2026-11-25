@@ -8,8 +8,10 @@ out="$root/Packages/GhosttyAdapter/Frameworks"
 
 required="$(sed -n 's/.*\.minimum_zig_version *= *"\([^"]*\)".*/\1/p' "$ghostty/build.zig.zon")"
 found="$("$zig" version)"
-if [[ "$(printf '%s\n%s\n' "$required" "$found" | sort -V | head -1)" != "$required" ]]; then
-  echo "vendor/ghostty requires Zig >= $required (found $found)" >&2
+# The same Zig line as the minimum (F7.6): at least that version, and no newer minor, so CI and local agree.
+line="${required%.*}"
+if [[ "$(printf '%s\n%s\n' "$required" "$found" | sort -V | head -1)" != "$required" || "${found%.*}" != "$line" ]]; then
+  echo "vendor/ghostty requires Zig $line.x (found $found)" >&2
   exit 1
 fi
 

@@ -5,7 +5,7 @@ set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 rel="$root/scripts/release"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-total=25; n=0; failures=0
+total=27; n=0; failures=0
 report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
 
 # shellcheck source=/dev/null
@@ -44,7 +44,7 @@ cat > "$work/expected-item.xml" <<'X'
       <sparkle:version>706</sparkle:version>
       <sparkle:shortVersionString>0.7.6</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>https://smalti.sh/changelog#v0.7.6</sparkle:releaseNotesLink>
+      <sparkle:releaseNotesLink>https://smalti.sh/es/changelog#v0.7.6</sparkle:releaseNotesLink>
       <enclosure url="https://github.com/simonriv/smalti/releases/download/v0.7.6/Smalti.dmg" length="18432000" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJl" />
     </item>
 X
@@ -94,6 +94,10 @@ signed="$(printf '%s' "$key" | "$rel/sign-update.sh" "$work/Smalti.dmg" "$public
 [[ "$signed" =~ ^[A-Za-z0-9+/=]+\ [0-9]+$ && "${signed#* }" == "$(stat -f %z "$work/Smalti.dmg")" ]]
 report signing_prints_signature_and_length $?
 
+# Final review (I1): the system's LibreSSL cannot derive an Ed25519 public key; the script finds OpenSSL 3 itself.
+[[ "$(printf '%s' "$key" | PATH=/usr/bin:/bin "$rel/public-key.sh" 2>/dev/null)" == "$public" ]]
+report public_key_works_with_a_minimal_path $?
+
 # Review 2 (I2): a key that is not the app's SUPublicEDKey stops the release before anything is published.
 other="$(openssl genpkey -algorithm ed25519 2>/dev/null | openssl pkey -outform DER 2>/dev/null | tail -c 32 | base64)"
 ! printf '%s' "$other" | "$rel/sign-update.sh" "$work/Smalti.dmg" "$public" > /dev/null 2>&1
@@ -122,6 +126,15 @@ report appcast_item_must_match_the_tag $?
 sed 's/length="18432000"/length="1"/' "$work/item.xml" > "$work/item-changed.xml"
 ! "$rel/push-appcast.sh" "$work/web.git" v0.7.6 "$work/item-changed.xml" > /dev/null 2>&1
 report rerun_with_a_different_item_fails $?
+
+# Final review (I2): once the appcast already lists the version (its PR merged), a rerun adds nothing.
+git clone -q "$work/web.git" "$work/web-merge" 2>/dev/null && cd "$work/web-merge" \
+  && sed -i '' "/prepends one <item>/r $work/item.xml" public/appcast.xml \
+  && git -c user.name=t -c user.email=t@localhost commit -qam merged && git push -q origin HEAD:main 2>/dev/null; cd "$root"
+"$rel/appcast-item.sh" 0.7.9 1 c2ln "Thu, 26 Nov 2026 10:00:00 +0000" | sed 's/0\.7\.9/0.7.6/g' > "$work/item-redo.xml"
+"$rel/push-appcast.sh" "$work/web.git" v0.7.6 "$work/item-redo.xml" > /dev/null 2>&1 \
+  && [[ "$(git --git-dir="$work/web.git" show main:public/appcast.xml | grep -c '<title>0.7.6</title>')" == 1 ]]
+report rerun_after_merge_adds_nothing $?
 
 # Review 2 (C1): with DEPLOY_KEY, both the clone and the push go through ssh with that key (a fake ssh in PATH
 # records its arguments and runs the git command locally), and the key leaves no file behind.

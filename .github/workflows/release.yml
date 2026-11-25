@@ -52,8 +52,9 @@ jobs:
       - name: Toolchain
         if: steps.existing.outputs.found == 'false'
         run: |
-          xcodebuild -version
-          xcodebuild -version | grep -q '^Xcode 27\.' || { echo "expected Xcode 27"; exit 1; }
+          xcode="$(xcodebuild -version)"  # captured first: grep -q under pipefail could SIGPIPE xcodebuild
+          echo "$xcode"
+          [[ "$xcode" == "Xcode 27."* ]] || { echo "expected Xcode 27"; exit 1; }
           git -C vendor/ghostty fetch -q --tags origin
           scripts/bootstrap
 
@@ -64,6 +65,10 @@ jobs:
       - name: DMG
         if: steps.existing.outputs.found == 'false'
         run: scripts/release/make-dmg.sh "$OUT/Smalti.app" "$OUT/Smalti.dmg"
+
+      - name: OpenSSL 3
+        # scripts/release/public-key.sh needs it (macOS's LibreSSL cannot derive an Ed25519 public key).
+        run: brew list openssl@3 > /dev/null 2>&1 || brew install openssl@3
 
       - name: Sign with EdDSA
         env:
@@ -85,9 +90,13 @@ jobs:
       - name: Appcast pull request (smalti-web)
         env:
           DEPLOY_KEY: ${{ secrets.WEB_DEPLOY_KEY }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           read -r signature length < "$OUT/signature"
-          scripts/release/appcast-item.sh "${TAG#v}" "$length" "$signature" > "$OUT/item.xml"
+          # The release's own date, so a rerun writes the very same <item>.
+          published="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)"
+          date="$(python3 -c 'import sys, email.utils, datetime; print(email.utils.format_datetime(datetime.datetime.fromisoformat(sys.argv[1].replace("Z", "+00:00"))))' "$published")"
+          scripts/release/appcast-item.sh "${TAG#v}" "$length" "$signature" "$date" > "$OUT/item.xml"
           scripts/release/push-appcast.sh git@github.com:simonriv/smalti-web.git "$TAG" "$OUT/item.xml"
 
       - name: Cask pull request (homebrew-tap)

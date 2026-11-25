@@ -85,10 +85,20 @@ enum TOMLConfigParser {
         return Parsed(config: config, warning: ignored.warning)
     }
 
-    /// The stored version when the text parses and writes a valid one; `nil` otherwise (a missing one is 1).
+    /// The stored version; `nil` when none is written (format 1). A file this build cannot parse (written by a
+    /// newer Smalti, or by hand) is read line by line for a top `version = N`, so it is still recognised as newer.
     static func storedVersion(_ text: String) -> Int? {
-        guard let root = try? TOMLSection.root(of: TOMLSource(text: text, file: "")) else { return nil }
-        return (try? version(of: root)) ?? nil
+        if let root = try? TOMLSection.root(of: TOMLSource(text: text, file: "")),
+            let version = try? version(of: root)
+        {
+            return version
+        }
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("[") { return nil }
+            if let match = trimmed.wholeMatch(of: /version\s*=\s*(\d+)\s*(#.*)?/) { return Int(match.1) }
+        }
+        return nil
     }
 
     /// The top table, collecting unknown keys when the file is newer than this build.

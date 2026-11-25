@@ -181,4 +181,27 @@ struct FormatVersionTests {
             #expect(error.key == nil)
         }
     }
+
+    // MARK: Final review (M6): a newer theme this build cannot even parse is still not overwritten
+
+    @Test func unparseableNewerThemeIsNotOverwritten() throws {
+        let newer = "version = 3\n[appearance]\nblur = 20\nnuevo = {a = 1, b = [1,\n2]}\n[[x\n"
+        try write(newer, to: themeFile)
+
+        #expect(throws: ConfigError.self) {
+            try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+        }
+        #expect(try String(contentsOf: themeFile, encoding: .utf8) == newer)
+    }
+
+    @Test func unparseableThemeWithoutVersionIsStillBackedUpAndRewritten() throws {
+        try write("[[x\n", to: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile)
+        store.remember(AppearanceDocument(config: .defaults))
+        try write("[[x\n", to: themeFile)
+
+        try store.save(AppearanceDocument(config: .defaults))
+
+        #expect(try String(contentsOf: themeFile, encoding: .utf8).contains("version = 1"))
+    }
 }

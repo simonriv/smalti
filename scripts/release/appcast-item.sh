@@ -7,7 +7,7 @@ version="${1:?version}"; length="${2:?length}"; signature="${3:-}"
 date="${4:-$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')}"
 # Tests only (scripts/release/test-update.sh): a local download and notes, so nothing leaves the machine.
 download="${SMALTI_DOWNLOAD_URL:-https://github.com/$RELEASE_REPO/releases/download/v$version/$DMG_NAME}"
-notes="${SMALTI_NOTES_URL:-https://smalti.sh/changelog#v$version}"
+notes="${SMALTI_NOTES_URL:-https://smalti.sh/es/changelog#v$version}"  # Spanish while the UI is (F7.7)
 [[ -n "$signature" ]] || die "an appcast item without sparkle:edSignature is never published"
 [[ "$length" =~ ^[0-9]+$ ]] || die "length must be a byte count: $length"
 cat <<X

@@ -31,7 +31,7 @@ scripts/bootstrap
 xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -configuration Release -derivedDataPath build build
 ```
 
-La app queda en `build/Build/Products/Release/Smalti.app`. Lo que compilas en tu Mac no lleva la marca de descarga, así que no hay aviso de primera apertura. Necesitas Xcode 27 y Homebrew (`scripts/bootstrap` instala Zig y el Metal Toolchain y compila libghostty).
+La app queda en `build/Build/Products/Release/Smalti.app`. Lo que compilas en tu Mac no lleva la marca de descarga, así que no hay aviso de primera apertura. Es la misma app que la DMG: buscará actualizaciones en smalti.sh y te ofrecerá la versión oficial cuando salga una nueva (puedes apagarlo con ⌘K → «Desactivar actualizaciones automáticas»). Necesitas Xcode 27 y Homebrew (`scripts/bootstrap` instala Zig y el Metal Toolchain y compila libghostty).
 
 ## Primera apertura
 
@@ -39,12 +39,12 @@ Smalti no lleva firma de desarrollador de Apple (está firmada *ad hoc*) ni est�
 
 **Desde los ajustes de macOS**
 
-1. Abre Smalti. macOS dice «No se abrió "Smalti"»; pulsa **«Listo»** (en español de España, «Aceptar»).
+1. Abre Smalti. macOS dice «No se abrió “Smalti.app”» porque no pudo verificarla; pulsa **«Listo»** (en español de España, «Aceptar»).
 
    ![Aviso de macOS 27 al abrir Smalti por primera vez](docs/specs/F7.6-assets/first-open-warning.png)
 
 2. Abre **Configuración del Sistema → Privacidad y seguridad** (en España, **Ajustes del Sistema**), baja hasta «Seguridad» y, junto a «Se bloqueó Smalti para proteger tu Mac.», pulsa **«Abrir de todos modos»** (en España, **«Abrir igualmente»**).
-3. Confirma con tu contraseña o Touch ID. Smalti se abre y macOS no vuelve a preguntar.
+3. macOS puede pedir una confirmación más: vuelve a pulsar «Abrir de todos modos» («Abrir igualmente») y autentícate con tu contraseña o Touch ID.
 
 **Desde la terminal**
 
@@ -60,7 +60,7 @@ Esa comprobación es **lo único que sale de tu Mac**: Smalti no envía datos de
 
 Limitaciones de no estar notarizada:
 
-- La primera apertura necesita «Abrir igualmente» o `xattr`.
+- La primera apertura necesita «Abrir de todos modos» («Abrir igualmente» en España) o `xattr`.
 - Si concedes a Smalti permisos de privacidad (Accesibilidad, Automatización, carpetas protegidas), macOS puede volver a pedirlos tras una actualización, porque cada versión tiene una firma distinta.
 - Si abres Smalti sin moverla a Aplicaciones, no podrá actualizarse (te lo dirá).
 
