@@ -84,6 +84,29 @@ struct GuardMutantKillerTests {
         #expect(changes.approvedFlags == [false])
     }
 
+    @Test func expiryIsReportedAsNotApproved() {
+        let changes = Changes()
+        let approvals = queue(changes, panes: [PaneID()])
+
+        approvals.expire(now: t0.addingTimeInterval(AgentApprovals.standardTimeout))
+
+        #expect(changes.approvedFlags == [false])
+    }
+
+    // MARK: - Review 2 mutation survivors
+
+    @Test func wgetMethodWithoutValue() {
+        #expect(guardFindings("wget https://api.heroku.com/apps/x --method").isEmpty)
+    }
+
+    @Test func rootFolderIsNotASecret() {
+        #expect(!SecretPaths(home: home).isSecret("/", cwd: nil))
+    }
+
+    @Test func lonelyRedirectionStillReadsTheSecret() {
+        #expect(verdict("< .env").isDenied)
+    }
+
     // MARK: - CommandCatalog: approval and secret entries are never "current"
 
     @Test func guardEntriesAreNotCurrent() throws {
@@ -308,6 +331,7 @@ struct GuardMutantKillerTests {
 
     @Test func homeVariableNeedsTheWholeName() {
         #expect(commands("echo $HOMEx").first?.arguments == ["$HOMEx"])
+        #expect(commands("echo $HOME1").first?.arguments == ["$HOME1"])
         #expect(commands("echo $HOME").first?.arguments == ["/Users/u"])
     }
 }
