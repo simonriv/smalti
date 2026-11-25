@@ -5,7 +5,7 @@ set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 rel="$root/scripts/release"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-total=27; n=0; failures=0
+total=28; n=0; failures=0
 report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
 
 # shellcheck source=/dev/null
@@ -169,5 +169,13 @@ grep -q 'if: ${{ !github.event.repository.private }}' "$root/.github/workflows/r
 report workflow_skips_private_repos_and_runs_on_xcode_27 $?
 
 (cd "$root" && actionlint .github/workflows/*.yml > /dev/null 2>&1); report workflows_pass_actionlint $?
+
+# Release run 1 (CI): `xcodebuild -version | head -1` aborted xcodebuild with SIGPIPE under pipefail. No script that
+# runs in the workflow pipes a command into head or grep -q.
+! grep -nE '\| *(head|grep -q)' "$rel/build.sh" "$rel/make-dmg.sh" "$rel/sign-update.sh" "$rel/publish.sh" \
+  "$rel/appcast-item.sh" "$rel/cask.sh" "$rel/push-appcast.sh" "$rel/push-cask.sh" "$rel/lib.sh" \
+  "$rel/fetch-sparkle-tools.sh" "$rel/check-notices.sh" "$rel/public-key.sh" "$root/scripts/bootstrap" \
+  "$root/scripts/build-ghostty.sh" > /dev/null
+report no_pipe_into_head_or_grep_q_in_ci_scripts $?
 
 exit $((failures > 0))

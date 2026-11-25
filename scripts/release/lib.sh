@@ -21,7 +21,9 @@ build_number() {
 # MARKETING_VERSION of the app target (every configuration carries the same one).
 project_version() {
   local root; root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  sed -n 's/.*MARKETING_VERSION = \([^;]*\);/\1/p' "$root/App/Smalti.xcodeproj/project.pbxproj" | sort -u | head -1
+  local versions
+  versions="$(sed -n 's/.*MARKETING_VERSION = \([^;]*\);/\1/p' "$root/App/Smalti.xcodeproj/project.pbxproj" | sort -u)"
+  echo "${versions%%$'\n'*}"
 }
 
 readonly RELEASE_REPO="simonriv/smalti"
