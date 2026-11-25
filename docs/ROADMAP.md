@@ -8,8 +8,13 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
+F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras
+   ┌──────────────────────────────────────────────────────────────────────────────────────────────────┘
+   ▼
+F7.5 Guardas para agentes ──▶ F8 Puertos y procesos ──▶ F8.5 Proyectos ──▶ F9 Timeline ──▶ F10 Revisión con Neovim ──▶ F11 Baúl de secretos
 ```
+
+F7.5 y F8.5–F11 salen de la evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25): ver «Ideas evaluadas» al final.
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
 
@@ -134,6 +139,18 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Nada sale de la máquina: el receptor OTLP escucha solo en `127.0.0.1`, y una prueba lo cubre.
 - **Dependencias:** F2 (persistencia y layouts con nombre) y F3 (Observatorio, que recibe la telemetría OTLP).
 
+## F7.5 · Guardas para agentes
+
+- **Objetivo:** que un agente en un panel de Smalti no pueda leer secretos ni ejecutar un comando destructivo contra producción sin que Simón lo apruebe. Los controles viven fuera del agente: las instrucciones del prompt no bastan (incidentes de Replit, DataTalks.Club y PocketOS).
+- **Entregables:**
+  - **Bloqueo de lectura de secretos:** el plugin de Claude Code que Smalti ya instala suma un hook `PreToolUse` que bloquea `Read` y `Bash` sobre `.env*`, `*.pem`, `~/.ssh`, `~/.aws` y similares, y Smalti genera las reglas `permissions.deny` con la sintaxis correcta (rutas absolutas con `//`) en el proyecto que se le pida.
+  - **Guardia de comandos destructivos:** el mismo hook detecta comandos de alto riesgo (`supabase db push`/`reset`, `prisma migrate reset`, `drizzle-kit push`, `npm run db:push`, `terraform destroy`/`apply`, `railway … delete`, `psql` con `DROP`/`TRUNCATE`, cualquier comando con un `DATABASE_URL` de producción) y espera la decisión de Smalti.
+  - **Aprobación nativa:** Smalti muestra en el panel y en una notificación el workspace, el comando completo y el entorno detectado («rizaria: `supabase db push` contra **PROD**»), con aprobar y rechazar por teclado y en ⌘K. El canal hook → Smalti pasa de aviso a petición con respuesta por el socket de F2.
+  - **Entorno detectado** por el host del `DATABASE_URL` y por una lista de hosts de producción en `config.toml`; si no se puede determinar, se asume producción (falla cerrado).
+- **Criterio de cierre:** una prueba reproduce los comandos de los tres incidentes y cada uno queda bloqueado hasta la aprobación; ninguna lectura de los archivos de secretos de una lista de prueba llega al agente; sin respuesta de Smalti (app cerrada o socket caído), el hook bloquea.
+- **Fuera:** el proxy SQL con `libpg_query` y el proxy HTTPS de valores de relleno (ver «Ideas evaluadas»).
+- **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
+
 ## F8 · Puertos y procesos
 
 - **Objetivo:** ver qué está escuchando y qué está consumiendo, y detenerlo, sin salir de Smalti ni abrir otra herramienta (idea de Simón, 2026-11-23).
@@ -144,3 +161,55 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Criterio de cierre:** por definir en su spec. Como mínimo, la lista de puertos coincide con `lsof -iTCP -sTCP:LISTEN -nP` en una prueba con puertos abiertos a propósito, y detener nunca toca procesos de otro usuario ni el propio Smalti.
 - **Diseño:** no hay tablero. La fase empieza con su maqueta para aprobar, en la línea del Observatorio.
 - **Dependencias:** F3 (puerto `SystemMetrics`, sin sudo) y F2 (relación panel ↔ proceso).
+
+## F8.5 · Proyectos
+
+- **Objetivo:** abrir un proyecto tal como se trabaja en él con un atajo, sin buscar el layout guardado.
+- **Entregables:** un layout compartible de F7 dentro del repo (`.smalti/layout.json`) se descubre al abrir un panel o workspace en esa carpeta y se ofrece en ⌘K como «Abrir proyecto “rizaria”»; con la misma confirmación de comandos de F7 la primera vez que cambia el archivo. Atajo para saltar entre proyectos recientes.
+- **Criterio de cierre:** por definir en su spec; como mínimo, un repo con `.smalti/layout.json` se abre con su layout y sus comandos tras confirmar, y un archivo modificado vuelve a pedir confirmación.
+- **Dependencias:** F7 (formato y validación del layout compartible).
+
+## F9 · Timeline de la sesión
+
+- **Objetivo:** recuperar lo que un agente hizo aunque ya no se vea: Claude Code usa la pantalla alternativa y su historial no queda en el scrollback.
+- **Entregables:** panel lateral (con atajo y en ⌘K) que lee los transcripts y muestra los turnos con las herramientas plegadas, búsqueda en todas las sesiones del proyecto, copiar cualquier salida antigua y saltar a un turno. Adaptadores de Claude Code y Codex detrás de un puerto, reutilizando los lectores de F3 y F6.
+- **Criterio de cierre:** por definir en su spec; como mínimo, sobre los fixtures reales de F3 y F6, cada turno y cada resultado de herramienta del transcript aparece en el timeline y se copia íntegro.
+- **Diseño:** no hay tablero; empieza con maqueta para aprobar.
+- **Dependencias:** F3 (lector de transcripts) y F6 (fixtures y adaptadores de harness).
+
+## F10 · Revisión con Neovim
+
+- **Objetivo:** revisar los cambios del agente en el editor real y devolverle los comentarios sin copiar y pegar.
+- **Entregables:** desde los archivos editados del último turno (F6), abrir el diff en NvChad; comentarios en líneas o rangos que se convierten en un prompt estructurado y se escriben en el panel de Claude de ese workspace.
+- **Criterio de cierre:** por definir en su spec; como mínimo, comentarios en dos archivos llegan al panel de Claude como un solo prompt con archivo, líneas y texto.
+- **Dependencias:** F6 (`EditorBridge`, claudecode.nvim, «Editados por Claude»).
+
+## F11 · Baúl de secretos
+
+- **Objetivo:** que los secretos de cada proyecto vivan en el Keychain y no en `.env` que un agente pueda leer.
+- **Entregables:** baúl en el Keychain de macOS con Touch ID, por workspace y entorno; migrar un `.env` a referencias; inyectar las variables en los procesos que se lancen con el comando de Smalti para ello (no en todo el shell: Smalti no sabe de antemano si en un panel correrá un agente); enmascarar los valores conocidos en el scrollback guardado en disco, en el Observatorio y en el timeline; auditoría de qué proceso usó qué secreto, sin guardar valores.
+- **Fuera:** enmascarar en la pantalla (libghostty es dueño del render y del PTY: exigiría cambiar esa Decisión) y el proxy HTTPS de valores de relleno.
+- **Criterio de cierre:** por definir en su spec; como mínimo, tras migrar un `.env` de prueba no queda ningún valor en disco, y ningún valor del baúl aparece en el scrollback guardado ni en los registros.
+- **Dependencias:** F7.5 (bloqueo de lectura) y F9 (timeline, para enmascararlo).
+
+## Ideas evaluadas
+
+Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya construido en F0–F7 y las Decisiones:
+
+| Idea | Veredicto | Dónde |
+| --- | --- | --- |
+| Timeline nativo de la sesión | Entra | F9 |
+| Ciclo de revisión con Neovim | Entra lo que falta: comentarios → prompt al agente (los diffs con `:w`/`:q` ya están en F6) | F10 |
+| Workspaces por proyecto | Entra, sobre el formato de F7 | F8.5 |
+| Monitor de contexto por panel | Ya está: modelo y `ctx %` en la cabecera y la barra de estado (F3) | — |
+| Diseño refinado | Ya está (F0, F5) | — |
+| Notificaciones, restauración, temas, prompt, autocompletado | Ya están (F2, F4, F5, F6) | — |
+| Seguro para bases de datos, etapa 1 (guardia de comandos) | Entra, primero: mayor valor por esfuerzo | F7.5 |
+| Bloqueo de lectura de `.env` | Entra con la guardia | F7.5 |
+| Baúl de secretos, etapa 1 | Entra sin el enmascarado en pantalla | F11 |
+| Enmascarado de secretos en el render | Fuera: libghostty es dueño del PTY y del render (Decisión «Procesos al reabrir») | — |
+| Proxy HTTPS de valores de relleno (etapa 2 del baúl) | Fuera: intercepta TLS con un certificado de confianza propio y depende de un proceso largo como `smaltid`, ya descartado | — |
+| Proxy SQL con `libpg_query` (etapa 2) | Fuera por ahora: alto esfuerzo, no cubre PostgREST ni el MCP de Supabase, y la guardia de comandos cubre los incidentes reales | — |
+| Predicción por API y `smaltid` | Ya descartados (Simón, 2026-11-25) | — |
+| Navegador, app móvil, VMs, checkpoints | Fuera (como dice el documento) | — |
+
