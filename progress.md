@@ -324,13 +324,13 @@
 - [x] T13 · Catálogo de integraciones, instalador de claudecode.nvim y prueba del diff (C3)
 - [x] Revisión intermedia 1 (1 crítico, 4 importantes, 12 menores; corregidos salvo M11, por decisión) + mutación incremental (96,7 %; 5 sobrevivientes matados y verificados a mano)
 #### Bloque 4 · App
-- [ ] T14 · Composition root, flags y captura en vivo
-- [ ] T15 · Buscador como tarjeta propia (⌘⇧O)
-- [ ] T16 · Columna del buscador en «Retomar»
-- [ ] T17 · Neovim en la app
-- [ ] T18 · Observatorio con filtros y filas de OpenCode
-- [ ] T19 · Restaurar nvim, `--ide` e integraciones en ⌘K
-- [ ] Revisión intermedia 2 + mutación incremental
+- [x] T14 · Composition root, flags y captura en vivo
+- [x] T15 · Buscador como tarjeta propia (⌘⇧O)
+- [x] T16 · Columna del buscador en «Retomar»
+- [x] T17 · Neovim en la app
+- [x] T18 · Observatorio con filtros y filas de OpenCode
+- [x] T19 · Restaurar nvim, `--ide` e integraciones en ⌘K
+- [x] Revisión intermedia 2 + mutación incremental (10 importantes y 9 menores corregidos; mutación 95,9 %, 9 sobrevivientes muertos)
 #### Bloque 5 · Cierre
 - [ ] T20 · Mediciones, capturas, checklist y revisión final
 - [ ] T21 · Limpieza, PRs y despliegue

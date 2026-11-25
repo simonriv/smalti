@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SmaltiCore
 
 /// Primary adapter for ⌘⇧O: the session search alone, centered on the ⌘K glass. ↑↓ move, ←→ (with the field empty)
@@ -15,6 +16,10 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
     private var outsideClicks: Any?
     /// ⌘↩ and ⌘1…⌘5 are the card's while it is open: the keymap and the terminal would take them first.
     private var cardKeys: Any?
+    /// C7: the card opens in 100 ms or less with every store read; "sessions.open" spans the open until every harness
+    /// answered. `-SmaltiSessionSearchTimings <file>` also writes each open's milliseconds (measurements only).
+    private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "sessions")
+    private let timings = UserDefaults.standard.string(forKey: "SmaltiSessionSearchTimings").map { URL(filePath: $0) }
 
     init(window: SmaltiWindow, model: SessionSearchModel, open: @escaping (OpenPlan, String?) -> Void) {
         self.window = window
@@ -28,6 +33,8 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
 
     func show(theme: Theme) {
         guard !isOpen, let content = window.contentView else { return }
+        let opened = ContinuousClock.now
+        let interval = signposter.beginInterval("sessions.open")
         let view = SessionSearchView(theme: theme, column: false)
         view.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(view, positioned: .above, relativeTo: nil)
@@ -55,6 +62,10 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
         isOpen = true
         view.render(model.state, rows: [])
         model.refresh()
+        model.whenSettled { [weak self, timings] in
+            self?.signposter.endInterval("sessions.open", interval)
+            if let timings { TimingLog.append(since: opened, to: timings, label: "session search timings") }
+        }
         window.makeFirstResponder(view.field)
         outsideClicks = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             MainActor.assumeIsolated { self?.closeIfOutside(event) }
@@ -112,7 +123,8 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
     }
 
     private func run(forking: Bool) {
-        guard let plan = model.plan(forking: forking) else { return }
+        // A second ↩ queued before the listing settled finds the card already closed.
+        guard isOpen, let plan = model.plan(forking: forking) else { return }
         let directory = model.selectedDirectory
         if case .open = plan { close() }
         open(plan, directory)

@@ -13,7 +13,7 @@ final class SessionSearchModel {
     private var running: Task<Void, Never>?
     /// The query's listing is not complete yet (the pause runs, or a harness has not answered): Enter waits for it.
     private var isSettling = false
-    private var whenSettledAction: (() -> Void)?
+    private var whenSettledActions: [() -> Void] = []
     /// Typing waits this long before reading the stores again, so a word is one search, not one per letter.
     static let typingPause: Duration = .milliseconds(100)
 
@@ -53,22 +53,22 @@ final class SessionSearchModel {
     /// Runs `action` once the listing matches the query: now, or when every harness has answered.
     func whenSettled(_ action: @escaping () -> Void) {
         guard isSettling else { return action() }
-        whenSettledAction = action
+        whenSettledActions.append(action)
     }
 
     private func settle() {
         guard isSettling else { return }
         isSettling = false
-        let action = whenSettledAction
-        whenSettledAction = nil
-        action?()
+        let actions = whenSettledActions
+        whenSettledActions = []
+        actions.forEach { $0() }
     }
 
     func stop() {
         running?.cancel()
         running = nil
         isSettling = false
-        whenSettledAction = nil
+        whenSettledActions = []
     }
 
     func setText(_ text: String) {

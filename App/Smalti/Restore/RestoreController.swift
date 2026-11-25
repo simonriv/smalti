@@ -34,6 +34,8 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
     private var rowIDs: [UUID] { content.windows.flatMap(\.workspaces).flatMap(\.rows).map(\.id) }
     private let sessions: SessionSearchModel
     private var notice: String?
+    /// The screen answers once: a second ↩ queued while the search settled does nothing.
+    private var hasChosen = false
 
     init(
         _ content: Content, theme: Theme, preferences: any RestorePreferenceStore, sessions: SessionSearchModel,
@@ -112,6 +114,8 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
             renderSessions()
             return
         }
+        guard !hasChosen else { return }
+        hasChosen = true
         onChoice(.restoreAndOpen(selection, plan, directory: sessions.selectedDirectory))
     }
 

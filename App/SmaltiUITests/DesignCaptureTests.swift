@@ -335,6 +335,57 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(smaltiWindow(app).screenshot(), as: "f5-legibility.png")
     }
 
+    /// F6: the ⌘⇧O card and the restore screen's search column (Reanudar.dc.html), over the seeded harness stores.
+    func testCaptureF6SessionSearch() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        app.seedHarnessStoresFromRunner()
+        launch(app)
+        app.typeKey("o", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("sessions.row.fxcodex1").waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 1)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f6-session-card.png")
+    }
+
+    func testCaptureF6RestoreColumn() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        app.seedHarnessStoresFromRunner()
+        let home = "/Users/\(NSUserName())"
+        SessionState.seed(
+            [
+                .init(
+                    name: "solen", root: "\(home)/dev/solen", layout: "dwindle",
+                    panes: [
+                        .init(
+                            directory: "\(home)/dev/solen", agentSessionID: "7f3a9c2e-1111-4b7a-9c11-2f6e5d4c3b2a",
+                            title: "Agendar recordatorios al crear eventos", process: "claude"),
+                        .init(directory: "\(home)/dev/solen", process: "codex", harness: ("codex", "0198abcdef")),
+                        .init(
+                            directory: "\(home)/dev/solen", process: "nvim",
+                            editor: ("\(home)/dev/solen/reminder.service.ts", 42)),
+                    ])
+            ], alwaysRestore: false, in: app)
+        self.app = app
+        app.launch()
+        XCTAssertTrue(app.element("sessions.row.fxcodex1").waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 1)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f6-restore-column.png")
+    }
+
+    func testCaptureF6ObservatoryFilters() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        try app.installObservatoryFixture(
+            from: Bundle(for: Self.self), newestFirst: ["projects/-fixture-work-x/tools-session.jsonl"])
+        app.seedHarnessStoresFromRunner()
+        launch(app)
+        app.typeKey("a", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.observatory.filter.0").waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 3)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f6-observatory-filters.png")
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

@@ -22,18 +22,24 @@ final class PreviewTimings {
     func cardShown() {
         guard let start = loadStart else { return }
         loadStart = nil
+        TimingLog.append(since: start, to: output, label: "preview timings")
+    }
+}
+
+/// Measurement files: one line of milliseconds per sample, appended (F5.5 C3, F6 C7).
+enum TimingLog {
+    static func append(since start: ContinuousClock.Instant, to output: URL, label: String) {
         let elapsed = ContinuousClock.now - start
         let milliseconds = Double(elapsed.components.seconds) * 1000 + Double(elapsed.components.attoseconds) / 1e15
-        let line = Data(String(format: "%.2f\n", milliseconds).utf8)
         do {
-            try append(line)
+            try append(Data(String(format: "%.2f\n", milliseconds).utf8), to: output)
         } catch {
             // A measurement hook: the run that asked for it reads stderr.
-            FileHandle.standardError.write(Data("preview timings: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("\(label): \(error)\n".utf8))
         }
     }
 
-    private func append(_ line: Data) throws {
+    private static func append(_ line: Data, to output: URL) throws {
         guard FileManager.default.fileExists(atPath: output.path(percentEncoded: false)) else {
             try line.write(to: output)
             return
