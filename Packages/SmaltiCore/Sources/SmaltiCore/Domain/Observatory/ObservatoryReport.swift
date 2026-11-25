@@ -66,11 +66,15 @@ public struct ObservatoryReport: Equatable, Sendable {
         public let outputPerMinute: [Int]
         public let peak: OutputPeak?
         public let compaction: String
+        /// F7: "Telemetría · desde 10:42 · …" when the session's Claude sent telemetry to Smalti.
+        public fileprivate(set) var telemetry: String? = nil
     }
 
     public let summary: Summary
     public let rows: [Row]
-    public let detail: Detail?
+    public private(set) var detail: Detail?
+    /// F7: the board's footnote, naming the telemetry when some arrived.
+    public private(set) var footnote = ObservatoryTexts.footnote
 
     /// From 5 % of failed tools the rate turns red (the board shows 2 % plain and 9 % red).
     public static let highErrorRate = 5
@@ -101,10 +105,16 @@ public struct ObservatoryReport: Equatable, Sendable {
             .sorted { newerFirst($0.updatedAt, $1.updatedAt, $0.sessionID, $1.sessionID) }
         let rows =
             sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
-        return ObservatoryReport(
+        var report = ObservatoryReport(
             summary: summary(sessions, others: others, in: window, snapshot: snapshot),
             rows: rows,
             detail: detail(selecting: request.selection, sessions: sessions, others: others, snapshot: snapshot))
+        report.footnote = ObservatoryTexts.footnote(
+            status: snapshot.telemetryStatus, hasTelemetry: !snapshot.telemetry.isEmpty)
+        if let id = report.detail?.sessionID, let telemetry = snapshot.telemetry.telemetry(of: id) {
+            report.detail?.telemetry = TelemetryTexts.line(telemetry, timeZone: request.calendar.timeZone)
+        }
+        return report
     }
 
     /// The selected row's detail; a selection no longer listed falls back to the first row.
