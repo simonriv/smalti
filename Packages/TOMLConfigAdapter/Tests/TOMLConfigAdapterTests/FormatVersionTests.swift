@@ -109,7 +109,7 @@ struct FormatVersionTests {
             try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
             Issue.record("the newer theme was overwritten")
         } catch {
-            #expect(error.reason == "theme.toml es de una versión más nueva de Smalti: no se sobrescribe")
+            #expect(error.summary.hasSuffix("theme.toml · es de una versión más nueva de Smalti: no se sobrescribe"))
         }
     }
 

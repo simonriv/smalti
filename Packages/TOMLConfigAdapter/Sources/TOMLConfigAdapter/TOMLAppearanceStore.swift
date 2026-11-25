@@ -48,7 +48,7 @@ public final class TOMLAppearanceStore: AppearanceStore {
         else { return }
         throw ConfigError(
             file: path, line: nil, key: nil,
-            reason: "theme.toml es de una versión más nueva de Smalti: no se sobrescribe")
+            reason: "es de una versión más nueva de Smalti: no se sobrescribe")
     }
 
     /// Keys missing from the edited file read as defaults, so deleting one by hand is respected (M8). A file that no

@@ -5,6 +5,9 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 version="${1:?version}"; length="${2:?length}"; signature="${3:-}"
 date="${4:-$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')}"
+# Tests only (scripts/release/test-update.sh): a local download and notes, so nothing leaves the machine.
+download="${SMALTI_DOWNLOAD_URL:-https://github.com/$RELEASE_REPO/releases/download/v$version/$DMG_NAME}"
+notes="${SMALTI_NOTES_URL:-https://smalti.sh/changelog#v$version}"
 [[ -n "$signature" ]] || die "an appcast item without sparkle:edSignature is never published"
 [[ "$length" =~ ^[0-9]+$ ]] || die "length must be a byte count: $length"
 cat <<X
@@ -14,7 +17,7 @@ cat <<X
       <sparkle:version>$(build_number "$version")</sparkle:version>
       <sparkle:shortVersionString>$version</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>$MINIMUM_SYSTEM_VERSION</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>https://smalti.sh/changelog#v$version</sparkle:releaseNotesLink>
-      <enclosure url="https://github.com/$RELEASE_REPO/releases/download/v$version/$DMG_NAME" length="$length" type="application/octet-stream" sparkle:edSignature="$signature" />
+      <sparkle:releaseNotesLink>$notes</sparkle:releaseNotesLink>
+      <enclosure url="$download" length="$length" type="application/octet-stream" sparkle:edSignature="$signature" />
     </item>
 X

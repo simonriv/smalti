@@ -47,8 +47,7 @@ struct CommandCoverageGuardTests {
     }
 
     /// Commands of a phase in progress whose app action lands in a later task; empty between phases.
-    /// F7.6: wired in the app by Task 6 of the plan, which empties this set again.
-    static let pendingInApp: Set<CommandID> = [.updatesCheck, .updatesAutomatic, .helpDocs, .appSupport]
+    static let pendingInApp: Set<CommandID> = []
 
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue

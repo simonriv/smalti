@@ -18,6 +18,7 @@ import UserNotificationsAdapter
 import OSLog
 import OTLPReceiverAdapter
 import SmaltiCore
+import SparkleUpdatesAdapter
 import TOMLConfigAdapter
 
 /// Composition root: the only place that builds infrastructure and wires it to the UI.
@@ -64,6 +65,8 @@ final class AppComposition {
     private var reportedTelemetryFailure: String?
     /// F7.5: the commands the panes' agents wait to have approved, shared by every window.
     private var approvals: AgentApprovals?
+    /// F7.6: the updater; nil in Smalti Dev unless a UI test passes `-SmaltiUpdateFeedURL`.
+    private let updates = AppComposition.makeUpdates()
     private var approvalTimer: Timer?
     private static let persistTimeout: Duration = .seconds(1)
 
@@ -84,6 +87,7 @@ final class AppComposition {
         }
         do {
             try start(startup)
+            startUpdates()
         } catch {
             fail(error)
         }
@@ -167,6 +171,14 @@ final class AppComposition {
         }
     }
 
+    private func startUpdates() {
+        do {
+            try updates?.start()
+        } catch {
+            logger.error("the updater did not start: \(String(describing: error), privacy: .public)")
+        }
+    }
+
     private func start(_ startup: Startup) throws(TerminalEngineError) {
         let runtime = try makeRuntime(
             startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
@@ -203,7 +215,7 @@ final class AppComposition {
         let dependencies = TilingController.Dependencies(
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
-            harnesses: harnesses, captures: captures, editor: editor,
+            harnesses: harnesses, captures: captures, editor: editor, updates: updates,
             agents: guardedAgents(
                 Self.agentDependencies(notifier: makeNotifier(), claudecode: claudecode), startup: startup),
             home: try homeDirectory(),
@@ -373,6 +385,14 @@ final class AppComposition {
             }
             mainMenu?.refresh()
         case .appAbout: showAbout()
+        case .updatesCheck: updates.map { CheckForUpdates(updates: $0).execute() }
+        case .updatesAutomatic:
+            guard let updates else { return }
+            composition.controller.report(
+                StatusMessage(text: SetAutomaticUpdates(updates: updates).toggle(), isTransient: true))
+            mainMenu?.refresh()
+        case .helpDocs: URLOpener.open(SmaltiLinks.documentation)
+        case .appSupport: URLOpener.open(SmaltiLinks.support)
         case .feedbackReport:
             composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
                 self?.report(kind, includingLogs: includesLogs)
@@ -542,9 +562,9 @@ final class AppComposition {
 
     private func menuBar() -> MenuBar {
         guard let controller else { return .empty }
-        let commands = CommandCatalog.commands(
-            for: CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts()),
-            keymap: controller.config.keys, layouts: .standard)
+        var state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
+        state.updates = UpdatesAvailability(updates)
+        let commands = CommandCatalog.commands(for: state, keymap: controller.config.keys, layouts: .standard)
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
@@ -670,18 +690,34 @@ final class AppComposition {
             ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: "Downloads")
     }
 
-    /// "Acerca de Smalti": the standard panel with the version, the commit and the credits.
+    /// "Acerca de Smalti": the standard panel with the version, the commit, the credits and (F7.6) the links to the
+    /// documentation, to support Smalti and to the third-party notices inside the bundle.
     private func showAbout() {
         let build = Self.buildInfo
         let ghostty = Bundle.main.infoDictionary?["SmaltiGhosttyVersion"] as? String ?? "?"
-        let credits = NSAttributedString(
-            string: "libghostty \(ghostty) (MIT) · Inter (OFL) · JetBrains Mono (OFL) · specs de Fig (ISC)",
-            attributes: [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)])
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationVersion: "\(build.version) (\(build.commit))", .version: "", .credits: credits,
+            .applicationVersion: "\(build.version) (\(build.commit))", .version: "",
+            .credits: AboutCredits.text(ghosttyVersion: ghostty, notices: Self.noticesFile),
         ])
         NSApp.activate()
     }
+
+    private static var noticesFile: URL? {
+        Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "md")
+    }
+
+    /// F7.6: Release builds read `SUFeedURL`; Debug ones have none and update only in UI tests, with a local feed.
+    private static func makeUpdates() -> SparkleUpdates? {
+        #if DEBUG
+            let override = UserDefaults.standard.string(forKey: updateFeedKey).flatMap(URL.init(string:))
+        #else
+            let override: URL? = nil
+        #endif
+        return SparkleUpdates.make(bundle: .main, feedOverride: override)
+    }
+
+    /// `-SmaltiUpdateFeedURL <url>` (Debug, UI tests): the feed Smalti Dev checks.
+    static let updateFeedKey = "SmaltiUpdateFeedURL"
 
     /// ⌘,: the TOML in the user's editor; written first from the commented template when there is none.
     private func openConfig() {
