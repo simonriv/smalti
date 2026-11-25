@@ -1,3 +1,5 @@
+import Foundation
+
 /// Identifies something the user can do. The raw values are what users write in `config.toml`.
 public struct CommandID: Hashable, Sendable, RawRepresentable {
     public let rawValue: String
@@ -76,6 +78,37 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let legibilityToggle = CommandID(rawValue: "legibility.toggle")
     /// F5.5: opens the image of the visible preview card in Quick Look; without a card it does nothing.
     public static let previewQuickLook = CommandID(rawValue: "preview.quickLook")
+
+    // F7.5: agent guards.
+    /// Approves or rejects the oldest command waiting in the focused pane.
+    public static let guardApprove = CommandID(rawValue: "guard.approve")
+    public static let guardReject = CommandID(rawValue: "guard.reject")
+    /// Writes or removes Smalti's deny rules in the focused pane's project.
+    public static let secretsProtect = CommandID(rawValue: "secrets.protect")
+    public static let secretsUnprotect = CommandID(rawValue: "secrets.unprotect")
+
+    private static let guardApprovePrefix = "guard.approve."
+    private static let guardRejectPrefix = "guard.reject."
+
+    /// ⌘K: approves one waiting command, wherever it is.
+    public static func guardApprove(id: UUID) -> CommandID {
+        CommandID(rawValue: guardApprovePrefix + id.uuidString)
+    }
+
+    public static func guardReject(id: UUID) -> CommandID {
+        CommandID(rawValue: guardRejectPrefix + id.uuidString)
+    }
+
+    /// The approval this command decides, if it names one.
+    public var approval: ApprovalCommand? {
+        if rawValue.hasPrefix(Self.guardApprovePrefix) {
+            return UUID(uuidString: String(rawValue.dropFirst(Self.guardApprovePrefix.count))).map { .approve($0) }
+        }
+        if rawValue.hasPrefix(Self.guardRejectPrefix) {
+            return UUID(uuidString: String(rawValue.dropFirst(Self.guardRejectPrefix.count))).map { .reject($0) }
+        }
+        return nil
+    }
 
     /// The F5 commands, in the order ⌘K, the help and the menu list them.
     static let appearance: [CommandID] = [
@@ -160,7 +193,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
             observatoryPeriod, historySearch, harnessSearch, editorOpenBeside, editorOpenLastEdited, observatoryFilter,
-            layoutImport,
+            layoutImport, guardApprove, guardReject, secretsProtect, secretsUnprotect,
         ]
         + basics
         + appearance
@@ -179,6 +212,12 @@ extension Direction {
         case .down: "down"
         }
     }
+}
+
+/// F7.5: what a ⌘K approval entry does.
+public enum ApprovalCommand: Equatable, Sendable {
+    case approve(UUID)
+    case reject(UUID)
 }
 
 public enum NamedLayoutCommand: Equatable, Sendable {

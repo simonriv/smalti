@@ -37,3 +37,21 @@ public protocol GuardRequests: AnyObject {
     /// One consumer: iterate it once.
     func requests() -> AsyncStream<GuardRequest>
 }
+
+public enum ProjectPermissionsError: Error, Equatable, Sendable {
+    case unreadable(path: String, reason: String)
+    case unwritable(path: String, reason: String)
+
+    public var message: String {
+        switch self {
+        case .unreadable(let path, let reason): "No se pudo leer \(path): \(reason)"
+        case .unwritable(let path, let reason): "No se pudo escribir \(path): \(reason)"
+        }
+    }
+}
+
+/// Port (F7.5): the `permissions.deny` rules of a project's local Claude Code settings.
+public protocol ProjectPermissions: Sendable {
+    func deniedRules(in project: String) throws(ProjectPermissionsError) -> [String]
+    func setDeniedRules(_ rules: [String], in project: String) throws(ProjectPermissionsError)
+}

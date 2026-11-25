@@ -3,5 +3,7 @@
 public enum IntegrationState: Equatable, Sendable {
     case installed
     case notInstalled
+    /// F7.5: installed, but older than the copy this Smalti ships.
+    case outdated
     case unknown
 }
