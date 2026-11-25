@@ -27,7 +27,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`, `LayoutFiles`, `TelemetryReceiver`, `ClaudeTelemetrySettings`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -96,6 +96,8 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `swift test --package-path Packages/ImageIOAdapter`: lectura y miniaturas de imágenes (F5.5) para la vista previa y `smalti img`.
 - `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-cli-startup.sh 50 [binario…]`: C9 de F5.5, arranque de `smalti event` (lo que paga cada hook).
 - `TEST_RUNNER_SMALTI_MEASURE=1 scripts/test-ui.sh PreviewLatencyTests`: C3 de F5.5, a demanda (`-SmaltiPreviewTimings <archivo>` escribe cada carga). `TEST_RUNNER_SMALTI_CAPTURE=1 scripts/test-ui.sh PreviewTests/testCaptureCard` saca la tarjeta para `docs/specs/F5.5-assets/compose-card.py`. `PREVIEW_HOVER=false scripts/measure-gpu-idle.sh` mide con la vista previa apagada.
+- `cd scripts/otlp && python3 -m unittest test_fake_claude`: emisor falso de telemetría de Claude Code (F7, `fake-claude.py`), que usan las UI tests y las mediciones; nunca un Claude real.
+- Telemetría y layouts compartibles (F7): `[extras] otlp` en `config.toml`; en pruebas, `-SmaltiManagedSettings` (nunca los managed settings de la máquina), `-SmaltiTelemetryProbe`, y en Debug `-SmaltiImportFile`, `-SmaltiPickedFolder`, `-SmaltiConfirmImport yes|no` y `-SmaltiExportDirectory`.
 - `swift test --package-path Packages/OTLPReceiverAdapter`: receptor OTLP/HTTP de F7 (socket TCP solo en `127.0.0.1`, token por arranque, eventos `api_request` y `api_error` de Claude Code).
 - `swift test --package-path Packages/DiagnosticsAdapter`: exportación de los registros de la sesión (F4.5, `OSLogStore` del propio proceso) y la guarda de que ningún `Logger` publica texto escrito.
 - `swift test --package-path Packages/<ClaudeTelemetryAdapter|OllamaAdapter|DarwinMetricsAdapter>`: adaptadores del Observatorio (F3). Las pruebas nunca leen el `~/.claude` real; las de UI pasan `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales.
