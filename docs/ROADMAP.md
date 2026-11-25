@@ -155,16 +155,18 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 ## F7.6 · Distribución y actualizaciones
 
-- **Objetivo:** que cualquiera instale Smalti en un minuto, que macOS lo abra sin avisos de seguridad y que cada versión nueva llegue sola.
+- **Objetivo:** que cualquiera instale Smalti en un minuto y que cada versión nueva llegue sola, **sin pagar el Apple Developer Program** (decidido por Simón, 2026-11-25: la app es gratis y no debe costar 99 USD al año).
 - **Entregables:**
-  - **Firma Developer ID y notarización** de Apple, con «stapling» del ticket. Sustituye la firma ad hoc de `CLAUDE.md`: sin ella, Gatekeeper bloquea una app descargada y Homebrew deja de aceptar casks sin notarizar. **Cuesta dinero** (Apple Developer Program, 99 USD al año): la spec no avanza sin la aprobación explícita de Simón.
-  - **Actualización automática con Sparkle 2:** firma EdDSA de cada versión, `appcast.xml` servido desde el dominio de la web (Vercel), notas de versión en la ventana de actualización, comprobación al arrancar y a demanda («Buscar actualizaciones…» en el menú Smalti y en ⌘K), opción de desactivarla. La comprobación solo pide el appcast: no envía datos de uso.
-  - **Entrega:** DMG firmado en GitHub Releases; cask de Homebrew en un tap propio (`brew install --cask simonriv/tap/smalti`) con `auto_updates true`, y propuesta al tap oficial cuando cumpla sus criterios de notoriedad. Comprobar antes que el nombre `smalti` está libre en Homebrew (pregunta abierta de `PROJECT.md`).
-  - **Pipeline de release** en GitHub Actions: compilar el Release, firmar, notarizar, crear el DMG, publicar la release con sus notas, actualizar el appcast y el cask. Los secretos de firma viven en los secretos del repo, nunca en el código.
+  - **Firma ad hoc, sin Developer ID ni notarización.** macOS mostrará el aviso de app no verificada la primera vez: la web y el `README` explican «Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente», con capturas, y el comando `xattr -dr com.apple.quarantine /Applications/Smalti.app` para quien prefiera la terminal.
+  - **Homebrew con tap propio:** `brew install --cask simonriv/tap/smalti` desde el repo `simonriv/homebrew-tap`, con `auto_updates true`. El tap oficial exige notarización y queda fuera. La spec verifica la política vigente de Homebrew sobre cuarentena en taps de terceros antes de decidir si el cask la quita al instalar (salta Gatekeeper) o si deja el paso de «Abrir igualmente»; nada se promete en la web sin esa verificación. Comprobar antes que el nombre `smalti` no choca en Homebrew.
+  - **Actualización automática con Sparkle 2 y firma EdDSA:** cada versión firmada con una clave EdDSA de Simón (gratis; la clave privada vive en los secretos del pipeline, nunca en el repo), `appcast.xml` servido desde el dominio de la web (Vercel), notas de versión, comprobación al arrancar y a demanda («Buscar actualizaciones…» en el menú Smalti y en ⌘K) y opción de desactivarla. Sparkle no acepta una versión cuya firma EdDSA no coincida. Un spike al inicio confirma que Sparkle funciona sin Developer ID con apps firmadas ad hoc y que las actualizaciones que instala no vuelven a pasar por Gatekeeper.
+  - **Otras vías de instalación:** DMG en GitHub Releases (`/download` en la web redirige a la última) y compilar desde el código con `scripts/bootstrap` (lo compilado en local no lleva cuarentena).
+  - **Pipeline de release** en GitHub Actions: compilar el Release, firmar ad hoc, firmar con EdDSA, crear el DMG, publicar la release con sus notas, y abrir PR con el `appcast.xml` nuevo en el repo de la web y con el cask nuevo en el tap.
   - **Compatibilidad entre versiones:** los formatos de sesión, layouts, índice del Observatorio y `config.toml` llevan versión, se migran hacia delante, y una versión vieja que encuentra datos de una nueva no los rompe.
-  - **Repositorio público:** licencia elegida por Simón, `THIRD_PARTY_NOTICES` (libghostty MIT, Inter y JetBrains Mono OFL, specs de Fig ISC, Sparkle MIT), `README` de instalación y desinstalación, y el canal de feedback de F4.5 apuntando a los issues públicos.
-- **Criterio de cierre:** por definir en su spec; como mínimo, un Mac limpio instala por DMG y por Homebrew sin avisos de Gatekeeper (`spctl --assess` acepta la app), y una versión instalada se actualiza a la siguiente desde un appcast de prueba sin perder sesión, layouts ni configuración.
-- **Dependencias:** F4.5 (feedback, «Acerca de» con versión). Cambia la Decisión «Alcance» de `PROJECT.md` y la línea de firma de `CLAUDE.md`.
+  - **Repositorio público:** licencia elegida por Simón, `THIRD_PARTY_NOTICES` (libghostty MIT, Inter y JetBrains Mono OFL, specs de Fig ISC, Sparkle MIT), `README` de instalación, primera apertura y desinstalación, y el canal de feedback de F4.5 apuntando a los issues públicos.
+- **Notarización, después y condicionada:** si las donaciones cubren el Apple Developer Program, se añade Developer ID y notarización al pipeline y se propone el cask al tap oficial; no cambia nada más de la fase. Gastar ese dinero exige la aprobación explícita de Simón.
+- **Criterio de cierre:** por definir en su spec; como mínimo, en un usuario de macOS sin la app, la instalación por DMG y por el tap abre la app siguiendo los pasos documentados, y una versión instalada se actualiza a la siguiente desde un appcast de prueba (firma EdDSA verificada, sin aviso de Gatekeeper) sin perder sesión, layouts ni configuración; una versión con firma EdDSA inválida se rechaza.
+- **Dependencias:** F4.5 (feedback, «Acerca de» con versión). Cambia la Decisión «Alcance» de `PROJECT.md`; la línea de firma de `CLAUDE.md` (ad hoc) se mantiene.
 
 ## F7.7 · Primer uso e inglés
 
@@ -238,7 +240,7 @@ Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya con
 | Proxy SQL con `libpg_query` (etapa 2) | Fuera por ahora: alto esfuerzo, no cubre PostgREST ni el MCP de Supabase, y la guardia de comandos cubre los incidentes reales | — |
 | Predicción por API y `smaltid` | Ya descartados (Simón, 2026-11-25) | — |
 | Publicar Smalti para otros (web en Vercel, Homebrew, actualización automática) | Entra: decisión de Simón (2026-11-25) | F7.6, F7.7 |
-| Espacio de donaciones | Entra en la web, no en la app; en la app, un enlace discreto en «Acerca de» y en la ayuda | Web, F7.6 |
+| Espacio de donaciones | Entra en la web, no en la app; en la app, un enlace discreto en «Acerca de» y en la ayuda. Si cubren los 99 USD anuales, pagan la notarización | Web, F7.6 |
 | Smalti para Windows y Linux | Fuera por ahora (análisis en «Multiplataforma») | — |
 | Navegador, app móvil, VMs, checkpoints | Fuera (como dice el documento) | — |
 
