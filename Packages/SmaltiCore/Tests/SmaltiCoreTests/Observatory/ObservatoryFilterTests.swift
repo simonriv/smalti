@@ -6,12 +6,15 @@ import Testing
 struct ObservatoryFilterTests {
     private let now = ObservatoryFixtures.date("2026-11-18 12:00")
 
-    private func opencode(_ id: String, model: String = "qwen3:4b", local: Bool = true, input: Int = 300, output: Int = 40)
+    private func opencode(
+        _ id: String, model: String = "qwen3:4b", local: Bool = true, input: Int = 300, output: Int = 40
+    )
         -> UsageRow
     {
         UsageRow(
             harness: .opencode, sessionID: id, directory: "/Users/simon/termotty", model: model, isLocal: local,
-            input: input, output: output, startedAt: now.addingTimeInterval(-3600), updatedAt: now.addingTimeInterval(-600))
+            input: input, output: output, startedAt: now.addingTimeInterval(-3600),
+            updatedAt: now.addingTimeInterval(-600))
     }
 
     private func snapshot(usage: [UsageRow]) -> ObservatorySnapshot {
@@ -61,7 +64,8 @@ struct ObservatoryFilterTests {
         #expect(row?.label == "termotty")
         #expect(row?.state == .stopped)
         #expect(row?.pid == "—")
-        #expect(report(.opencode, usage: [opencode("oc-2", local: false)]).rows.first?.agentModel == "OpenCode · qwen3:4b")
+        #expect(
+            report(.opencode, usage: [opencode("oc-2", local: false)]).rows.first?.agentModel == "OpenCode · qwen3:4b")
     }
 
     @Test func opencodeOutsideThePeriodIsLeftOut() {
@@ -72,9 +76,18 @@ struct ObservatoryFilterTests {
         #expect(report(.opencode, usage: [old]).rows.isEmpty)
     }
 
+    @Test func goneSelectionFallsBackToFirstRow() {
+        let report = ObservatoryReport.make(
+            snapshot(usage: [opencode("oc-1")]),
+            for: .init(period: .today, selection: "gone", calendar: ObservatoryFixtures.calendar(), filter: .all))
+
+        #expect(report.detail?.sessionID == "claude-1")
+    }
+
     @Test func footerNamesOpenCode() {
         #expect(
             ObservatoryTexts.footnote
-                == "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado.")
+                == "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
+        )
     }
 }

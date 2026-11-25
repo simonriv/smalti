@@ -214,3 +214,23 @@ struct EditedFilesPaletteTests {
         #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3 * 86_400), now: now) == "hace 3 d")
     }
 }
+
+@Suite("EditorCommand.reopen")
+struct EditorReopenTests {
+    private let position = EditorPosition(file: "/w/reminder.service.ts", line: 42)
+    private let pane = PaneID(rawValue: UUID(uuidString: "7F3A9C2E-0000-4000-8000-000000000001") ?? UUID())
+
+    @Test func reopensListeningOnThePanesSocket() {
+        #expect(
+            EditorCommand.reopen(nvim: "nvim", socketDirectory: "/tmp/s", position: position, pane: pane)
+                == "nvim --listen /tmp/s/nvim-7f3a9c2e-0000-4000-8000-000000000001.sock +42 /w/reminder.service.ts")
+    }
+
+    @Test func tooLongSocketFallsBackToPlainCommand() {
+        let deep = "/" + String(repeating: "d", count: 100)
+
+        #expect(
+            EditorCommand.reopen(nvim: "nvim", socketDirectory: deep, position: position, pane: pane)
+                == position.plainCommand)
+    }
+}

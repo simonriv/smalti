@@ -178,7 +178,7 @@ final class AppComposition {
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
             harnesses: harnesses, captures: captures, editor: editor,
-            agents: Self.agentDependencies(notifier: makeNotifier()),
+            agents: Self.agentDependencies(notifier: makeNotifier(), nvimConfigHome: startup.settings.nvimConfigHome),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
@@ -203,6 +203,7 @@ final class AppComposition {
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         // The window in front at the time reports it: the first one may be closed by then.
         keeper.onFailure = { [weak self] reason in self?.controller?.report(.sessionSaveFailed(reason)) }
+        keeper.editorPositions = { [weak self] in await self?.editorPositions() ?? [:] }
         self.runtime = runtime
         self.engine = engine
         sessionKeeper = keeper
@@ -252,8 +253,7 @@ final class AppComposition {
     {
         let visibility = WindowVisibility()
         let agents = TilingController.AgentDependencies(
-            notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
-            integrationStatus: dependencies.agents.integrationStatus,
+            notifier: dependencies.agents.notifier, integrations: dependencies.agents.integrations,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
         let controller = TilingController(dependencies.with(agents: agents), initial: initial)
         controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
@@ -848,12 +848,17 @@ final class AppComposition {
     }
 
     /// The Claude integration and its state, asked once at launch (F5.6).
-    private static func agentDependencies(notifier: any Notifier) -> TilingController.AgentDependencies {
-        let integration = claudeIntegration()
-        let status = ClaudeIntegrationStatus(integration: integration)
-        status.refresh(forced: true)
+    private static func agentDependencies(notifier: any Notifier, nvimConfigHome: URL)
+        -> TilingController.AgentDependencies
+    {
+        let integrations: [IntegrationID: ClaudeIntegrationStatus] = [
+            .claudePlugin: ClaudeIntegrationStatus(integration: claudeIntegration()),
+            // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
+            .claudecodeNvim: ClaudeIntegrationStatus(integration: ClaudecodeNvimInstaller(configHome: nvimConfigHome)),
+        ]
+        integrations.values.forEach { $0.refresh(forced: true) }
         return TilingController.AgentDependencies(
-            notifier: notifier, integration: integration, integrationStatus: status,
+            notifier: notifier, integrations: integrations,
             // Replaced per window in `makeController`: "visible" is that window's, not the app's.
             isAppActive: { NSApp.isActive })
     }
@@ -914,12 +919,21 @@ final class AppComposition {
     }
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
-    func saveForQuit() {
+    /// F6: every window's Smalti Neovims, for the session.
+    private func editorPositions() async -> [PaneID: EditorPosition] {
+        var all: [PaneID: EditorPosition] = [:]
+        for composition in compositions {
+            all.merge(await composition.controller.editors.positions()) { first, _ in first }
+        }
+        return all
+    }
+
+    func saveForQuit() async {
         // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
         appearance?.saveIfPending()
         secureInput.releaseAll()
         windowsChanged()
-        sessionKeeper?.saveForQuit()
+        await sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()
         input?.stop()

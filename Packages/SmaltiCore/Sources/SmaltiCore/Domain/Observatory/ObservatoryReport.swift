@@ -108,21 +108,32 @@ public struct ObservatoryReport: Equatable, Sendable {
         let sessions = request.filter.includesClaude ? ordered(ObservedSession.merge(snapshot), in: window) : []
         let others = snapshot.usage.filter { $0.updatedAt >= start && request.filter.includes($0) }
             .sorted { newerFirst($0.updatedAt, $1.updatedAt, $0.sessionID, $1.sessionID) }
-        let rows = sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
-        let selected = sessions.first { $0.id == request.selection } ?? (request.selection == nil ? sessions.first : nil)
-        let otherDetail = others.first { $0.sessionID == request.selection }.map { detail(for: $0, snapshot) }
+        let rows =
+            sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
         return ObservatoryReport(
             summary: summary(sessions, in: window, snapshot: snapshot).adding(others),
             rows: rows,
-            detail: selected.map { detail(for: $0, snapshot: snapshot) } ?? otherDetail
-                ?? (sessions.isEmpty ? others.first.map { detail(for: $0, snapshot) } : nil))
+            detail: detail(selecting: request.selection, sessions: sessions, others: others, snapshot: snapshot))
+    }
+
+    /// The selected row's detail; a selection no longer listed falls back to the first row.
+    private static func detail(
+        selecting selection: String?, sessions: [ObservedSession], others: [UsageRow], snapshot: ObservatorySnapshot
+    ) -> Detail? {
+        if let session = sessions.first(where: { $0.id == selection }) {
+            return detail(for: session, snapshot: snapshot)
+        }
+        if let usage = others.first(where: { $0.sessionID == selection }) { return detail(for: usage, snapshot) }
+        return sessions.first.map { detail(for: $0, snapshot: snapshot) }
+            ?? others.first.map { detail(for: $0, snapshot) }
     }
 
     /// F6: an OpenCode session, from its database's totals; no live state is known for it.
     private static func row(for usage: UsageRow, _ snapshot: ObservatorySnapshot) -> Row {
         let model = usage.model.map { "\(usage.harness.displayName) · \($0)\(usage.isLocal ? " local" : "")" }
         return Row(
-            id: usage.sessionID, state: .stopped, label: ObservedSession.label(cwd: usage.directory, home: snapshot.home),
+            id: usage.sessionID, state: .stopped,
+            label: ObservedSession.label(cwd: usage.directory, home: snapshot.home),
             agentModel: model ?? usage.harness.displayName,
             lifetime: ObservatoryFormat.agoCompact(snapshot.now.timeIntervalSince(usage.updatedAt)),
             input: ObservatoryFormat.count(usage.input), output: ObservatoryFormat.count(usage.output),

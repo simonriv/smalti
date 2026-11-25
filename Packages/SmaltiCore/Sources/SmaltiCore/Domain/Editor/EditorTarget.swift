@@ -62,4 +62,14 @@ public enum EditorCommand {
         if let target { words.append(ShellWord.quoted(target.path)) }
         return words.joined(separator: " ")
     }
+
+    /// A saved Neovim pane reopens at its file and line, listening on its pane's socket again; without a usable socket
+    /// it still reopens there, as a plain `nvim +42 <file>`.
+    public static func reopen(nvim: String, socketDirectory: String, position: EditorPosition, pane: PaneID) -> String {
+        guard let socket = try? EditorSocketPath.make(directory: socketDirectory, pane: pane) else {
+            return position.plainCommand
+        }
+        return launch(
+            nvim: nvim, socket: socket, target: EditorTarget(path: position.file, line: position.line, column: nil))
+    }
 }

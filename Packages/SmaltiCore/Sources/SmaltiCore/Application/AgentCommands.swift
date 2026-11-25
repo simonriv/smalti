@@ -76,15 +76,17 @@ public struct ActivatePane {
 @MainActor
 public struct InstallClaudeIntegration {
     private let integration: any HarnessIntegration
+    private let id: IntegrationID
 
-    public init(integration: any HarnessIntegration) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
         self.integration = integration
+        self.id = id
     }
 
     public func execute() async -> String {
         do {
             try await integration.install()
-            return "Integración con Claude Code instalada"
+            return id.installedText
         } catch {
             return IntegrationErrorText.describe(error)
         }
@@ -94,15 +96,17 @@ public struct InstallClaudeIntegration {
 @MainActor
 public struct UninstallClaudeIntegration {
     private let integration: any HarnessIntegration
+    private let id: IntegrationID
 
-    public init(integration: any HarnessIntegration) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
         self.integration = integration
+        self.id = id
     }
 
     public func execute() async -> String {
         do {
             try await integration.uninstall()
-            return "Integración con Claude Code desinstalada"
+            return id.uninstalledText
         } catch {
             return IntegrationErrorText.describe(error)
         }

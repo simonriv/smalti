@@ -32,6 +32,21 @@ public enum IntegrationID: CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// The status bar line after a successful install.
+    public var installedText: String {
+        switch self {
+        case .claudePlugin: "Integración con Claude Code instalada"
+        case .claudecodeNvim: "claudecode.nvim instalado: se activa al abrir Neovim"
+        }
+    }
+
+    public var uninstalledText: String {
+        switch self {
+        case .claudePlugin: "Integración con Claude Code desinstalada"
+        case .claudecodeNvim: "claudecode.nvim desinstalado"
+        }
+    }
+
     /// Only the action that applies to the state; none while it is unknown (spec F5.6).
     func commandID(for state: IntegrationState) -> (id: CommandID, title: String)? {
         switch state {

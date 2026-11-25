@@ -159,6 +159,17 @@ struct AgentUseCaseTests {
                 == "Falló `claude plugin install smalti@smalti`: more")
     }
 
+    @Test func claudecodeInstallReportsItsOwnName() async {
+        let integration = FakeHarnessIntegration()
+
+        #expect(
+            await InstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+                == "claudecode.nvim instalado: se activa al abrir Neovim")
+        #expect(
+            await UninstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+                == "claudecode.nvim desinstalado")
+    }
+
     @Test func uninstallReportsSuccess() async {
         let integration = FakeHarnessIntegration()
         _ = await InstallClaudeIntegration(integration: integration).execute()

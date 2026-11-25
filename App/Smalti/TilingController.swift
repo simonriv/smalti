@@ -65,9 +65,8 @@ final class TilingController {
     /// What agent events need from outside the tiling.
     struct AgentDependencies {
         let notifier: any Notifier
-        let integration: any HarnessIntegration
-        /// F5.6: the integration's last known state, shared by every window.
-        let integrationStatus: ClaudeIntegrationStatus
+        /// F5.6/F6: each integration's last known state, shared by every window.
+        let integrations: [IntegrationID: ClaudeIntegrationStatus]
         let isAppActive: () -> Bool
     }
 
@@ -175,12 +174,12 @@ final class TilingController {
         show(.nobodyWaiting)
     }
 
-    private func runIntegration(_ command: IntegrationCommand.Type) {
-        let integration = deps.agents.integration
-        let status = deps.agents.integrationStatus
+    private func runIntegration(_ id: IntegrationID, _ command: IntegrationCommand.Type) {
+        guard let status = deps.agents.integrations[id] else { return }
+        let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration).execute()
+            let line = await command.init(integration: integration, id: id).execute()
             self?.report(.integration(line))
             status.refresh(forced: true)
         }
@@ -190,13 +189,13 @@ final class TilingController {
     func catalogState() -> CatalogState {
         CatalogState(
             workspaces: set, savedLayouts: savedLayouts(),
-            integrations: [.claudePlugin: deps.agents.integrationStatus.state],
+            integrations: deps.agents.integrations.mapValues(\.state),
             editedFiles: set.active.focusedPane.map { deps.editor.editedFiles.recent(in: $0) } ?? [])
     }
 
     /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
     func refreshIntegrationState() {
-        deps.agents.integrationStatus.refresh(forced: false)
+        deps.agents.integrations.values.forEach { $0.refresh(forced: false) }
     }
 
     /// The saved layouts as the palette lists them.
@@ -232,10 +231,17 @@ final class TilingController {
     }
 
     private var restoreSession: RestoreSession {
-        RestoreSession(
+        let nvim = deps.editor.nvim
+        let socketDirectory = deps.editor.socketDirectory
+        return RestoreSession(
             .init(
                 engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now },
+                // F6: Claude reopens with `--ide` while claudecode.nvim is installed.
+                connectsEditor: deps.agents.integrations[.claudecodeNvim]?.state == .installed,
+                editorCommand: { position, pane in
+                    EditorCommand.reopen(nvim: nvim, socketDirectory: socketDirectory, position: position, pane: pane)
+                }))
     }
 
     /// Rebuilds one saved window's workspaces; if none could open, starts as usual.
@@ -249,10 +255,22 @@ final class TilingController {
             return
         }
         set = restored
+        adoptRestoredEditors(plan)
         pendingRestore = (interval, Set(set.workspaces.flatMap(\.panes).map(\.id)))
         set.workspaces.flatMap(\.panes).forEach { observe($0.id) }
         reportRestoreFailures(result.failures)
         publish()
+    }
+
+    /// F6: the Neovim panes reopened with `--listen` answer "Abrir en Neovim" and are saved at their line again.
+    private func adoptRestoredEditors(_ plan: RestorePlan) {
+        for planned in plan.workspaces.flatMap(\.panes) {
+            guard case .editor = planned.launch,
+                let socket = try? EditorSocketPath.make(
+                    directory: deps.editor.socketDirectory, pane: PaneID(rawValue: planned.id))
+            else { continue }
+            editors.adopt(PaneID(rawValue: planned.id), socket: socket)
+        }
     }
 
     func perform(_ command: CommandID) {
@@ -325,8 +343,16 @@ final class TilingController {
             .panesEqualize: { [unowned self] in EqualizePanes().execute(in: &set) },
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
-            .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
-            .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
+            .claudeIntegrationInstall: { [unowned self] in runIntegration(.claudePlugin, InstallClaudeIntegration.self)
+            },
+            .claudeIntegrationUninstall: { [unowned self] in
+                runIntegration(.claudePlugin, UninstallClaudeIntegration.self)
+            },
+            .claudecodeNvimInstall: { [unowned self] in runIntegration(.claudecodeNvim, InstallClaudeIntegration.self)
+            },
+            .claudecodeNvimUninstall: { [unowned self] in
+                runIntegration(.claudecodeNvim, UninstallClaudeIntegration.self)
+            },
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
             .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
             .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
@@ -717,7 +743,7 @@ final class TilingController {
 /// Install and uninstall share one shape, so the palette runs either the same way.
 @MainActor
 protocol IntegrationCommand {
-    init(integration: any HarnessIntegration)
+    init(integration: any HarnessIntegration, id: IntegrationID)
     func execute() async -> String
 }
 

@@ -28,8 +28,8 @@ final class SmaltiAppDelegate: NSObject, NSApplicationDelegate {
                 sender.reply(toApplicationShouldTerminate: false)
                 return
             }
-            composition.saveForQuit()
             Task {
+                await composition.saveForQuit()
                 await composition.persistObservatory()
                 sender.reply(toApplicationShouldTerminate: true)
             }

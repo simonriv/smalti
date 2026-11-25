@@ -64,6 +64,25 @@ final class EditorCoordinator: EditorPanes {
 
     func socket(of pane: PaneID) -> String? { sockets[pane] }
 
+    /// F6, for saving: the file and line of each Smalti Neovim still running, asked all at once (200 ms each); one
+    /// that does not answer is left out and saves as its process.
+    func positions() async -> [PaneID: EditorPosition] {
+        let live = sockets.filter { host?.pane(byID: $0.key)?.processName == "nvim" }
+        var found: [PaneID: EditorPosition] = [:]
+        await withTaskGroup(of: (PaneID, EditorPosition?).self) { group in
+            for (pane, socket) in live {
+                group.addTask { [bridge] in (pane, await bridge.current(socket: socket)) }
+            }
+            for await (pane, position) in group { found[pane] = position }
+        }
+        return found
+    }
+
+    /// F6: a restored Neovim pane listens on `socket` again.
+    func adopt(_ pane: PaneID, socket: String) {
+        sockets[pane] = socket
+    }
+
     /// ⌘⇧E: a Neovim with its socket next to `pane`, in its directory.
     func openBeside(_ pane: PaneID) {
         guard let origin = host?.pane(byID: pane),
