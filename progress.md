@@ -345,19 +345,19 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · `SharedLayout`
-- [ ] T2 · `ExportLayout`, `ImportLayout`, `LayoutFiles` y ⌘K
-- [ ] T3 · Dominio de la telemetría
-- [ ] T4 · `[extras]`, puertos, `CollectTelemetry`, entorno y Observatorio
+- [x] T1 · `SharedLayout`
+- [x] T2 · `ExportLayout`, `ImportLayout`, `LayoutFiles` y ⌘K
+- [x] T3 · Dominio de la telemetría
+- [x] T4 · `[extras]`, puertos, `CollectTelemetry`, entorno y Observatorio
 #### Bloque 2 · Adaptadores
-- [ ] T5 · `OTLPReceiverAdapter`: socket y HTTP
-- [ ] T6 · `OTLPLogsDecoder`
-- [ ] T7 · `ClaudeSettingsTelemetryCheck` y `SharedLayoutFiles`
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T5 · `OTLPReceiverAdapter`: socket y HTTP
+- [x] T6 · `OTLPLogsDecoder`
+- [x] T7 · `ClaudeSettingsTelemetryCheck` y `SharedLayoutFiles`
+- [x] Revisión intermedia 1 (3 críticos, 6 importantes, 8 menores; corregidos, I5 como enmienda) + mutación incremental (97,4 %; 4 sobrevivientes muertos y verificados a mano)
 #### Bloque 3 · App
-- [ ] T8 · Telemetría en la app y emisor falso
-- [ ] T9 · Exportar e importar layouts en la app
-- [ ] T10 · Guardas y documentos
+- [x] T8 · Telemetría en la app y emisor falso
+- [x] T9 · Exportar e importar layouts en la app
+- [x] T10 · Guardas y documentos
 - [ ] Revisión intermedia 2 + mutación incremental
 #### Bloque 4 · Cierre
 - [ ] T11 · Mediciones, capturas, checklist y revisión final
