@@ -401,18 +401,18 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · `FormatCompatibility`, sesión y layouts con versión
-- [ ] T2 · `config.toml`, `theme.toml` e índice del Observatorio
-- [ ] T3 · Puerto `AppUpdates`, comandos, enlaces y feedback
+- [x] T1 · `FormatCompatibility`, sesión y layouts con versión
+- [x] T2 · `config.toml`, `theme.toml` e índice del Observatorio
+- [x] T3 · Puerto `AppUpdates`, comandos, enlaces y feedback
 #### Bloque 2 · Adaptadores
-- [ ] T4 · `SparkleUpdatesAdapter`
-- [ ] T5 · `LICENSE` y avisos de terceros
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T4 · `SparkleUpdatesAdapter`
+- [x] T5 · `LICENSE` y avisos de terceros
+- [x] Revisión intermedia 1 (0 críticos, 2 importantes, 8 menores; corregidos) + mutación incremental (99,1 %; 1 sobreviviente muerto y verificado a mano)
 #### Bloque 3 · App, repo y pipeline
 - [ ] T6 · La app
 - [ ] T7 · Documentos del repo
-- [ ] T8 · Scripts de release y workflow
-- [ ] T9 · Repos satélite
+- [x] T8 · Scripts de release y workflow
+- [x] T9 · Repos satélite
 - [ ] T10 · Pruebas de instalación y actualización
 - [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre

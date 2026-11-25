@@ -27,7 +27,8 @@ value() { plutil -extract "$1" raw "$plist" 2>/dev/null || echo "<missing>"; }
 
 [[ "$(lipo -archs "$app/Contents/MacOS/Smalti")" == arm64 ]] || die "the binary is not arm64 only"
 codesign --verify --deep --strict "$app" || die "the signature does not verify"
-codesign -dv "$app" 2>&1 | grep -q "Signature=adhoc" || die "the app is not signed ad hoc"
+signature="$(codesign -dv "$app" 2>&1)"  # captured first: grep -q under pipefail would SIGPIPE codesign
+[[ "$signature" == *"Signature=adhoc"* ]] || die "the app is not signed ad hoc"
 [[ "$(value CFBundleShortVersionString)" == "$version" ]] || die "CFBundleShortVersionString is not $version"
 [[ "$(value CFBundleVersion)" == "$(build_number "$version")" ]] || die "CFBundleVersion is not $(build_number "$version")"
 [[ "$(value LSMinimumSystemVersion)" == "$MINIMUM_SYSTEM_VERSION" ]] || die "LSMinimumSystemVersion is not $MINIMUM_SYSTEM_VERSION"
