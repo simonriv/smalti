@@ -18,14 +18,16 @@ struct NamedLayoutCommandTests {
     private func id(_ id: CommandID) -> (Command) -> Bool { { $0.id == id } }
 
     private func search(_ query: String, saved: [NamedLayoutSummary] = []) -> [Command] {
-        SearchCommands(layouts: .standard).execute(query, set: set, keymap: .standard, savedLayouts: saved)
-            .map(\.command)
+        SearchCommands(layouts: .standard).execute(
+            query, state: CatalogState(workspaces: set, savedLayouts: saved), keymap: .standard
+        )
+        .map(\.command)
     }
 
     @Test func catalogListsSavedLayoutsWithSubtitle() throws {
         let commands = CommandCatalog.commands(
-            for: set, keymap: .standard, layouts: .standard,
-            savedLayouts: [try summary("rizaria-full", panes: 4, agents: 2)])
+            for: CatalogState(workspaces: set, savedLayouts: [try summary("rizaria-full", panes: 4, agents: 2)]),
+            keymap: .standard, layouts: .standard)
 
         let restore = commands.first(where: id(.layoutRestore(try LayoutName("rizaria-full"))))
         #expect(restore?.title == "Restaurar layout “rizaria-full”")
@@ -35,14 +37,16 @@ struct NamedLayoutCommandTests {
 
     @Test func catalogOmitsAgentClauseWithoutAgents() throws {
         let commands = CommandCatalog.commands(
-            for: set, keymap: .standard, layouts: .standard, savedLayouts: [try summary("solo", panes: 1, agents: 0)])
+            for: CatalogState(workspaces: set, savedLayouts: [try summary("solo", panes: 1, agents: 0)]),
+            keymap: .standard, layouts: .standard)
 
         #expect(commands.first(where: id(.layoutRestore(try LayoutName("solo"))))?.subtitle == "— 1 panel")
     }
 
     @Test func oneAgentIsSingular() throws {
         let commands = CommandCatalog.commands(
-            for: set, keymap: .standard, layouts: .standard, savedLayouts: [try summary("uno", panes: 2, agents: 1)])
+            for: CatalogState(workspaces: set, savedLayouts: [try summary("uno", panes: 2, agents: 1)]),
+            keymap: .standard, layouts: .standard)
 
         #expect(
             commands.first(where: id(.layoutRestore(try LayoutName("uno"))))?.subtitle

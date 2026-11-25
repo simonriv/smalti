@@ -85,13 +85,16 @@ public actor FakeCompletionProvider: CompletionProvider {
     private let generated: [GeneratorID: [Suggestion]]
     private let failing: Set<GeneratorID>
     private let pathEntries: [Suggestion]
+    /// Commands whose spec is loaded already; `nil` means every one.
+    private var loaded: Set<String>?
     public private(set) var pathRequests: [PathRequest] = []
     public private(set) var generateRequests: [(generator: GeneratorID, tokens: [String])] = []
 
     public init(
         specs: [CompletionSpec] = [], generated: [GeneratorID: [Suggestion]] = [:], failing: Set<GeneratorID> = [],
-        paths: [Suggestion] = []
+        paths: [Suggestion] = [], loaded: Set<String>? = nil
     ) {
+        self.loaded = loaded
         self.specs = Dictionary(specs.flatMap { spec in spec.name.map { ($0, spec) } }) { first, _ in first }
         self.generated = generated
         self.failing = failing
@@ -100,7 +103,15 @@ public actor FakeCompletionProvider: CompletionProvider {
 
     public var commands: [String] { Array(specs.keys) }
 
-    public func spec(for command: String) async -> CompletionSpec? { specs[command] }
+    public func spec(for command: String) async -> CompletionSpec? {
+        loaded?.insert(command)
+        return specs[command]
+    }
+
+    public func loadedSpec(for command: String) async -> CompletionSpec? {
+        guard loaded?.contains(command) ?? true else { return nil }
+        return specs[command]
+    }
 
     public func generate(_ generator: GeneratorID, tokens: [String], in directory: String) async throws(CompletionError)
         -> [Suggestion]
@@ -113,5 +124,23 @@ public actor FakeCompletionProvider: CompletionProvider {
     public func paths(matching prefix: String, in directory: String, foldersOnly: Bool) async -> [Suggestion] {
         pathRequests.append(PathRequest(prefix: prefix, directory: directory, foldersOnly: foldersOnly))
         return pathEntries
+    }
+}
+
+/// `PathFacts` over a fixed table; `delay` makes every answer slow, and `queried` records each path asked.
+public actor InMemoryPathFacts: PathFacts {
+    private let kinds: [String: PathKind]
+    private let delay: Duration
+    public private(set) var queried: [String] = []
+
+    public init(kinds: [String: PathKind] = [:], delay: Duration = .zero) {
+        self.kinds = kinds
+        self.delay = delay
+    }
+
+    public func kind(of path: String) async -> PathKind? {
+        queried.append(path)
+        if delay > .zero { try? await Task.sleep(for: delay) }
+        return kinds[path]
     }
 }

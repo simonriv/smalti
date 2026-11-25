@@ -17,10 +17,11 @@ struct FuzzyMatchTests {
 
     private func catalog() -> [Command] {
         CommandCatalog.commands(
-            for: WorkspaceSet(
-                first: Workspace.empty(
-                    name: "w", rootDirectory: root,
-                    layout: DwindleLayout())),
+            for: CatalogState(
+                workspaces: WorkspaceSet(
+                    first: Workspace.empty(
+                        name: "w", rootDirectory: root,
+                        layout: DwindleLayout()))),
             keymap: .standard, layouts: .standard)
     }
 
@@ -102,11 +103,12 @@ struct FuzzyMatchTests {
 
     @Test func izqRanksAllThreeDirectionVerbsEqually() throws {
         let commands = CommandCatalog.commands(
-            for: WorkspaceSet(
-                first: (0..<2).reduce(Workspace.empty(name: "w", rootDirectory: root, layout: DwindleLayout())) {
-                    w, _ in
-                    w.adding(Pane(id: PaneID(), workingDirectory: root))
-                }),
+            for: CatalogState(
+                workspaces: WorkspaceSet(
+                    first: (0..<2).reduce(Workspace.empty(name: "w", rootDirectory: root, layout: DwindleLayout())) {
+                        w, _ in
+                        w.adding(Pane(id: PaneID(), workingDirectory: root))
+                    })),
             keymap: .standard, layouts: .standard)
 
         let ranked = fuzzyMatch("izq", in: commands)

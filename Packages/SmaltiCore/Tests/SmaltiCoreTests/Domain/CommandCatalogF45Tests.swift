@@ -17,7 +17,8 @@ struct CommandCatalogF45Tests {
     }
 
     private func commands(panes: Int) -> [Command] {
-        CommandCatalog.commands(for: workspaces(panes: panes), keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(
+            for: CatalogState(workspaces: workspaces(panes: panes)), keymap: .standard, layouts: .standard)
     }
 
     @Test(arguments: [

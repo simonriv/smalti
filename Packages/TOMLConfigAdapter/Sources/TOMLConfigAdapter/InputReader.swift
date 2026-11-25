@@ -1,9 +1,9 @@
 import SmaltiCore
 
-/// `[input]`: `enabled`, `predictions`, `completions` (booleans), `history_limit` and `generator_timeout_ms`
+/// `[input]`: `enabled`, `predictions`, `completions`, `highlighting` (booleans), `history_limit` and `generator_timeout_ms`
 /// (integers within `InputSettings`' ranges). Unwritten keys keep their defaults.
 enum InputReader {
-    private static let flags = ["enabled", "predictions", "completions"]
+    private static let flags = ["enabled", "predictions", "completions", "highlighting"]
     private static let historyLimitKey = "history_limit"
     private static let timeoutKey = "generator_timeout_ms"
 
@@ -13,6 +13,7 @@ enum InputReader {
         settings.isEnabled = try section.flag("enabled") ?? settings.isEnabled
         settings.hasPredictions = try section.flag("predictions") ?? settings.hasPredictions
         settings.hasCompletions = try section.flag("completions") ?? settings.hasCompletions
+        settings.isHighlighting = try section.flag("highlighting") ?? settings.isHighlighting
         if let limit = try integer(historyLimitKey, in: section, within: InputSettings.historyLimitRange) {
             settings.historyLimit = limit
         }

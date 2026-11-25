@@ -18,7 +18,7 @@ struct CommandCatalogTests {
     }
 
     private func commands(for set: WorkspaceSet) -> [Command] {
-        CommandCatalog.commands(for: set, keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
     }
 
     private func commands(paneCount: Int) -> [Command] {
@@ -41,7 +41,7 @@ struct CommandCatalogTests {
         let layouts = LayoutCatalog([SubtitledLayout()])
 
         let commands = CommandCatalog.commands(
-            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: layouts)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: layouts)
 
         let command = try #require(commands.first { $0.id == .layout(SubtitledLayout().id) })
         #expect(command.subtitle == "de prueba")
@@ -212,7 +212,7 @@ struct CommandCatalogTests {
 
     @Test func paletteListsOpenObservatory() {
         let commands = CommandCatalog.commands(
-            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)
 
         let open = commands.first { $0.id == .observatoryToggle }
         #expect(open?.title == "Abrir observatorio")
@@ -223,7 +223,7 @@ struct CommandCatalogTests {
 
     @Test func jumpCommandIsInPalette() {
         let commands = CommandCatalog.commands(
-            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)
 
         let jump = commands.first { $0.id == .agentJump }
         #expect(jump?.title == "Saltar al agente que espera")
@@ -231,15 +231,30 @@ struct CommandCatalogTests {
         #expect(jump?.shortcut?.display == "⌘J")
     }
 
-    @Test func claudeIntegrationCommandsAreOffered() {
-        let commands = CommandCatalog.commands(
-            for: WorkspaceSet(first: makeWorkspace()), keymap: .standard, layouts: .standard)
+    private func integrationCommands(_ state: IntegrationState) -> [Command] {
+        CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace()), claudeIntegration: state),
+            keymap: .standard, layouts: .standard
+        ).filter { $0.id == .claudeIntegrationInstall || $0.id == .claudeIntegrationUninstall }
+    }
 
-        let install = commands.first { $0.id == .claudeIntegrationInstall }
-        let uninstall = commands.first { $0.id == .claudeIntegrationUninstall }
-        #expect(install?.title == "Instalar integración con Claude Code")
-        #expect(uninstall?.title == "Desinstalar integración con Claude Code")
-        #expect(install?.group == .configuration)
+    @Test func notInstalledOffersOnlyInstall() {
+        let commands = integrationCommands(.notInstalled)
+
+        #expect(commands.map(\.title) == ["Instalar integración con Claude Code"])
+        #expect(commands.first?.group == .configuration)
+    }
+
+    @Test func installedOffersOnlyUninstall() {
+        #expect(integrationCommands(.installed).map(\.title) == ["Desinstalar integración con Claude Code"])
+    }
+
+    @Test func unknownOffersNeither() {
+        #expect(integrationCommands(.unknown).isEmpty)
+    }
+
+    @Test func catalogStateDefaultsToUnknownIntegration() {
+        #expect(CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())).claudeIntegration == .unknown)
     }
 }
 

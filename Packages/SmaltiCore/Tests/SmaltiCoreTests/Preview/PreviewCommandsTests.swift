@@ -17,7 +17,7 @@ struct PreviewCommandsTests {
     }
 
     private var commands: [Command] {
-        CommandCatalog.commands(for: set, keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
     }
 
     @Test func quickLookIdIsStandard() {

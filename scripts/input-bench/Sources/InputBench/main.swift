@@ -11,6 +11,8 @@ import SmaltiCore
 // ~/.zsh_history, read-only and only in memory (never written anywhere), as the history and as what is typed.
 let arguments = CommandLine.arguments
 let usesRealHistory = arguments.contains("--real-history")
+/// F5.6 C1: also highlight every line, as the app does (`LineAnswers`), and time the first highlight painted.
+let highlights = arguments.contains("--highlight")
 let keystrokes = arguments.firstIndex(of: "--keystrokes").flatMap { Int(arguments[$0 + 1]) } ?? 2_000
 let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -83,12 +85,13 @@ try lines.write(to: historyFile)
 
 // MARK: Session and server
 
+let specs = FigSpecs(user: work.appending(path: "completions"), runner: GeneratorRunner(timeout: .seconds(1)))
 let session = InputSession(
     ports: InputSession.Ports(
         history: FileCommandHistory(file: historyFile, limit: 100_000), project: FileProjectContext(),
-        completions: FigSpecs(user: work.appending(path: "completions"), runner: GeneratorRunner(timeout: .seconds(1))),
-        predictor: HeuristicPredictor()),
+        completions: specs, predictor: HeuristicPredictor()),
     settings: .standard, clock: { Date() })
+let highlighter = highlights ? HighlightLine(paths: FileSystemPathFacts(), completions: specs) : nil
 let loadStart = ContinuousClock.now
 await session.start()
 let loadTime = ContinuousClock.now - loadStart
@@ -103,15 +106,25 @@ final class Timings: @unchecked Sendable {
 let timings = Timings()
 let directory = directories[0]
 let socket = "/tmp/smalti-bench-\(UUID().uuidString.prefix(8)).sock"
+let style = SmaltiMessage.highlightStyle(Theme.obsidian.highlightPalette)
 let server = try InputSocketServer(socketFile: URL(filePath: socket)) { connection, message in
-    Task {
+    Task { @MainActor in
         let start = ContinuousClock.now
-        let reply = await InputRouting.respond(to: message.message, pane: pane, directory: directory, session: session)
+        if case .line(let seq, let line) = message.message, let highlighter {
+            // The app's path (F5.6): ghost and highlight each sent when ready.
+            await LineAnswers(session: session, highlighter: highlighter).answer(
+                HighlightRequest(line: line, seq: seq, directory: directory, home: "/bench"), pane: pane,
+                channel: LineChannel(send: { connection.send($0) }, isLatest: { _ in true }))
+        } else {
+            if case .hello = message.message, highlights { connection.send(style) }
+            let reply = await InputRouting.respond(
+                to: message.message, pane: pane, directory: directory, session: session)
+            if case .send(let messages) = reply { messages.forEach { connection.send($0) } }
+        }
         if case .line = message.message {
             let elapsed = ContinuousClock.now - start
             timings.add(Double(elapsed.components.attoseconds) / 1e15 + Double(elapsed.components.seconds) * 1000)
         }
-        if case .send(let messages) = reply { messages.forEach { connection.send($0) } }
     }
 }
 defer { server.stop() }
@@ -133,6 +146,7 @@ functions[_bench_apply]=$functions[_smalti_input_apply]
 _smalti_input_apply() {
     _bench_apply "$@"
     [[ $1 == suggest$'\\t'* ]] && print -r -- "P ${${1#suggest$'\\t'}%%$'\\t'*} $EPOCHREALTIME" >> \(log.path(percentEncoded: false))
+    [[ $1 == highlight$'\\t'* ]] && print -r -- "H ${${1#highlight$'\\t'}%%$'\\t'*} $EPOCHREALTIME" >> \(log.path(percentEncoded: false))
 }
 """.write(to: user.appending(path: ".zshrc"), atomically: true, encoding: .utf8)
 let smalti = try SmaltiZshEnv.install(in: work.appending(path: "smalti"))
@@ -178,13 +192,19 @@ zsh.terminate()
 let events = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
 var sent: [String: Double] = [:]
 var endToEnd: [Double] = []
+var highlightEndToEnd: [Double] = []
+var highlighted: Set<String> = []
 for line in events.split(separator: "\n") {
     let parts = line.split(separator: " ")
     guard parts.count == 3, let time = Double(parts[2]) else { continue }
-    if parts[0] == "S" {
-        sent[String(parts[1])] = time
-    } else if let start = sent.removeValue(forKey: String(parts[1])) {
-        endToEnd.append((time - start) * 1000)
+    let seq = String(parts[1])
+    switch parts[0] {
+    case "S": sent[seq] = time
+    case "P": if let start = sent[seq] { endToEnd.append((time - start) * 1000) }
+    case "H":
+        // Only the first highlight of a line: a follow-up repaints, it does not answer the keystroke.
+        if let start = sent[seq], highlighted.insert(seq).inserted { highlightEndToEnd.append((time - start) * 1000) }
+    default: break
     }
 }
 
@@ -199,4 +219,8 @@ print(
     "BENCH history=\(entryCount)\(usesRealHistory ? " (real)" : "") load=\(loadTime) keystrokes=\(typed)",
     "e2e n=\(endToEnd.count) p50=\(format(percentile(endToEnd, 0.5))) p95=\(format(percentile(endToEnd, 0.95)))",
     "p99=\(format(percentile(endToEnd, 0.99))) ms;",
-    "domain n=\(domain.count) p50=\(format(percentile(domain, 0.5))) p99=\(format(percentile(domain, 0.99))) ms")
+    "domain n=\(domain.count) p50=\(format(percentile(domain, 0.5))) p99=\(format(percentile(domain, 0.99))) ms;",
+    highlights
+        ? "highlight n=\(highlightEndToEnd.count) p50=\(format(percentile(highlightEndToEnd, 0.5)))"
+            + " p95=\(format(percentile(highlightEndToEnd, 0.95))) p99=\(format(percentile(highlightEndToEnd, 0.99))) ms"
+        : "highlight off")

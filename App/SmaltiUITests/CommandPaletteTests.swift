@@ -130,6 +130,107 @@ final class CommandPaletteTests: SmaltiUITestCase {
         XCTAssertTrue(isInsideTheList(app.elements("smalti.paletteGroup").firstMatch))
     }
 
+    /// F5.6: the trackpad or the wheel reaches the last command without the keyboard (the list used to hold only the
+    /// rows around the selection, so the wheel ran out early).
+    func testWheelScrollReachesLastCommand() {
+        openPalette()
+        let list = app.element("smalti.palette.list")
+        let last = app.elements("smalti.paletteRow").matching(NSPredicate(format: "label == 'Acerca de Smalti'"))
+            .firstMatch
+        XCTAssertFalse(isInsideTheList(last), "the list shows everything: nothing to prove")
+
+        for _ in 0..<8 { list.scroll(byDeltaX: 0, deltaY: -400) }
+
+        XCTAssertTrue(last.waitForExistence(timeout: 2))
+        XCTAssertTrue(isInsideTheList(last))
+    }
+
+    func testClickingARowRunsIt() {
+        openPalette()
+        app.typeText("col")
+
+        app.elements("smalti.paletteRow").firstMatch.click()
+
+        XCTAssertTrue(app.element("smalti.palette").waitForNonExistence(timeout: 5))
+        expect(app.element("smalti.statusBar"), valueEndsWith: "· columnas")
+    }
+
+    // MARK: - F5.6: only the Claude integration action that applies
+
+    private static let install = "Instalar integración con Claude Code"
+    private static let uninstall = "Desinstalar integración con Claude Code"
+
+    /// A new launch with a fake `claude` set up by `configure`, replacing the one from `setUp`.
+    private func relaunch(_ configure: (XCUIApplication) -> Void) {
+        let previous = app.configFile.deletingLastPathComponent()
+        app.terminate()
+        try? FileManager.default.removeItem(at: previous)
+        let fresh = XCUIApplication.isolatedSmalti()
+        configure(fresh)
+        launch(fresh)
+    }
+
+    private func row(_ title: String) -> XCUIElement {
+        app.elements("smalti.paletteRow").matching(NSPredicate(format: "label == %@", title)).firstMatch
+    }
+
+    /// Types the start of the title (no spaces: XCUITest sends them as ⌃Space on this layout).
+    private func openPaletteOnIntegration() {
+        openPalette()
+        app.typeText("integraci")
+    }
+
+    /// What the fake `claude` was asked, for a failure message.
+    private var claudeCalls: String {
+        let file = app.configFile.deletingLastPathComponent().appending(path: "claude-calls")
+        return (try? String(contentsOf: file, encoding: .utf8)) ?? "no calls"
+    }
+
+    func testPaletteOffersInstallWhenNotInstalled() {
+        relaunch { $0.useFakeClaude(installed: false) }
+
+        openPaletteOnIntegration()
+
+        XCTAssertTrue(row(Self.install).waitForExistence(timeout: 10), claudeCalls)
+        XCTAssertFalse(row(Self.uninstall).exists)
+    }
+
+    func testPaletteOffersUninstallAfterInstall() {
+        relaunch { $0.useFakeClaude(installed: false) }
+        openPaletteOnIntegration()
+        XCTAssertTrue(row(Self.install).waitForExistence(timeout: 10))
+        app.typeKey(.return, modifierFlags: [])
+
+        openPaletteOnIntegration()
+
+        XCTAssertTrue(row(Self.uninstall).waitForExistence(timeout: 10))
+        XCTAssertFalse(row(Self.install).exists)
+    }
+
+    func testPaletteOffersNeitherWithoutClaude() {
+        openPaletteOnIntegration()
+
+        XCTAssertFalse(row(Self.install).waitForExistence(timeout: 3))
+        XCTAssertFalse(row(Self.uninstall).exists)
+    }
+
+    /// The palette opens with the last known state ("Desinstalar") and rebuilds its open list when the check made
+    /// on opening finds the plugin gone (`catalogChanged`), without closing.
+    func testExternalUninstallUpdatesOpenPalette() throws {
+        var state: URL?
+        relaunch { state = $0.useFakeClaude(installed: true) }
+        openPaletteOnIntegration()
+        XCTAssertTrue(row(Self.uninstall).waitForExistence(timeout: 10), claudeCalls)
+        app.typeKey(.escape, modifierFlags: [])
+        try FileManager.default.removeItem(at: try XCTUnwrap(state))
+
+        openPaletteOnIntegration()
+
+        XCTAssertTrue(row(Self.install).waitForExistence(timeout: 10), claudeCalls)
+        XCTAssertFalse(row(Self.uninstall).exists)
+        XCTAssertTrue(app.element("smalti.palette").exists, "the list changed with the palette open")
+    }
+
     private var selectedRow: XCUIElement {
         app.elements("smalti.paletteRow").matching(NSPredicate(format: "value == 'selected'")).firstMatch
     }

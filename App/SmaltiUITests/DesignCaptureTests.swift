@@ -266,6 +266,39 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(smaltiWindow(app).screenshot(), as: "f5-prompt.png")
     }
 
+    // MARK: - F5.6 (C6, C11)
+
+    /// The line colored while typing and the prompt with the new icons, in the four themes, over this repository
+    /// (branch icon). The line is pasted without Return.
+    func testCaptureF56Highlight() throws {
+        let repository = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().path(percentEncoded: false)
+        for theme in ["obsidiana", "niebla", "ambar-nocturno", "bosque"] {
+            let app = XCUIApplication.isolatedSmaltiWithIntegration(smaltiPrompt: true)
+            app.writeTheme("[appearance]\ntheme = \"\(theme)\"\n")
+            launch(app)
+            sleep(2)
+            app.run("cd '\(repository)'")
+            sleep(2)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString("git checkout -b \"feat x\" ~/src | grep -v foo > out.txt", forType: .string)
+            app.typeKey("v", modifierFlags: .command)
+            sleep(2)
+            try save(smaltiWindow(app).screenshot(), as: "f56-highlight-\(theme).png")
+            app.terminate()
+        }
+    }
+
+    func testCaptureF56Studio() throws {
+        let app = XCUIApplication.isolatedSmaltiWithIntegration(smaltiPrompt: true)
+        launch(app)
+        sleep(2)
+        app.typeKey("p", modifierFlags: [.shift, .command])
+        XCTAssertTrue(app.element("smalti.studio").waitForExistence(timeout: 5))
+        sleep(1)
+        try save(smaltiWindow(app).screenshot(), as: "f56-prompt-studio.png")
+    }
+
     func testCaptureF5Buttons() throws {
         for mode in ["hidden", "hover", "visible"] {
             let app = XCUIApplication.isolatedSmalti(config: "[window]\nbuttons = \"\(mode)\"\n")

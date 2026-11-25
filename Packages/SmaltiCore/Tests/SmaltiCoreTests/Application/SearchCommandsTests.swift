@@ -13,7 +13,7 @@ struct SearchCommandsTests {
     }
 
     @Test func searchUsesCurrentState() {
-        let results = search.execute("workspace", set: set, keymap: .standard)
+        let results = search.execute("workspace", state: CatalogState(workspaces: set), keymap: .standard)
 
         let ids = results.map(\.command.id)
         #expect(ids.contains(.workspaceNew))
@@ -21,15 +21,15 @@ struct SearchCommandsTests {
     }
 
     @Test func searchReflectsStateOfTheSet() {
-        let withoutPanes = search.execute("cerrar panel", set: set, keymap: .standard)
+        let withoutPanes = search.execute("cerrar panel", state: CatalogState(workspaces: set), keymap: .standard)
 
         #expect(!withoutPanes.contains { $0.command.id == .paneClose })
     }
 
     @Test func emptyQueryReturnsEveryCommandInCatalogOrder() {
-        let results = search.execute("", set: set, keymap: .standard)
+        let results = search.execute("", state: CatalogState(workspaces: set), keymap: .standard)
 
-        let catalog = CommandCatalog.commands(for: set, keymap: .standard, layouts: .standard)
+        let catalog = CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
         #expect(results.map(\.command) == catalog)
     }
 }

@@ -263,7 +263,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
 6. **F5 · Apariencia y prompt.** Temas, vidrio ajustable, protección de legibilidad, estudio de prompt y exportación a Starship.
     - Cierre: tema, prompt y layout se cambian sin editar archivos.
     - **F5.5 · Previews.** Miniatura al pasar el cursor sobre nombres de imagen, ⌘Y Quick Look y `smalti img` (kitty) (separada de F5 por Simón, 2026-11-23).
-    - **F5.6 · Resaltado del input.** Coloreado nativo de la línea de comando con los colores del tema, sin plugins de zsh (idea de Simón, 2026-11-24).
+    - **F5.6 · Resaltado del input.** Coloreado nativo de la línea de comando con los colores del tema, sin plugins de zsh, más dos correcciones de ⌘K y los iconos del prompt a la altura del texto (idea de Simón, 2026-11-24; spec F5.6).
 7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Gemini CLI, Antigravity y OpenCode; buscador de sesiones; puente con Neovim e instalador de claudecode.nvim.
     - Cierre: se retoman sesiones de los 5 harnesses y los diffs de Claude se aprueban en Neovim.
 8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.

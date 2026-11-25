@@ -93,7 +93,7 @@ final class WindowComposition {
             NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
             NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification,
         ]
-        observers = changes.map { name in
+        observers += changes.map { name in
             center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.windowChanged() }
             }
@@ -311,8 +311,7 @@ final class WindowComposition {
                 search: { [weak controller] query in
                     guard let controller else { return [] }
                     return SearchCommands(layouts: .standard).execute(
-                        query, set: controller.set, keymap: controller.config.keys,
-                        savedLayouts: controller.savedLayouts())
+                        query, state: controller.catalogState(), keymap: controller.config.keys)
                 },
                 perform: { [weak controller] command in controller?.perform(command) },
                 rename: { [weak controller] name in controller?.rename(to: name) },
@@ -323,7 +322,15 @@ final class WindowComposition {
             if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
             // An overlay over the Tab menu takes the keyboard: the menu goes away rather than answer its keys.
             if isOpen { services.completionMenu()?.close() }
+            // F5.6: the integration may have changed outside Smalti; a new state rebuilds the open list.
+            if isOpen { controller.refreshIntegrationState() }
         }
+        // F5.6: a new Claude integration state rebuilds the open palette's list.
+        observers.append(
+            NotificationCenter.default.addObserver(forName: .claudeIntegrationChanged, object: nil, queue: .main) {
+                [weak palette] _ in
+                MainActor.assumeIsolated { palette?.catalogChanged() }
+            })
         let help = HelpController(
             window: window, keymap: { [weak controller] in controller?.config.keys ?? .standard },
             perform: { [weak controller] command in controller?.perform(command) })

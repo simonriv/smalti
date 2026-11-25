@@ -3,14 +3,20 @@ extension Theme {
     /// With "Proteger legibilidad" the role's color also reaches 4.5:1 on the protected panel and on its own pill
     /// (final review, I4: Niebla's waiting amber was 2.8:1), moving toward the text color as protection does.
     func color(for role: SegmentColor) -> RGBAColor {
-        let base = baseColor(for: role)
-        guard let ground = legibleGround else { return base }
-        var color = LegibilityGuard.legible(base, on: ground, toward: text.primary)
+        guard let ground = legibleGround else { return baseColor(for: role) }
+        var color = protectedColor(for: role)
         for _ in 0..<Self.pillPasses {
             let pill = PillsStyle.background(of: color, over: panel.background)
             color = LegibilityGuard.legible(color, on: pill, toward: text.primary)
         }
         return color
+    }
+
+    /// The role's color at 4.5:1 over the protected panel when "Proteger legibilidad" is on; as is otherwise.
+    func protectedColor(for role: SegmentColor) -> RGBAColor {
+        let base = baseColor(for: role)
+        guard let ground = legibleGround else { return base }
+        return LegibilityGuard.legible(base, on: ground, toward: text.primary)
     }
 
     /// The pill's tint follows the color it holds: a second pass settles it.

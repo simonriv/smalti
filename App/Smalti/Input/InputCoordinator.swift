@@ -26,6 +26,10 @@ final class InputCoordinator {
     var renderPrompt: RenderPrompt?
     /// F5: a pane's prompt context changed (its header shows it with "Solo símbolo").
     var onPromptRendered: ((PaneID) -> Void)?
+    /// F5.6: colors each `line` (nil: no highlighting at all).
+    var highlighter: HighlightLine?
+    /// F5.6: `[input] highlighting` (and `enabled`) as configured now.
+    var isHighlighting: () -> Bool = { false }
 
     private let session: InputSession
     private let provider: any TerminalViewProvider
@@ -33,6 +37,9 @@ final class InputCoordinator {
     private var server: InputSocketServer?
     private var panes: [UUID: PaneID] = [:]
     private var latestSeq: [PaneID: Int] = [:]
+    /// F5.6: the `seq` of each pane's last `line`; a highlight follow-up is sent only for it (Tab or ⌃R on the same
+    /// line do not make it stale).
+    private var latestLine: [PaneID: Int] = [:]
     private var connections: [PaneID: InputConnection] = [:]
     private var events: AsyncStream<(InputConnection, ShellPacket)>.Continuation?
 
@@ -123,6 +130,16 @@ final class InputCoordinator {
         if case .line(_, let line) = message { onLine?(pane, line) }
         handlePrompt(message, pane: pane, connection: connection)
         let path = packet.directory ?? directory(pane) ?? Self.home
+        if case .line(let seq, let line) = message {
+            // F5.6: the ghost and the highlight each go out when ready; neither waits for the other.
+            latestLine[pane] = seq
+            let answers = LineAnswers(session: session, highlighter: isHighlighting() ? highlighter : nil)
+            await answers.answer(
+                HighlightRequest(line: line, seq: seq, directory: path, home: Self.home), pane: pane,
+                channel: LineChannel(
+                    send: { connection.send($0) }, isLatest: { [weak self] in self?.latestLine[pane] == $0 }))
+            return
+        }
         let reply = await InputRouting.respond(to: message, pane: pane, directory: path, session: session)
         act(on: reply, pane: pane, connection: connection, directory: path)
     }
@@ -166,10 +183,10 @@ final class InputCoordinator {
     /// Sends the pane's pending style, if any; true when one went out whole.
     @discardableResult
     private func deliverStyle(to pane: PaneID, over connection: InputConnection) -> Bool {
-        guard let render = renderPrompt, let style = render.pendingStyle(for: pane), connection.send(style) else {
-            return false
-        }
-        render.styleDelivered(style, to: pane)
+        guard let render = renderPrompt else { return false }
+        let styles = render.pendingStyles(for: pane)
+        guard !styles.isEmpty, styles.allSatisfy({ connection.send($0) }) else { return false }
+        render.stylesDelivered(styles, to: pane)
         return true
     }
 
@@ -188,6 +205,7 @@ final class InputCoordinator {
         guard connections[pane] == connection else { return }
         connections[pane] = nil
         latestSeq[pane] = nil
+        latestLine[pane] = nil
     }
 
     private static func seq(of message: ShellMessage) -> Int? {
