@@ -10,6 +10,8 @@ final class SessionKeeper {
     static let scrollbackInterval: Duration = .seconds(5 * 60)
 
     var onFailure: ((String) -> Void)?
+    /// F6: each Smalti Neovim's file and line, asked right before every save.
+    var editorPositions: @MainActor () async -> [PaneID: EditorPosition] = { [:] }
 
     private let save: SaveSession
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "session")
@@ -30,9 +32,12 @@ final class SessionKeeper {
         periodicScrollback = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.scrollbackInterval)
-                guard !Task.isCancelled, let self, let set = self.latest else { return }
+                guard !Task.isCancelled, let self, self.latest != nil else { return }
                 if self.heldStructure != nil { continue }
-                self.report(self.save.saveWithScrollback(of: set, at: .now))
+                let editors = await self.editorPositions()
+                // Quit may have saved, or "Empezar limpio" started a hold, while Neovim answered.
+                guard !Task.isCancelled, self.heldStructure == nil, let set = self.latest else { continue }
+                self.report(self.save.saveWithScrollback(of: set, at: .now, editors: editors))
             }
         }
     }
@@ -53,17 +58,21 @@ final class SessionKeeper {
         pendingStructure?.cancel()
         pendingStructure = Task { [weak self] in
             try? await Task.sleep(for: Self.structureDelay)
-            guard !Task.isCancelled, let self, let set = self.latest else { return }
-            self.report(self.save.saveStructure(of: set, at: .now))
+            guard !Task.isCancelled, let self else { return }
+            let editors = await self.editorPositions()
+            guard !Task.isCancelled, let set = self.latest else { return }
+            self.report(self.save.saveStructure(of: set, at: .now, editors: editors))
         }
     }
 
     /// On quit: everything, now.
-    func saveForQuit() {
+    func saveForQuit() async {
         pendingStructure?.cancel()
         periodicScrollback?.cancel()
-        guard heldStructure == nil, let set = latest else { return }
-        report(save.saveWithScrollback(of: set, at: .now))
+        guard heldStructure == nil, latest != nil else { return }
+        let editors = await editorPositions()
+        guard let set = latest else { return }
+        report(save.saveWithScrollback(of: set, at: .now, editors: editors))
     }
 
     private func report(_ outcome: SaveOutcome) {

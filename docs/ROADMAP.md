@@ -122,8 +122,8 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F6 · Multi-harness y Neovim
 
 - **Objetivo:** retomar sesiones de cualquier harness y aprobar los diffs de Claude en Neovim.
-- **Entregables:** adaptadores `HarnessAdapter` de Codex, Gemini CLI, Antigravity y OpenCode (`detect`, `captureSessionId`, `listSessions`, `resumeCommand`); respaldo "continuar la última del directorio"; buscador de sesiones del disco filtrable por harness; `EditorBridge` con Neovim por socket; instalador de claudecode.nvim en NvChad; enlaces "Abrir en Neovim"; filtros por harness del Observatorio (Todas, Claude Code, OpenCode, Locales).
-- **Criterio de cierre:** una prueba de contrato compartida pasa para los 5 adaptadores sobre fixtures reales. Una prueba de integración retoma una sesión de fixture de cada harness con su comando real. Un diff de Claude se acepta con `:w` y se rechaza con `:q`.
+- **Entregables:** adaptadores `HarnessAdapter` de Codex, Antigravity y OpenCode (`detect`, `captureSessionId`, `listSessions`, `resumeCommand`), sin Gemini CLI (Google retiró su login individual; decidido por Simón, 2026-11-24); respaldo "continuar la última del directorio"; buscador de sesiones del disco filtrable por harness; `EditorBridge` con Neovim por socket; instalador de claudecode.nvim en NvChad; enlaces "Abrir en Neovim"; filtros por harness del Observatorio (Todas, Claude Code, OpenCode, Locales). Spec: `docs/specs/F6-multi-harness.md`.
+- **Criterio de cierre:** una prueba de contrato compartida pasa para los 4 adaptadores (Claude, Codex, Antigravity, OpenCode) sobre fixtures reales. Una prueba de integración retoma una sesión de fixture de cada harness con su comando real. Un diff con el protocolo de Claude se acepta con `:w` y se rechaza con `:q`.
 - **Dependencias:** F2 (puerto `HarnessAdapter` y adaptador de Claude como primera implementación). F3 suma la telemetría de OpenCode, pero no bloquea.
 
 ## F7 · Extras

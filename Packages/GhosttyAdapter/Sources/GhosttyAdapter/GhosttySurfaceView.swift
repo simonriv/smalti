@@ -158,7 +158,8 @@ final class GhosttySurfaceView: NSView {
         guard let surface, let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface)),
             let name = ForegroundProcess.name(ofProcessGroup: pid)
         else { return nil }
-        return SmaltiCore.ForegroundProcess(name: name, commandLine: ProcessArguments.of(pid: pid))
+        return SmaltiCore.ForegroundProcess(
+            name: name, commandLine: ProcessArguments.of(pid: pid), pid: pid, startedAt: ProcessStart.of(pid: pid))
     }
 
     private func refreshForegroundProcess() {
@@ -166,7 +167,10 @@ final class GhosttySurfaceView: NSView {
         // 0 means libghostty has no pid (no PTY yet, or the child is gone).
         let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface))
         let name = pid.flatMap(ForegroundProcess.name)
-        if let event = processNames.observe(name, commandLine: { pid.flatMap(ProcessArguments.of) }) {
+        let observed = processNames.observe(
+            name, commandLine: { pid.flatMap(ProcessArguments.of) }, pid: pid,
+            startedAt: { pid.flatMap(ProcessStart.of) })
+        if let event = observed {
             continuation.yield(event)
         }
     }
@@ -408,7 +412,31 @@ final class GhosttySurfaceView: NSView {
         window?.makeFirstResponder(self)
         // ⌃click is macOS's right click: the menu, unless the program in the terminal takes the mouse.
         if event.modifierFlags.contains(.control), showContextMenu(for: event) { return }
+        if event.modifierFlags.contains(.command), takeCommandClick(event) {
+            swallowsRelease = true
+            return
+        }
         mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_LEFT, event)
+    }
+
+    /// F6: set by the engine; the app opens a text file under a ⌘-click in Neovim and answers true.
+    var commandClick: ((String) -> Bool)?
+    private var swallowsRelease = false
+
+    /// The word under the click, offered to the app before the terminal sees the click.
+    private func takeCommandClick(_ event: NSEvent) -> Bool {
+        guard let surface, let commandClick, !ghostty_surface_mouse_captured(surface) else { return false }
+        let point = convert(event.locationInWindow, from: nil)
+        let topLeft = Point(x: point.x, y: frame.height - point.y)
+        ghostty_surface_mouse_pos(surface, topLeft.x, topLeft.y, GhosttyInput.mods(event.modifierFlags))
+        let size = ghostty_surface_size(surface)
+        let scale = Double(window?.backingScaleFactor ?? 2)
+        let cell = Size(width: Double(size.cell_width_px) / scale, height: Double(size.cell_height_px) / scale)
+        guard let clicked = PointerGrid(origin: gridPadding, cell: cell).cell(at: topLeft),
+            let word = PointerWordReader.word(in: surface, cell: cell)
+        else { return false }
+        let row = PointerWordReader.rowText(in: surface, row: clicked.row, columns: Int(size.columns))
+        return commandClick(CommandClickWord.extended(word.text, row: row, column: clicked.column))
     }
 
     /// F4.5: set by the engine; the app builds the menu (Copiar, Pegar, Buscar…).
@@ -424,7 +452,13 @@ final class GhosttySurfaceView: NSView {
         NSMenu.popUpContextMenu(menu, with: event, for: self)
         return true
     }
-    override func mouseUp(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, event) }
+    override func mouseUp(with event: NSEvent) {
+        guard !swallowsRelease else {
+            swallowsRelease = false
+            return
+        }
+        mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, event)
+    }
     override func rightMouseDown(with event: NSEvent) {
         if showContextMenu(for: event) { return }
         mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_RIGHT, event)

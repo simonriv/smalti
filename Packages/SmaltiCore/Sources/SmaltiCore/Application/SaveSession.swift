@@ -22,19 +22,27 @@ public struct SaveSession {
     }
 
     /// Layout, directories, agents and window frames; line counts carry over from the last scrollback save.
-    public func saveStructure(of windows: WindowSet, at date: Date) -> SaveOutcome {
-        save(SessionSnapshot.capture(windows, scrollbackLines: previousLineCounts(), at: date))
+    /// F6: `editors` holds the file and line each Smalti Neovim answered with; one that did not answer saves as its
+    /// process.
+    public func saveStructure(of windows: WindowSet, at date: Date, editors: [PaneID: EditorPosition] = [:])
+        -> SaveOutcome
+    {
+        save(SessionSnapshot.capture(windows, scrollbackLines: previousLineCounts(), editors: editors, at: date))
     }
 
     /// Also exports the scrollback of every pane that is at its shell, in every window.
-    public func saveWithScrollback(of windows: WindowSet, at date: Date) -> SaveOutcome {
+    public func saveWithScrollback(of windows: WindowSet, at date: Date, editors: [PaneID: EditorPosition] = [:])
+        -> SaveOutcome
+    {
         let panes = windows.allPanes
         var lineCounts: [PaneID: Int] = [:]
         for pane in panes where pane.isAtShell {
             lineCounts[pane.id] = keepScrollback(of: pane.id)
         }
         transcripts.forget(allExcept: Set(panes.map(\.id)))
-        return save(SessionSnapshot.capture(windows, scrollbackLines: lineCounts.compactMapValues { $0 }, at: date))
+        return save(
+            SessionSnapshot.capture(
+                windows, scrollbackLines: lineCounts.compactMapValues { $0 }, editors: editors, at: date))
     }
 
     /// Lines kept, or `nil` when the pane's scrollback could not be read or kept.

@@ -210,6 +210,31 @@ struct CommandCatalogTests {
         #expect(!commands(paneCount: 0).contains { $0.id == .historySearch })
     }
 
+    @Test func paletteListsTheF6Commands() {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 1))), keymap: .standard,
+            layouts: .standard)
+        let entry = { (id: CommandID) in commands.first { $0.id == id } }
+
+        #expect(entry(.harnessSearch)?.title == "Buscar sesiones de agentes")
+        #expect(entry(.harnessSearch)?.shortcut?.display == "⇧⌘O")
+        #expect(entry(.editorOpenBeside)?.title == "Abrir Neovim junto al agente")
+        #expect(entry(.editorOpenBeside)?.shortcut?.display == "⇧⌘E")
+        #expect(entry(.editorOpenLastEdited)?.title == "Abrir en Neovim el último archivo editado")
+        #expect(entry(.editorOpenLastEdited)?.shortcut?.display == "⇧⌘L")
+        #expect(entry(.observatoryFilter)?.title == "Filtrar el Observatorio")
+        #expect(entry(.observatoryFilter)?.shortcut?.display == "⇧⌘F")
+    }
+
+    @Test func editorCommandsNeedAPane() {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 0))), keymap: .standard,
+            layouts: .standard)
+
+        #expect(!commands.contains { $0.id == .editorOpenBeside || $0.id == .editorOpenLastEdited })
+        #expect(commands.contains { $0.id == .harnessSearch })
+    }
+
     @Test func paletteListsOpenObservatory() {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)
@@ -231,30 +256,45 @@ struct CommandCatalogTests {
         #expect(jump?.shortcut?.display == "⌘J")
     }
 
-    private func integrationCommands(_ state: IntegrationState) -> [Command] {
-        CommandCatalog.commands(
-            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace()), claudeIntegration: state),
+    private func integrationCommands(_ states: [IntegrationID: IntegrationState]) -> [Command] {
+        let ids = IntegrationID.allCases.flatMap { [$0.installCommand, $0.uninstallCommand] }
+        return CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace()), integrations: states),
             keymap: .standard, layouts: .standard
-        ).filter { $0.id == .claudeIntegrationInstall || $0.id == .claudeIntegrationUninstall }
+        ).filter { ids.contains($0.id) }
     }
 
     @Test func notInstalledOffersOnlyInstall() {
-        let commands = integrationCommands(.notInstalled)
+        let commands = integrationCommands([.claudePlugin: .notInstalled])
 
         #expect(commands.map(\.title) == ["Instalar integración con Claude Code"])
         #expect(commands.first?.group == .configuration)
     }
 
     @Test func installedOffersOnlyUninstall() {
-        #expect(integrationCommands(.installed).map(\.title) == ["Desinstalar integración con Claude Code"])
+        #expect(
+            integrationCommands([.claudePlugin: .installed]).map(\.title) == ["Desinstalar integración con Claude Code"]
+        )
     }
 
     @Test func unknownOffersNeither() {
-        #expect(integrationCommands(.unknown).isEmpty)
+        #expect(integrationCommands([.claudePlugin: .unknown]).isEmpty)
     }
 
-    @Test func catalogStateDefaultsToUnknownIntegration() {
-        #expect(CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())).claudeIntegration == .unknown)
+    @Test func catalogOffersOnlyApplicableActionPerIntegration() {
+        let commands = integrationCommands([.claudePlugin: .installed, .claudecodeNvim: .notInstalled])
+
+        #expect(
+            commands.map(\.title) == ["Desinstalar integración con Claude Code", "Instalar claudecode.nvim en Neovim"])
+        #expect(commands.map(\.id) == [.claudeIntegrationUninstall, .claudecodeNvimInstall])
+        #expect(integrationCommands([.claudecodeNvim: .installed]).map(\.title) == ["Desinstalar claudecode.nvim"])
+    }
+
+    @Test func catalogStateDefaultsToUnknownIntegrations() {
+        let state = CatalogState(workspaces: WorkspaceSet(first: makeWorkspace()))
+
+        #expect(IntegrationID.allCases.allSatisfy { state.integrations[$0, default: .unknown] == .unknown })
+        #expect(integrationCommands([:]).isEmpty)
     }
 }
 

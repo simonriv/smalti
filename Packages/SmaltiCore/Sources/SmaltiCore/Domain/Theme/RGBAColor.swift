@@ -1,5 +1,8 @@
 /// sRGB color with 8-bit channels and a 0–1 alpha, as written in docs/design.
 public struct RGBAColor: Equatable, Hashable, Sendable {
+    /// No color: an unchosen chip or row has no border or background.
+    public static let clear = RGBAColor(red: 0, green: 0, blue: 0, alpha: 0)
+
     public let red: UInt8
     public let green: UInt8
     public let blue: UInt8

@@ -12,11 +12,11 @@ public struct WindowSnapshot: Codable, Equatable, Sendable {
         self.activeIndex = activeIndex
     }
 
-    init(_ window: WindowState, scrollbackLines: [PaneID: Int]) {
+    init(_ window: WindowState, scrollbackLines: [PaneID: Int], editors: [PaneID: EditorPosition]) {
         let set = window.workspaces
         frame = window.frame
         isFullScreen = window.isFullScreen
-        workspaces = set.workspaces.map { WorkspaceSnapshot($0, scrollbackLines: scrollbackLines) }
+        workspaces = set.workspaces.map { WorkspaceSnapshot($0, scrollbackLines: scrollbackLines, editors: editors) }
         activeIndex = set.workspaces.firstIndex { $0.id == set.activeID } ?? 0
     }
 }

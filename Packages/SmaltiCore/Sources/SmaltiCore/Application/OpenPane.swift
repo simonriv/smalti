@@ -3,11 +3,22 @@ public struct OpenPaneRequest: Sendable {
     public let geometry: LayoutGeometry
     /// Last resort when the current directory and the workspace root are gone.
     public let home: WorkingDirectory?
+    /// F6: where to open instead of the focused pane's directory, what to type once the shell starts, and the
+    /// harness binding the pane begins with (a session opened from the search).
+    public let directory: WorkingDirectory?
+    public let initialInput: String?
+    public let binding: HarnessBinding?
 
-    public init(shell: TerminalCommand, geometry: LayoutGeometry, home: WorkingDirectory? = nil) {
+    public init(
+        shell: TerminalCommand, geometry: LayoutGeometry, home: WorkingDirectory? = nil,
+        directory: WorkingDirectory? = nil, initialInput: String? = nil, binding: HarnessBinding? = nil
+    ) {
         self.shell = shell
         self.geometry = geometry
         self.home = home
+        self.directory = directory
+        self.initialInput = initialInput
+        self.binding = binding
     }
 }
 
@@ -35,13 +46,13 @@ public struct OpenPane {
     }
 
     public func execute(_ request: OpenPaneRequest, in set: inout WorkspaceSet) throws(OpenPaneError) -> PaneID {
-        let directory = set.active.directoryForNewPane
+        let directory = request.directory ?? set.active.directoryForNewPane
         try ensureFits(request.geometry, adding: directory, to: set.active)
         let id = PaneID()
         let opened = try open(
             id, request, candidates: [directory, set.active.rootDirectory] + [request.home].compactMap { $0 })
         let pane = Pane(id: id, workingDirectory: opened)
-        set = set.updating(set.activeID) { $0.adding(pane) }
+        set = set.updating(set.activeID) { $0.adding(request.binding.map(pane.binding) ?? pane) }
         return id
     }
 
@@ -53,7 +64,8 @@ public struct OpenPane {
         var tried: Set<WorkingDirectory> = []
         for directory in candidates where tried.insert(directory).inserted {
             let spec = TerminalSessionSpec(
-                workingDirectory: directory, command: request.shell, environment: environment.variables(for: id))
+                workingDirectory: directory, command: request.shell, environment: environment.variables(for: id),
+                initialInput: request.initialInput)
             do {
                 try engine.open(spec, as: id)
                 return directory

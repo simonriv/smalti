@@ -95,4 +95,42 @@ struct HookPayloadTranslatorTests {
     @Test func aSessionIDThatIsNotAUUIDIsDropped() throws {
         #expect(try translate("Stop", "{\"session_id\":\"abc\\u0015rm\"}").sessionID == nil)
     }
+
+    @Test func postToolUseEditCarriesPathAndText() throws {
+        let event = try translate(
+            "PostToolUse",
+            #"{"tool_name":"Edit","tool_input":{"file_path":"/w/a.ts","old_string":"x","new_string":"func greet() {\n}"}}"#
+        )
+
+        #expect(event.edit == FileEdit(tool: "Edit", path: "/w/a.ts", newText: "func greet() {\n}"))
+    }
+
+    @Test func multiEditTakesFirstEdit() throws {
+        let event = try translate(
+            "PostToolUse",
+            #"{"tool_name":"MultiEdit","tool_input":{"file_path":"/w/b.ts","edits":[{"new_string":"one"},{"new_string":"two"}]}}"#
+        )
+
+        #expect(event.edit == FileEdit(tool: "MultiEdit", path: "/w/b.ts", newText: "one"))
+    }
+
+    @Test func writeTakesFirstContentLine() throws {
+        let event = try translate(
+            "PostToolUse", ##"{"tool_name":"Write","tool_input":{"file_path":"/w/c.md","content":"# Título\nresto"}}"##)
+
+        #expect(event.edit == FileEdit(tool: "Write", path: "/w/c.md", newText: "# Título"))
+    }
+
+    @Test func notebookEditUsesNotebookPath() throws {
+        let event = try translate(
+            "PostToolUse",
+            #"{"tool_name":"NotebookEdit","tool_input":{"notebook_path":"/w/n.ipynb","new_source":"x=1"}}"#)
+
+        #expect(event.edit == FileEdit(tool: "NotebookEdit", path: "/w/n.ipynb", newText: "x=1"))
+    }
+
+    @Test func otherToolsHaveNoEdit() throws {
+        #expect(try translate("PostToolUse", #"{"tool_name":"Read","tool_input":{"file_path":"/w/a.ts"}}"#).edit == nil)
+        #expect(try translate("PreToolUse", #"{"tool_name":"Edit","tool_input":{"file_path":"/w/a.ts"}}"#).edit == nil)
+    }
 }

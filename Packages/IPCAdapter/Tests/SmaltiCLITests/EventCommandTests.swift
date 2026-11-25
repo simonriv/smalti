@@ -40,6 +40,27 @@ struct EventCommandTests {
         #expect(String(decoding: request.payload, as: UTF8.self).contains("s1"))
     }
 
+    /// F6: "Editados por Claude" finds the line from the text a file tool wrote, so that text has to reach the app.
+    @Test func fileToolsKeepTheTextTheyWrote() throws {
+        let edit =
+            #"{"tool_name":"Edit","tool_input":{"file_path":"/w/a.ts","old_string":"x","new_string":"func a() {"}}"#
+        let multi =
+            #"{"tool_name":"MultiEdit","tool_input":{"file_path":"/w/b.ts","edits":[{"old_string":"y","new_string":"let b"}]}}"#
+        let write = #"{"tool_name":"Write","tool_input":{"file_path":"/w/c.ts","content":"export {}"}}"#
+        let notebook = #"{"tool_name":"NotebookEdit","tool_input":{"notebook_path":"/w/d.ipynb","new_source":"x"}}"#
+
+        let kept = try [edit, multi, write, notebook].map { input in
+            let object = try JSONSerialization.jsonObject(with: EventCommand.essentials(Data(input.utf8)))
+            return try #require((object as? [String: Any])?["tool_input"] as? [String: Any])
+        }
+
+        #expect(kept[0]["new_string"] as? String == "func a() {")
+        #expect(kept[0]["old_string"] == nil)
+        #expect((kept[1]["edits"] as? [[String: String]])?.first?["new_string"] == "let b")
+        #expect(kept[2]["content"] as? String == "export {}")
+        #expect(kept[3]["notebook_path"] as? String == "/w/d.ipynb")
+    }
+
     @Test func exitsZeroWithoutSocketVariable() {
         let transport = RecordingTransport()
 
@@ -136,7 +157,9 @@ struct EventCommandTests {
         let payload = try JSONSerialization.jsonObject(with: try IPCCodec.decodeRequest(line).payload) as? [String: Any]
         #expect(payload?["session_id"] as? String == "s1")
         #expect((payload?["prompt"] as? String)?.count == EventCommand.maxFieldLength)
-        #expect(payload?["tool_input"] == nil)
+        let tool = payload?["tool_input"] as? [String: Any]
+        #expect((tool?["content"] as? String)?.count == EventCommand.maxFieldLength)
+        #expect(line.count < IPCLimits.maxMessageBytes)
     }
 }
 

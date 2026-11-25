@@ -1,9 +1,11 @@
+import Foundation
+
 /// Builds the commands the palette offers for the current state, in display order.
 public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
     public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
-        let context = Context(workspaces: state.workspaces, keymap: keymap, claudeIntegration: state.claudeIntegration)
+        let context = Context(workspaces: state.workspaces, keymap: keymap, integrations: state.integrations)
         return tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
@@ -12,6 +14,15 @@ public enum CommandCatalog {
             + windowCommands(context)
             + configurationCommands(context)
             + helpCommands(context)
+            + state.editedFiles.map { editedFileCommand($0, now: state.now) }
+    }
+
+    /// "reminder.service.ts", "línea 42 · hace 2 min".
+    private static func editedFileCommand(_ file: EditedFile, now: Date) -> Command {
+        Command(
+            id: .editorOpen(path: file.path, line: file.line), title: file.fileName,
+            subtitle: "línea \(file.line) · \(ElapsedPhrase.text(since: file.at, now: now))", group: .editedFiles,
+            shortcut: nil, isCurrent: false)
     }
 
     /// F4.5: titles as in the spec's menu table; the menu and the help reuse them.
@@ -29,6 +40,9 @@ public enum CommandCatalog {
         .themeOpen: "Abrir theme.toml", .themeNext: "Siguiente tema", .ansiReset: "Restablecer paleta ANSI",
         .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
         .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
+        .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
+        .editorOpenLastEdited: "Abrir en Neovim el último archivo editado",
+        .observatoryFilter: "Filtrar el Observatorio",
     ]
 
     static let terminalIDs: [CommandID] = [
@@ -73,7 +87,7 @@ public enum CommandCatalog {
     fileprivate struct Context {
         let workspaces: WorkspaceSet
         let keymap: Keymap
-        let claudeIntegration: IntegrationState
+        let integrations: [IntegrationID: IntegrationState]
 
         var paneCount: Int { workspaces.active.panes.count }
 
@@ -112,6 +126,9 @@ public enum CommandCatalog {
         if context.paneCount >= 1 {
             commands.append(context.command(.paneClose, "Cerrar panel", group: .panes))
             commands.append(context.command(.historySearch, "Buscar en el historial", group: .panes))
+            commands.append(context.command(.editorOpenBeside, "Abrir Neovim junto al agente", group: .panes))
+            commands.append(
+                context.command(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado", group: .panes))
         }
         commands += goToPaneCommands(context)
         if context.paneCount >= 2 {
@@ -147,6 +164,8 @@ public enum CommandCatalog {
         var commands = [
             context.command(.agentJump, "Saltar al agente que espera", group: .workspaces),
             context.command(.observatoryToggle, "Abrir observatorio", group: .workspaces),
+            context.command(.observatoryFilter, "Filtrar el Observatorio", group: .workspaces),
+            context.command(.harnessSearch, "Buscar sesiones de agentes", group: .workspaces),
             context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
             context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
         ]
@@ -164,38 +183,41 @@ public enum CommandCatalog {
         [
             context.command(
                 .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
-        ] + claudeIntegrationCommands(context) + [
+        ] + integrationCommands(context) + [
             context.titled(.configOpen, group: .configuration),
             context.titled(.secureInputToggle, group: .configuration),
         ] + CommandID.appearance.map { context.titled($0, group: .configuration) }
     }
 }
 
-/// Only the action that applies to the integration's state; none while it is unknown (spec F5.6).
-private func claudeIntegrationCommands(_ context: CommandCatalog.Context) -> [Command] {
-    switch context.claudeIntegration {
-    case .notInstalled:
-        [context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration)]
-    case .installed:
-        [context.command(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration)]
-    case .unknown: []
+/// One action per integration, the one its state allows (spec F5.6, F6).
+private func integrationCommands(_ context: CommandCatalog.Context) -> [Command] {
+    IntegrationID.allCases.compactMap { integration in
+        integration.commandID(for: context.integrations[integration, default: .unknown]).map {
+            context.command($0.id, $0.title, group: .configuration)
+        }
     }
 }
 
 /// What the catalog needs from the app besides the keymap and the layouts: the workspaces, the saved layouts and the
-/// Claude integration's state.
+/// integrations' states (missing ones are unknown).
 public struct CatalogState: Sendable {
     public let workspaces: WorkspaceSet
     public let savedLayouts: [NamedLayoutSummary]
-    public let claudeIntegration: IntegrationState
+    public let integrations: [IntegrationID: IntegrationState]
+    /// F6: what the focused pane's Claude edited, newest first, and the time their age is told from.
+    public let editedFiles: [EditedFile]
+    public let now: Date
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
-        claudeIntegration: IntegrationState = .unknown
+        integrations: [IntegrationID: IntegrationState] = [:], editedFiles: [EditedFile] = [], now: Date = Date()
     ) {
         self.workspaces = workspaces
         self.savedLayouts = savedLayouts
-        self.claudeIntegration = claudeIntegration
+        self.integrations = integrations
+        self.editedFiles = editedFiles
+        self.now = now
     }
 }
 

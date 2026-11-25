@@ -8,10 +8,12 @@ public struct ObservatorySources {
     public let system: any SystemMetrics
     public let catalog: ModelCatalog
     public let home: String
+    /// F6: other harnesses' token use (OpenCode).
+    public let usage: [any HarnessUsage]
 
     public init(
         transcripts: any AgentTranscripts, live: any LiveAgents, localModels: any LocalModels,
-        system: any SystemMetrics, catalog: ModelCatalog, home: String
+        system: any SystemMetrics, catalog: ModelCatalog, home: String, usage: [any HarnessUsage] = []
     ) {
         self.transcripts = transcripts
         self.live = live
@@ -19,6 +21,7 @@ public struct ObservatorySources {
         self.system = system
         self.catalog = catalog
         self.home = home
+        self.usage = usage
     }
 }
 
@@ -35,6 +38,8 @@ public final class ObserveAgents {
     private var gpuHistory: [Double] = []
     /// `status` values the session registry wrote that Smalti does not know; the app logs each once.
     public private(set) var unknownStatuses: Set<String> = []
+    /// F6: why another harness's usage could not be read, each reason once; the app logs them.
+    public private(set) var usageFailures: [String] = []
 
     public static let history: TimeInterval = 30 * 86_400
     public static let samplesKept = 60
@@ -54,10 +59,24 @@ public final class ObserveAgents {
         lastRunning = running
         unknownStatuses.formUnion(ObservedSession.unknownStatuses(in: running))
         let system = lastSample ?? sampleSystem()
-        return ObservatorySnapshot(
+        let snapshot = ObservatorySnapshot(
             activity: lastActivity, running: running, panes: panes, localModels: await sources.localModels.current(),
             system: system, cpuHistory: cpuHistory, gpuHistory: gpuHistory, catalog: sources.catalog, now: now,
             home: sources.home, lastError: lastError)
+        return snapshot.adding(usage: await otherUsage(since: now.addingTimeInterval(-Self.history)))
+    }
+
+    /// Each harness's sessions; one that cannot be read adds nothing and never hides Claude's.
+    private func otherUsage(since: Date) async -> [UsageRow] {
+        var rows: [UsageRow] = []
+        for source in sources.usage {
+            do {
+                rows += try await source.sessions(since: since)
+            } catch {
+                if !usageFailures.contains(error.message) { usageFailures.append(error.message) }
+            }
+        }
+        return rows
     }
 
     /// One reading of the machine, on its own 2 s rhythm; refreshes reuse the latest one.

@@ -1,14 +1,24 @@
 import Foundation
 
-/// Which coding-agent CLI runs in a pane. F2 knows only Claude Code; F6 adds the others as new values.
+/// Which coding-agent CLI runs in a pane. F2 knew only Claude Code; F6 adds Codex, Antigravity and OpenCode.
 public struct HarnessID: Hashable, Codable, Sendable, RawRepresentable {
     public static let claude = HarnessID(rawValue: "claude")
+    public static let codex = HarnessID(rawValue: "codex")
+    public static let antigravity = HarnessID(rawValue: "antigravity")
+    public static let opencode = HarnessID(rawValue: "opencode")
+
+    private static let names: [HarnessID: String] = [
+        .claude: "Claude Code", .codex: "Codex", .antigravity: "Antigravity", .opencode: "OpenCode",
+    ]
 
     public let rawValue: String
 
     public init(rawValue: String) {
         self.rawValue = rawValue
     }
+
+    /// Shown in the interface ("Claude Code"); an unknown id shows as it is.
+    public var displayName: String { Self.names[self] ?? rawValue }
 }
 
 /// Why an agent waits for the user.

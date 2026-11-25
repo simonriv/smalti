@@ -21,14 +21,16 @@ public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
         self.panes = panes
     }
 
-    init(_ workspace: Workspace, scrollbackLines: [PaneID: Int]) {
+    init(_ workspace: Workspace, scrollbackLines: [PaneID: Int], editors: [PaneID: EditorPosition] = [:]) {
         let order = workspace.panes.map(\.id)
         name = workspace.name
         rootDirectory = workspace.rootDirectory.path
         layout = workspace.layout.id.rawValue
         tree = workspace.tree.map { SnapshotTree($0, order: order) }
         focusedIndex = workspace.focusedPane.flatMap(order.firstIndex(of:))
-        panes = workspace.panes.map { PaneSnapshot($0, scrollbackLines: scrollbackLines[$0.id] ?? 0) }
+        panes = workspace.panes.map {
+            PaneSnapshot($0, scrollbackLines: scrollbackLines[$0.id] ?? 0, editor: editors[$0.id])
+        }
     }
 }
 
@@ -63,10 +65,12 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
     public var workspaces: [WorkspaceSnapshot] { windows.flatMap(\.workspaces) }
 
     /// `scrollbackLines` holds the lines saved for each pane whose scrollback was kept; the rest count 0.
-    public static func capture(_ set: WindowSet, scrollbackLines: [PaneID: Int], at date: Date) -> SessionSnapshot {
+    public static func capture(
+        _ set: WindowSet, scrollbackLines: [PaneID: Int], editors: [PaneID: EditorPosition] = [:], at date: Date
+    ) -> SessionSnapshot {
         SessionSnapshot(
             version: formatVersion, savedAt: date,
-            windows: set.windows.map { WindowSnapshot($0, scrollbackLines: scrollbackLines) },
+            windows: set.windows.map { WindowSnapshot($0, scrollbackLines: scrollbackLines, editors: editors) },
             frontIndex: set.windows.firstIndex { $0.id == set.frontID } ?? 0)
     }
 

@@ -20,10 +20,18 @@ public struct RestoreSession {
         /// The configured shell (`[shell] command`, or the test override), as for any new pane.
         let shell: TerminalCommand
         let clock: @Sendable () -> Date
+        /// F6: an editor integration (claudecode.nvim) is installed, so harnesses that can connect to it do.
+        let connectsEditor: Bool
+        /// F6: how a Neovim pane reopens; the app adds its socket.
+        let editorCommand: @Sendable (EditorPosition, PaneID) -> String
 
         public init(
             engine: any TerminalEngine, transcripts: any PaneTranscripts, harnesses: HarnessRegistry,
-            environment: PaneEnvironment, shell: TerminalCommand, clock: @escaping @Sendable () -> Date
+            environment: PaneEnvironment, shell: TerminalCommand, clock: @escaping @Sendable () -> Date,
+            connectsEditor: Bool = false,
+            editorCommand: @escaping @Sendable (EditorPosition, PaneID) -> String = { position, _ in
+                position.plainCommand
+            }
         ) {
             self.engine = engine
             self.transcripts = transcripts
@@ -31,6 +39,8 @@ public struct RestoreSession {
             self.environment = environment
             self.shell = shell
             self.clock = clock
+            self.connectsEditor = connectsEditor
+            self.editorCommand = editorCommand
         }
     }
 
@@ -115,7 +125,8 @@ public struct RestoreSession {
                 restoration: restoration, initialInput: start.input)
             do {
                 try deps.engine.open(spec, as: id)
-                return (Pane(id: id, workingDirectory: directory).attaching(start.agent), start.failures, unreachable)
+                let pane = Pane(id: id, workingDirectory: directory).attaching(start.agent)
+                return (start.binding.map(pane.binding) ?? pane, start.failures, unreachable)
             } catch {
                 unreachable.insert(directory)
                 lastError = String(describing: error)
@@ -125,22 +136,44 @@ public struct RestoreSession {
         return (nil, start.failures + [failure], unreachable)
     }
 
-    private func startup(for planned: PlannedPane) -> (input: String?, agent: AgentSession?, failures: [String]) {
+    private struct Startup {
+        var input: String?
+        var agent: AgentSession?
+        var binding: HarnessBinding?
+        var failures: [String] = []
+    }
+
+    private func startup(for planned: PlannedPane) -> Startup {
         switch planned.launch {
         case .shell:
-            return (nil, nil, [])
+            return Startup()
         case .relaunch(let command):
-            return (command.displayText + "\n", nil, [])
+            return Startup(input: command.displayText + "\n")
+        case .editor(let position):
+            return Startup(input: deps.editorCommand(position, PaneID(rawValue: planned.id)) + "\n")
         case .resume(let agent):
-            guard let adapter = deps.harnesses.adapter(for: agent.harness) else {
-                return (
-                    nil, nil, ["\(agent.harness.rawValue): harness sin adaptador, no se reanuda \(agent.sessionID)"]
-                )
-            }
-            let session = AgentSession(
-                harness: agent.harness, sessionID: agent.sessionID, title: agent.title,
-                state: .waiting(since: deps.clock(), reason: .turnFinished), startedAt: deps.clock())
-            return (adapter.resumeCommand(for: agent) + "\n", session, [])
+            return resume(agent)
         }
+    }
+
+    /// With an id, the harness's resume command; without, the directory's last session. Only a harness with hooks
+    /// (a saved state) gets an `AgentSession`; every harness pane keeps its binding for the capture (spec F6).
+    private func resume(_ agent: AgentSnapshot) -> Startup {
+        guard let adapter = deps.harnesses.adapter(for: agent.harness) else {
+            let failure = "\(agent.harness.rawValue): harness sin adaptador, no se reanuda \(agent.sessionID ?? "")"
+            return Startup(failures: [failure])
+        }
+        let binding = HarnessBinding(harness: agent.harness, sessionID: agent.sessionID, processStartedAt: deps.clock())
+        guard let id = agent.sessionID else {
+            return Startup(input: adapter.continueCommand() + "\n", binding: binding)
+        }
+        let editorAware = deps.connectsEditor ? adapter as? any EditorConnectable : nil
+        let command = editorAware?.resumeCommandConnectingEditor(sessionID: id) ?? adapter.resumeCommand(sessionID: id)
+        let session = agent.lastState.map { _ in
+            AgentSession(
+                harness: agent.harness, sessionID: id, title: agent.title,
+                state: .waiting(since: deps.clock(), reason: .turnFinished), startedAt: deps.clock())
+        }
+        return Startup(input: command + "\n", agent: session, binding: binding)
     }
 }

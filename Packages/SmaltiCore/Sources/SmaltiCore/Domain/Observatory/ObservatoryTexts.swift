@@ -13,6 +13,10 @@ public struct ToolResultText: Equatable, Sendable {
 
 /// The observatory's words, as the board writes them.
 public enum ObservatoryTexts {
+    /// The board's footnote, with OpenCode's database since F6.
+    public static let footnote =
+        "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
+
     /// "2 trabajando · 1 esperando" (the board's summary card says "esperando"), "· 1 error" only with errors.
     public static func sessions(_ summary: ObservatoryReport.Summary) -> String {
         let base = "\(summary.working) trabajando · \(summary.waiting) esperando"

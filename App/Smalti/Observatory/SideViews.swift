@@ -95,7 +95,7 @@ final class SystemView: NSView {
     /// CPU and GPU curves are percentages: their scale tops at 100, not at the highest sample.
     private static let percentScale = 100.0
 
-    static let footnote = "Datos: hooks y transcripts de Claude Code y API local de Ollama. El costo es estimado."
+    static let footnote = ObservatoryTexts.footnote
 
     init(theme: Theme) {
         self.theme = theme

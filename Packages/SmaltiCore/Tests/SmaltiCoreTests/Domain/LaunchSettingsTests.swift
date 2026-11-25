@@ -109,4 +109,54 @@ struct LaunchSettingsTests {
         #expect(custom.ollamaURL == URL(string: "http://127.0.0.1:1"))
         #expect(plain.ollamaURL == URL(string: "http://127.0.0.1:11434"))
     }
+
+    // F6: harness homes and Neovim, swapped by the tests and read from the environment like Claude's.
+
+    @Test func harnessHomesDefaultToTheUsersOwn() {
+        let settings = LaunchSettings(arguments: [:], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.codexHome == URL(filePath: "/Users/simon/.codex"))
+        #expect(settings.antigravityRoot == URL(filePath: "/Users/simon/.gemini/antigravity-cli"))
+        #expect(settings.opencodeDataHome == URL(filePath: "/Users/simon/.local/share"))
+        #expect(settings.opencodeDatabase == nil)
+        #expect(settings.nvimConfigHome == URL(filePath: "/Users/simon/.config/nvim"))
+        #expect(settings.nvimCommand == "nvim")
+        #expect(settings.editorSocketDirectory == nil)
+    }
+
+    @Test func environmentMovesTheHomes() {
+        let settings = LaunchSettings(
+            arguments: [
+                "CODEX_HOME": "/env/codex", "XDG_DATA_HOME": "/env/data", "XDG_CONFIG_HOME": "/env/config",
+                "OPENCODE_DB": "/env/oc.db",
+            ], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.codexHome == URL(filePath: "/env/codex"))
+        #expect(settings.opencodeDataHome == URL(filePath: "/env/data"))
+        #expect(settings.opencodeDatabase == URL(filePath: "/env/oc.db"))
+        #expect(settings.nvimConfigHome == URL(filePath: "/env/config/nvim"))
+    }
+
+    @Test func testFlagsWinOverTheEnvironment() {
+        let settings = LaunchSettings(
+            arguments: [
+                "CODEX_HOME": "/env/codex", "SmaltiCodexHome": "/t/codex", "SmaltiAntigravityHome": "/t/agy",
+                "SmaltiOpenCodeDB": "/t/oc.db", "OPENCODE_DB": "/env/oc.db", "SmaltiNvimConfigHome": "/t/nvim",
+                "SmaltiNvimCommand": "nvim --clean", "SmaltiEditorSocketDir": "/t/s",
+            ], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.codexHome == URL(filePath: "/t/codex"))
+        #expect(settings.antigravityRoot == URL(filePath: "/t/agy"))
+        #expect(settings.opencodeDatabase == URL(filePath: "/t/oc.db"))
+        #expect(settings.nvimConfigHome == URL(filePath: "/t/nvim"))
+        #expect(settings.nvimCommand == "nvim --clean")
+        #expect(settings.editorSocketDirectory == "/t/s")
+    }
+
+    @Test func relativeOpenCodeDatabaseIsIgnored() {
+        let settings = LaunchSettings(
+            arguments: ["OPENCODE_DB": "custom.db"], home: home, defaultStateDirectory: defaultState)
+
+        #expect(settings.opencodeDatabase == nil)
+    }
 }

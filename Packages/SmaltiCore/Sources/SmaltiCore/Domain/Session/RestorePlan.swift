@@ -10,6 +10,14 @@ public enum PaneLaunch: Equatable, Sendable {
     case shell
     case resume(AgentSnapshot)
     case relaunch(RelaunchCommand)
+    /// F6: a Neovim pane, reopened at its file and line.
+    case editor(EditorPosition)
+
+    /// What a saved pane runs: its agent, else its editor, else its program, else a shell.
+    public static func saved(_ pane: PaneSnapshot) -> PaneLaunch {
+        pane.agent.map(PaneLaunch.resume) ?? pane.editor.map(PaneLaunch.editor)
+            ?? pane.relaunch.map(PaneLaunch.relaunch) ?? .shell
+    }
 }
 
 public struct PlannedPane: Equatable, Sendable {
@@ -92,7 +100,7 @@ public struct RestorePlan: Equatable, Sendable {
                 id: pane.id, workingDirectory: pane.workingDirectory, restoresScrollback: false,
                 restoresHistory: false, launch: .shell)
         }
-        let launch: PaneLaunch = pane.agent.map(PaneLaunch.resume) ?? pane.relaunch.map(PaneLaunch.relaunch) ?? .shell
+        let launch = PaneLaunch.saved(pane)
         return PlannedPane(
             id: pane.id, workingDirectory: pane.workingDirectory,
             restoresScrollback: launch == .shell && pane.scrollbackLines > 0,

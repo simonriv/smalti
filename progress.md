@@ -296,3 +296,41 @@
 - [x] Revisión intermedia 2 (3 importantes, 6 menores) + mutación incremental (22/22)
 #### Bloque 4 · Cierre
 - [x] T14 · Mediciones (C1 ✅ con enmienda 6 y repetición limpia, B7 17,8–23,9 ms, C12 ⚠️ no atribuible al resaltado), capturas, checklist (`docs/specs/F5.6-checklist.md`), revisión final acotada (2 importantes, 4 menores), mutación de la fase 100 % (328 mutantes), PRs #30 y #31, versión 0.5.6 desplegada
+
+## F6 · Multi-harness y Neovim
+
+### Spec
+- [x] Aprobada (2026-11-24, `docs/specs/F6-multi-harness.md`): Gemini CLI fuera, 4 adaptadores, fixtures reales grabados con Ollama (`qwen3:4b`) y la cuenta de Antigravity, captura por disco
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F6-multi-harness.md`)
+
+### Tareas
+#### Bloque 1 · Spike, fixtures y dominio
+- [x] T1 · Spike de reanudación, nombres de proceso y fixtures reales
+- [x] T2 · Tipos del multi-harness en el dominio
+- [x] T3 · Puerto `HarnessAdapter` ampliado, contrato compartido y fake
+- [x] T4 · Captura del ID y `HarnessBinding`
+- [x] T5 · Guardar y restaurar con respaldo, y compatibilidad
+#### Bloque 2 · Adaptadores de harness
+- [x] T6 · `SQLiteReader`
+- [x] T7 · `CodexHarnessAdapter`
+- [x] T8 · `AntigravityHarnessAdapter`
+- [x] T9 · `OpenCodeHarnessAdapter` y `OpenCodeUsage`
+- [x] T10 · `ClaudeHarness` completo e integración de reanudación
+#### Bloque 3 · Neovim, instalador e IPC
+- [x] T11 · `ForegroundProcess` con pid y arranque, `PostToolUse` con archivo
+- [x] T12 · Dominio de Neovim y `NeovimAdapter`
+- [x] T13 · Catálogo de integraciones, instalador de claudecode.nvim y prueba del diff (C3)
+- [x] Revisión intermedia 1 (1 crítico, 4 importantes, 12 menores; corregidos salvo M11, por decisión) + mutación incremental (96,7 %; 5 sobrevivientes matados y verificados a mano)
+#### Bloque 4 · App
+- [x] T14 · Composition root, flags y captura en vivo
+- [x] T15 · Buscador como tarjeta propia (⌘⇧O)
+- [x] T16 · Columna del buscador en «Retomar»
+- [x] T17 · Neovim en la app
+- [x] T18 · Observatorio con filtros y filas de OpenCode
+- [x] T19 · Restaurar nvim, `--ide` e integraciones en ⌘K
+- [x] Revisión intermedia 2 + mutación incremental (10 importantes y 9 menores corregidos; mutación 95,9 %, 9 sobrevivientes muertos)
+#### Bloque 5 · Cierre
+- [x] T20 · Mediciones, capturas, checklist y revisión final (C7 p95 53,6 ms; revisión final: 1 crítico, 2 importantes y 6 menores corregidos; mutación completa 99,9 %)
+- [x] T21 · Limpieza (modelo, Codex, OpenCode y Ollama desinstalados; grabaciones crudas borradas), 0.6.0, PRs y despliegue

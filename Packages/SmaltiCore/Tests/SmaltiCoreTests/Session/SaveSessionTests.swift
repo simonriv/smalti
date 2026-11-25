@@ -39,6 +39,22 @@ struct SaveSessionTests {
         #expect(archive.saved?.workspaces[0].panes[0].scrollbackLines == 3)
     }
 
+    @Test func editorPositionIsSavedForItsPane() {
+        let position = EditorPosition(file: "/Users/s/dev/solen/reminder.service.ts", line: 42)
+
+        _ = save.saveStructure(of: .single(set), at: SessionFixtures.savedAt, editors: [editor.id: position])
+
+        #expect(archive.saved?.workspaces[0].panes.map(\.editor) == [nil, position])
+        #expect(archive.saved?.workspaces[0].panes[1].relaunch == nil)
+    }
+
+    @Test func editorWithoutPositionKeepsItsProcessRelaunch() {
+        _ = save.saveWithScrollback(of: .single(set), at: SessionFixtures.savedAt, editors: [:])
+
+        #expect(archive.saved?.workspaces[0].panes[1].editor == nil)
+        #expect(archive.saved?.workspaces[0].panes[1].relaunch != nil)
+    }
+
     @Test func saveWithScrollbackExportsOnlyShellPanes() {
         scrollback.contents[shell.id] = Scrollback(text: "uno\ndos", format: .vt)
 

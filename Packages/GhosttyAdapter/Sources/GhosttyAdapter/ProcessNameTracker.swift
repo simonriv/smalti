@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 
 /// Turns successive foreground process names into `foregroundProcessChanged` events, only when the name changes.
@@ -5,10 +6,13 @@ import SmaltiCore
 struct ProcessNameTracker {
     private var current: String?
 
-    /// `commandLine` is read only when the name changes (it costs a `sysctl`).
-    mutating func observe(_ name: String?, commandLine: () -> [String]? = { nil }) -> TerminalEvent? {
+    /// `commandLine` and `startedAt` are read only when the name changes (each costs a system call).
+    mutating func observe(
+        _ name: String?, commandLine: () -> [String]? = { nil }, pid: Int32? = nil, startedAt: () -> Date? = { nil }
+    ) -> TerminalEvent? {
         guard let name, name != current else { return nil }
         current = name
-        return .foregroundProcessChanged(SmaltiCore.ForegroundProcess(name: name, commandLine: commandLine()))
+        return .foregroundProcessChanged(
+            SmaltiCore.ForegroundProcess(name: name, commandLine: commandLine(), pid: pid, startedAt: startedAt()))
     }
 }

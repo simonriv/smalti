@@ -20,7 +20,23 @@ public enum HookPayloadTranslator {
         return AgentEvent(
             pane: PaneID(rawValue: uuid), hook: hook, at: date, sessionID: sessionID(fields["session_id"]),
             prompt: fields["prompt"] as? String, toolSummary: toolSummary(fields),
-            message: fields["message"] as? String ?? fields["error"] as? String, source: fields["source"] as? String)
+            message: fields["message"] as? String ?? fields["error"] as? String, source: fields["source"] as? String,
+            edit: hook == .postToolUse ? edit(fields) : nil)
+    }
+
+    private static let fileTools: Set<String> = ["Edit", "MultiEdit", "Write", "NotebookEdit"]
+
+    /// F6: which file a file tool wrote and the text it wrote, for "Editados por Claude".
+    private static func edit(_ fields: [String: Any]) -> FileEdit? {
+        guard let tool = fields["tool_name"] as? String, fileTools.contains(tool) else { return nil }
+        let input = fields["tool_input"] as? [String: Any] ?? [:]
+        guard let path = input["file_path"] as? String ?? input["notebook_path"] as? String else { return nil }
+        let edits = input["edits"] as? [[String: Any]] ?? []
+        let content = (input["content"] as? String).flatMap { $0.split(separator: "\n").first.map(String.init) }
+        let text =
+            input["new_string"] as? String ?? edits.first?["new_string"] as? String ?? content
+            ?? input["new_source"] as? String
+        return FileEdit(tool: tool, path: path, newText: text)
     }
 
     /// Claude Code session ids are UUIDs; anything else is dropped, because it is later typed into a shell

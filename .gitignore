@@ -18,3 +18,7 @@ scripts/observatory/markers.local
 # F4: Fig specs are vendored from here
 scripts/fig/node_modules/
 scripts/input-bench/.build/
+
+# F6: recording homes for harness fixtures (tokens, configs)
+scripts/harnesses/recording.local/
+__pycache__/

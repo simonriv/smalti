@@ -14,6 +14,20 @@ public enum AgentHook: String, CaseIterable, Sendable {
     case sessionEnd = "SessionEnd"
 }
 
+/// A file an agent wrote (F6: "Editados por Claude"), with the text it put there to find the line.
+public struct FileEdit: Equatable, Sendable {
+    public let tool: String
+    public let path: String
+    /// `new_string`, the first edit's, or the first line of what was written.
+    public let newText: String?
+
+    public init(tool: String, path: String, newText: String?) {
+        self.tool = tool
+        self.path = path
+        self.newText = newText
+    }
+}
+
 /// Something an agent reported about itself, already translated from its hook payload.
 public struct AgentEvent: Equatable, Sendable {
     public let pane: PaneID
@@ -26,10 +40,12 @@ public struct AgentEvent: Equatable, Sendable {
     public let message: String?
     /// Why a session started (`startup`, `resume`, `clear`, `compact`).
     public let source: String?
+    /// F6: the file a `PostToolUse` of a file tool wrote.
+    public let edit: FileEdit?
 
     public init(
         pane: PaneID, hook: AgentHook, at: Date, sessionID: String?, prompt: String? = nil, toolSummary: String? = nil,
-        message: String? = nil, source: String? = nil
+        message: String? = nil, source: String? = nil, edit: FileEdit? = nil
     ) {
         self.pane = pane
         self.hook = hook
@@ -39,6 +55,7 @@ public struct AgentEvent: Equatable, Sendable {
         self.toolSummary = toolSummary
         self.message = message
         self.source = source
+        self.edit = edit
     }
 
     /// A session start from compacting the context, mid-turn: it changes nothing about what the agent is doing.

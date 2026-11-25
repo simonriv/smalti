@@ -21,6 +21,8 @@ final class ObservatoryController {
     private var snapshot: ObservatorySnapshot?
     private var report: ObservatoryReport?
     private(set) var period = ObservatoryPeriod.today
+    /// F6: kept while the app runs, not saved (spec F6).
+    private(set) var filter = ObservatoryFilter.all
     private var selection: String?
     /// Bumped on every render request; a report computed for an older one is dropped.
     private var renderGeneration = 0
@@ -51,6 +53,19 @@ final class ObservatoryController {
         render()
     }
 
+    /// ⌘⇧F, like ⌘P for the period: only while the observatory is open.
+    func cycleFilter() {
+        guard isOpen else { return }
+        choose(filter.next)
+    }
+
+    private func choose(_ next: ObservatoryFilter) {
+        filter = next
+        selection = nil
+        view?.show(filter: next)
+        render()
+    }
+
     /// The refresher's latest facts; drawn right away while the observatory is open.
     func show(_ snapshot: ObservatorySnapshot) {
         self.snapshot = snapshot
@@ -64,6 +79,8 @@ final class ObservatoryController {
         view.autoresizingMask = [.width, .height]
         view.onSelect = { [weak self] id in self?.select(id) }
         view.onCyclePeriod = { [weak self] in self?.cyclePeriod() }
+        view.onSelectFilter = { [weak self] filter in self?.choose(filter) }
+        view.show(filter: filter)
         view.onKey = { [weak self] key in self?.handle(key) }
         self.view = view
         self.theme = theme
@@ -107,10 +124,12 @@ final class ObservatoryController {
         let generation = renderGeneration
         let period = period
         let selection = selection
+        let filter = filter
         Task { [weak self] in
             let report = await Task.detached(priority: .userInitiated) {
                 ObservatoryReport.make(
-                    snapshot, for: .init(period: period, selection: selection, calendar: .autoupdatingCurrent))
+                    snapshot,
+                    for: .init(period: period, selection: selection, calendar: .autoupdatingCurrent, filter: filter))
             }.value
             guard let self, generation == self.renderGeneration, let view = self.view else { return }
             self.report = report

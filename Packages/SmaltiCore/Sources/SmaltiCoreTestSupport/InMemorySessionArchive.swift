@@ -79,14 +79,3 @@ public final class FakeScrollbackSource: ScrollbackSource {
         return contents[pane] ?? Scrollback(text: "", format: .plain)
     }
 }
-
-/// Resumes with `fake --resume <id>`, posing as Claude.
-public struct FakeHarnessAdapter: HarnessAdapter {
-    public let harness = HarnessID.claude
-    public let displayName = "Fake"
-    public static let binary = "fake"
-
-    public init() {}
-
-    public func resumeCommand(for agent: AgentSnapshot) -> String { "\(Self.binary) --resume \(agent.sessionID)" }
-}
