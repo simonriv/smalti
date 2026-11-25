@@ -76,10 +76,18 @@ final class TestHTTPClient {
         }
     }
 
-    /// True when the server closed the connection (read returns 0) within the timeout.
+    /// True when the server closed the connection within the timeout: an orderly close (read returns 0) or a reset
+    /// after the client wrote to a closed connection.
     func isClosedByServer() -> Bool {
         var byte: UInt8 = 0
-        return read(fd, &byte, 1) == 0
+        let count = read(fd, &byte, 1)
+        return count == 0 || (count < 0 && (errno == ECONNRESET || errno == EPIPE))
+    }
+
+    /// Writes and says whether the connection took it (false once the server hung up).
+    func sendAccepted(_ data: Data) -> Bool {
+        // Safe: the buffer pointer is valid for the closure's duration and `count` bytes long.
+        data.withUnsafeBytes { write(fd, $0.baseAddress, data.count) } == data.count
     }
 
     private static func parse(_ buffer: inout Data) -> Response? {

@@ -95,4 +95,18 @@ struct SharedLayoutFilesTests {
             }
         }
     }
+
+    /// A device or a FIFO reports size 0 and could be read without end (`/dev/zero`): only regular files are read.
+    @Test(.timeLimit(.minutes(1)))
+    func rejectsWhatIsNotARegularFile() throws {
+        do {
+            _ = try files.read(from: URL(filePath: "/dev/null"))
+            Issue.record("a FIFO was read")
+        } catch {
+            guard case .unreadable = error else {
+                Issue.record("wrong error: \(error)")
+                return
+            }
+        }
+    }
 }

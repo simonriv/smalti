@@ -12,6 +12,12 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     case escapingDirectory(pane: Int, path: String)
     case tooLarge(bytes: Int)
     case notJSON(reason: String)
+    /// A pane that names more than one of `command`, `harness` and `editor`: which one runs would be ambiguous.
+    case ambiguousPane(pane: Int)
+    case invalidEditor(pane: Int)
+    /// The tree's leaves are not each pane exactly once.
+    case invalidTree
+    case invalidRoot(String)
 
     public var message: String {
         switch self {
@@ -25,6 +31,10 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
         case .escapingDirectory(let pane, let path): "la ruta «\(path)» del panel \(pane) sale de la carpeta del layout"
         case .tooLarge(let bytes): "pesa \(bytes) bytes; el máximo es \(SharedLayout.maximumBytes)"
         case .notJSON(let reason): "no es un layout de Smalti (\(reason))"
+        case .ambiguousPane(let pane): "el panel \(pane) indica más de un programa que abrir"
+        case .invalidEditor(let pane): "el archivo o la línea del editor del panel \(pane) no son válidos"
+        case .invalidTree: "su árbol no coloca cada panel una sola vez"
+        case .invalidRoot(let root): "la carpeta «\(root)» no es una ruta absoluta ni empieza por ~"
         }
     }
 }
@@ -115,7 +125,7 @@ public struct SharedLayout: Codable, Equatable, Sendable {
         }
         return SharedPane(
             directory: PortablePaths.relative(pane.workingDirectory, to: root) ?? paths.portable(pane.workingDirectory),
-            command: pane.relaunch?.arguments, harness: pane.agent?.harness, editor: editor)
+            command: pane.relaunch?.arguments.map(paths.portableArgument), harness: pane.agent?.harness, editor: editor)
     }
 
     /// The root on this machine: `~` is this user's home.
@@ -130,22 +140,33 @@ public struct SharedLayout: Codable, Equatable, Sendable {
             guard case .invalid(_, let reason) = error else { throw .invalidName(name, reason: "") }
             throw .invalidName(name, reason: reason)
         }
+        guard root == "~" || root.hasPrefix("~/") || root.hasPrefix("/") else { throw .invalidRoot(root) }
         guard (1...Self.maximumPanes).contains(panes.count) else { throw .paneCount(panes.count) }
-        if let tree, tree.leafCount != panes.count { throw .treeMismatch(leaves: tree.leafCount, panes: panes.count) }
+        if let tree {
+            guard tree.leafCount == panes.count else { throw .treeMismatch(leaves: tree.leafCount, panes: panes.count) }
+            guard tree.leafIndices.sorted() == Array(panes.indices) else { throw .invalidTree }
+        }
         for (index, pane) in panes.enumerated() { try Self.check(pane, number: index + 1) }
         return ValidatedLayout(name: layoutName, layout: self, warnings: warnings)
     }
 
     private static func check(_ pane: SharedPane, number: Int) throws(SharedLayoutError) {
+        // The confirmation shows one program per pane: a file naming two could show one and run the other.
+        let programs = [pane.command != nil, pane.harness != nil, pane.editor != nil].count { $0 }
+        guard programs <= 1 else { throw .ambiguousPane(pane: number) }
         if let command = pane.command {
-            guard !command.isEmpty else { throw .emptyCommand(pane: number) }
+            guard let first = command.first, !first.isEmpty else { throw .emptyCommand(pane: number) }
             guard RelaunchCommand.isTypeable(command) else { throw .untypeableCommand(pane: number) }
         }
         if PortablePaths.escapesUpward(pane.directory) {
             throw .escapingDirectory(pane: number, path: pane.directory)
         }
-        if let file = pane.editor?.file, PortablePaths.escapesUpward(file) {
-            throw .escapingDirectory(pane: number, path: file)
+        if let editor = pane.editor {
+            // The file is typed into the shell (`nvim +N 'file'`): a control character would edit or run the line.
+            guard !editor.file.isEmpty, editor.line >= 1, RelaunchCommand.isTypeable([editor.file]) else {
+                throw .invalidEditor(pane: number)
+            }
+            if PortablePaths.escapesUpward(editor.file) { throw .escapingDirectory(pane: number, path: editor.file) }
         }
     }
 
@@ -169,7 +190,8 @@ public struct SharedLayout: Codable, Equatable, Sendable {
             let directory = paths.absolute(pane.directory, base: root)
             return PaneSnapshot(
                 id: UUID(), workingDirectory: directory, title: nil, processName: nil, scrollbackLines: 0,
-                commandCount: 0, relaunch: pane.command.map(RelaunchCommand.init(arguments:)),
+                commandCount: 0,
+                relaunch: pane.command.map { RelaunchCommand(arguments: $0.map(paths.expandedArgument)) },
                 agent: pane.harness.flatMap {
                     $0.isKnown ? AgentSnapshot(harness: $0, sessionID: nil, title: nil, lastState: nil) : nil
                 },
@@ -194,6 +216,18 @@ struct PortablePaths {
     func portable(_ path: String) -> String {
         if path == home { return "~" }
         return Self.relative(path, to: home).map { "~/" + $0 } ?? path
+    }
+
+    /// A command argument with this home written as `~`, so the file never carries the home's path.
+    func portableArgument(_ argument: String) -> String {
+        if argument == home { return "~" }
+        return Self.relative(argument, to: home).map { "~/" + $0 } ?? argument
+    }
+
+    /// The inverse of `portableArgument` with this machine's home: the shell will not expand a quoted `~`.
+    func expandedArgument(_ argument: String) -> String {
+        if argument == "~" { return home }
+        return argument.hasPrefix("~/") ? home + argument.dropFirst(1) : argument
     }
 
     func absolute(_ path: String, base: String) -> String {

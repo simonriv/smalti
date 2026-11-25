@@ -1,6 +1,6 @@
 import Darwin
 import Foundation
-import OTLPReceiverAdapter
+@testable import OTLPReceiverAdapter
 import SmaltiCore
 import Synchronization
 import Testing
@@ -64,9 +64,10 @@ final class LoopbackOTLPReceiverTests {
         #expect(endpoint.port > 0)
     }
 
-    @Test func connectViaLanAddressFails() throws {
+    @Test(.enabled(if: lanAddress() != nil, "this Mac has no non-loopback IPv4 address"))
+    func connectViaLanAddressFails() throws {
         let (_, endpoint) = try started()
-        let lan = try #require(lanAddress(), "this Mac has no non-loopback IPv4 address")
+        let lan = try #require(lanAddress())
 
         let client = TestHTTPClient(address: lan, port: endpoint.port)
 
@@ -304,5 +305,44 @@ final class LoopbackOTLPReceiverTests {
 
         #expect(Set(tokens).count == 20)
         #expect(tokens.allSatisfy { $0.count == 64 && $0.allSatisfy(\.isHexDigit) })
+    }
+
+    // MARK: Review 1
+
+    @Test func descriptorsAreCloseOnExec() throws {
+        let (receiver, endpoint) = try started()
+        let client = try client(endpoint)
+        client.send(TestHTTPClient.post(body: "s", token: endpoint.token))
+        #expect(client.response()?.status == 200)
+
+        let descriptors = receiver.openDescriptors
+
+        #expect(descriptors.count == 2)
+        #expect(descriptors.allSatisfy { fcntl($0, F_GETFD) & FD_CLOEXEC != 0 })
+    }
+
+    @Test func releasingTheReceiverClosesItsSocket() throws {
+        var port: UInt16 = 0
+        do {
+            let receiver = LoopbackOTLPReceiver(decode: decodeSessionID)
+            port = try receiver.start { _ in }.port
+        }
+
+        #expect(TestHTTPClient(port: port) == nil)
+    }
+
+    @Test func slowHeadersAreCutAtTheIdleTimeout() throws {
+        let (_, endpoint) = try started(idleTimeout: .milliseconds(300))
+        let client = try client(endpoint)
+        let start = Date()
+
+        var isOpen = true
+        while isOpen, Date().timeIntervalSince(start) < 3 {
+            isOpen = client.sendAccepted(Data("X".utf8))
+            usleep(50_000)
+        }
+
+        #expect(!isOpen)
+        #expect(Date().timeIntervalSince(start) < 1.5)
     }
 }

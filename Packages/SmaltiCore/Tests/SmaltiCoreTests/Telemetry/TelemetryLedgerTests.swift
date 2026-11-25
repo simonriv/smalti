@@ -142,4 +142,30 @@ struct TelemetryLedgerTests {
         #expect(ledger.telemetry(of: "s0") != nil)
         #expect(ledger.telemetry(of: "s1") == nil)
     }
+
+    // MARK: Review 1
+
+    @Test func sameSequenceWithAnotherTimestampCounts() {
+        var ledger = TelemetryLedger()
+
+        ledger.record([request(sequence: 1, after: 0), request(sequence: 1, after: 30)])
+
+        #expect(ledger.telemetry(of: "s1")?.requests == 2)
+    }
+
+    @Test func costSaturatesInsteadOfOverflowing() {
+        var ledger = TelemetryLedger()
+
+        ledger.record([request(cost: Int.max), request(cost: Int.max)])
+
+        #expect(ledger.telemetry(of: "s1")?.costMicroUSD == Int.max)
+    }
+
+    @Test func medianOfHugeDurationsDoesNotOverflow() {
+        var ledger = TelemetryLedger()
+
+        ledger.record([request(duration: Int.max), request(duration: Int.max)])
+
+        #expect(ledger.telemetry(of: "s1")?.medianMilliseconds == Int.max)
+    }
 }

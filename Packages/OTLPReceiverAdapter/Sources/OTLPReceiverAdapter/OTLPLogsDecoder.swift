@@ -34,24 +34,27 @@ public enum OTLPLogsDecoder {
         else { return nil }
         switch name {
         case "api_request":
-            guard let duration = attributes.int("duration_ms"), let cost = cost(attributes) else { return nil }
+            guard let duration = attributes.int("duration_ms"), duration >= 0, let cost = cost(attributes), cost >= 0
+            else { return nil }
             return .apiRequest(
                 APIRequest(
                     sessionID: sessionID, sequence: sequence.value, at: at, model: model.value,
                     durationMilliseconds: duration, costMicroUSD: cost))
         case "api_error":
-            guard let status = attributes.optionalInt("status_code") else { return nil }
+            // An unreadable status still counts the failure, without its code.
             return .apiError(
                 APIError(
-                    sessionID: sessionID, sequence: sequence.value, at: at, model: model.value, statusCode: status.value
-                ))
+                    sessionID: sessionID, sequence: sequence.value, at: at, model: model.value,
+                    statusCode: attributes.int("status_code")))
         default:
             return nil
         }
     }
 
     private static func name(_ record: [String: Any], _ attributes: OTLPAttributes) -> String? {
-        if let name = attributes.string("event.name") { return name }
+        if let name = attributes.string("event.name") {
+            return name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
+        }
         guard let body = (record["body"] as? [String: Any])?["stringValue"] as? String, body.hasPrefix(prefix) else {
             return nil
         }
@@ -60,9 +63,7 @@ public enum OTLPLogsDecoder {
 
     /// `event.timestamp` (ISO 8601), else the record's `timeUnixNano`.
     private static func timestamp(_ record: [String: Any], _ attributes: OTLPAttributes) -> Date? {
-        if let text = attributes.string("event.timestamp") {
-            return ISO8601.date(text)
-        }
+        if let date = attributes.string("event.timestamp").flatMap(ISO8601.date) { return date }
         guard let nanos = OTLPAttributes.integer(record["timeUnixNano"]) else { return nil }
         return Date(timeIntervalSince1970: Double(nanos) / 1_000_000_000)
     }
@@ -71,7 +72,7 @@ public enum OTLPLogsDecoder {
     private static func cost(_ attributes: OTLPAttributes) -> Int? {
         if attributes.has("cost_usd_micros") { return attributes.int("cost_usd_micros") }
         guard attributes.has("cost_usd") else { return 0 }
-        return attributes.double("cost_usd").map { Int(($0 * 1_000_000).rounded()) }
+        return attributes.double("cost_usd").flatMap { OTLPAttributes.exactInt($0 * 1_000_000) }
     }
 }
 
@@ -105,7 +106,7 @@ private struct OTLPAttributes {
     func int(_ key: String) -> Int? {
         guard let value = values[key] else { return nil }
         if let integer = Self.integer(value["intValue"]) { return integer }
-        if let double = value["doubleValue"] as? Double, double.isFinite { return Int(double.rounded()) }
+        if let double = value["doubleValue"] as? Double { return Self.exactInt(double) }
         return (value["stringValue"] as? String).flatMap { Int($0) }
     }
 
@@ -121,6 +122,12 @@ private struct OTLPAttributes {
         return (value["stringValue"] as? String).flatMap { Double($0) }
     }
 
+    /// The rounded value when it fits in an `Int`; nil for NaN, infinities and anything out of range.
+    static func exactInt(_ value: Double) -> Int? {
+        guard value.isFinite else { return nil }
+        return Int(exactly: value.rounded())
+    }
+
     static func integer(_ raw: Any?) -> Int? {
         if let text = raw as? String { return Int(text) }
         guard let number = raw as? NSNumber, CFNumberIsFloatType(number) == false else { return nil }
@@ -129,10 +136,16 @@ private struct OTLPAttributes {
 }
 
 private enum ISO8601 {
+    // Safe to share across threads: Foundation's date formatters are thread-safe once configured, and these are
+    // never changed after creation. Reused because building one per record is costly.
+    nonisolated(unsafe) private static let fractional: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    nonisolated(unsafe) private static let whole = ISO8601DateFormatter()
+
     static func date(_ text: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: text) { return date }
-        return ISO8601DateFormatter().date(from: text)
+        fractional.date(from: text) ?? whole.date(from: text)
     }
 }

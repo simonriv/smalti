@@ -101,6 +101,66 @@ struct OTLPLogsDecoderTests {
 
         #expect(client.response()?.status == 400)
     }
+    // MARK: Review 1
+
+    private func one(_ attributes: String, time: String = "\"1795000000000000000\"") -> Data {
+        Data(
+            """
+            {"resourceLogs":[{"scopeLogs":[{"logRecords":[{"timeUnixNano":\(time),"attributes":[\(attributes)]}]}]}]}
+            """.utf8)
+    }
+
+    private let base = """
+        {"key":"event.name","value":{"stringValue":"api_request"}},{"key":"session.id","value":{"stringValue":"s"}}
+        """
+
+    @Test(arguments: [
+        #"{"key":"cost_usd","value":{"doubleValue":1e20}},{"key":"duration_ms","value":{"intValue":"5"}}"#,
+        #"{"key":"duration_ms","value":{"doubleValue":1e30}}"#,
+        #"{"key":"duration_ms","value":{"intValue":"-5"}}"#,
+        #"{"key":"duration_ms","value":{"intValue":"5"}},{"key":"cost_usd_micros","value":{"intValue":"-1"}}"#,
+    ])
+    func outOfRangeNumbersSkipTheRecord(numbers: String) throws {
+        #expect(try OTLPLogsDecoder.decode(one(base + "," + numbers)).isEmpty)
+    }
+
+    @Test func unreadableStatusCodeStillCountsTheError() throws {
+        let attributes = """
+            {"key":"event.name","value":{"stringValue":"api_error"}},{"key":"session.id","value":{"stringValue":"s"}},\
+            {"key":"status_code","value":{"stringValue":"undefined"}}
+            """
+
+        let events = try OTLPLogsDecoder.decode(one(attributes))
+
+        guard case .apiError(let error) = try #require(events.first) else {
+            Issue.record("not an api_error")
+            return
+        }
+        #expect(error.statusCode == nil)
+    }
+
+    @Test func unreadableTimestampFallsBackToTimeUnixNano() throws {
+        let attributes =
+            base
+            + #",{"key":"event.timestamp","value":{"stringValue":"yesterday"}},{"key":"duration_ms","value":{"intValue":"5"}}"#
+
+        let events = try OTLPLogsDecoder.decode(one(attributes))
+
+        guard case .apiRequest(let request) = try #require(events.first) else {
+            Issue.record("not an api_request")
+            return
+        }
+        #expect(request.at == Date(timeIntervalSince1970: 1_795_000_000))
+    }
+
+    @Test func prefixedEventNameIsAccepted() throws {
+        let attributes = """
+            {"key":"event.name","value":{"stringValue":"claude_code.api_request"}},\
+            {"key":"session.id","value":{"stringValue":"s"}},{"key":"duration_ms","value":{"intValue":"5"}}
+            """
+
+        #expect(try OTLPLogsDecoder.decode(one(attributes)).count == 1)
+    }
 }
 
 extension TelemetryEvent {
@@ -110,4 +170,5 @@ extension TelemetryEvent {
         case .apiError: "error"
         }
     }
+
 }

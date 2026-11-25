@@ -80,7 +80,7 @@ public struct ImportLayout {
         }
         let root = validated.layout.resolvedRoot(home: home)
         return ImportPreview(
-            name: validated.name, commands: commands(of: validated.layout), root: root,
+            name: validated.name, commands: commands(of: validated.layout, root: root), root: root,
             isRootPresent: directoryExists(root), warnings: validated.warnings, layout: validated.layout)
     }
 
@@ -93,13 +93,15 @@ public struct ImportLayout {
         return name
     }
 
-    private func commands(of layout: SharedLayout) -> [String] {
-        layout.panes.compactMap { pane in
-            if let command = pane.command { return RelaunchCommand(arguments: command).displayText }
-            if let harness = pane.harness, harness.isKnown, let adapter = harnesses.adapter(for: harness) {
-                return adapter.continueCommand()
+    /// What each pane will run, read through `PaneLaunch.saved`: the same choice restoring makes.
+    private func commands(of layout: SharedLayout, root: String) -> [String] {
+        layout.workspaceSnapshot(root: root, home: home).panes.compactMap { pane in
+            switch PaneLaunch.saved(pane) {
+            case .shell: nil
+            case .relaunch(let command): command.displayText
+            case .editor(let position): position.plainCommand
+            case .resume(let agent): harnesses.adapter(for: agent.harness)?.continueCommand()
             }
-            return pane.editor.map { EditorPosition(file: $0.file, line: $0.line).plainCommand }
         }
     }
 

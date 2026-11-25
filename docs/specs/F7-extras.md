@@ -245,3 +245,17 @@ Según `.claude/rules/`:
 - `docs/PROJECT.md`: el pilar 4 nombra la telemetría OTLP de Claude Code como fuente (solo para los paneles de Smalti); «Receptor OTLP local en F7» pasa a describir el adaptador.
 - `CLAUDE.md`: puertos `TelemetryReceiver`, `ClaudeTelemetrySettings` y `LayoutFiles`; paquete `OTLPReceiverAdapter` en «Comandos» y en la línea de `swift format lint`; flags nuevos.
 - `docs/design/README.md`: nota bajo `Observatorio.dc.html` (línea de telemetría y pies) y bajo `Paleta.dc.html` (exportar e importar layouts).
+
+## Enmiendas
+
+1. **2026-11-25 · Revisión intermedia 1, Claude.** Validación del layout importado, más estricta:
+   - un panel con más de uno de `command`, `harness` y `editor` se rechaza («indica más de un programa que abrir»), porque la confirmación mostraría uno y se ejecutaría otro;
+   - el archivo del editor debe ser tecleable (sin caracteres de control) y la línea ≥ 1, porque se escribe en el shell;
+   - las hojas del árbol deben ser cada panel exactamente una vez;
+   - la raíz debe ser `~`, `~/…` o absoluta;
+   - un comando con el primer argumento vacío se rechaza.
+2. **2026-11-25 · Revisión intermedia 1, Claude.** La confirmación sale de la misma regla que restaura (`PaneLaunch.saved`), así que el comando de un panel de Neovim se muestra con su ruta completa (`nvim +42 /Users/…/src/a.ts`).
+3. **2026-11-25 · Revisión intermedia 1, Claude.** Al exportar, los argumentos de los comandos que empiezan por el home se escriben con `~` (C7); al importar, ese `~` se expande con el home de esta máquina, porque el shell no expande un `~` entre comillas.
+4. **2026-11-25 · Revisión intermedia 1, Claude.** Un evento repetido es el de la misma sesión, el mismo `event.sequence` y la misma `event.timestamp`: `event.sequence` vuelve a empezar si Claude se relanza sobre la misma sesión (`claude --continue`).
+5. **2026-11-25 · Revisión intermedia 1, Claude (decisión delegada por Simón).** Las variables de telemetría las hereda todo lo que corre en el panel, no solo Claude: un programa propio instrumentado con OpenTelemetry pierde sus métricas y trazas (`none`) y manda sus logs al receptor de Smalti, que los descarta. Se mantiene así y se documenta: `OTEL_METRICS_EXPORTER=none` y `OTEL_TRACES_EXPORTER=none` son la guarda que impide que Claude mande métricas a un endpoint genérico configurado en el shell. Quien depure con OpenTelemetry en un panel puede exportar sus propias variables en ese shell o apagar `[extras] otlp`.
+6. **2026-11-25 · Revisión intermedia 1, Claude.** Robustez del receptor: sus sockets llevan `FD_CLOEXEC` (los paneles no los heredan); una petición debe llegar entera dentro del plazo de 30 s, no solo un byte cada 30 s; números fuera de rango o negativos omiten el registro y un `status_code` ilegible cuenta el error sin código.

@@ -30,6 +30,9 @@ public final class LoopbackOTLPReceiver: TelemetryReceiver {
     /// The address the socket is bound to, read back from the system (`getsockname`); nil while stopped.
     public var boundAddress: String? { server?.boundAddress }
 
+    /// The listening socket and the open connections (for the close-on-exec test).
+    var openDescriptors: [Int32] { server?.openDescriptors ?? [] }
+
     public func start(onBatch: @escaping @MainActor ([TelemetryEvent]) -> Void) throws(TelemetryReceiverError)
         -> TelemetryEndpoint
     {
@@ -115,23 +118,32 @@ private final class LoopbackServer: Sendable {
         source.resume()
     }
 
+    var openDescriptors: [Int32] { [listener] + state.withLock { Array($0.connections) } }
+
     /// Stops listening, waits for the listening socket to close, and hangs up every open connection (each one's
     /// thread then closes its descriptor).
     func stop() {
-        let open: Set<Int32>? = state.withLock { state in
-            guard !state.isStopped else { return nil }
+        // Under the lock: `serve` takes its descriptor out of the set before closing it, so every one still in the
+        // set is open and is not a reused number belonging to another socket.
+        let wasRunning = state.withLock { state in
+            guard !state.isStopped else { return false }
             state.isStopped = true
-            return state.connections
+            state.connections.forEach { shutdown($0, SHUT_RDWR) }
+            return true
         }
-        guard let open else { return }
+        guard wasRunning else { return }
         source.cancel()
         _ = closed.wait(timeout: .now() + 1)
-        open.forEach { shutdown($0, SHUT_RDWR) }
+    }
+
+    deinit {
+        stop()
     }
 
     private func acceptOne() {
         let client = accept(listener, nil, nil)
         guard client >= 0 else { return }
+        LoopbackSocket.closeOnExec(client)
         let isAdmitted = state.withLock { state in
             guard !state.isStopped, state.connections.count < settings.maximumConnections else { return false }
             state.connections.insert(client)
@@ -152,12 +164,17 @@ private final class LoopbackServer: Sendable {
         LoopbackSocket.prepare(client, idleTimeout: settings.idleTimeout)
         var parser = HTTPRequestParser(maximumBody: settings.maximumBody)
         var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+        let clock = ContinuousClock()
+        // A request must arrive whole within the idle timeout, not just a byte at a time within it.
+        var partialSince: ContinuousClock.Instant?
         while true {
             let count = read(client, &buffer, buffer.count)
             guard count > 0 else { return }
             for item in parser.feed(Data(buffer.prefix(count))) {
                 guard handle(item, on: client) else { return }
             }
+            partialSince = parser.hasPartialRequest ? (partialSince ?? clock.now) : nil
+            if let since = partialSince, clock.now - since > settings.idleTimeout { return }
         }
     }
 
@@ -182,6 +199,7 @@ enum LoopbackSocket {
     static func listen(backlog: Int32) throws(TelemetryReceiverError) -> Int32 {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         guard fd >= 0 else { throw .cannotListen(operation: "socket", errno: errno) }
+        closeOnExec(fd)
         var on: Int32 = 1
         // Accepted connections inherit it: a client that hangs up never raises SIGPIPE in the app.
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
@@ -223,6 +241,12 @@ enum LoopbackSocket {
             String(decoding: text.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self),
             UInt16(bigEndian: address.sin_port)
         )
+    }
+
+    /// Ghostty starts panes with fork and exec without closing descriptors: without this every shell would inherit
+    /// the receiver's sockets and keep the port open after the receiver stops.
+    static func closeOnExec(_ fd: Int32) {
+        _ = fcntl(fd, F_SETFD, FD_CLOEXEC)
     }
 
     static func prepare(_ client: Int32, idleTimeout: Duration) {

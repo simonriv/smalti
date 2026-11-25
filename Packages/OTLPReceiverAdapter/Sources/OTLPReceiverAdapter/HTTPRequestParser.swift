@@ -30,6 +30,9 @@ struct HTTPRequestParser {
         self.maximumBody = maximumBody
     }
 
+    /// Bytes of a request that has not arrived whole yet.
+    var hasPartialRequest: Bool { !buffer.isEmpty }
+
     mutating func feed(_ data: Data) -> [ParsedItem] {
         guard !hasFailed else { return [] }
         buffer.append(data)

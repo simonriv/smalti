@@ -83,7 +83,7 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["pnpm dev", "fake --continue", "nvim +42 src/a.ts"])
+        #expect(preview.commands == ["pnpm dev", "fake --continue", "nvim +42 \(root)/src/a.ts"])
     }
 
     @Test func previewOfShellsOnlyHasNoCommands() throws {
@@ -224,5 +224,26 @@ struct ShareLayoutTests {
     @Test func errorMessagesReachTheStatusBar() {
         #expect(LayoutShareError.file(.invalid(.paneCount(10))).message == "tiene 10 paneles; el máximo es 9")
         #expect(LayoutShareError.archive(.notFound(name: "x")).message.contains("x"))
+    }
+
+    // MARK: Review 1
+
+    @Test func previewMatchesWhatRestoreRuns() throws {
+        let agent = AgentSnapshot(harness: .claude, sessionID: "s", title: nil, lastState: nil)
+        let saved = snapshot([pane(agent: agent), pane(editor: EditorPosition(file: root + "/src/a.ts", line: 42))])
+        files.files[file] = try shared(saved.panes)
+
+        let preview = try importer(existing: [root]).preview(file)
+
+        #expect(preview.commands == ["fake --continue", "nvim +42 \(root)/src/a.ts"])
+    }
+
+    @Test func freeNameIgnoresCase() throws {
+        try layouts.save(snapshot([pane()]), as: try LayoutName("Solen-dev"))
+        files.files[file] = try shared([pane()])
+
+        let saved = try importer().confirm(try importer().preview(file), root: root)
+
+        #expect(saved.rawValue == "solen-dev 2")
     }
 }
