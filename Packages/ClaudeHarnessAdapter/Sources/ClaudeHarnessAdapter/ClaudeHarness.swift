@@ -1,20 +1,41 @@
+import Foundation
 import SmaltiCore
 
-/// Claude Code as a harness: resumes a session with `claude --resume <id>`.
-public struct ClaudeHarness: HarnessAdapter {
+/// Claude Code as a harness: resumes with `claude --resume <id>` and lists the transcripts under
+/// `~/.claude/projects/<directory>/<id>.jsonl`. The session id normally comes from its `SessionStart` hook (F2); the
+/// listing also feeds the search and the capture of a Claude without Smalti's plugin.
+public struct ClaudeHarness: HarnessAdapter, EditorConnectable {
     public let harness = HarnessID.claude
-    public let displayName = "Claude Code"
-    private static let safeCharacters = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+    private let projectsRoot: URL
 
-    public init() {}
-
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "claude --resume \(Self.quoted(agent.sessionID))"
+    /// `projectsRoot` is `<CLAUDE_CONFIG_DIR or ~/.claude>/projects`, resolved by the composition root.
+    public init(projectsRoot: URL) {
+        self.projectsRoot = projectsRoot
     }
 
-    /// Session ids are UUIDs; anything else is single-quoted for the shell.
-    private static func quoted(_ text: String) -> String {
-        guard text.isEmpty || !text.allSatisfy(safeCharacters.contains) else { return text }
-        return "'" + text.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
+    public func detect(_ process: ForegroundProcess) -> Bool { ProcessNames.matches(process, ["claude"]) }
+
+    public func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] {
+        let sessions = try ClaudeSessionList(root: projectsRoot, harness: harness).sessions()
+        return SessionCatalog.merge([.success(sessions)], query: query).sessions
+    }
+
+    public func resumeCommand(for agent: AgentSnapshot) -> String {
+        "claude --resume \(ShellWord.quoted(agent.sessionID ?? ""))"
+    }
+
+    public func resumeCommandConnectingEditor(for agent: AgentSnapshot) -> String {
+        resumeCommand(for: agent) + " --ide"
+    }
+
+    public func continueCommand() -> String { "claude --continue" }
+
+    public func forkCommand(for agent: AgentSnapshot) -> String? {
+        resumeCommand(for: agent) + " --fork-session"
+    }
+
+    public func sessionID(fromCommandLine arguments: [String]) -> String? {
+        guard let first = arguments.first, detect(ForegroundProcess(name: first)) else { return nil }
+        return ProcessNames.value(after: ["--resume", "-r"], in: arguments)
     }
 }
