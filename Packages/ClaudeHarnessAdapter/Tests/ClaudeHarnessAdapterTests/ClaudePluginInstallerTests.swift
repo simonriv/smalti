@@ -135,6 +135,36 @@ struct ClaudePluginInstallerTests {
                 atPath: installDirectory.appending(path: "viejo.txt").path(percentEncoded: false)))
     }
 
+    /// F7.5: an installed copy older than the plugin this Smalti ships asks to be updated.
+    @Test func installStateOutdated() async throws {
+        try await installer().install()
+        let manifest = installDirectory.appending(path: "plugins/smalti/.claude-plugin/plugin.json")
+        let text = try String(contentsOf: manifest, encoding: .utf8)
+        try Data(text.replacing(#""version": "0.2.0""#, with: #""version": "0.1.0""#).utf8).write(to: manifest)
+
+        #expect(await installer().installState == .outdated)
+    }
+
+    @Test func installStateSameVersionInstalled() async throws {
+        try await installer().install()
+
+        #expect(await installer().installState == .installed)
+    }
+
+    @Test func installStateWithoutCopyIsOutdated() async throws {
+        try await installer().install()
+        try FileManager.default.removeItem(at: installDirectory)
+
+        #expect(await installer().installState == .outdated)
+    }
+
+    @Test func versionsCompareNumerically() {
+        #expect(PluginVersion("0.10.0") > PluginVersion("0.9.1"))
+        #expect(PluginVersion("0.2.0") > PluginVersion("0.1.9"))
+        #expect(!(PluginVersion("0.2.0") > PluginVersion("0.2.0")))
+        #expect(PluginVersion("0.2") == PluginVersion("0.2.0"))
+    }
+
     @Test func uninstallRunsUninstallThenRemove() async throws {
         try await installer().uninstall()
 

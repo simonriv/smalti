@@ -48,13 +48,30 @@ public final class ClaudePluginInstaller: HarnessIntegration {
         if let failure { throw failure }
     }
 
-    /// A missing `claude`, a shell that cannot start or a failing list leave the state unknown (spec F5.6).
+    /// A missing `claude`, a shell that cannot start or a failing list leave the state unknown (spec F5.6). F7.5: an
+    /// installed plugin whose copy is missing or older than the one this Smalti ships is outdated.
     public var installState: IntegrationState {
         get async {
             let result = await runner.run(command + ["plugin", "list"])
             guard result.status == 0 else { return .unknown }
-            return result.output.contains(Self.plugin) ? .installed : .notInstalled
+            guard result.output.contains(Self.plugin) else { return .notInstalled }
+            return isCopyOutdated ? .outdated : .installed
         }
+    }
+
+    private static let manifest = "plugins/smalti/.claude-plugin/plugin.json"
+
+    private var isCopyOutdated: Bool {
+        guard let shipped = Self.version(at: pluginSource.appending(path: Self.manifest)) else { return false }
+        guard let installed = Self.version(at: installDirectory.appending(path: Self.manifest)) else { return true }
+        return shipped > installed
+    }
+
+    private static func version(at manifest: URL) -> PluginVersion? {
+        guard let data = try? Data(contentsOf: manifest),
+            let text = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["version"] as? String
+        else { return nil }
+        return PluginVersion(text)
     }
 
     private func claude(_ arguments: [String]) async throws(IntegrationError) {

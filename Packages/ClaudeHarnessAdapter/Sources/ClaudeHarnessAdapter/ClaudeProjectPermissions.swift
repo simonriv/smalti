@@ -1,0 +1,60 @@
+import Foundation
+import SmaltiCore
+
+/// `ProjectPermissions` over a project's `.claude/settings.local.json` (spec F7.5): only `permissions.deny` changes;
+/// every other key stays. A file Foundation cannot read as JSON (comments, trailing commas) is never rewritten.
+public struct ClaudeProjectPermissions: ProjectPermissions {
+    public init() {}
+
+    public func deniedRules(in project: String) throws(ProjectPermissionsError) -> [String] {
+        let settings = try read(Self.file(in: project))
+        let permissions = settings["permissions"] as? [String: Any] ?? [:]
+        guard let deny = permissions["deny"] else { return [] }
+        guard let rules = deny as? [String] else {
+            throw .unreadable(path: Self.path(in: project), reason: "permissions.deny no es una lista de textos")
+        }
+        return rules
+    }
+
+    public func setDeniedRules(_ rules: [String], in project: String) throws(ProjectPermissionsError) {
+        let file = Self.file(in: project)
+        var settings = try read(file)
+        var permissions = settings["permissions"] as? [String: Any] ?? [:]
+        permissions["deny"] = rules
+        settings["permissions"] = permissions
+        do {
+            try FileManager.default.createDirectory(
+                at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let data = try JSONSerialization.data(
+                withJSONObject: settings, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+            try (data + Data("\n".utf8)).write(to: file, options: .atomic)
+        } catch {
+            throw .unwritable(path: Self.path(in: project), reason: error.localizedDescription)
+        }
+    }
+
+    private static func file(in project: String) -> URL {
+        URL(filePath: project).appending(path: ".claude/settings.local.json")
+    }
+
+    private static func path(in project: String) -> String {
+        file(in: project).path(percentEncoded: false)
+    }
+
+    /// The settings as a dictionary; a missing file is empty.
+    private func read(_ file: URL) throws(ProjectPermissionsError) -> [String: Any] {
+        let path = file.path(percentEncoded: false)
+        guard FileManager.default.fileExists(atPath: path) else { return [:] }
+        do {
+            let data = try Data(contentsOf: file)
+            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw ProjectPermissionsError.unreadable(path: path, reason: "no es un objeto JSON")
+            }
+            return object
+        } catch let error as ProjectPermissionsError {
+            throw error
+        } catch {
+            throw .unreadable(path: path, reason: "JSON inválido")
+        }
+    }
+}
