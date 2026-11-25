@@ -362,3 +362,31 @@
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones (C2 ✅: A12/A14 sin cambio, GPU alternada 9,18/8,65/8,28 %, C1 independiente, C13 sin empeorar), capturas, checklist (`docs/specs/F7-checklist.md`), revisión final (2 importantes, 3 menores, corregidos), mutación de la fase 97,8 % (4 sobrevivientes muertos y verificados a mano; completa detenida por decisión de Simón)
 - [x] T12 · 0.7.0, PRs #37 y #38, despliegue (0.6.0 en `/Applications/Smalti.app.old`)
+
+## F7.5 · Guardas para agentes
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7.5-guardas.md`): guardia en el CLI con reglas de `SmaltiCore`, aprobación nativa, falla cerrado en tres capas (`onFailure: "block"`, CLI, app); PocketOS cubierto por la regla de APIs de proveedores; Simón aprobó de antemano spec, plan, recomendaciones, merges y despliegue
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7.5-guardas.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · `ShellCommandLine`
+- [ ] T2 · `SecretPaths` y reglas de secretos
+- [ ] T3 · Reglas destructivas, entorno y redacción
+- [ ] T4 · `ScreenToolUse` y `[guards]`
+- [ ] T5 · `AgentApprovals` y estado del panel
+- [ ] T6 · `ProtectProjectSecrets`, integración desactualizada y ⌘K
+#### Bloque 2 · Adaptadores
+- [ ] T7 · Protocolo `guard`, servidor y CLI
+- [ ] T8 · `ClaudeProjectPermissions`, versión del plugin y `[guards]` en TOML
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App
+- [ ] T9 · Aprobaciones en la app
+- [ ] T10 · Proteger secretos, integración desactualizada y documentos
+- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+#### Bloque 4 · Cierre
+- [ ] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
+- [ ] T12 · 0.7.5, PRs y despliegue
