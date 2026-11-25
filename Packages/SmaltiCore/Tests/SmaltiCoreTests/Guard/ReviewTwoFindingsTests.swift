@@ -118,6 +118,7 @@ struct ReviewTwoFindingsTests {
 
         #expect(ContrastRatio.between(ground, card.title) >= 4.5, "title on \(id)")
         #expect(ContrastRatio.between(ground, card.body) >= 4.5, "body on \(id)")
-        #expect(ContrastRatio.between(commandGround, card.title) >= 4.5, "command on \(id)")
+        #expect(ContrastRatio.between(ground, card.emphasis) >= 4.5, "emphasis on \(id)")
+        #expect(ContrastRatio.between(commandGround, card.emphasis) >= 4.5, "command on \(id)")
     }
 }

@@ -240,6 +240,37 @@ final class ApprovalTests: SmaltiUITestCase {
         waitFor(out, toContain: "exit=0")
     }
 
+    // MARK: - Captures (on demand: TEST_RUNNER_SMALTI_CAPTURE=1)
+
+    private func capture(_ element: XCUIElement, as name: String) throws {
+        let captures = FileManager.default.temporaryDirectory.appending(path: "smalti-captures")
+        try FileManager.default.createDirectory(at: captures, withIntermediateDirectories: true)
+        try element.screenshot().pngRepresentation.write(to: captures.appending(path: name))
+    }
+
+    func testCaptureCardAndPalette() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["SMALTI_CAPTURE"] == "1", "captures run on demand")
+        launchSmalti()
+        let first = try guardCommand(bash("supabase db push"), name: "a")
+        expectCard(command: "supabase db push", environment: "PROD")
+        let second = try guardCommand(bash(Self.pocketOS), name: "b")
+        expect(card, value: "1 de 2")
+        usleep(300_000)
+
+        try capture(card, as: "f75-approval-card.png")
+        try capture(app.windows.firstMatch, as: "f75-approval-window.png")
+        openPalette()
+        app.typeText("aprobar")
+        usleep(300_000)
+        try capture(app.element("smalti.palette"), as: "f75-palette-approvals.png")
+        app.typeKey(.escape, modifierFlags: [])
+
+        app.typeKey(.escape, modifierFlags: [.command, .shift])
+        app.typeKey(.escape, modifierFlags: [.command, .shift])
+        waitFor(first, toContain: "exit=0")
+        waitFor(second, toContain: "exit=0")
+    }
+
     func testCardIsRedacted() throws {
         launchSmalti()
         let out = try guardCommand(bash(Self.replit))

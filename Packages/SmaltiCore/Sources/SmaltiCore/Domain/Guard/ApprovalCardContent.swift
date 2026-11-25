@@ -26,8 +26,11 @@ public struct ApprovalCardContent: Equatable, Sendable {
 
     public var counter: String { "1 de \(count)" }
 
-    public var footer: String {
+    /// «vence en 10 min», never below 1.
+    public var expiresText: String {
         let minutes = max(1, Int((approval.deadline.timeIntervalSince(now) / 60).rounded(.up)))
-        return "\(approveKeys) aprobar   \(rejectKeys) rechazar   vence en \(minutes) min"
+        return "vence en \(minutes) min"
     }
+
+    public var footer: String { "\(approveKeys) aprobar   \(rejectKeys) rechazar   \(expiresText)" }
 }

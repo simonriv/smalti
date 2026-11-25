@@ -20,6 +20,8 @@ public struct ApprovalCardTokens: Equatable, Sendable {
     public let dot: RGBAColor
     public let title: RGBAColor
     public let body: RGBAColor
+    /// «PROD» and the command: the brightest text, so the environment is what the eye reads first.
+    public let emphasis: RGBAColor
     public let commandBackground: RGBAColor
     public let shadowOpacity: Double
     public let shadowRadius: Double
@@ -32,8 +34,9 @@ public struct ApprovalCardTokens: Equatable, Sendable {
         background = preview.background
         border = theme.agent.waitingBorder
         dot = theme.agent.waiting
-        title = theme.statusBar.text
-        body = preview.caption
+        title = theme.text.title
+        body = theme.text.secondary
+        emphasis = theme.text.primary
         commandBackground = theme.kbd.background
         shadowOpacity = preview.shadowOpacity
         shadowRadius = preview.shadowRadius

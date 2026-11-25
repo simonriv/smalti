@@ -11,7 +11,13 @@ final class ApprovalCardView: NSView {
     private let subject = NSTextField(labelWithString: "")
     private let commandScroll = NSScrollView()
     private let command = NSTextView()
-    private let footer = NSTextField(labelWithString: "")
+    /// «⇧⌘↩ aprobar   ⇧⌘⎋ rechazar   vence en 10 min», the keys as the palette draws them.
+    private let footer = NSStackView()
+    private let approveKey: KbdView
+    private let rejectKey: KbdView
+    private let approveLabel = NSTextField(labelWithString: "aprobar")
+    private let rejectLabel = NSTextField(labelWithString: "rechazar")
+    private let expires = NSTextField(labelWithString: "")
     private let tokens: ApprovalCardTokens
     /// The theme it was styled with: a card shown after a theme change is built again.
     let theme: Theme
@@ -20,6 +26,8 @@ final class ApprovalCardView: NSView {
     init(theme: Theme) {
         self.theme = theme
         tokens = theme.approvalCard
+        approveKey = KbdView("", theme: theme)
+        rejectKey = KbdView("", theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = tokens.cornerRadius
@@ -52,10 +60,23 @@ final class ApprovalCardView: NSView {
         counter.font = theme.interfaceFont(size: tokens.footerFontSize, weight: 500)
         counter.textColor = tokens.body.nsColor
         counter.alignment = .right
-        footer.font = theme.interfaceFont(size: tokens.footerFontSize, weight: 500)
-        footer.textColor = tokens.body.nsColor
+        for label in [approveLabel, rejectLabel, expires] {
+            label.font = theme.interfaceFont(size: tokens.footerFontSize, weight: 500)
+            label.textColor = tokens.body.nsColor
+        }
+        footer.orientation = .horizontal
+        footer.alignment = .centerY
+        footer.spacing = tokens.gap / 2
+        footer.addArrangedSubview(approveKey)
+        footer.addArrangedSubview(approveLabel)
+        footer.setCustomSpacing(tokens.gap * 2, after: approveLabel)
+        footer.addArrangedSubview(rejectKey)
+        footer.addArrangedSubview(rejectLabel)
+        footer.setCustomSpacing(tokens.gap * 2, after: rejectLabel)
+        footer.addArrangedSubview(expires)
+        footer.setAccessibilityIdentifier("smalti.approvalFooter")
         subject.setAccessibilityIdentifier("smalti.approvalEnvironment")
-        [title, subject, footer].forEach { $0.lineBreakMode = .byTruncatingTail }
+        [title, subject].forEach { $0.lineBreakMode = .byTruncatingTail }
     }
 
     private func styleCommand() {
@@ -63,7 +84,7 @@ final class ApprovalCardView: NSView {
         command.isSelectable = true
         command.drawsBackground = false
         command.font = theme.monospacedFont(size: tokens.commandFontSize)
-        command.textColor = tokens.title.nsColor
+        command.textColor = tokens.emphasis.nsColor
         command.textContainerInset = NSSize(width: tokens.commandPadding, height: tokens.commandPadding / 2)
         command.isVerticallyResizable = true
         command.textContainer?.widthTracksTextView = true
@@ -80,8 +101,13 @@ final class ApprovalCardView: NSView {
         let isSameCommand = self.content.map(content.showsSameCommand(as:)) ?? false
         self.content = content
         counter.stringValue = content.counter
-        footer.stringValue = content.footer
+        approveKey.text = content.approveKeys
+        rejectKey.text = content.rejectKeys
+        expires.stringValue = content.expiresText
+        footer.setAccessibilityLabel(content.footer)
         setAccessibilityValue(content.counter)
+        // The counter's width changes ("1 de 2"): every refresh lays the card out again.
+        needsLayout = true
         // Review 2: the same command keeps its text view, so its scroll and selection survive every refresh.
         guard !isSameCommand else { return }
         let subjectOfCard = content.approval.subject
@@ -100,7 +126,7 @@ final class ApprovalCardView: NSView {
         ]
         var bold = regular
         bold[.font] = theme.interfaceFont(size: tokens.bodyFontSize, weight: 700)
-        bold[.foregroundColor] = tokens.title.nsColor
+        bold[.foregroundColor] = tokens.emphasis.nsColor
         let text = NSMutableAttributedString(
             string: "\(subject.headline?.rule ?? "comando") contra ", attributes: regular)
         text.append(NSAttributedString(string: subject.environment.label, attributes: bold))
@@ -126,7 +152,7 @@ final class ApprovalCardView: NSView {
 
     /// Padding, title, subject and footer with their gaps: what shows even when the command has no room.
     private var fixedRowsHeight: CGFloat {
-        let rows = [title, subject, footer].map { $0.intrinsicContentSize.height }.reduce(0, +)
+        let rows = title.intrinsicContentSize.height + subject.intrinsicContentSize.height + footer.fittingSize.height
         return tokens.padding * 2 + rows + tokens.gap * 2
     }
 
@@ -149,7 +175,7 @@ final class ApprovalCardView: NSView {
             x: titleX, y: top, width: inner.maxX - counterWidth - tokens.gap - titleX, height: titleHeight)
         top -= tokens.gap + subject.intrinsicContentSize.height
         subject.frame = NSRect(x: inner.minX, y: top, width: inner.width, height: subject.intrinsicContentSize.height)
-        let footerHeight = footer.intrinsicContentSize.height
+        let footerHeight = footer.fittingSize.height
         footer.frame = NSRect(x: inner.minX, y: inner.minY, width: inner.width, height: footerHeight)
         let commandBottom = inner.minY + footerHeight + tokens.gap
         commandScroll.frame = NSRect(
