@@ -358,7 +358,7 @@
 - [x] T8 · Telemetría en la app y emisor falso
 - [x] T9 · Exportar e importar layouts en la app
 - [x] T10 · Guardas y documentos
-- [ ] Revisión intermedia 2 + mutación incremental
+- [x] Revisión intermedia 2 (0 críticos, 2 importantes, 9 menores; corregidos, I1 como enmienda 7) + regresión de UI (64/65 → 13/13 tras la tanda; 2 pruebas viejas rotas desde F6 arregladas) + mutación incremental (100 %, 107 mutantes)
 #### Bloque 4 · Cierre
 - [ ] T11 · Mediciones, capturas, checklist y revisión final
 - [ ] T12 · 0.7.0, PRs y despliegue
