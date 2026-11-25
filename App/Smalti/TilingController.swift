@@ -33,6 +33,8 @@ struct TilingState {
     var isSecureInput = false
     /// F4.5: the link under the pointer while ⌘ is held.
     var hoveredLink: String?
+    /// F7.5: the commands waiting for approval in each pane of the active workspace.
+    var approvals: [PaneID: [PendingApproval]] = [:]
 }
 
 extension TilingState {
@@ -68,6 +70,16 @@ final class TilingController {
         /// F5.6/F6: each integration's last known state, shared by every window.
         let integrations: [IntegrationID: ClaudeIntegrationStatus]
         let isAppActive: () -> Bool
+        /// F7.5: the app's approvals; nil only before the composition root sets them.
+        var guards: GuardDependencies?
+    }
+
+    /// F7.5: the app's approval queue, what ⌘K lists from every window, and the hook that drops approvals of panes
+    /// that are gone.
+    struct GuardDependencies {
+        let approvals: AgentApprovals
+        let entries: () -> [ApprovalEntry]
+        let panesChanged: () -> Void
     }
 
     var onChange: ((TilingState) -> Void)?
@@ -168,6 +180,39 @@ final class TilingController {
         return true
     }
 
+    // MARK: - Approvals (F7.5)
+
+    /// ⌘⇧↩ / ⌘⇧⎋: the oldest command waiting in the focused pane.
+    private func decideOldest(approve: Bool) {
+        guard let approvals = deps.agents.guards?.approvals, let pane = set.active.focusedPane else { return }
+        let decided = approve ? approvals.approveOldest(in: pane) : approvals.rejectOldest(in: pane)
+        show(decided ? (approve ? .commandApproved : .commandRejected) : .noApprovalWaiting)
+    }
+
+    /// ⌘K: one waiting command, wherever it is.
+    private func decide(_ command: ApprovalCommand) {
+        guard let approvals = deps.agents.guards?.approvals else { return }
+        switch command {
+        case .approve(let id):
+            approvals.approve(id)
+            show(.commandApproved)
+        case .reject(let id):
+            approvals.reject(id)
+            show(.commandRejected)
+        }
+    }
+
+    /// An approval changed somewhere: the window that has the pane shows it.
+    func handleApproval(_ change: AgentApprovalChange) {
+        if case .blocked(let pane, let path) = change {
+            guard set.workspace(containing: pane) != nil else { return }
+            show(.secretBlocked(path))
+        } else {
+            HandleApprovalChange(notifier: deps.agents.notifier).execute(change, in: &set)
+        }
+        publish()
+    }
+
     func reportNobodyWaiting() {
         show(.nobodyWaiting)
     }
@@ -185,12 +230,14 @@ final class TilingController {
 
     /// What ⌘K lists besides the keymap: the workspaces, the saved layouts and the Claude integration's state.
     func catalogState() -> CatalogState {
-        CatalogState(
+        var state = CatalogState(
             workspaces: set, savedLayouts: savedLayouts(),
             integrations: deps.agents.integrations.mapValues(\.state),
             editedFiles: set.active.focusedPane.map {
                 deps.editor.editedFiles.recent(in: $0, workspace: set.active.panes.map(\.id))
             } ?? [])
+        state.pendingApprovals = deps.agents.guards?.entries() ?? []
+        return state
     }
 
     /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
@@ -333,6 +380,7 @@ final class TilingController {
             }
         }
         if let named = command.namedLayout { return { [unowned self] in perform(named) } }
+        if let approval = command.approval { return { [unowned self] in decide(approval) } }
         if let action = layoutActions[command] { return action }
         return workspaceGoAction(command)
     }
@@ -362,6 +410,8 @@ final class TilingController {
             .claudecodeNvimUninstall: { [unowned self] in
                 runIntegration(.claudecodeNvim, UninstallClaudeIntegration.self)
             },
+            .guardApprove: { [unowned self] in decideOldest(approve: true) },
+            .guardReject: { [unowned self] in decideOldest(approve: false) },
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
             .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
             .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
@@ -694,6 +744,7 @@ final class TilingController {
 
     private func publish() {
         editors.noteFocus(set.active.focusedPane)
+        deps.agents.guards?.panesChanged()
         onChange?(state)
         keepMinutesFresh()
     }
@@ -711,6 +762,9 @@ final class TilingController {
             isSecureInput: isSecureInput, hoveredLink: hoveredLink)
         if let promptHeader {
             for pane in set.active.panes { state.promptHeaders[pane.id] = promptHeader(pane.id) }
+        }
+        if let approvals = deps.agents.guards?.approvals {
+            for pane in set.active.panes { state.approvals[pane.id] = approvals.pending(in: pane.id) }
         }
         return state
     }

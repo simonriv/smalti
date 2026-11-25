@@ -36,6 +36,16 @@ struct StatusMessage: Equatable {
         StatusMessage(text: text, isTransient: true)
     }
 
+    // F7.5: agent guards.
+    static let commandApproved = StatusMessage(text: "Comando aprobado", isTransient: true)
+    static let commandRejected = StatusMessage(text: "Comando rechazado", isTransient: true)
+    static let noApprovalWaiting = StatusMessage(
+        text: "No hay comandos esperando en este panel (⌘J salta al agente que espera)", isTransient: true)
+
+    static func secretBlocked(_ path: String) -> StatusMessage {
+        StatusMessage(text: "Smalti bloqueó la lectura de \(path)", isTransient: true)
+    }
+
     static func sessionSaveFailed(_ reason: String) -> StatusMessage {
         StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
     }

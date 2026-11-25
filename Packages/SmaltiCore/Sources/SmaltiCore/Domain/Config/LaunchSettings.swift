@@ -31,6 +31,9 @@ public struct LaunchSettings: Equatable, Sendable {
     public static let managedSettingsKey = "SmaltiManagedSettings"
     public static let telemetryProbeKey = "SmaltiTelemetryProbe"
     public static let telemetryArgumentKeys = [managedSettingsKey, telemetryProbeKey]
+    /// F7.5 (tests): how long an approval waits, in seconds.
+    public static let approvalTimeoutKey = "SmaltiApprovalTimeoutSeconds"
+    public static let guardArgumentKeys = [approvalTimeoutKey]
     /// Every key the composition root reads, arguments and environment alike.
     public static let harnessArgumentKeys = [
         codexHomeKey, antigravityHomeKey, opencodeDatabaseKey, nvimConfigHomeKey, nvimCommandKey,
@@ -70,6 +73,8 @@ public struct LaunchSettings: Equatable, Sendable {
     /// F7: nil uses the machine's managed settings; tests point it at a temporary file.
     public let managedSettings: URL?
     public let telemetryProbe: URL?
+    /// F7.5: how long a guarded command waits for the user before it is denied.
+    public let approvalTimeout: Double
 
     public init(arguments: [String: String], home: URL, defaultStateDirectory: URL) {
         let value = { (key: String) in arguments[key].flatMap { $0.isEmpty ? nil : $0 } }
@@ -98,6 +103,9 @@ public struct LaunchSettings: Equatable, Sendable {
         editorSocketDirectory = value(Self.editorSocketDirectoryKey)
         managedSettings = value(Self.managedSettingsKey).map { URL(filePath: $0) }
         telemetryProbe = value(Self.telemetryProbeKey).map { URL(filePath: $0) }
+        approvalTimeout =
+            value(Self.approvalTimeoutKey).flatMap(Double.init).flatMap { $0 > 0 ? $0 : nil }
+            ?? AgentApprovals.standardTimeout
     }
 
     // A literal that always parses; the fallback only exists to keep the type non-optional.

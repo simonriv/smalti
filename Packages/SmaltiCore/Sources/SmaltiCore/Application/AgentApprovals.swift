@@ -21,6 +21,8 @@ public enum AgentApprovalChange: Equatable, Sendable {
     case waiting(PendingApproval)
     /// Decided, expired or dropped; `remaining` is how many still wait in the same pane.
     case settled(PendingApproval, approved: Bool, remaining: Int)
+    /// The CLI refused to let the pane's agent read a secret.
+    case blocked(pane: PaneID, path: String)
 }
 
 /// The approvals Smalti holds (spec F7.5): it decides each guarded call again with the user's `[guards]`, queues the
@@ -51,7 +53,7 @@ public final class AgentApprovals {
     public var nextDeadline: Date? { allPending.map(\.deadline).min() }
 
     public func receive(_ request: GuardRequest) {
-        if case .deny(let denial) = request.localVerdict { return request.reply(.deny(denial.reason)) }
+        if case .deny(let denial) = request.localVerdict { return blockedLocally(request, denial) }
         if request.isTruncated { return enqueue(request, ScreenToolUse.truncatedSubject(request.use.command)) }
         let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts)
         switch ScreenToolUse.verdict(for: request.use, context: context, home: home) {
@@ -59,6 +61,15 @@ public final class AgentApprovals {
         case .deny(let denial): request.reply(.deny(denial.reason))
         case .ask(let subject): enqueue(request, subject)
         }
+    }
+
+    private func blockedLocally(_ request: GuardRequest, _ denial: GuardDenial) {
+        request.reply(.deny(denial.reason))
+        let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts)
+        guard case .deny(let local) = ScreenToolUse.verdict(for: request.use, context: context, home: home),
+            case .secret(let path) = local.kind
+        else { return }
+        onChange?(.blocked(pane: request.pane, path: path))
     }
 
     private func enqueue(_ request: GuardRequest, _ subject: ApprovalSubject) {
@@ -104,6 +115,13 @@ public final class AgentApprovals {
         for approval in pending(in: pane) { settle(approval.id, with: .deny(GuardReasons.paneClosed), approved: false) }
     }
 
+    /// The panes every window still has: requests of any other pane are denied (closed pane or window).
+    public func retain(_ panes: Set<PaneID>) {
+        for approval in allPending where !panes.contains(approval.pane) {
+            settle(approval.id, with: .deny(GuardReasons.paneClosed), approved: false)
+        }
+    }
+
     /// The app is quitting: nobody will answer.
     public func stop() {
         for approval in allPending { settle(approval.id, with: .deny(GuardReasons.unreachable), approved: false) }
@@ -133,7 +151,7 @@ public struct HandleApprovalChange {
         case .waiting(let approval): wait(approval, in: &set)
         case .settled(let approval, _, let remaining) where remaining == 0:
             update(approval.pane, in: &set) { $0.approvalSettled(in: approval.pane) }
-        case .settled: break
+        case .settled, .blocked: break
         }
     }
 

@@ -97,8 +97,18 @@ final class PaneGridView: NSView {
                 PaneHeaderContent($0, index: state.set.paneIndex(of: pane), context: context)
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
+            container.showApproval(approvalContent(state, pane: pane, workspace: workspace.name))
             container.setAccessibilityLabel(workspace.index(of: pane).map { "Panel \($0)" })
         }
+    }
+
+    /// F7.5: the card of the pane's oldest waiting command, with the keys that decide it as the keymap binds them.
+    private func approvalContent(_ state: TilingState, pane: PaneID, workspace: String) -> ApprovalCardContent? {
+        guard let pending = state.approvals[pane], let first = pending.first else { return nil }
+        return ApprovalCardContent(
+            approval: first, position: 1, count: pending.count, workspace: workspace,
+            approveKeys: state.config.keys.chord(for: .guardApprove)?.display ?? "",
+            rejectKeys: state.config.keys.chord(for: .guardReject)?.display ?? "", now: .now)
     }
 
     /// A new pane appears at its place; only the panes that already existed move.

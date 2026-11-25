@@ -218,6 +218,36 @@ struct AgentApprovalsTests {
         #expect(approvals.pending(in: pane).first?.subject.findings.map(\.rule) == [ScreenToolUse.oversizedRule])
     }
 
+    /// T9: panes that no window has any more (closed pane, closed window) lose their requests.
+    @Test func retainDeniesRequestsOfGonePanes() {
+        let mine = ReplyLog()
+        let gone = ReplyLog()
+        let other = PaneID()
+        let approvals = approvals()
+        approvals.receive(request("terraform destroy", log: mine))
+        approvals.receive(request("terraform destroy", pane: other, log: gone))
+
+        approvals.retain([pane])
+
+        #expect(mine.all.isEmpty)
+        #expect(gone.all == [.deny(GuardReasons.paneClosed)])
+    }
+
+    /// T9: a secret read the CLI denied is reported, so the pane's window can say so.
+    @Test func localSecretDenialIsReported() {
+        let changes = ChangeLog()
+        let approvals = approvals(changes)
+        let denial = GuardDenial(kind: .secret(path: ""), reason: "r")
+        let use = ToolUse(tool: "Read", filePath: "/p/.env", cwd: "/p")
+        let request = GuardRequest(
+            id: UUID(), pane: pane, use: use, environmentHosts: [], localVerdict: .deny(denial), receivedAt: t0,
+            reply: { _ in })
+
+        approvals.receive(request)
+
+        #expect(changes.items == [.blocked(pane: pane, path: "/p/.env")])
+    }
+
     @Test func approveOnEmptyPaneReturnsFalse() {
         let approvals = approvals()
 
