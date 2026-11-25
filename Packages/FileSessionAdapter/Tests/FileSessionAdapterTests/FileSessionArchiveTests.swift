@@ -80,18 +80,60 @@ struct FileSessionArchiveTests {
         #expect(names.contains { $0.hasPrefix("session.corrupt-") && $0.hasSuffix(".json") })
     }
 
-    @Test func unknownVersionIsMovedAside() throws {
+    /// F7.6: a newer format is left where it is, byte for byte, and named by its version.
+    @Test func newerVersionIsLeftUntouched() throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try Data(#"{"version":99,"savedAt":"2026-11-22T00:00:00Z","workspaces":[],"activeIndex":0}"#.utf8)
-            .write(to: file("session.json"))
+        let newer = Data(#"{"version":99,"savedAt":"2026-11-22T00:00:00Z","workspaces":[],"activeIndex":0}"#.utf8)
+        try newer.write(to: file("session.json"))
 
         let last = FileSessionArchive(directory: directory).lastSession()
 
-        guard case .unreadable(let reason) = last else {
-            Issue.record("expected unreadable, got \(last)")
-            return
+        #expect(last == .newer(version: 99))
+        #expect(try Data(contentsOf: file("session.json")) == newer)
+        let names = try FileManager.default.contentsOfDirectory(atPath: directory.path(percentEncoded: false))
+        #expect(!names.contains { $0.hasPrefix("session.corrupt-") })
+    }
+
+    @Test func savingNeverOverwritesANewerVersion() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let newer = Data(#"{"version":99}"#.utf8)
+        try newer.write(to: file("session.json"))
+
+        #expect(throws: SessionArchiveError.newerFormat(file: "session.json", version: 99)) {
+            try FileSessionArchive(directory: directory).save(snapshot())
         }
-        #expect(reason.contains("99"))
+        #expect(try Data(contentsOf: file("session.json")) == newer)
+    }
+
+    @Test func savedLayoutCarriesItsFormatVersion() throws {
+        let archive = FileSessionArchive(directory: directory)
+        try archive.save(SessionArchiveContract.snapshot.workspaces[0], as: LayoutName("solen"))
+
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: file("layouts/solen.json")))
+        #expect((json as? [String: Any])?["version"] as? Int == 1)
+    }
+
+    @Test func layoutWithoutVersionStillOpens() throws {
+        let archive = FileSessionArchive(directory: directory)
+        let layout = SessionArchiveContract.snapshot.workspaces[0]
+        try archive.save(layout, as: LayoutName("solen"))
+        var json = try #require(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: file("layouts/solen.json"))) as? [String: Any])
+        json["version"] = nil
+        try JSONSerialization.data(withJSONObject: json).write(to: file("layouts/solen.json"))
+
+        #expect(try archive.layout(named: LayoutName("solen")) == layout)
+    }
+
+    @Test func newerLayoutIsReportedWithItsVersion() throws {
+        let archive = FileSessionArchive(directory: directory)
+        try archive.save(SessionArchiveContract.snapshot.workspaces[0], as: LayoutName("solen"))
+        try Data(#"{"version":2,"name":"x"}"#.utf8).write(to: file("layouts/solen.json"))
+
+        #expect(throws: SessionArchiveError.newerFormat(file: "solen.json", version: 2)) {
+            try archive.layout(named: LayoutName("solen"))
+        }
+        #expect(archive.names() == [try LayoutName("solen")])
     }
 
     @Test func interruptedWriteKeepsPreviousSnapshot() throws {

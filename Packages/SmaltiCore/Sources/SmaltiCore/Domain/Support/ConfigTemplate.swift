@@ -9,6 +9,9 @@ public enum ConfigTemplate {
             el valor por defecto.
             # Después de guardar: ⌘K → "Recargar configuración".
 
+            # Formato del archivo: no lo cambies.
+            version = 1
+
             [appearance]
             # accent = "\((appearance.accent ?? ThemeCatalog.theme(appearance.theme).accent).hexString)"
             # glass_opacity = \(number(appearance.glassOpacity))

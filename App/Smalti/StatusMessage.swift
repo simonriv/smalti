@@ -150,6 +150,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
     }
 
+    /// F7.6: the session on disk is from a newer Smalti; this one leaves it alone (shown once, at launch).
+    static func newerSession(_ version: Int) -> StatusMessage {
+        StatusMessage(text: SaveOutcome.keptNewer(version: version).message ?? "", isTransient: false)
+    }
+
     static func restoreFailures(first: String, count: Int) -> StatusMessage {
         let more = count > 1 ? " (y \(count - 1) más)" : ""
         return StatusMessage(text: "No se restauró todo: \(first)\(more)", isTransient: true)

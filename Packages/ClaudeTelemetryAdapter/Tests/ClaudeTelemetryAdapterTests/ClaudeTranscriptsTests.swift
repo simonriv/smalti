@@ -312,6 +312,22 @@ struct ClaudeTranscriptsTests {
         #expect(await transcripts.indexWrites == 2)
     }
 
+    /// F7.6 (review 1, M8): a newer Smalti's index is left as it is, and that is not counted as a write.
+    @Test func newerIndexIsNotCountedAsWritten() async throws {
+        let home = try TranscriptHome()
+        try FileManager.default.createDirectory(
+            at: home.indexFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"version":2}"#.utf8).write(to: home.indexFile)
+        let transcripts = home.transcripts()
+        try home.write([TranscriptHome.reply("m1")])
+        _ = try await transcripts.activity(since: since)
+
+        await transcripts.persistIndex()
+
+        #expect(await transcripts.indexWrites == 0)
+        #expect(await transcripts.indexWriteFailures == 0)
+    }
+
     @Test func healthTravelsWithTheActivity() async throws {
         let home = try TranscriptHome()
         try home.copySynthetic("malformed.jsonl")

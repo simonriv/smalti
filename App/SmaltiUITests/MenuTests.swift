@@ -68,6 +68,14 @@ final class MenuTests: SmaltiUITestCase {
             NSPredicate(format: "value MATCHES %@", "(?s).*[0-9]+[.][0-9]+[.][0-9]+ [(][0-9a-f]+.*")
         ).firstMatch
         XCTAssertTrue(version.waitForExistence(timeout: 5))
+        // F7.6: Fig's specs are MIT, and the credits link to the docs, to support Smalti and to the notices.
+        let credits = app.textViews.firstMatch
+        XCTAssertTrue(credits.waitForExistence(timeout: 5))
+        let text = credits.value as? String ?? ""
+        for expected in ["specs de Fig (MIT)", "Sparkle (MIT)", "Documentación", "Apoyar Smalti", "Avisos de terceros"]
+        {
+            XCTAssertTrue(text.contains(expected), "missing \(expected) in \(text)")
+        }
     }
 
     func testConfigOpenCreatesTheTemplateWhenMissing() throws {

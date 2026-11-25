@@ -3,11 +3,15 @@ import Foundation
 public enum SessionArchiveError: Error, Equatable, Sendable {
     case writeFailed(file: String, reason: String)
     case notFound(name: String)
+    /// F7.6: the file was written by a newer Smalti; it is left as it is.
+    case newerFormat(file: String, version: Int)
 
     public var summary: String {
         switch self {
         case .writeFailed(let file, let reason): "\(file): \(reason)"
         case .notFound(let name): "\(name): not found"
+        case .newerFormat(let file, let version):
+            "\(file): guardado por una versión más nueva de Smalti (formato \(version))"
         }
     }
 }
@@ -18,6 +22,8 @@ public enum LastSession: Equatable, Sendable {
     case saved(SessionSnapshot)
     /// There was one, but it could not be read; the archive already set it aside.
     case unreadable(reason: String)
+    /// F7.6: saved by a newer Smalti; neither restored nor overwritten.
+    case newer(version: Int)
 }
 
 /// Port: keeps the snapshot of the window between runs.

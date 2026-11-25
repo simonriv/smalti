@@ -9,7 +9,14 @@ struct ConfigTemplateTests {
         let values = text.split(separator: "\n").filter { $0.contains(" = ") }
 
         #expect(!values.isEmpty)
-        #expect(values.allSatisfy { $0.hasPrefix("# ") })
+        #expect(values.allSatisfy { $0.hasPrefix("# ") || $0 == "version = 1" })
+    }
+
+    /// F7.6: the only uncommented value, so an older Smalti knows the file is newer.
+    @Test func templateStartsTheFileWithItsVersion() {
+        let firstValue = text.split(separator: "\n").first { !$0.hasPrefix("#") && !$0.isEmpty }
+
+        #expect(firstValue == "version = 1")
     }
 
     @Test(arguments: [

@@ -82,8 +82,7 @@ public actor ClaudeTranscripts: AgentTranscripts {
     private func save(_ index: TranscriptIndex) {
         lastWrite = now()
         do {
-            try index.save(to: indexFile)
-            indexWrites += 1
+            if try index.save(to: indexFile) { indexWrites += 1 }
             hasUnsavedChanges = false
         } catch {
             indexWriteFailures += 1

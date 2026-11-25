@@ -42,6 +42,10 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
     // MARK: SessionArchive
 
     public func save(_ snapshot: SessionSnapshot) throws(SessionArchiveError) {
+        // F7.6: a newer Smalti's session is never overwritten, whatever the caller decided.
+        if case .newer(let version) = storedCompatibility(of: sessionFile, current: SessionSnapshot.formatVersion) {
+            throw .newerFormat(file: sessionFile.lastPathComponent, version: version)
+        }
         try write(encoded(snapshot, file: sessionFile), to: sessionFile)
     }
 
@@ -54,11 +58,10 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
             // Present but unreadable (permissions): reported, never mistaken for "no session".
             return .unreadable(reason: "session.json: \(error.localizedDescription)")
         }
-        // The version first: a newer format may not decode at all, and it is set aside naming its version.
-        if let version = try? decoder.decode(FormatVersion.self, from: data).version,
-            !Self.readableVersions.contains(version)
-        {
-            return setAside(reason: "unknown format version \(version)")
+        // The version first: a newer format may not decode at all, and it is left as it is (F7.6).
+        let stored = try? decoder.decode(FormatVersion.self, from: data).version
+        if case .newer(let version) = FormatCompatibility.of(stored: stored, current: SessionSnapshot.formatVersion) {
+            return .newer(version: version)
         }
         do {
             return .saved(try decoder.decode(SessionSnapshot.self, from: data))
@@ -68,10 +71,15 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
     }
 
     /// Format 1 (F2–F4, one window) still opens; it is written back as the current format.
-    private static let readableVersions = 1...SessionSnapshot.formatVersion
-
     private struct FormatVersion: Decodable {
-        let version: Int
+        let version: Int?
+    }
+
+    private func storedCompatibility(of file: URL, current: Int) -> FormatCompatibility {
+        guard let data = try? Data(contentsOf: file),
+            let stored = try? decoder.decode(FormatVersion.self, from: data)
+        else { return .current }
+        return FormatCompatibility.of(stored: stored.version, current: current)
     }
 
     private func setAside(reason: String) -> LastSession {
@@ -143,15 +151,25 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
 
     // MARK: NamedLayouts
 
+    /// F7.6: the layouts' own format; files without a version are format 1.
+    public static let layoutFormatVersion = 1
+
+    /// Saving under a name is the user's explicit choice, so it replaces whatever had that name.
     public func save(_ layout: WorkspaceSnapshot, as name: LayoutName) throws(SessionArchiveError) {
         let file = layoutFile(name)
-        try write(encoded(layout, file: file), to: file)
+        try write(encoded(VersionedLayout(version: Self.layoutFormatVersion, layout: layout), file: file), to: file)
     }
 
     public func layout(named name: LayoutName) throws(SessionArchiveError) -> WorkspaceSnapshot {
-        guard let data = try? Data(contentsOf: layoutFile(name)),
-            let layout = try? decoder.decode(WorkspaceSnapshot.self, from: data)
-        else { throw .notFound(name: name.rawValue) }
+        let file = layoutFile(name)
+        guard let data = try? Data(contentsOf: file) else { throw .notFound(name: name.rawValue) }
+        let stored = try? decoder.decode(FormatVersion.self, from: data).version
+        if case .newer(let version) = FormatCompatibility.of(stored: stored, current: Self.layoutFormatVersion) {
+            throw .newerFormat(file: file.lastPathComponent, version: version)
+        }
+        guard let layout = try? decoder.decode(WorkspaceSnapshot.self, from: data) else {
+            throw .notFound(name: name.rawValue)
+        }
         return layout
     }
 
@@ -205,5 +223,21 @@ public final class FileSessionArchive: SessionArchive, PaneTranscripts, NamedLay
         } catch {
             throw .writeFailed(file: file.lastPathComponent, reason: error.reason)
         }
+    }
+}
+
+/// A named layout on disk: the workspace's own keys plus `version`.
+private struct VersionedLayout: Encodable {
+    let version: Int
+    let layout: WorkspaceSnapshot
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        try layout.encode(to: encoder)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(version, forKey: .version)
     }
 }

@@ -7,6 +7,13 @@ struct TOMLSource {
     let file: String
 }
 
+/// F7.6: where a file written for a newer Smalti collects the dotted names of the keys this build does not know.
+final class IgnoredKeys {
+    private(set) var names: [String] = []
+
+    func append(_ name: String) { names.append(name) }
+}
+
 /// One TOML table read as configuration: typed accessors whose failures are `ConfigError`s that name the key and,
 /// through `TOMLKeyLocator`, its line. This is the frontier where `TOMLError` is translated.
 struct TOMLSection {
@@ -20,11 +27,26 @@ struct TOMLSection {
     let name: String
     private let table: TOMLTable
     private let source: TOMLSource
+    /// Set when reading a newer file: unknown keys are collected here instead of failing.
+    private let ignored: IgnoredKeys?
 
-    private init(name: String, table: TOMLTable, source: TOMLSource) {
+    private init(name: String, table: TOMLTable, source: TOMLSource, ignored: IgnoredKeys? = nil) {
         self.name = name
         self.table = table
         self.source = source
+        self.ignored = ignored
+    }
+
+    /// F7.6 (review 1): in a newer file, a value this build does not know (a command, a module, a choice) is skipped
+    /// and named, so the rest of the file still applies; in a current file it is the error `error` describes.
+    func skipUnknownValue(_ value: String, at key: String, else error: ConfigError) throws(ConfigError) {
+        guard let ignored else { throw error }
+        ignored.append("\(dotted(key)) = \(value)")
+    }
+
+    /// The same table, and every table read from it, collecting unknown keys into `ignored` instead of failing.
+    func collectingUnknownKeys(into ignored: IgnoredKeys) -> TOMLSection {
+        TOMLSection(name: name, table: table, source: source, ignored: ignored)
     }
 
     /// The top-level table, or a syntax error with the line the library reports.
@@ -47,6 +69,10 @@ struct TOMLSection {
 
     /// Fails on the first key, in file order, that is not in `allowed`.
     func rejectUnknownKeys(allowed: Set<String>) throws(ConfigError) {
+        if let ignored {
+            keysInFileOrder.filter { !allowed.contains($0) }.forEach { ignored.append(dotted($0)) }
+            return
+        }
         guard let unknown = keysInFileOrder.first(where: { !allowed.contains($0) }) else { return }
         throw error(at: unknown, isTable(unknown) ? "tabla desconocida" : "clave desconocida")
     }
@@ -57,7 +83,7 @@ struct TOMLSection {
             at: key, read: { (table) throws(TOMLError) in try table.table(forKey: key) },
             reason: { _ in Self.tableReason }
         )
-        .map { TOMLSection(name: name.isEmpty ? key : "\(name).\(key)", table: $0, source: source) }
+        .map { TOMLSection(name: dotted(key), table: $0, source: source, ignored: ignored) }
     }
 
     /// An integer or float at `key`, or `nil` when it is not written. `nan` and `inf` come back as written.
@@ -106,6 +132,8 @@ struct TOMLSection {
             throw self.error(at: key, reason(error))
         }
     }
+
+    private func dotted(_ key: String) -> String { name.isEmpty ? key : "\(name).\(key)" }
 
     private func line(of key: String) -> Int? {
         TOMLKeyLocator.line(of: key, inTable: name, text: source.text)

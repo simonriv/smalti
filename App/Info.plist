@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- F7.6: Sparkle's keys, merged with the generated Info.plist. The feed is empty in Debug (Smalti Dev never updates
+     itself); release and test builds set SMALTI_FEED_URL. The public EdDSA key is the one of the release pipeline. -->
+<plist version="1.0">
+<dict>
+	<key>SUFeedURL</key>
+	<string>$(SMALTI_FEED_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>$(SMALTI_ED_PUBLIC_KEY)</string>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+</dict>
+</plist>

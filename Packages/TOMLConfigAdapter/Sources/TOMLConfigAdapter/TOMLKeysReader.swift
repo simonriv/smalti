@@ -17,7 +17,11 @@ enum TOMLKeysReader {
             }
             try validate(chord, writtenAs: text, in: section)
             writtenChords[chord] = text
-            bindings.append((chord, try command(at: text, in: section)))
+            switch try binding(at: text, in: section) {
+            case .command(let command): bindings.append((chord, command))
+            case .unbound: bindings.append((chord, nil))
+            case .skipped: continue
+            }
         }
         return try apply(bindings, to: keymap, writtenAs: writtenChords, in: section)
     }
@@ -41,14 +45,23 @@ enum TOMLKeysReader {
         }
     }
 
-    private static func command(at key: String, in section: TOMLSection) throws(ConfigError) -> CommandID? {
+    private enum Binding {
+        case command(CommandID)
+        case unbound
+        /// A newer file names a command this build does not have (F7.6).
+        case skipped
+    }
+
+    private static func binding(at key: String, in section: TOMLSection) throws(ConfigError) -> Binding {
         let text = try section.text(key, reason: valueReason) ?? unbindKeyword
-        if text == unbindKeyword { return nil }
+        if text == unbindKeyword { return .unbound }
         let command = CommandID(rawValue: text)
         guard knownCommands.contains(command) else {
-            throw section.error(at: key, "comando desconocido; \(valueReason)")
+            try section.skipUnknownValue(
+                text, at: key, else: section.error(at: key, "comando desconocido; \(valueReason)"))
+            return .skipped
         }
-        return command
+        return .command(command)
     }
 
     /// `Keymap.overriding` reports the chord by its display (`⌥K`); this puts back the user's text and its line.

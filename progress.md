@@ -389,4 +389,32 @@
 - [x] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
-- [ ] T12 · 0.7.5, PRs y despliegue
+- [x] T12 · 0.7.5, PRs y despliegue (#41, #42; instalada el 2026-11-25, la 0.7.0 en `/Applications/Smalti.app.old`; web smalti-web #5)
+
+## F7.6 · Distribución y actualizaciones
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7.6-distribucion.md`): spike de Sparkle 2.10.1 con firma ad hoc (actualiza sin Gatekeeper, rechaza EdDSA ajena, falla si la app está trasladada), Homebrew 7 pone cuarentena en taps de terceros, PR limitados a colaboradores por API, deploy keys + workflow en destino en lugar del token; Simón aprobó de antemano spec, plan, recomendaciones, merges y despliegue
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7.6-distribucion.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [x] T1 · `FormatCompatibility`, sesión y layouts con versión
+- [x] T2 · `config.toml`, `theme.toml` e índice del Observatorio
+- [x] T3 · Puerto `AppUpdates`, comandos, enlaces y feedback
+#### Bloque 2 · Adaptadores
+- [x] T4 · `SparkleUpdatesAdapter`
+- [x] T5 · `LICENSE` y avisos de terceros
+- [x] Revisión intermedia 1 (0 críticos, 2 importantes, 8 menores; corregidos) + mutación incremental (99,1 %; 1 sobreviviente muerto y verificado a mano)
+#### Bloque 3 · App, repo y pipeline
+- [x] T6 · La app
+- [x] T7 · Documentos del repo
+- [x] T8 · Scripts de release y workflow
+- [x] T9 · Repos satélite
+- [x] T10 · Pruebas de instalación y actualización
+- [x] Revisión intermedia 2 (1 crítico, 6 importantes, 10 menores; corregidos) + regresión de UI (86/86) + mutación incremental (sin archivos de SmaltiCore nuevos desde la revisión 1)
+#### Bloque 4 · Cierre
+- [x] T11 · Verificación, capturas y checklist
+- [ ] T12 · Público, release y despliegue

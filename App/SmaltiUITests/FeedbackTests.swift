@@ -49,9 +49,10 @@ final class FeedbackTests: SmaltiUITestCase {
         waitForOpened(1)
         let url = try XCTUnwrap(URLComponents(string: opened().last ?? ""))
         XCTAssertEqual(url.path, "/simonriv/smalti/issues/new")
-        let body = url.queryItems?.first { $0.name == "body" }?.value ?? ""
-        XCTAssertTrue(body.contains("Smalti 0.5.6 ("), body)
-        XCTAssertEqual(url.queryItems?.first { $0.name == "labels" }?.value, "bug")
+        // F7.6: the public repo's issue form, with the build in its own field.
+        let build = url.queryItems?.first { $0.name == "build" }?.value ?? ""
+        XCTAssertNotNil(build.range(of: #"^Smalti [0-9]+\.[0-9]+\.[0-9]+ \("#, options: .regularExpression), build)
+        XCTAssertEqual(url.queryItems?.first { $0.name == "template" }?.value, "bug.yml")
         XCTAssertTrue(savedLogs().isEmpty)
     }
 
@@ -67,7 +68,7 @@ final class FeedbackTests: SmaltiUITestCase {
         XCTAssertEqual(savedLogs().count, 1)
         XCTAssertTrue(opened().contains { $0.hasPrefix(downloads.path(percentEncoded: false)) })
         let url = try XCTUnwrap(URLComponents(string: opened().last ?? ""))
-        XCTAssertEqual(url.queryItems?.first { $0.name == "labels" }?.value, "idea")
+        XCTAssertEqual(url.queryItems?.first { $0.name == "template" }?.value, "idea.yml")
     }
 
     func testEscapeCancels() {
@@ -89,6 +90,8 @@ final class FeedbackTests: SmaltiUITestCase {
         waitForOpened(1)
         let file = try XCTUnwrap(savedLogs().first)
         let text = try String(contentsOf: downloads.appending(path: file), encoding: .utf8)
-        XCTAssertTrue(text.hasPrefix("Smalti 0.5.6 ("), String(text.prefix(80)))
+        // F7.6: any version (it named 0.5.6 and broke with every release since).
+        XCTAssertNotNil(
+            text.range(of: #"^Smalti [0-9]+\.[0-9]+\.[0-9]+ \("#, options: .regularExpression), String(text.prefix(80)))
     }
 }

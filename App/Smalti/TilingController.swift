@@ -11,7 +11,8 @@ extension TilingController.Dependencies {
     func with(agents: TilingController.AgentDependencies) -> TilingController.Dependencies {
         TilingController.Dependencies(
             engine: engine, configStore: configStore, paneEnvironment: paneEnvironment, transcripts: transcripts,
-            namedLayouts: namedLayouts, harnesses: harnesses, captures: captures, editor: editor, agents: agents,
+            namedLayouts: namedLayouts, harnesses: harnesses, captures: captures, editor: editor, updates: updates,
+            agents: agents,
             home: home, shellOverride: shellOverride, applyAppearance: applyAppearance)
     }
 }
@@ -57,6 +58,8 @@ final class TilingController {
         let captures: HarnessCaptures
         /// F6: Neovim panes: the command they run, where their sockets go, and the edits shared by all windows.
         let editor: EditorSettings
+        /// F7.6: nil in a build that cannot update itself (Smalti Dev without a test feed).
+        let updates: (any AppUpdates)?
         let agents: AgentDependencies
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
@@ -105,7 +108,7 @@ final class TilingController {
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
         .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
-        .promptExport, .layoutImport,
+        .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport,
     ]
 
     private let deps: Dependencies
@@ -271,6 +274,7 @@ final class TilingController {
             } ?? [])
         state.pendingApprovals = deps.agents.guards?.entries() ?? []
         state.secretsProject = secretsProjectState()
+        state.updates = UpdatesAvailability(deps.updates)
         return state
     }
 
@@ -281,9 +285,7 @@ final class TilingController {
 
     /// The saved layouts as the palette lists them.
     func savedLayouts() -> [NamedLayoutSummary] {
-        deps.namedLayouts.names().compactMap { name in
-            (try? deps.namedLayouts.layout(named: name)).map { NamedLayoutSummary(name: name, layout: $0) }
-        }
+        ListNamedLayouts(layouts: deps.namedLayouts).execute()
     }
 
     private func perform(_ command: NamedLayoutCommand) {

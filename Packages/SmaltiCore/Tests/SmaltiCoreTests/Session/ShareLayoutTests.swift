@@ -108,7 +108,7 @@ struct ShareLayoutTests {
         bad.smaltiLayout = 7
         files.files[file] = bad
 
-        #expect(throws: LayoutShareError.file(.invalid(.unsupportedFormat(7)))) { try importer().preview(file) }
+        #expect(throws: LayoutShareError.file(.invalid(.newerFormat(7)))) { try importer().preview(file) }
     }
 
     @Test func previewPropagatesUnreadableFile() {
@@ -224,6 +224,16 @@ struct ShareLayoutTests {
     @Test func errorMessagesReachTheStatusBar() {
         #expect(LayoutShareError.file(.invalid(.paneCount(10))).message == "tiene 10 paneles; el máximo es 9")
         #expect(LayoutShareError.archive(.notFound(name: "x")).message.contains("x"))
+    }
+
+    /// F7.6: a layout saved by a newer Smalti says so instead of "not found".
+    @Test func newerLayoutMessageNamesFileAndVersion() {
+        #expect(
+            LayoutShareError.archive(.newerFormat(file: "solen.json", version: 2)).message
+                == "solen.json lo guardó una versión más nueva de Smalti (formato 2)")
+        #expect(
+            SessionArchiveError.newerFormat(file: "session.json", version: 3).summary
+                == "session.json: guardado por una versión más nueva de Smalti (formato 3)")
     }
 
     // MARK: Review 1
