@@ -436,6 +436,15 @@ final class AppComposition {
             asking.controller.start()
             beginSaving(keepingPreviousSession: true)
             return
+        case .restoreAndOpen(let selection, let plan, let directory):
+            if selection.checkedCount(in: snapshot) == 0 {
+                asking.controller.start()
+            } else {
+                restoreWindows(
+                    snapshot, plans: WindowRestorePlan.make(from: snapshot, mode: .full, selection: selection),
+                    into: asking)
+            }
+            asking.controller.openHarnessSession(plan, directory: directory)
         }
         beginSaving(keepingPreviousSession: false)
     }

@@ -1,8 +1,8 @@
 import AppKit
 import SmaltiCore
 
-/// "Retomar donde quedaste" (Reanudar.dc.html, left column; the session list on the right is F6). Draws what the
-/// controller says and reports keys and clicks; it decides nothing.
+/// "Retomar donde quedaste" (Reanudar.dc.html): the restore list on the left and, since F6, the session search as
+/// the right column. Draws what the controller says and reports keys and clicks; it decides nothing.
 final class RestoreView: NSView {
     struct State {
         let checked: Set<UUID>
@@ -21,8 +21,11 @@ final class RestoreView: NSView {
     private let layoutsOnly: ResumeButton
     private let startClean: ResumeButton
     private let always = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    /// F6: the right column.
+    let search: SessionSearchView
 
     init(theme: Theme, windows: [ResumeWindow], closedAt: String) {
+        search = SessionSearchView(theme: theme, column: true)
         self.theme = theme
         primary = ResumeButton(style: .primary, theme: theme, identifier: "restore.primary")
         layoutsOnly = ResumeButton(style: .secondary, theme: theme, identifier: "restore.layoutsOnly")
@@ -107,11 +110,20 @@ final class RestoreView: NSView {
         column.spacing = tokens.blockGap
         column.translatesAutoresizingMaskIntoConstraints = false
         addSubview(column)
+        search.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(search)
+        let left = NSLayoutGuide()
+        addLayoutGuide(left)
         let width = column.widthAnchor.constraint(equalToConstant: tokens.contentWidth - 2 * tokens.paddingHorizontal)
         width.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            column.centerXAnchor.constraint(equalTo: centerXAnchor), width,
-            column.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, constant: -2 * tokens.paddingHorizontal),
+            search.trailingAnchor.constraint(equalTo: trailingAnchor), search.topAnchor.constraint(equalTo: topAnchor),
+            search.bottomAnchor.constraint(equalTo: bottomAnchor),
+            search.widthAnchor.constraint(equalToConstant: theme.sessionSearch.width),
+            left.leadingAnchor.constraint(equalTo: leadingAnchor),
+            left.trailingAnchor.constraint(equalTo: search.leadingAnchor),
+            column.centerXAnchor.constraint(equalTo: left.centerXAnchor), width,
+            column.widthAnchor.constraint(lessThanOrEqualTo: left.widthAnchor, constant: -2 * tokens.paddingHorizontal),
             column.topAnchor.constraint(equalTo: topAnchor, constant: tokens.paddingVertical),
             column.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -tokens.paddingVertical),
             scroll.widthAnchor.constraint(equalTo: column.widthAnchor),

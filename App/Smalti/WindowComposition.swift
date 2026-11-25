@@ -237,7 +237,9 @@ final class WindowComposition {
             snapshot: snapshot,
             windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
             closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
-        let screen = RestoreController(listing, theme: controller.theme, preferences: preferences) {
+        let screen = RestoreController(
+            listing, theme: controller.theme, preferences: preferences, harnesses: services.harnesses
+        ) {
             [weak self] choice in self?.finishAsking(choice, snapshot: snapshot)
         }
         screen.view.frame = content.bounds
@@ -249,6 +251,7 @@ final class WindowComposition {
     }
 
     private func finishAsking(_ choice: RestoreChoice, snapshot: SessionSnapshot) {
+        restoreScreen?.stop()
         restoreScreen?.view.removeFromSuperview()
         restoreScreen = nil
         setTilingHidden(false)

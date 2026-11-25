@@ -70,13 +70,14 @@ final class SessionSearchView: NSView {
         return true
     }
 
-    func render(_ state: SessionSearchState, rows: [SessionSearchRow]) {
+    func render(_ state: SessionSearchState, rows: [SessionSearchRow], notice: String? = nil) {
         chips.setViews(
             SessionSearchState.chips.enumerated().map { index, chip in
                 chipView(chip.title, index: index, isSelected: index == state.chipIndex)
             }, in: .leading)
         notes.setViews(
-            (state.failureMessages + [state.emptyText].compactMap { $0 }).map { note($0) }, in: .leading)
+            ([notice].compactMap { $0 } + state.failureMessages + [state.emptyText].compactMap { $0 }).map { note($0) },
+            in: .leading)
         rowViews = [:]
         list.setViews(
             rows.map { row in

@@ -7,12 +7,16 @@ enum RestoreChoice: Equatable {
     case restore(RestoreSelection)
     case layoutsOnly
     case startClean
+    /// F6: restore what is checked, then open a session from the search column in a new pane.
+    case restoreAndOpen(RestoreSelection, OpenPlan, directory: String?)
 }
 
 /// Primary adapter for the resume screen: keeps the selection and the highlighted row, turns keys and clicks into a
 /// `RestoreChoice`, and toggles "Siempre restaurar" in the store. Every action has a key (↑↓, espacio, ↵, ⌘L, esc, ⌘,).
+/// F6: Tab moves between the list and the session search; in the search, esc gives the focus back and never discards
+/// the saved session, and ↩ restores what is checked and then opens the session (⌘↩ forks it).
 @MainActor
-final class RestoreController {
+final class RestoreController: NSObject, NSTextFieldDelegate {
     struct Content {
         let snapshot: SessionSnapshot
         /// F4.5: grouped by window ("Ventana 1 · 2 workspaces") when the session had two or more.
@@ -28,9 +32,11 @@ final class RestoreController {
     private var selection: RestoreSelection
     private var highlighted = 0
     private var rowIDs: [UUID] { content.windows.flatMap(\.workspaces).flatMap(\.rows).map(\.id) }
+    private let sessions: SessionSearchModel
+    private var notice: String?
 
     init(
-        _ content: Content, theme: Theme, preferences: any RestorePreferenceStore,
+        _ content: Content, theme: Theme, preferences: any RestorePreferenceStore, harnesses: HarnessRegistry,
         onChoice: @escaping (RestoreChoice) -> Void
     ) {
         self.content = content
@@ -38,10 +44,70 @@ final class RestoreController {
         self.onChoice = onChoice
         selection = .defaults(for: content.snapshot)
         view = RestoreView(theme: theme, windows: content.windows, closedAt: content.closedAt)
+        sessions = SessionSearchModel(registry: harnesses)
+        super.init()
         view.onKey = { [weak self] key in self?.handle(key) ?? false }
         view.onToggleRow = { [weak self] id in self?.toggle(id) }
         view.onAction = { [weak self] action in self?.perform(action) }
+        view.search.field.delegate = self
+        view.search.onChip = { [weak self] index in self?.sessions.selectChip(index) }
+        view.search.onClickRow = { [weak self] id in
+            self?.sessions.select(id: id)
+            self?.openSession(forking: false)
+        }
+        sessions.onChange = { [weak self] in self?.renderSessions() }
         render()
+        renderSessions()
+        sessions.refresh()
+    }
+
+    /// The screen is leaving: the search stops reading the harnesses.
+    func stop() { sessions.stop() }
+
+    // MARK: - Session search column (F6)
+
+    func controlTextDidChange(_ notification: Notification) {
+        notice = nil
+        sessions.setText(view.search.field.stringValue)
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+        let fieldIsEmpty = view.search.field.stringValue.isEmpty
+        switch selector {
+        case #selector(NSResponder.moveUp(_:)): sessions.moveSelection(by: -1)
+        case #selector(NSResponder.moveDown(_:)): sessions.moveSelection(by: 1)
+        case #selector(NSResponder.moveLeft(_:)) where fieldIsEmpty: sessions.moveChip(by: -1)
+        case #selector(NSResponder.moveRight(_:)) where fieldIsEmpty: sessions.moveChip(by: 1)
+        case #selector(NSResponder.insertNewline(_:)):
+            openSession(forking: NSApp.currentEvent?.modifierFlags.contains(.command) == true)
+        case #selector(NSResponder.cancelOperation(_:)), #selector(NSResponder.insertTab(_:)),
+            #selector(NSResponder.insertBacktab(_:)):
+            focusList()
+        default: return false
+        }
+        return true
+    }
+
+    private func focusSearch() {
+        view.window?.makeFirstResponder(view.search.field)
+    }
+
+    private func focusList() {
+        view.window?.makeFirstResponder(view)
+    }
+
+    private func openSession(forking: Bool) {
+        guard let plan = sessions.plan(forking: forking) else { return }
+        if case .cannotFork(let harness) = plan {
+            notice = OpenHarnessSession.cannotForkMessage(harness)
+            renderSessions()
+            return
+        }
+        onChoice(.restoreAndOpen(selection, plan, directory: sessions.selectedDirectory))
+    }
+
+    private func renderSessions() {
+        view.search.render(sessions.state, rows: sessions.rows(), notice: notice)
     }
 
     enum Action {
@@ -57,6 +123,7 @@ final class RestoreController {
         case .layoutsOnly: perform(.layoutsOnly)
         case .startClean: perform(.startClean)
         case .toggleAlways: perform(.toggleAlways)
+        case .switchColumn: focusSearch()
         }
         render()
         return true
@@ -98,10 +165,10 @@ final class RestoreController {
 
 /// Keys the resume screen understands.
 enum RestoreKey {
-    case up, down, toggle, restore, layoutsOnly, startClean, toggleAlways
+    case up, down, toggle, restore, layoutsOnly, startClean, toggleAlways, switchColumn
 
     private static let keyCodes: [UInt16: RestoreKey] = [
-        126: .up, 125: .down, 49: .toggle, 36: .restore, 76: .restore, 53: .startClean,
+        126: .up, 125: .down, 49: .toggle, 36: .restore, 76: .restore, 53: .startClean, 48: .switchColumn,
     ]
 
     /// Arrow and keypad keys carry these flags by themselves.
