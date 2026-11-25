@@ -72,6 +72,10 @@ public struct Keymap: Sendable, Equatable {
             (chord("n", .control, .command), .workspaceNew),
             (chord("j", .command), .agentJump),
             (chord("a", .shift, .command), .observatoryToggle),
+            (chord("o", .shift, .command), .harnessSearch),
+            (chord("e", .shift, .command), .editorOpenBeside),
+            (chord("l", .shift, .command), .editorOpenLastEdited),
+            (chord("f", .shift, .command), .observatoryFilter),
             (chord("p", .command), .observatoryPeriod),
         ]
         entries += basicEntries

@@ -29,6 +29,8 @@ public enum CommandCatalog {
         .themeOpen: "Abrir theme.toml", .themeNext: "Siguiente tema", .ansiReset: "Restablecer paleta ANSI",
         .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
         .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
+        .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
+        .editorOpenLastEdited: "Abrir en Neovim el último archivo editado", .observatoryFilter: "Filtrar el Observatorio",
     ]
 
     static let terminalIDs: [CommandID] = [
@@ -112,6 +114,9 @@ public enum CommandCatalog {
         if context.paneCount >= 1 {
             commands.append(context.command(.paneClose, "Cerrar panel", group: .panes))
             commands.append(context.command(.historySearch, "Buscar en el historial", group: .panes))
+            commands.append(context.command(.editorOpenBeside, "Abrir Neovim junto al agente", group: .panes))
+            commands.append(
+                context.command(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado", group: .panes))
         }
         commands += goToPaneCommands(context)
         if context.paneCount >= 2 {
@@ -147,6 +152,8 @@ public enum CommandCatalog {
         var commands = [
             context.command(.agentJump, "Saltar al agente que espera", group: .workspaces),
             context.command(.observatoryToggle, "Abrir observatorio", group: .workspaces),
+            context.command(.observatoryFilter, "Filtrar el Observatorio", group: .workspaces),
+            context.command(.harnessSearch, "Buscar sesiones de agentes", group: .workspaces),
             context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
             context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
         ]

@@ -65,6 +65,21 @@ struct OpenPaneTests {
         #expect(engine.openedSpecs.first?.workingDirectory == elsewhere)
     }
 
+    /// F6: a session from the search opens in its own directory, typing its resume command, with its binding.
+    @Test mutating func openInADirectoryWithACommandAndABinding() throws {
+        let usr = try WorkingDirectory(path: "/usr")
+        let binding = HarnessBinding(harness: .codex, sessionID: "0198", processStartedAt: .now, pid: nil)
+        let session = OpenPaneRequest(
+            shell: .loginShell, geometry: roomy, directory: usr, initialInput: "codex resume 0198\n",
+            binding: binding)
+
+        let id = try OpenPane(engine: engine, version: "1").execute(session, in: &set)
+
+        #expect(engine.openedSpecs.first?.workingDirectory == usr)
+        #expect(engine.openedSpecs.first?.initialInput == "codex resume 0198\n")
+        #expect(set.active.panes.first { $0.id == id }?.harnessBinding == binding)
+    }
+
     @Test mutating func openRefusesWhenMinimumWouldBreak() throws {
         let open = OpenPane(engine: engine, version: "1")
         _ = try open.execute(request(cramped), in: &set)

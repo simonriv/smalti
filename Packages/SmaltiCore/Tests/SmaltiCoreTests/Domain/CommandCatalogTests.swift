@@ -210,6 +210,31 @@ struct CommandCatalogTests {
         #expect(!commands(paneCount: 0).contains { $0.id == .historySearch })
     }
 
+    @Test func paletteListsTheF6Commands() {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 1))), keymap: .standard,
+            layouts: .standard)
+        let entry = { (id: CommandID) in commands.first { $0.id == id } }
+
+        #expect(entry(.harnessSearch)?.title == "Buscar sesiones de agentes")
+        #expect(entry(.harnessSearch)?.shortcut?.display == "⇧⌘O")
+        #expect(entry(.editorOpenBeside)?.title == "Abrir Neovim junto al agente")
+        #expect(entry(.editorOpenBeside)?.shortcut?.display == "⇧⌘E")
+        #expect(entry(.editorOpenLastEdited)?.title == "Abrir en Neovim el último archivo editado")
+        #expect(entry(.editorOpenLastEdited)?.shortcut?.display == "⇧⌘L")
+        #expect(entry(.observatoryFilter)?.title == "Filtrar el Observatorio")
+        #expect(entry(.observatoryFilter)?.shortcut?.display == "⇧⌘F")
+    }
+
+    @Test func editorCommandsNeedAPane() {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 0))), keymap: .standard,
+            layouts: .standard)
+
+        #expect(!commands.contains { $0.id == .editorOpenBeside || $0.id == .editorOpenLastEdited })
+        #expect(commands.contains { $0.id == .harnessSearch })
+    }
+
     @Test func paletteListsOpenObservatory() {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)

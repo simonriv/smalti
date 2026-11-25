@@ -280,7 +280,7 @@ final class TilingController {
 
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
-        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook,
+        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
@@ -366,6 +366,30 @@ final class TilingController {
             observe(pane)
         } catch {
             show(Self.message(for: error))
+        }
+    }
+
+    /// F6: a saved session opened from the search, in a new pane of the active workspace.
+    func openHarnessSession(_ plan: OpenPlan, directory: String?) {
+        switch plan {
+        case .open(let command, let path, let folderMissing, let binding):
+            let request = OpenPaneRequest(
+                shell: config.shell, geometry: geometry, home: deps.home,
+                directory: path.flatMap { try? WorkingDirectory(path: $0) } ?? deps.home,
+                initialInput: command + "\n", binding: binding)
+            do {
+                let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(
+                    request, in: &set)
+                observe(pane)
+                if folderMissing { show(.harnessSession(OpenHarnessSession.folderMissingMessage(directory ?? ""))) }
+            } catch {
+                show(Self.message(for: error))
+            }
+            publish()
+        case .cannotFork(let harness):
+            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness)))
+        case .unavailable:
+            break
         }
     }
 

@@ -24,6 +24,12 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let claudecodeNvimInstall = CommandID(rawValue: "claudecodeNvim.install")
     public static let claudecodeNvimUninstall = CommandID(rawValue: "claudecodeNvim.uninstall")
     public static let observatoryToggle = CommandID(rawValue: "observatory.toggle")
+    /// F6: the session search card, Neovim beside the agent and at the last edited file, the observatory's filter.
+    public static let harnessSearch = CommandID(rawValue: "harness.search")
+    public static let editorOpenBeside = CommandID(rawValue: "editor.openBeside")
+    public static let editorOpenLastEdited = CommandID(rawValue: "editor.openLastEdited")
+    /// Cycles the observatory's harness filter; like the period, it acts only while the observatory is open.
+    public static let observatoryFilter = CommandID(rawValue: "observatory.filter")
     /// Cycles the observatory's period; acts only while the observatory is open, the terminal gets the key otherwise.
     public static let observatoryPeriod = CommandID(rawValue: "observatory.period")
     /// F4: opens the ⌃R history palette for the focused pane (⌃R itself is zsh's key there, not Smalti's).
@@ -129,7 +135,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         [
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
-            observatoryPeriod, historySearch,
+            observatoryPeriod, historySearch, harnessSearch, editorOpenBeside, editorOpenLastEdited, observatoryFilter,
         ]
         + basics
         + appearance

@@ -76,6 +76,10 @@ private struct Rows {
         [
             entry(.agentJump, "Saltar al agente que espera"), entry(.observatoryToggle, "Abrir observatorio"),
             entry(.observatoryPeriod, "Cambiar el periodo del observatorio"),
+            entry(.observatoryFilter, "Filtrar el Observatorio"),
+            entry(.harnessSearch, "Buscar sesiones de agentes"),
+            entry(.editorOpenBeside, "Abrir Neovim junto al agente"),
+            entry(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado"),
             entry(.claudeIntegrationInstall, "Instalar integración con Claude Code"),
             entry(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code"),
         ]

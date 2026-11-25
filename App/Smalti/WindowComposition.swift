@@ -39,6 +39,8 @@ final class WindowComposition {
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
     private var help: HelpController?
+    /// F6: ⌘⇧O, the session search card.
+    private var sessions: SessionSearchController?
     /// F5 ⌘,: the Appearance aside, created on first use with the app's session.
     private var appearancePanel: AppearancePanelController?
     /// F5 ⇧⌘P: the prompt studio over the whole window.
@@ -147,7 +149,7 @@ final class WindowComposition {
     /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
     /// single place to go when the top one closes (block 4 review).
     enum Overlay {
-        case palette, help, search, feedback
+        case palette, help, search, feedback, sessions
     }
 
     func closeOverlays(keeping kept: Overlay? = nil) {
@@ -155,6 +157,7 @@ final class WindowComposition {
         if kept != .help { help?.close() }
         if kept != .search { search?.dismiss() }
         if kept != .feedback { feedback?.close() }
+        if kept != .sessions { sessions?.close() }
     }
 
     /// ⌘, (spec F5): opens or closes the Appearance aside of this window.
@@ -341,6 +344,16 @@ final class WindowComposition {
             if isOpen { services.completionMenu()?.close() }
         }
         self.help = help
+        let sessions = SessionSearchController(
+            window: window, harnesses: services.harnesses,
+            open: { [weak controller] plan, directory in controller?.openHarnessSession(plan, directory: directory) })
+        sessions.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+            if isOpen { services.completionMenu()?.close() }
+        }
+        self.sessions = sessions
         let search = SearchBarController(window: window, engine: services.engine)
         search.onClose = { [weak self] pane in self?.focusKeyboard(on: pane) }
         self.search = search
@@ -390,6 +403,9 @@ final class WindowComposition {
             case .paletteOpen:
                 closeOverlays(keeping: .palette)
                 palette.toggle(theme: theme)
+            case .harnessSearch:
+                closeOverlays(keeping: .sessions)
+                self.sessions?.toggle(theme: theme)
             default: break
             }
         }

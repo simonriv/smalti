@@ -82,8 +82,10 @@ struct MenuModelTests {
             ])
         #expect(
             menus[3].items.map(\.title) == [
-                "Paleta de comandos", "Observatorio", "", "Layout", "Igualar paneles", "", "Aumentar letra",
-                "Reducir letra", "Tamaño real", "", "Desplazamiento", "Abrir en Quick Look", "", "Pantalla completa",
+                "Paleta de comandos", "Observatorio", "Filtrar el Observatorio", "Buscar sesiones de agentes", "",
+                "Layout", "Igualar paneles", "", "Aumentar letra", "Reducir letra", "Tamaño real", "", "Desplazamiento",
+                "Abrir en Quick Look", "Abrir Neovim junto al agente", "Abrir en Neovim el último archivo editado", "",
+                "Pantalla completa",
             ])
         #expect(
             menus[5].items.map(\.title) == [

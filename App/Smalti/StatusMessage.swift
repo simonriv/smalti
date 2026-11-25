@@ -45,6 +45,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: line, isTransient: true)
     }
 
+    /// F6: what opening a saved session could not do as asked (folder gone, no fork).
+    static func harnessSession(_ text: String) -> StatusMessage {
+        StatusMessage(text: text, isTransient: true)
+    }
+
     /// The observatory could not read Claude's transcripts; it keeps showing what it read before.
     static func transcriptsUnreadable(_ message: String) -> StatusMessage {
         StatusMessage(text: message, isTransient: true)
