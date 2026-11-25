@@ -87,9 +87,9 @@ struct ShellLexer {
     }
 
     private mutating func separator(_ character: Character) {
-        // `>&` and `&>` are redirections, handled there; a lone `&` after a redirection operator never reaches here.
+        // `>&` and `&>` are redirections, handled there. The second character of `&&` or `||` ends an empty segment,
+        // which is dropped.
         endSegment(at: index)
-        if (character == "&" || character == "|") && next == character { index += 1 }
         segmentStart = index + 1
     }
 

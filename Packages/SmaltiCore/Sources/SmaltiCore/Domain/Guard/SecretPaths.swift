@@ -59,7 +59,8 @@ public struct SecretPaths: Sendable {
     /// its directory is a secret one (`~/.ssh/*`).
     public func mayMatchSecret(glob: String) -> Bool {
         let parts = glob.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-        guard let last = parts.last else { return false }
+        // Splitting never yields no parts; the glob itself is only a fallback for the type checker.
+        let last = parts.last ?? glob
         let directory = parts.dropLast().joined(separator: "/")
         if !directory.isEmpty && !GlobPattern.hasWildcard(directory) && isSecret(directory, cwd: nil) {
             return true

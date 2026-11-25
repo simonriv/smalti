@@ -129,7 +129,7 @@ enum HTTPRequestWords {
 
     private static func wget(_ arguments: [String]) -> Request? {
         guard let host = arguments.lazy.compactMap(hostOfURL).first else { return nil }
-        if let method = explicitMethod(arguments, short: nil, long: "--method") {
+        if let method = explicitMethod(arguments, long: "--method") {
             return Request(method: method, host: host)
         }
         let posts = arguments.contains {
@@ -149,15 +149,11 @@ enum HTTPRequestWords {
         return Request(method: method ?? (hasData ? "POST" : "GET"), host: host)
     }
 
-    /// `-X DELETE`, `-XDELETE`, `--request DELETE`, `--request=DELETE`.
-    private static func explicitMethod(_ arguments: [String], short: String?, long: String) -> String? {
+    /// `--method DELETE` or `--method=DELETE`.
+    private static func explicitMethod(_ arguments: [String], long: String) -> String? {
         for (index, word) in arguments.enumerated() {
-            let next = index + 1 < arguments.count ? arguments[index + 1] : nil
-            if word == long || word == short { return next?.uppercased() }
+            if word == long { return index + 1 < arguments.count ? arguments[index + 1].uppercased() : nil }
             if word.hasPrefix(long + "=") { return String(word.dropFirst(long.count + 1)).uppercased() }
-            if let short, word.hasPrefix(short), word.count > short.count {
-                return String(word.dropFirst(short.count)).uppercased()
-            }
         }
         return nil
     }
