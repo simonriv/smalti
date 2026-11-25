@@ -30,11 +30,20 @@ struct CaptureWindowTests {
         #expect(!window.admits(session("taken", created: 1)))
     }
 
-    @Test func newestAdmittedWins() {
+    @Test func oldestAdmittedWins() {
         let window = CaptureWindow(directory: "/tmp/w", processStartedAt: start, excludedIDs: [])
 
         let chosen = window.choose([session("old", created: -60), session("a", created: 1), session("b", created: 5)])
 
-        #expect(chosen == "b")
+        #expect(chosen == "a")
+    }
+
+    @Test func sessionCreatedAfterALaterStartBelongsToThatPane() {
+        let window = CaptureWindow(
+            directory: "/tmp/w", processStartedAt: start, excludedIDs: [], laterStarts: [start.addingTimeInterval(10)])
+
+        #expect(window.admits(session(created: 5)))
+        #expect(!window.admits(session(created: 9)))
+        #expect(!window.admits(session(created: 20)))
     }
 }

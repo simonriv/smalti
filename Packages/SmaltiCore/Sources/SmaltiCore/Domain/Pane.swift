@@ -13,6 +13,9 @@ public struct Pane: Equatable, Sendable {
     public private(set) var commandCount = 0
     /// The coding agent running in this pane, if any.
     public private(set) var agent: AgentSession?
+    /// F6: the harness that ran here last and its session, when known. Kept after it returns to the shell, like an
+    /// agent, so the pane relaunches it.
+    public private(set) var harnessBinding: HarnessBinding?
 
     public init(id: PaneID, workingDirectory: WorkingDirectory) {
         self.id = id
@@ -62,6 +65,12 @@ public struct Pane: Equatable, Sendable {
         return AgentSession(
             harness: fresh.harness, sessionID: fresh.sessionID, title: title, state: fresh.state,
             startedAt: previous.startedAt)
+    }
+
+    public func binding(_ binding: HarnessBinding) -> Pane {
+        var updated = self
+        updated.harnessBinding = binding
+        return updated
     }
 
     public func attaching(_ session: AgentSession?) -> Pane {
