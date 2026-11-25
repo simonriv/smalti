@@ -99,14 +99,15 @@ struct FileSessionArchiveV2Tests {
         #expect(archive.lastSession() == .saved(snapshot))
     }
 
-    @Test func v3IsUnreadableAndSetAside() throws {
+    /// F7.6: format 3 belongs to a newer Smalti, so it stays where it is (it used to be set aside).
+    @Test func v3IsKeptAsNewer() throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Data(#"{"version":3,"savedAt":"2026-11-22T00:00:00Z","windows":[],"frontIndex":0}"#.utf8)
             .write(to: file("session.json"))
 
         let last = FileSessionArchive(directory: directory).lastSession()
 
-        #expect(last == .unreadable(reason: "unknown format version 3"))
-        #expect(!FileManager.default.fileExists(atPath: file("session.json").path(percentEncoded: false)))
+        #expect(last == .newer(version: 3))
+        #expect(FileManager.default.fileExists(atPath: file("session.json").path(percentEncoded: false)))
     }
 }

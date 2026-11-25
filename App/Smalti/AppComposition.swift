@@ -244,6 +244,9 @@ final class AppComposition {
         case .startFreshAfterUnreadable(let reason):
             controller.start()
             controller.report(.unreadableSession(reason))
+        case .startFreshKeepingNewer(let version):
+            controller.start()
+            controller.report(.newerSession(version))
         case .restoreAll(let snapshot):
             let plans = WindowRestorePlan.make(from: snapshot, mode: .full, selection: .defaults(for: snapshot))
             restoreWindows(snapshot, plans: plans, into: composition)

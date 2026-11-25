@@ -8,6 +8,8 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
     public var transcripts: [PaneID: Scrollback] = [:]
     public var writeFailure: SessionArchiveError?
     public var unreadableReason: String?
+    /// F7.6: pretends the stored session was written by a newer Smalti.
+    public var newerVersion: Int?
     /// Panes whose scrollback was asked for.
     public private(set) var scrollbackLookups: [PaneID] = []
     private var preference = RestorePreference.ask
@@ -20,6 +22,7 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
     }
 
     public func lastSession() -> LastSession {
+        if let newerVersion { return .newer(version: newerVersion) }
         if let unreadableReason { return .unreadable(reason: unreadableReason) }
         return saved.map(LastSession.saved) ?? .none
     }

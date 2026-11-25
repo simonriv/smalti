@@ -226,6 +226,16 @@ struct ShareLayoutTests {
         #expect(LayoutShareError.archive(.notFound(name: "x")).message.contains("x"))
     }
 
+    /// F7.6: a layout saved by a newer Smalti says so instead of "not found".
+    @Test func newerLayoutMessageNamesFileAndVersion() {
+        #expect(
+            LayoutShareError.archive(.newerFormat(file: "solen.json", version: 2)).message
+                == "solen.json lo guardó una versión más nueva de Smalti (formato 2)")
+        #expect(
+            SessionArchiveError.newerFormat(file: "session.json", version: 3).summary
+                == "session.json: guardado por una versión más nueva de Smalti (formato 3)")
+    }
+
     // MARK: Review 1
 
     @Test func previewMatchesWhatRestoreRuns() throws {

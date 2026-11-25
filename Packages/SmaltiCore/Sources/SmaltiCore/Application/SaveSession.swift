@@ -3,6 +3,17 @@ import Foundation
 public enum SaveOutcome: Equatable, Sendable {
     case saved
     case failed(String)
+    /// F7.6: the stored session is from a newer Smalti, so nothing was written.
+    case keptNewer(version: Int)
+
+    public var message: String? {
+        switch self {
+        case .saved: nil
+        case .failed(let reason): reason
+        case .keptNewer(let version):
+            "La sesión la guardó una versión más nueva de Smalti (formato \(version)): esta no la abre ni la sobrescribe"
+        }
+    }
 }
 
 /// Saves the window so it can be reopened: the structure often and cheaply, the scrollback on quit and every few
@@ -27,13 +38,15 @@ public struct SaveSession {
     public func saveStructure(of windows: WindowSet, at date: Date, editors: [PaneID: EditorPosition] = [:])
         -> SaveOutcome
     {
-        save(SessionSnapshot.capture(windows, scrollbackLines: previousLineCounts(), editors: editors, at: date))
+        if let newer = newerStoredVersion() { return .keptNewer(version: newer) }
+        return save(SessionSnapshot.capture(windows, scrollbackLines: previousLineCounts(), editors: editors, at: date))
     }
 
     /// Also exports the scrollback of every pane that is at its shell, in every window.
     public func saveWithScrollback(of windows: WindowSet, at date: Date, editors: [PaneID: EditorPosition] = [:])
         -> SaveOutcome
     {
+        if let newer = newerStoredVersion() { return .keptNewer(version: newer) }
         let panes = windows.allPanes
         var lineCounts: [PaneID: Int] = [:]
         for pane in panes where pane.isAtShell {
@@ -54,6 +67,11 @@ public struct SaveSession {
         } catch {
             return nil
         }
+    }
+
+    private func newerStoredVersion() -> Int? {
+        guard case .newer(let version) = archive.lastSession() else { return nil }
+        return version
     }
 
     private func previousLineCounts() -> [PaneID: Int] {
@@ -78,6 +96,8 @@ public enum StartupChoice: Equatable, Sendable {
     case ask(SessionSnapshot)
     case restoreAll(SessionSnapshot)
     case startFreshAfterUnreadable(reason: String)
+    /// F7.6: the last session is from a newer Smalti and stays on disk untouched.
+    case startFreshKeepingNewer(version: Int)
 }
 
 @MainActor
@@ -94,6 +114,7 @@ public struct LoadLastSession {
         switch archive.lastSession() {
         case .none: .startFresh
         case .unreadable(let reason): .startFreshAfterUnreadable(reason: reason)
+        case .newer(let version): .startFreshKeepingNewer(version: version)
         case .saved(let snapshot): preferences.current() == .always ? .restoreAll(snapshot) : .ask(snapshot)
         }
     }
