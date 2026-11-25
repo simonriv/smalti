@@ -26,6 +26,15 @@ public struct ObservatoryReport: Equatable, Sendable {
         /// False while the index still reads files older than the period's start ("leyendo transcripts…").
         public let isComplete: Bool
 
+        /// F6: the same figures with other harnesses' sessions added (their tokens; they are never live).
+        func adding(_ others: [UsageRow]) -> Summary {
+            guard !others.isEmpty else { return self }
+            return Summary(
+                active: active, working: working, waiting: waiting, failed: failed,
+                input: input + others.reduce(0) { $0 + $1.input }, cacheShare: cacheShare,
+                output: output + others.reduce(0) { $0 + $1.output }, peak: peak, cost: cost, isComplete: isComplete)
+        }
+
         public init(
             active: Int, working: Int, waiting: Int, failed: Int, input: Int, cacheShare: Int?, output: Int,
             peak: OutputPeak?, cost: CostEstimate, isComplete: Bool
@@ -80,24 +89,51 @@ public struct ObservatoryReport: Equatable, Sendable {
         public let period: ObservatoryPeriod
         public let selection: String?
         public let calendar: Calendar
+        /// F6: which harnesses the table and the summary count.
+        public let filter: ObservatoryFilter
 
-        public init(period: ObservatoryPeriod, selection: String?, calendar: Calendar) {
+        public init(
+            period: ObservatoryPeriod, selection: String?, calendar: Calendar, filter: ObservatoryFilter = .all
+        ) {
             self.period = period
             self.selection = selection
             self.calendar = calendar
+            self.filter = filter
         }
     }
 
     public static func make(_ snapshot: ObservatorySnapshot, for request: Request) -> ObservatoryReport {
         let start = request.period.start(now: snapshot.now, calendar: request.calendar)
         let window = PeriodWindow(start: start, end: snapshot.now)
-        let sessions = ordered(ObservedSession.merge(snapshot), in: window)
-        let rows = sessions.map { row(for: $0, in: window, snapshot: snapshot) }
-        let selected = sessions.first { $0.id == request.selection } ?? sessions.first
+        let sessions = request.filter.includesClaude ? ordered(ObservedSession.merge(snapshot), in: window) : []
+        let others = snapshot.usage.filter { $0.updatedAt >= start && request.filter.includes($0) }
+            .sorted { newerFirst($0.updatedAt, $1.updatedAt, $0.sessionID, $1.sessionID) }
+        let rows = sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
+        let selected = sessions.first { $0.id == request.selection } ?? (request.selection == nil ? sessions.first : nil)
+        let otherDetail = others.first { $0.sessionID == request.selection }.map { detail(for: $0, snapshot) }
         return ObservatoryReport(
-            summary: summary(sessions, in: window, snapshot: snapshot),
+            summary: summary(sessions, in: window, snapshot: snapshot).adding(others),
             rows: rows,
-            detail: selected.map { detail(for: $0, snapshot: snapshot) })
+            detail: selected.map { detail(for: $0, snapshot: snapshot) } ?? otherDetail
+                ?? (sessions.isEmpty ? others.first.map { detail(for: $0, snapshot) } : nil))
+    }
+
+    /// F6: an OpenCode session, from its database's totals; no live state is known for it.
+    private static func row(for usage: UsageRow, _ snapshot: ObservatorySnapshot) -> Row {
+        let model = usage.model.map { "\(usage.harness.displayName) · \($0)\(usage.isLocal ? " local" : "")" }
+        return Row(
+            id: usage.sessionID, state: .stopped, label: ObservedSession.label(cwd: usage.directory, home: snapshot.home),
+            agentModel: model ?? usage.harness.displayName,
+            lifetime: ObservatoryFormat.agoCompact(snapshot.now.timeIntervalSince(usage.updatedAt)),
+            input: ObservatoryFormat.count(usage.input), output: ObservatoryFormat.count(usage.output),
+            context: .unavailable, errorRate: 0, isErrorRateHigh: false, pid: "—", pane: nil)
+    }
+
+    private static func detail(for usage: UsageRow, _ snapshot: ObservatorySnapshot) -> Detail {
+        Detail(
+            sessionID: usage.sessionID,
+            title: "Actividad · \(ObservedSession.label(cwd: usage.directory, home: snapshot.home))", tools: [],
+            outputPerMinute: Array(repeating: 0, count: chartMinutes), peak: nil, compaction: "Sin compactaciones")
     }
 
     private static func ordered(_ sessions: [ObservedSession], in window: PeriodWindow) -> [ObservedSession] {

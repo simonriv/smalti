@@ -11,12 +11,32 @@ struct ObserveAgentsTests {
 
     private func make(
         transcripts: FakeAgentTranscripts = FakeAgentTranscripts(), live: FakeLiveAgents = FakeLiveAgents(),
-        system: FakeSystemMetrics = FakeSystemMetrics()
+        system: FakeSystemMetrics = FakeSystemMetrics(), usage: [any HarnessUsage] = []
     ) -> ObserveAgents {
         ObserveAgents(
             ObservatorySources(
                 transcripts: transcripts, live: live, localModels: FakeLocalModels(), system: system,
-                catalog: .standard, home: F.home))
+                catalog: .standard, home: F.home, usage: usage))
+    }
+
+    struct FixedUsage: HarnessUsage {
+        let rows: [UsageRow]
+        var failure: HarnessError?
+        func sessions(since: Date) async throws(HarnessError) -> [UsageRow] {
+            if let failure { throw failure }
+            return rows.filter { $0.updatedAt >= since }
+        }
+    }
+
+    @Test func snapshotCarriesOtherHarnessUsage() async {
+        let row = UsageRow(
+            harness: .opencode, sessionID: "oc", directory: "/w", model: "qwen3:4b", isLocal: true, input: 3,
+            output: 1, startedAt: now, updatedAt: now)
+        let broken = FixedUsage(rows: [], failure: .storeMissing(harness: .opencode, path: "/x"))
+
+        let snapshot = await make(usage: [FixedUsage(rows: [row]), broken]).snapshot(panes: [], now: now)
+
+        #expect(snapshot.usage == [row])
     }
 
     @Test func snapshotAsksForThirtyDays() async {

@@ -47,7 +47,7 @@ struct CommandCoverageGuardTests {
     }
 
     /// Commands of a phase in progress whose app action lands in a later task; empty between phases.
-    static let pendingInApp: Set<CommandID> = [.observatoryFilter]
+    static let pendingInApp: Set<CommandID> = []
 
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue

@@ -388,6 +388,7 @@ final class WindowComposition {
             case .workspaceRename: palette.beginRename(theme: theme)
             case .observatoryToggle: screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
+            case .observatoryFilter: screen?.cycleFilter()
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
             case .previewQuickLook:

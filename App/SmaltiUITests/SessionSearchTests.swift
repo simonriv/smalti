@@ -125,10 +125,12 @@ extension XCUIApplication {
             + "time_updated integer, time_archived integer, tokens_input integer, tokens_output integer, "
             + "tokens_cache_read integer); create table session_message (id text, session_id text, type text, "
             + "seq integer, data text); insert into session_v2 values ('fxoc1', null, '/tmp/smalti-fx-gone', "
-            + "'Spec del hito 3', \(now) * 1000 - 300000, \(now) * 1000 - 300000, null, 10, 5, 0);"
+            + "'Spec del hito 3', \(now) * 1000 - 300000, \(now) * 1000 - 300000, null, 10, 5, 0); "
+            + "insert into session_message values ('m1', 'fxoc1', 'assistant', 1, "
+            + "'{\"model\":{\"id\":\"qwen3:4b\",\"providerID\":\"ollama\"}}');"
         return "mkdir -p '\(codex)' '\(antigravity)' \"$(dirname '\(opencode)')\" && "
             + "sqlite3 '\(codex)/state_5.sqlite' \"\(codexSQL)\" && "
             + "sqlite3 '\(antigravity)/conversation_summaries.db' \"\(agySQL.replacingOccurrences(of: "\"", with: "\\\""))\" && "
-            + "sqlite3 '\(opencode)' \"\(ocSQL)\""
+            + "sqlite3 '\(opencode)' \"\(ocSQL.replacingOccurrences(of: "\"", with: "\\\""))\""
     }
 }

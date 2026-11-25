@@ -295,7 +295,7 @@ final class TilingController {
 
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
-        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch,
+        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch, .observatoryFilter,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {

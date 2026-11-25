@@ -720,7 +720,12 @@ final class AppComposition {
             live: ClaudeSessionRegistry(claudeHome: settings.claudeHome),
             localModels: OllamaLocalModels(baseURL: settings.ollamaURL), system: DarwinSystemMetrics(),
             catalog: startup.initial.config.observatory.catalog,
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            usage: [
+                OpenCodeUsage(
+                    database: settings.opencodeDatabase
+                        ?? OpenCodeHarness.defaultDatabase(dataHome: settings.opencodeDataHome))
+            ])
         let refresher = ObservatoryRefresher(
             observe: ObserveAgents(sources),
             callbacks: .init(
