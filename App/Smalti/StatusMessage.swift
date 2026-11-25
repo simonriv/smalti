@@ -39,6 +39,8 @@ struct StatusMessage: Equatable {
     // F7.5: agent guards.
     static let commandApproved = StatusMessage(text: "Comando aprobado", isTransient: true)
     static let commandRejected = StatusMessage(text: "Comando rechazado", isTransient: true)
+    /// Review 2: chosen in ⌘K after it expired or was decided elsewhere.
+    static let approvalGone = StatusMessage(text: "Ese comando ya no espera aprobación", isTransient: true)
     static let noApprovalWaiting = StatusMessage(
         text: "No hay comandos esperando en este panel (⌘J salta al agente que espera)", isTransient: true)
 

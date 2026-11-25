@@ -102,6 +102,16 @@ final class AppComposition {
             theme: ThemeCatalog.apply(initial.config.appearance).theme)
     }
 
+    /// F7.5 review 2: the guard's test flags exist only in Debug, so a persisted default never redirects the daily
+    /// build's ⌘K rules or shortens its approvals.
+    private static var debugGuardArgumentKeys: [String] {
+        #if DEBUG
+            LaunchSettings.guardArgumentKeys
+        #else
+            []
+        #endif
+    }
+
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     /// Claude Code's `CLAUDE_CONFIG_DIR` rides along in the same map (LaunchSettings keeps three parameters).
     private static func launchArguments() -> [String: String] {
@@ -110,7 +120,7 @@ final class AppComposition {
                 LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
                 LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
             ] + LaunchSettings.harnessArgumentKeys + LaunchSettings.telemetryArgumentKeys
-            + LaunchSettings.guardArgumentKeys
+            + debugGuardArgumentKeys
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
         let environment = ProcessInfo.processInfo.environment
         for key in [LaunchSettings.claudeConfigDirKey] + LaunchSettings.harnessEnvironmentKeys {
@@ -987,10 +997,16 @@ final class AppComposition {
         approvalTimer?.invalidate()
         approvalTimer = nil
         guard let deadline = approvals?.nextDeadline else { return }
-        approvalTimer = Timer.scheduledTimer(withTimeInterval: max(0, deadline.timeIntervalSinceNow), repeats: false) {
-            [weak self] _ in
-            Task { @MainActor in self?.approvals?.expire(now: Date()) }
+        // Review 2: in the common modes (an open menu or a live resize does not hold it), and rescheduled after every
+        // firing, even when the clock went back and nothing expired.
+        let timer = Timer(timeInterval: max(0, deadline.timeIntervalSinceNow), repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.approvals?.expire(now: Date())
+                self?.scheduleApprovalExpiry()
+            }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        approvalTimer = timer
     }
 
     /// The waiting commands of every window, oldest first, with their workspace's name.

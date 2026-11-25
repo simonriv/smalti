@@ -84,31 +84,35 @@ public final class AgentApprovals {
     @discardableResult
     public func approveOldest(in pane: PaneID) -> Bool {
         guard let oldest = pending(in: pane).first else { return false }
-        approve(oldest.id)
-        return true
+        return approve(oldest.id)
     }
 
     @discardableResult
     public func rejectOldest(in pane: PaneID) -> Bool {
         guard let oldest = pending(in: pane).first else { return false }
-        reject(oldest.id)
-        return true
+        return reject(oldest.id)
     }
 
-    public func approve(_ id: UUID) {
+    /// False when it no longer waits (decided, expired or dropped meanwhile).
+    @discardableResult
+    public func approve(_ id: UUID) -> Bool {
         settle(id, with: .allow, approved: true)
     }
 
-    public func reject(_ id: UUID) {
-        guard let subject = queue.first(where: { $0.approval.id == id })?.approval.subject else { return }
-        settle(id, with: .deny(GuardReasons.rejected(subject)), approved: false)
+    @discardableResult
+    public func reject(_ id: UUID) -> Bool {
+        guard let subject = queue.first(where: { $0.approval.id == id })?.approval.subject else { return false }
+        return settle(id, with: .deny(GuardReasons.rejected(subject)), approved: false)
     }
 
-    public func expire(now: Date) {
+    @discardableResult
+    public func expire(now: Date) -> Date? {
         let minutes = max(1, Int((timeout / 60).rounded(.up)))
         for entry in queue where entry.approval.deadline <= now {
             settle(entry.approval.id, with: .deny(GuardReasons.expired(minutes: minutes)), approved: false)
         }
+        // Review 2: the caller reschedules from this, even when nothing expired (a clock set back).
+        return nextDeadline
     }
 
     public func paneClosed(_ pane: PaneID) {
@@ -127,12 +131,14 @@ public final class AgentApprovals {
         for approval in allPending { settle(approval.id, with: .deny(GuardReasons.unreachable), approved: false) }
     }
 
-    private func settle(_ id: UUID, with decision: GuardDecision, approved: Bool) {
-        guard let index = queue.firstIndex(where: { $0.approval.id == id }) else { return }
+    @discardableResult
+    private func settle(_ id: UUID, with decision: GuardDecision, approved: Bool) -> Bool {
+        guard let index = queue.firstIndex(where: { $0.approval.id == id }) else { return false }
         let entry = queue.remove(at: index)
         entry.reply(decision)
         let remaining = pending(in: entry.approval.pane).count
         onChange?(.settled(entry.approval, approved: approved, remaining: remaining))
+        return true
     }
 }
 

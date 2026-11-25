@@ -185,6 +185,61 @@ final class ApprovalTests: SmaltiUITestCase {
         wait(for: [said], timeout: 5)
     }
 
+    // MARK: - Intermediate review 2
+
+    /// M6: the keys decide even while the help or the search bar is open.
+    func testKeysDecideWithHelpOpen() throws {
+        launchSmalti()
+        let out = try guardCommand(bash(Self.dataTalks))
+        expectCard(command: "terraform destroy", environment: "PROD")
+        app.typeKey("?", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.help").waitForExistence(timeout: 5))
+
+        app.typeKey(.return, modifierFlags: [.command, .shift])
+
+        waitFor(out, toContain: "exit=0")
+        XCTAssertEqual(contents(out), "exit=0\n")
+    }
+
+    /// M3: a theme change restyles a card already shown.
+    func testCardFollowsTheTheme() throws {
+        launchSmalti()
+        let out = try guardCommand(bash(Self.dataTalks))
+        expectCard(command: "terraform destroy", environment: "PROD")
+        let before = card.title
+
+        openPalette()
+        app.typeText("siguientetema")
+        app.typeKey(.return, modifierFlags: [])
+
+        let restyled = XCTNSPredicateExpectation(
+            predicate: NSPredicate { [self] _, _ in card.title != before && !card.title.isEmpty }, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [restyled], timeout: 5), .completed, "card theme: \(card.title)")
+        app.typeKey(.escape, modifierFlags: [.command, .shift])
+        waitFor(out, toContain: "exit=0")
+    }
+
+    /// M5: in a small pane the card stays inside it.
+    func testCardFitsASmallPane() throws {
+        launchSmalti()
+        // Splits until no other pane fits ("No cabe otro panel"): the focused pane is the smallest one.
+        for _ in 2...9 {
+            let before = app.elements("smalti.pane").count
+            app.typeKey("d", modifierFlags: .command)
+            Thread.sleep(forTimeInterval: 0.6)
+            if app.elements("smalti.pane").count == before { break }
+        }
+        waitForShells(count: app.elements("smalti.pane").count)
+        let out = try guardCommand(bash(Self.pocketOS + "\n" + String(repeating: "# line\n", count: 20)))
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+
+        let pane = app.elements("smalti.pane").matching(NSPredicate(format: "value == 'focused'")).firstMatch
+        XCTAssertTrue(pane.frame.insetBy(dx: -1, dy: -1).contains(card.frame), "card \(card.frame) pane \(pane.frame)")
+        XCTAssertGreaterThan(card.frame.width, 0)
+        app.typeKey(.escape, modifierFlags: [.command, .shift])
+        waitFor(out, toContain: "exit=0")
+    }
+
     func testCardIsRedacted() throws {
         launchSmalti()
         let out = try guardCommand(bash(Self.replit))

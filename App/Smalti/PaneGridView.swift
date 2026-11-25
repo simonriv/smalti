@@ -106,9 +106,7 @@ final class PaneGridView: NSView {
     private func approvalContent(_ state: TilingState, pane: PaneID, workspace: String) -> ApprovalCardContent? {
         guard let pending = state.approvals[pane], let first = pending.first else { return nil }
         return ApprovalCardContent(
-            approval: first, position: 1, count: pending.count, workspace: workspace,
-            approveKeys: state.config.keys.chord(for: .guardApprove)?.display ?? "",
-            rejectKeys: state.config.keys.chord(for: .guardReject)?.display ?? "", now: .now)
+            approval: first, count: pending.count, workspace: workspace, keys: state.config.keys, now: .now)
     }
 
     /// A new pane appears at its place; only the panes that already existed move.

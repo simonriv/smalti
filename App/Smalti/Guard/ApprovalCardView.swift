@@ -1,23 +1,6 @@
 import AppKit
 import SmaltiCore
 
-/// What the card of a pane shows: its oldest waiting command and how many wait.
-struct ApprovalCardContent: Equatable {
-    let approval: PendingApproval
-    let position: Int
-    let count: Int
-    let workspace: String
-    let approveKeys: String
-    let rejectKeys: String
-    let now: Date
-
-    /// «vence en 10 min», never below 1.
-    var expiresText: String {
-        let minutes = max(1, Int((approval.deadline.timeIntervalSince(now) / 60).rounded(.up)))
-        return "vence en \(minutes) min"
-    }
-}
-
 /// The approval card of F7.5 (no board draws it; see `ApprovalCardTokens`): the waiting command at the bottom of its
 /// pane, with the workspace, the rule, the environment and the keys that decide it.
 @MainActor
@@ -30,7 +13,8 @@ final class ApprovalCardView: NSView {
     private let command = NSTextView()
     private let footer = NSTextField(labelWithString: "")
     private let tokens: ApprovalCardTokens
-    private let theme: Theme
+    /// The theme it was styled with: a card shown after a theme change is built again.
+    let theme: Theme
     private(set) var content: ApprovalCardContent?
 
     init(theme: Theme) {
@@ -53,6 +37,7 @@ final class ApprovalCardView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.approvalCard")
+        setAccessibilityTitle(theme.name)
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -92,17 +77,18 @@ final class ApprovalCardView: NSView {
     }
 
     func show(_ content: ApprovalCardContent) {
-        guard content != self.content else { return }
+        let isSameCommand = self.content.map(content.showsSameCommand(as:)) ?? false
         self.content = content
+        counter.stringValue = content.counter
+        footer.stringValue = content.footer
+        setAccessibilityValue(content.counter)
+        // Review 2: the same command keeps its text view, so its scroll and selection survive every refresh.
+        guard !isSameCommand else { return }
         let subjectOfCard = content.approval.subject
         title.stringValue = "Espera tu aprobación · \(content.workspace)"
-        counter.stringValue = "\(content.position) de \(content.count)"
         subject.attributedStringValue = subjectText(subjectOfCard)
-        subject.setAccessibilityValue(subjectOfCard.environment.label)
         command.string = subjectOfCard.command
         command.setAccessibilityValue(subjectOfCard.command)
-        footer.stringValue = "\(content.approveKeys) aprobar   \(content.rejectKeys) rechazar   \(content.expiresText)"
-        setAccessibilityValue("\(content.position) de \(content.count)")
         setAccessibilityLabel("\(subjectOfCard.summary): \(subjectOfCard.command)")
         needsLayout = true
     }
@@ -123,20 +109,33 @@ final class ApprovalCardView: NSView {
         return text
     }
 
-    /// The card's height for `width`: the command up to `maximumCommandLines` lines, then it scrolls.
+    /// The card's height for `width`: the command up to `maximumCommandLines` lines, then it scrolls. The text is
+    /// measured at the scroll view's content width (review 2: legacy scrollers take room).
     func height(for width: CGFloat) -> CGFloat {
-        let inner = width - tokens.padding * 2
+        let inner = max(0, width - tokens.padding * 2)
+        let scroller =
+            commandScroll.hasVerticalScroller && NSScroller.preferredScrollerStyle == .legacy
+            ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0
         let line = (command.font?.boundingRectForFont.height ?? tokens.commandFontSize * 1.3).rounded(.up)
-        command.frame.size.width = inner
+        command.frame.size.width = max(0, inner - scroller)
         command.layoutManager?.ensureLayout(for: command.textContainer ?? NSTextContainer())
         let used = command.layoutManager?.usedRect(for: command.textContainer ?? NSTextContainer()).height ?? line
         let commandHeight = min(used, line * CGFloat(tokens.maximumCommandLines)) + tokens.commandPadding
+        return (fixedRowsHeight + commandHeight + tokens.gap).rounded(.up)
+    }
+
+    /// Padding, title, subject and footer with their gaps: what shows even when the command has no room.
+    private var fixedRowsHeight: CGFloat {
         let rows = [title, subject, footer].map { $0.intrinsicContentSize.height }.reduce(0, +)
-        return (tokens.padding * 2 + rows + commandHeight + tokens.gap * 3).rounded(.up)
+        return tokens.padding * 2 + rows + tokens.gap * 2
     }
 
     override func layout() {
         super.layout()
+        // Review 2: in a pane too low for the command, only title and footer show, never overlapping.
+        let hasRoom = bounds.height >= fixedRowsHeight + tokens.gap
+        subject.isHidden = !hasRoom
+        commandScroll.isHidden = !hasRoom
         let inner = bounds.insetBy(dx: tokens.padding, dy: tokens.padding)
         var top = inner.maxY
         let titleHeight = title.intrinsicContentSize.height

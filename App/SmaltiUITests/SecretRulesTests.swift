@@ -12,11 +12,26 @@ final class SecretRulesTests: SmaltiUITestCase {
         app.elements("smalti.paletteRow").matching(NSPredicate(format: "label == %@", title)).firstMatch
     }
 
-    private func launchWithProject() throws {
+    private func launchWithProject(_ root: String? = nil) throws {
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let app = XCUIApplication.isolatedSmalti()
-        app.launchArguments += ["-SmaltiProjectPermissionsRoot", project.path(percentEncoded: false)]
+        // Review 2: every isolated launch already names a temporary project; this test names its own.
+        let position = try XCTUnwrap(app.launchArguments.firstIndex(of: "-SmaltiProjectPermissionsRoot"))
+        app.launchArguments[position + 1] = root ?? project.path(percentEncoded: false)
         launch(app)
+    }
+
+    /// Review 2 (I1): the home folder and the folders above it are never offered: their `.claude` is global.
+    func testRootIsNeverOffered() throws {
+        try launchWithProject("/")
+
+        openPalette()
+        app.typeText("secretos")
+
+        XCTAssertFalse(row("Proteger secretos en “”").waitForExistence(timeout: 3))
+        let offered = app.elements("smalti.paletteRow").matching(
+            NSPredicate(format: "label BEGINSWITH 'Proteger secretos'"))
+        XCTAssertEqual(offered.count, 0)
     }
 
     private func deniedRules() -> [String] {

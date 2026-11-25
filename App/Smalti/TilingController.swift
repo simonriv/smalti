@@ -196,12 +196,8 @@ final class TilingController {
     private func decide(_ command: ApprovalCommand) {
         guard let approvals = deps.agents.guards?.approvals else { return }
         switch command {
-        case .approve(let id):
-            approvals.approve(id)
-            show(.commandApproved)
-        case .reject(let id):
-            approvals.reject(id)
-            show(.commandRejected)
+        case .approve(let id): show(approvals.approve(id) ? .commandApproved : .approvalGone)
+        case .reject(let id): show(approvals.reject(id) ? .commandRejected : .approvalGone)
         }
     }
 
@@ -214,7 +210,9 @@ final class TilingController {
     }
 
     private func secretsProjectState() -> SecretsProjectState? {
-        guard let guards = deps.agents.guards, let project = secretsProject else { return nil }
+        guard let guards = deps.agents.guards, let project = secretsProject, guards.secrets.canProtect(project) else {
+            return nil
+        }
         // An unreadable settings file offers protecting, which then says why it cannot.
         let isProtected = (try? guards.secrets.isProtected(project)) ?? false
         return SecretsProjectState(name: URL(filePath: project).lastPathComponent, isProtected: isProtected)
