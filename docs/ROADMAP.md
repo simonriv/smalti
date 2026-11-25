@@ -231,6 +231,10 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Criterio de cierre:** por definir en su spec; como mínimo, tras migrar un `.env` de prueba no queda ningún valor en disco, y ningún valor del baúl aparece en el scrollback guardado ni en los registros.
 - **Dependencias:** F7.5 (bloqueo de lectura) y F9 (timeline, para enmascararlo).
 
+## Al terminar todas las fases
+
+- **Registro de derechos de autor en Colombia (pedido por Simón, 2026-11-25):** dar a Simón el paso a paso para registrar Smalti como «soporte lógico» (software) en la Dirección Nacional de Derecho de Autor (DNDA): trámite en línea y gratuito; la protección existe sin registro, y el registro sirve como prueba fechada de autoría. Verificar entonces los requisitos vigentes en la web de la DNDA.
+
 ## Ideas evaluadas
 
 Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya construido en F0–F7 y las Decisiones:
