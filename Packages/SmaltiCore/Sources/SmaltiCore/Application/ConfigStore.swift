@@ -17,10 +17,14 @@ extension ConfigStore {
 public enum ConfigWarning: Equatable, Sendable {
     /// Keys set in both `config.toml` and `theme.toml`; `theme.toml` wins (spec F5).
     case duplicatedKeys([String])
+    /// F7.6: the file was written for a newer Smalti; what this build does not know was ignored.
+    case newerFormat(file: String, version: Int, ignored: [String])
 
     public var message: String {
         switch self {
         case .duplicatedKeys(let keys): "theme.toml manda sobre config.toml en: " + keys.joined(separator: ", ")
+        case .newerFormat(let file, let version, let ignored):
+            "\(file) es de una versión más nueva de Smalti (\(version)): se ignoran " + ignored.joined(separator: ", ")
         }
     }
 }

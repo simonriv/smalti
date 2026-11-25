@@ -20,6 +20,7 @@
 		F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */; };
 		F61EF1D1A9F45B7E00C0FFEE /* NeovimAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F61EF1D2A9F45B7E00C0FFEE /* NeovimAdapter */; };
 		F70719D1A9F45B7E00C0FFEE /* OTLPReceiverAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */; };
+		F76A0001A9F45B7E00C0FFEE /* SparkleUpdatesAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F76A0002A9F45B7E00C0FFEE /* SparkleUpdatesAdapter */; };
 		F60C0DD1A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F60C0DD2A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter */; };
 		F6A61AD1A9F45B7E00C0FFEE /* AntigravityHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F6A61AD2A9F45B7E00C0FFEE /* AntigravityHarnessAdapter */; };
 		F6C0DED1A9F45B7E00C0FFEE /* CodexHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F6C0DED2A9F45B7E00C0FFEE /* CodexHarnessAdapter */; };
@@ -69,6 +70,7 @@
 				F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */,
 				F61EF1D1A9F45B7E00C0FFEE /* NeovimAdapter in Frameworks */,
 				F70719D1A9F45B7E00C0FFEE /* OTLPReceiverAdapter in Frameworks */,
+				F76A0001A9F45B7E00C0FFEE /* SparkleUpdatesAdapter in Frameworks */,
 				F60C0DD1A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter in Frameworks */,
 				F6A61AD1A9F45B7E00C0FFEE /* AntigravityHarnessAdapter in Frameworks */,
 				F6C0DED1A9F45B7E00C0FFEE /* CodexHarnessAdapter in Frameworks */,
@@ -143,6 +145,7 @@
 				F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */,
 				F61EF1D2A9F45B7E00C0FFEE /* NeovimAdapter */,
 				F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */,
+				F76A0002A9F45B7E00C0FFEE /* SparkleUpdatesAdapter */,
 				F60C0DD2A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter */,
 				F6A61AD2A9F45B7E00C0FFEE /* AntigravityHarnessAdapter */,
 				F6C0DED2A9F45B7E00C0FFEE /* CodexHarnessAdapter */,
@@ -217,6 +220,7 @@
 				F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */,
 				F61EF1D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/NeovimAdapter" */,
 				F70719D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OTLPReceiverAdapter" */,
+				F76A0003A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/SparkleUpdatesAdapter" */,
 				F60C0DD3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OpenCodeHarnessAdapter" */,
 				F6A61AD3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/AntigravityHarnessAdapter" */,
 				F6C0DED3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/CodexHarnessAdapter" */,
@@ -278,7 +282,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "set -euo pipefail\nsrc=\"$SRCROOT/../Packages/GhosttyAdapter/Frameworks/ghostty-resources\"\ndst=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nrsync -a --delete \"$src/ghostty\" \"$src/terminfo\" \"$dst/\"\n";
+			shellScript = "set -euo pipefail\nsrc=\"$SRCROOT/../Packages/GhosttyAdapter/Frameworks/ghostty-resources\"\ndst=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nrsync -a --delete \"$src/ghostty\" \"$src/terminfo\" \"$dst/\"\n# F7.6: the third-party notices ship inside the bundle.\ncp \"$SRCROOT/../THIRD_PARTY_NOTICES.md\" \"$dst/\"\n";
 		};
 		E3B0C44298FC1C149AFBF4C8 /* Embed smalti CLI and Claude plugin */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -384,15 +388,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 706;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Smalti Dev";
+				INFOPLIST_FILE = Info.plist;
+				ARCHS = arm64;
+				SMALTI_FEED_URL = "";
+				SMALTI_ED_PUBLIC_KEY = "eR1CKdUMDqYUEtFiDOhLTDaXzkMEsyMekDhy/8QNZuQ=";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.6;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.dev;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "Smalti Dev";
@@ -404,15 +412,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 706;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Smalti;
+				INFOPLIST_FILE = Info.plist;
+				ARCHS = arm64;
+				SMALTI_FEED_URL = "https://smalti.sh/appcast.xml";
+				SMALTI_ED_PUBLIC_KEY = "eR1CKdUMDqYUEtFiDOhLTDaXzkMEsyMekDhy/8QNZuQ=";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.6;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -422,9 +434,9 @@
 		5AB3A6BF84C2901E813939E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 706;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.6;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -434,9 +446,9 @@
 		54ECD3B736C66C8688F6C25B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 706;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.6;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -528,6 +540,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/NeovimAdapter;
 		};
+		F76A0003A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/SparkleUpdatesAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/SparkleUpdatesAdapter;
+		};
 		F70719D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OTLPReceiverAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/OTLPReceiverAdapter;
@@ -611,6 +627,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F61EF1D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/NeovimAdapter" */;
 			productName = NeovimAdapter;
+		};
+		F76A0002A9F45B7E00C0FFEE /* SparkleUpdatesAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F76A0003A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/SparkleUpdatesAdapter" */;
+			productName = SparkleUpdatesAdapter;
 		};
 		F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

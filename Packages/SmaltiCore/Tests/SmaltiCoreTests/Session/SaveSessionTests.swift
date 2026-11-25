@@ -163,4 +163,34 @@ struct SaveSessionTests {
             LoadLastSession(archive: archive, preferences: archive).execute()
                 == .startFreshAfterUnreadable(reason: "bad JSON"))
     }
+
+    /// F7.6: a session saved by a newer Smalti is neither restored nor overwritten.
+    @Test func loadStartsFreshKeepingANewerSession() {
+        archive.newerVersion = 3
+
+        #expect(
+            LoadLastSession(archive: archive, preferences: archive).execute() == .startFreshKeepingNewer(version: 3))
+    }
+
+    @Test func saveStructureLeavesANewerSessionAlone() {
+        archive.newerVersion = 3
+
+        #expect(save.saveStructure(of: set, at: SessionFixtures.savedAt) == .keptNewer(version: 3))
+        #expect(archive.saved == nil)
+    }
+
+    @Test func saveWithScrollbackLeavesANewerSessionAlone() {
+        archive.newerVersion = 3
+        scrollback.contents[shell.id] = Scrollback(text: "a", format: .plain)
+
+        #expect(save.saveWithScrollback(of: set, at: SessionFixtures.savedAt) == .keptNewer(version: 3))
+        #expect(archive.saved == nil)
+        #expect(archive.transcripts.isEmpty)
+    }
+
+    @Test func newerSessionMessageNamesItsVersion() {
+        #expect(
+            SaveOutcome.keptNewer(version: 3).message
+                == "La sesión la guardó una versión más nueva de Smalti (formato 3): esta no la abre ni la sobrescribe")
+    }
 }

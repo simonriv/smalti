@@ -6,7 +6,7 @@ import Testing
 public enum SessionArchiveContract {
     public typealias Archive = SessionArchive & PaneTranscripts & RestorePreferenceStore
 
-    static let snapshot = SessionSnapshot(
+    public static let snapshot = SessionSnapshot(
         version: SessionSnapshot.formatVersion, savedAt: Date(timeIntervalSince1970: 1_800_000_000),
         workspaces: [
             WorkspaceSnapshot(

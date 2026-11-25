@@ -1,0 +1,107 @@
+# F7.6: publishes a version from its tag. Every step is a script of scripts/release/ that also runs locally.
+# The job only runs in the public repo: macOS minutes in a private one cost money (they count 10x).
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (vX.Y.Z)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ !github.event.repository.private }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      OUT: build/release
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          submodules: recursive
+          fetch-depth: 0
+          # The token stays out of .git/config while bootstrap and Zig download their dependencies.
+          persist-credentials: false
+
+      # A rerun of a tag whose release already exists signs and announces that release's own DMG: rebuilding
+      # would give other bytes than the published asset.
+      - name: Existing release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$OUT"
+          if gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern Smalti.dmg --dir "$OUT" 2>/dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Toolchain
+        if: steps.existing.outputs.found == 'false'
+        run: |
+          xcode="$(xcodebuild -version)"  # captured first: grep -q under pipefail could SIGPIPE xcodebuild
+          echo "$xcode"
+          [[ "$xcode" == "Xcode 27."* ]] || { echo "expected Xcode 27"; exit 1; }
+          git -C vendor/ghostty fetch -q --tags origin
+          scripts/bootstrap
+
+      - name: Build
+        if: steps.existing.outputs.found == 'false'
+        run: scripts/release/build.sh "$TAG" "$OUT"
+
+      - name: DMG
+        if: steps.existing.outputs.found == 'false'
+        run: scripts/release/make-dmg.sh "$OUT/Smalti.app" "$OUT/Smalti.dmg"
+
+      - name: OpenSSL 3
+        # scripts/release/public-key.sh needs it (macOS's LibreSSL cannot derive an Ed25519 public key).
+        run: brew list openssl@3 > /dev/null 2>&1 || brew install openssl@3
+
+      - name: Sign with EdDSA
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          SPARKLE_BIN="$(scripts/release/fetch-sparkle-tools.sh "$RUNNER_TEMP/sparkle")"
+          export SPARKLE_BIN
+          # Checked against the key the app carries, read from the project (the same for the rebuilt and the
+          # downloaded DMG).
+          public="$(sed -n 's/.*SMALTI_ED_PUBLIC_KEY = "\(.*\)";/\1/p' App/Smalti.xcodeproj/project.pbxproj | sort -u)"
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | scripts/release/sign-update.sh "$OUT/Smalti.dmg" "$public" > "$OUT/signature"
+
+      - name: Publish the release
+        if: steps.existing.outputs.found == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/release/publish.sh "$TAG" "$OUT/Smalti.dmg"
+
+      - name: Appcast pull request (smalti-web)
+        env:
+          DEPLOY_KEY: ${{ secrets.WEB_DEPLOY_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r signature length < "$OUT/signature"
+          # The release's own date, so a rerun writes the very same <item>.
+          published="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)"
+          date="$(python3 -c 'import sys, email.utils, datetime; print(email.utils.format_datetime(datetime.datetime.fromisoformat(sys.argv[1].replace("Z", "+00:00"))))' "$published")"
+          scripts/release/appcast-item.sh "${TAG#v}" "$length" "$signature" "$date" > "$OUT/item.xml"
+          scripts/release/push-appcast.sh git@github.com:simonriv/smalti-web.git "$TAG" "$OUT/item.xml"
+
+      - name: Cask pull request (homebrew-tap)
+        env:
+          DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        run: |
+          scripts/release/cask.sh "${TAG#v}" "$(shasum -a 256 "$OUT/Smalti.dmg" | cut -d' ' -f1)" > "$OUT/smalti.rb"
+          scripts/release/push-cask.sh git@github.com:simonriv/homebrew-tap.git "$TAG" "$OUT/smalti.rb"

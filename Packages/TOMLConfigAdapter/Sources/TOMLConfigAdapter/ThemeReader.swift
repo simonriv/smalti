@@ -62,7 +62,9 @@ enum PromptReader {
         var modules: [PromptModuleID] = []
         for word in words {
             guard let module = PromptModuleID(rawValue: word) else {
-                throw section.error(at: modulesKey, "módulo desconocido: \(word)")
+                try section.skipUnknownValue(
+                    word, at: modulesKey, else: section.error(at: modulesKey, "módulo desconocido: \(word)"))
+                continue
             }
             guard !modules.contains(module) else { throw section.error(at: modulesKey, "módulo repetido: \(word)") }
             modules.append(module)

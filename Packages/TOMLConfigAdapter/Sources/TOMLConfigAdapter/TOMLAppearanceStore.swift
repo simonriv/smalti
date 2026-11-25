@@ -26,6 +26,7 @@ public final class TOMLAppearanceStore: AppearanceStore {
 
     @discardableResult
     public func save(_ document: AppearanceDocument) throws(ConfigError) -> AppearanceDocument {
+        try refuseNewerFile()
         let merged = rebasedOnHandEdit(document)
         do {
             try FileManager.default.createDirectory(
@@ -37,6 +38,17 @@ public final class TOMLAppearanceStore: AppearanceStore {
         }
         baseline = (merged, modificationDate())
         return merged
+    }
+
+    /// F7.6: a `theme.toml` written by a newer Smalti may hold keys this build would drop; it is left as it is.
+    private func refuseNewerFile() throws(ConfigError) {
+        guard let text = try? String(contentsOf: target, encoding: .utf8),
+            let stored = TOMLConfigParser.storedVersion(text),
+            FormatCompatibility.of(stored: stored, current: TOMLConfigParser.supportedVersion).isNewer
+        else { return }
+        throw ConfigError(
+            file: path, line: nil, key: nil,
+            reason: "es de una versión más nueva de Smalti: no se sobrescribe")
     }
 
     /// Keys missing from the edited file read as defaults, so deleting one by hand is respected (M8). A file that no

@@ -43,14 +43,17 @@ public final class TOMLConfigStore: ConfigStore {
 
     private func read() throws(ConfigError) -> SmaltiConfig {
         let configText = try text(of: file)
-        var config =
+        let parsed =
             try configText.map { (text) throws(ConfigError) in
-                try TOMLConfigParser.parse(text, file: displayPath)
-            } ?? .defaults
-        var warnings: [ConfigWarning] = []
+                try TOMLConfigParser.read(text, file: displayPath)
+            } ?? TOMLConfigParser.Parsed(config: .defaults, warning: nil)
+        var config = parsed.config
+        var warnings = [parsed.warning].compactMap { $0 }
         if let themeFile, let themeText = try text(of: themeFile) {
             let themePath = themeFile.path(percentEncoded: false)
-            config = try TOMLConfigParser.parseTheme(themeText, file: themePath, over: config)
+            let theme = try TOMLConfigParser.readTheme(themeText, file: themePath, over: config)
+            config = theme.config
+            warnings += [theme.warning].compactMap { $0 }
             let repeated =
                 try configText.map { (text) throws(ConfigError) in
                     try TOMLConfigParser.lookKeys(text, file: displayPath)

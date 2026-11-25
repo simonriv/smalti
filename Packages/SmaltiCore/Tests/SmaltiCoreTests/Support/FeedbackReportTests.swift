@@ -21,36 +21,35 @@ struct FeedbackReportTests {
         #expect(url.absoluteString.hasPrefix("https://github.com/simonriv/smalti/issues/new?"))
     }
 
-    @Test(arguments: [(FeedbackKind.bug, "bug"), (.idea, "idea")])
-    func issueURLHasTheLabelOfItsKind(_ kind: FeedbackKind, _ label: String) {
-        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["labels"] == label)
+    /// F7.6: the public repo's issue forms; the form adds its own label.
+    @Test(arguments: [(FeedbackKind.bug, "bug.yml"), (.idea, "idea.yml")])
+    func issueURLOpensTheFormOfItsKind(_ kind: FeedbackKind, _ template: String) {
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["template"] == template)
     }
 
-    @Test func issueURLHasLabelAndEncodedBody() {
-        let url = FeedbackReport.issueURL(kind: .bug, build: build)
-        let body = query(url)["body"] ?? ""
-
-        #expect(body.contains("### Qué pasó"))
-        #expect(body.contains("### Qué esperabas"))
-        #expect(body.contains("### Pasos"))
-        #expect(body.contains("Smalti 0.4.5 (abc1234) · macOS 27.2 · Apple M4"))
-        #expect(!url.absoluteString.contains(" "))
-        #expect(!url.absoluteString.contains("#"))
+    @Test(arguments: [FeedbackKind.bug, .idea])
+    func issueURLFillsTheBuildField(_ kind: FeedbackKind) {
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["build"] == build.summary)
     }
 
-    @Test func ideaBodyAsksForTheIdea() {
-        let body = query(FeedbackReport.issueURL(kind: .idea, build: build))["body"] ?? ""
+    @Test func issueURLLeavesLabelsAndBodyToTheForm() {
+        let names = Set(query(FeedbackReport.issueURL(kind: .bug, build: build)).keys)
 
-        #expect(body.contains("### La idea"))
-        #expect(body.contains("Smalti 0.4.5"))
+        #expect(names == ["template", "title", "build"])
+    }
+
+    @Test func formFieldIDsAreStable() {
+        #expect(FeedbackReport.buildFieldID == "build")
     }
 
     @Test func versionWithAmpersandsAndHashesStaysEncoded() {
         let odd = BuildInfo(version: "0.4.5&x=1#y", commit: "abc", macOS: "27", chip: "M4")
 
-        let body = query(FeedbackReport.issueURL(kind: .bug, build: odd))["body"] ?? ""
+        let url = FeedbackReport.issueURL(kind: .bug, build: odd)
 
-        #expect(body.contains("0.4.5&x=1#y"))
+        #expect(query(url)["build"]?.contains("0.4.5&x=1#y") == true)
+        #expect(!url.absoluteString.contains(" "))
+        #expect(!url.absoluteString.dropFirst(8).contains("#"))
     }
 
     @Test(arguments: [(FeedbackKind.bug, "Fallo: "), (.idea, "Idea: ")])

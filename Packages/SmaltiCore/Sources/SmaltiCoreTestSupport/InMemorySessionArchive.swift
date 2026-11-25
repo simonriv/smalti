@@ -8,6 +8,8 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
     public var transcripts: [PaneID: Scrollback] = [:]
     public var writeFailure: SessionArchiveError?
     public var unreadableReason: String?
+    /// F7.6: pretends the stored session was written by a newer Smalti.
+    public var newerVersion: Int?
     /// Panes whose scrollback was asked for.
     public private(set) var scrollbackLookups: [PaneID] = []
     private var preference = RestorePreference.ask
@@ -20,6 +22,7 @@ public final class InMemorySessionArchive: SessionArchive, PaneTranscripts, Rest
     }
 
     public func lastSession() -> LastSession {
+        if let newerVersion { return .newer(version: newerVersion) }
         if let unreadableReason { return .unreadable(reason: unreadableReason) }
         return saved.map(LastSession.saved) ?? .none
     }
@@ -56,11 +59,17 @@ public final class InMemoryNamedLayouts: NamedLayouts {
     }
 
     public func layout(named name: LayoutName) throws(SessionArchiveError) -> WorkspaceSnapshot {
+        if let version = newer[name] { throw .newerFormat(file: "\(name.rawValue).json", version: version) }
         guard let layout = layouts[name] else { throw .notFound(name: name.rawValue) }
         return layout
     }
 
-    public func names() -> [LayoutName] { layouts.keys.sorted { $0.rawValue < $1.rawValue } }
+    /// F7.6: layouts a newer Smalti saved, by their format version.
+    public var newer: [LayoutName: Int] = [:]
+
+    public func names() -> [LayoutName] {
+        Set(layouts.keys).union(newer.keys).sorted { $0.rawValue < $1.rawValue }
+    }
 }
 
 /// Scrollback per pane; panes in `failing` cannot be read.

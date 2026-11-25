@@ -79,6 +79,31 @@ struct TranscriptLineTranslatorTests {
 
 @Suite("TranscriptIndex")
 struct TranscriptIndexTests {
+    private let file = FileManager.default.temporaryDirectory.appending(path: "smalti-index-\(UUID())/index.json")
+
+    /// F7.6: an index written by a newer Smalti is a cache this build cannot read: it starts empty and leaves it.
+    @Test func newerIndexIsNotOverwritten() throws {
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let newer = Data(#"{"version":2,"futuro":true}"#.utf8)
+        try newer.write(to: file)
+
+        let index = TranscriptIndex.load(from: file)
+        try index.save(to: file)
+
+        #expect(index.files.isEmpty)
+        #expect(try Data(contentsOf: file) == newer)
+    }
+
+    @Test func currentIndexIsSaved() throws {
+        var index = TranscriptIndex()
+        index.files["/a"] = TranscriptIndex.FileEntry(
+            inode: 1, size: 2, offset: 3, modified: Date(timeIntervalSince1970: 0), sessionID: "s", isSubagent: false)
+
+        try index.save(to: file)
+
+        #expect(TranscriptIndex.load(from: file).files["/a"]?.offset == 3)
+    }
+
     @Test func sourcesReadAgainAreKeptOnce() {
         #expect(TranscriptIndex.FileEntry.merging(["s"], ["s", "t", "t"]) == ["s", "t"])
     }

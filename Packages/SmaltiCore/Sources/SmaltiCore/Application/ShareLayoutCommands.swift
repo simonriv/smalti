@@ -11,6 +11,8 @@ public enum LayoutShareError: Error, Equatable, Sendable {
         case .file(let error): error.message
         case .archive(.notFound(let name)): "no hay ningún layout guardado como «\(name)»"
         case .archive(.writeFailed(let file, let reason)): "no se pudo guardar \(file) (\(reason))"
+        case .archive(.newerFormat(let file, let version)):
+            "\(file) lo guardó una versión más nueva de Smalti (formato \(version))"
         }
     }
 }

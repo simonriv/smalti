@@ -109,11 +109,13 @@ private struct Rows {
 
     var configuration: [HelpEntry] {
         [entry(.paletteOpen, "Paleta de comandos")]
-            + [CommandID.helpShow].map(titled)
+            + [CommandID.helpShow, .helpDocs].map(titled)
             + CommandID.appearance.map(titled)
             + [CommandID.configOpen].map(titled)
             + [entry(.configReload, "Recargar configuración")]
-            + [CommandID.feedbackReport, .logsShow, .appAbout].map(titled)
+            + [CommandID.feedbackReport, .logsShow, .updatesCheck].map(titled)
+            + [entry(.updatesAutomatic, "Activar o desactivar actualizaciones automáticas")]
+            + [CommandID.appSupport, .appAbout].map(titled)
             + [
                 HelpEntry(
                     title: "No preguntar al cerrar con procesos", keys: "confirm_close = false", command: nil,

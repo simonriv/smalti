@@ -90,7 +90,8 @@ public enum MenuModel {
             context.allowing?.contains($0) ?? true
         }
         let builder = Builder(
-            keymap: keymap, available: offered.subtracting(context.passingThrough), checked: state.checked)
+            keymap: keymap, available: offered.subtracting(context.passingThrough), checked: state.checked,
+            offeredTitles: Dictionary(commands.map { ($0.id, $0.title) }) { first, _ in first })
         let workspaces = state.workspaces
         return MenuBar(menus: [
             Menu(id: .app, title: "Smalti", items: builder.app),
@@ -124,6 +125,8 @@ private struct Builder {
     /// nil: everything is enabled (the context menu acts on the pane it was opened on).
     let available: Set<CommandID>?
     let checked: Set<CommandID>
+    /// The palette's titles, for items whose title depends on the state (F7.6: the automatic-updates toggle).
+    var offeredTitles: [CommandID: String] = [:]
 
     private static let titles: [CommandID: String] = CommandCatalog.titles.merging([
         .paneNew: "Nuevo panel", .paneClose: "Cerrar panel", .workspaceNew: "Nuevo workspace",
@@ -141,7 +144,7 @@ private struct Builder {
 
     func item(_ id: CommandID, chord: KeyChord?, title: String? = nil) -> MenuItem {
         var item = MenuItem(
-            title: title ?? Self.titles[id] ?? id.rawValue, action: .command(id), chord: chord,
+            title: title ?? Self.titles[id] ?? offeredTitles[id] ?? id.rawValue, action: .command(id), chord: chord,
             isEnabled: available?.contains(id) ?? true, children: [])
         item.isChecked = checked.contains(id)
         return item
@@ -156,12 +159,19 @@ private struct Builder {
 
     var app: [MenuItem] {
         [
-            item(.appAbout), .separator, item(.appearanceOpen), item(.promptStudio), item(.configOpen),
+            item(.appAbout)
+        ] + updateItems + [
+            .separator, item(.appearanceOpen), item(.promptStudio), item(.configOpen),
             item(.configReload), .separator, item(.secureInputToggle),
             .separator, system("Servicios", .services), .separator, system("Ocultar Smalti", .hide, "cmd+h"),
             system("Ocultar otros", .hideOthers, "cmd+opt+h"), system("Mostrar todo", .showAll), .separator,
             system("Salir de Smalti", .quit, "cmd+q"),
         ]
+    }
+
+    /// F7.6: only when the palette offers them (a build that can update itself).
+    private var updateItems: [MenuItem] {
+        [CommandID.updatesCheck, .updatesAutomatic].filter { offeredTitles[$0] != nil }.map { item($0) }
     }
 
     var file: [MenuItem] {
@@ -205,7 +215,10 @@ private struct Builder {
     }
 
     var help: [MenuItem] {
-        [item(.helpShow), .separator, item(.feedbackReport), item(.logsShow)]
+        [
+            item(.helpShow), item(.helpDocs), .separator, item(.feedbackReport), item(.logsShow), .separator,
+            item(.appSupport),
+        ]
     }
 
     private var paneItems: [MenuItem] {
