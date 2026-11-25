@@ -96,6 +96,30 @@ struct EditedFilesTests {
         #expect(tracker.recent(in: paneB).isEmpty)
     }
 
+    /// ⌘⇧E moves the focus to Neovim: from there, the workspace's agents' edits still count.
+    @MainActor
+    @Test func paneWithoutEditsFallsBackToItsWorkspace() async {
+        let agent = PaneID()
+        let nvim = PaneID()
+        let elsewhere = PaneID()
+        let tracker = TrackEditedFiles(readFile: { _ in "x\n" })
+        await tracker.record(
+            AgentEvent(
+                pane: agent, hook: .postToolUse, at: t0, sessionID: nil,
+                edit: FileEdit(tool: "Edit", path: "/w/a.ts", newText: "x")))
+        await tracker.record(
+            AgentEvent(
+                pane: elsewhere, hook: .postToolUse, at: t0.addingTimeInterval(5), sessionID: nil,
+                edit: FileEdit(tool: "Edit", path: "/w/b.ts", newText: "x")))
+
+        #expect(tracker.recent(in: nvim, workspace: [agent, nvim]).map(\.path) == ["/w/a.ts"])
+        #expect(tracker.recent(in: agent, workspace: [agent, nvim, elsewhere]).map(\.path) == ["/w/a.ts"])
+    }
+
+    @Test func noEditsText() {
+        #expect(EditedFiles.noneText == "Claude no ha editado archivos en este espacio")
+    }
+
     @MainActor
     @Test func fileIsReadOffTheMainActor() async {
         let readOnMain = ThreadFlag()

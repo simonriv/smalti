@@ -121,6 +121,7 @@ extension OpenCodeHarnessTests {
 
             #expect(rows.count == 2)
             #expect(rows.allSatisfy { $0.input == 120 && $0.output == 7 && $0.harness == .opencode })
+            #expect(rows.allSatisfy { $0.cacheRead == 20 })
         }
 
         @Test func ollamaProviderIsLocal() async throws {

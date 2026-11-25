@@ -38,6 +38,8 @@ public final class ObserveAgents {
     private var gpuHistory: [Double] = []
     /// `status` values the session registry wrote that Smalti does not know; the app logs each once.
     public private(set) var unknownStatuses: Set<String> = []
+    /// F6: why another harness's usage could not be read, each reason once; the app logs them.
+    public private(set) var usageFailures: [String] = []
 
     public static let history: TimeInterval = 30 * 86_400
     public static let samplesKept = 60
@@ -68,7 +70,11 @@ public final class ObserveAgents {
     private func otherUsage(since: Date) async -> [UsageRow] {
         var rows: [UsageRow] = []
         for source in sources.usage {
-            rows += (try? await source.sessions(since: since)) ?? []
+            do {
+                rows += try await source.sessions(since: since)
+            } catch {
+                if !usageFailures.contains(error.message) { usageFailures.append(error.message) }
+            }
         }
         return rows
     }

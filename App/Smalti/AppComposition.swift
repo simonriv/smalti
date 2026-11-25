@@ -53,6 +53,8 @@ final class AppComposition {
     private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
     private var harnesses = HarnessRegistry([])
+    /// F6: claudecode.nvim is installed right now (`--ide` for the Claude sessions Smalti relaunches).
+    private var connectsEditor: () -> Bool = { false }
     private var captures: HarnessCaptures?
     private static let persistTimeout: Duration = .seconds(1)
 
@@ -171,14 +173,18 @@ final class AppComposition {
         harnesses = Self.harnessRegistry(startup.settings)
         let captures = HarnessCaptures(registry: harnesses)
         self.captures = captures
+        // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
+        let claudecode = ClaudecodeNvimInstaller(configHome: startup.settings.nvimConfigHome)
         let editor = EditorSettings(
             editedFiles: TrackEditedFiles(readFile: Self.fileHead), nvim: startup.settings.nvimCommand,
-            socketDirectory: Self.editorSocketDirectory(startup.settings))
+            socketDirectory: Self.editorSocketDirectory(startup.settings), bridge: NeovimBridge(),
+            connectsEditor: { claudecode.isInstalled })
+        connectsEditor = editor.connectsEditor
         let dependencies = TilingController.Dependencies(
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
             harnesses: harnesses, captures: captures, editor: editor,
-            agents: Self.agentDependencies(notifier: makeNotifier(), nvimConfigHome: startup.settings.nvimConfigHome),
+            agents: Self.agentDependencies(notifier: makeNotifier(), claudecode: claudecode),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
@@ -399,6 +405,7 @@ final class AppComposition {
             return
         }
         compositions.removeAll { $0 === composition }
+        composition.controller.forgetAllPanes()
         composition.closeOverlays()
         // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
         composition.closeAppearancePanel()
@@ -456,7 +463,13 @@ final class AppComposition {
             beginSaving(keepingPreviousSession: true)
             return
         case .restoreAndOpen(let selection, let plan, let directory):
+            // Nothing checked: the opened session is the first pane, with no empty shell next to it.
             if selection.checkedCount(in: snapshot) == 0 {
+                if case .open = plan {
+                    asking.controller.openHarnessSession(plan, directory: directory)
+                    beginSaving(keepingPreviousSession: false)
+                    return
+                }
                 asking.controller.start()
             } else {
                 restoreWindows(
@@ -662,6 +675,9 @@ final class AppComposition {
     private func windowServices(_ engine: GhosttyTerminalEngine) -> WindowServices {
         WindowServices(
             engine: engine, harnesses: harnesses,
+            makeSessionSearch: { [harnesses, connectsEditor] in
+                SessionSearchModel(registry: harnesses, connectsEditor: connectsEditor)
+            },
             changed: { [weak self] in self?.windowsChanged() },
             restoreChosen: { [weak self] choice, snapshot, asking in
                 self?.restoreChosen(choice, snapshot: snapshot, in: asking)
@@ -848,13 +864,12 @@ final class AppComposition {
     }
 
     /// The Claude integration and its state, asked once at launch (F5.6).
-    private static func agentDependencies(notifier: any Notifier, nvimConfigHome: URL)
+    private static func agentDependencies(notifier: any Notifier, claudecode: ClaudecodeNvimInstaller)
         -> TilingController.AgentDependencies
     {
         let integrations: [IntegrationID: ClaudeIntegrationStatus] = [
             .claudePlugin: ClaudeIntegrationStatus(integration: claudeIntegration()),
-            // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
-            .claudecodeNvim: ClaudeIntegrationStatus(integration: ClaudecodeNvimInstaller(configHome: nvimConfigHome)),
+            .claudecodeNvim: ClaudeIntegrationStatus(integration: claudecode),
         ]
         integrations.values.forEach { $0.refresh(forced: true) }
         return TilingController.AgentDependencies(

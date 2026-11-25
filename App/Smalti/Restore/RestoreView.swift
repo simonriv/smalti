@@ -57,8 +57,10 @@ final class RestoreView: NSView {
 
     /// ⌘L and ⌘, act wherever the focus is inside the screen (a button, with full keyboard access).
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard !isHidden, window != nil, let key = RestoreKey(event) else { return false }
-        return onKey?(key) == true
+        guard !isHidden, window != nil else { return false }
+        // Keys the screen does not handle (⌘1…⌘5 for the search column's chips) go on to its subviews.
+        guard let key = RestoreKey(event), onKey?(key) == true else { return super.performKeyEquivalent(with: event) }
+        return true
     }
 
     func render(_ state: State) {

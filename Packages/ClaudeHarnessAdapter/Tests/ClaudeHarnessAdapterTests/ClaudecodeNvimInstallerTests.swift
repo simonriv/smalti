@@ -50,6 +50,17 @@ struct ClaudecodeNvimInstallerTests {
         #expect(await installer.installState == .installed)
     }
 
+    /// Restore asks right away, before the palette's first background check has answered.
+    @Test func isInstalledAnswersWithoutWaiting() async throws {
+        try nvChadStarter()
+        let installer = ClaudecodeNvimInstaller(configHome: nvim)
+        #expect(!installer.isInstalled)
+
+        try await installer.install()
+
+        #expect(installer.isInstalled)
+    }
+
     @Test func uninstallRemovesOnlyItsFile() async throws {
         try nvChadStarter()
         let installer = ClaudecodeNvimInstaller(configHome: nvim)

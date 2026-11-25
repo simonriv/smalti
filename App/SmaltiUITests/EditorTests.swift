@@ -10,7 +10,9 @@ final class EditorTests: SmaltiUITestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        launch(.isolatedSmalti())
+        let smalti = XCUIApplication.isolatedSmalti()
+        smalti.launchArguments += ["-SmaltiExposeCellSize", "YES"]
+        launch(smalti)
         app.run(
             "mkdir -p '\(work)' && cd '\(work)' && printf 'import x\\n\\nfunc greet() {\\n}\\n' > reminder.service.ts && clear"
         )
@@ -58,8 +60,10 @@ final class EditorTests: SmaltiUITestCase {
         XCTAssertTrue(app.element("smalti.palette").waitForExistence(timeout: 5))
         app.typeText("reminder")
 
-        XCTAssertTrue(app.staticTexts["reminder.service.ts"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["línea 3 · ahora"].exists)
+        let row = app.elements("smalti.paletteRow").matching(NSPredicate(format: "label == 'reminder.service.ts'"))
+        XCTAssertTrue(row.firstMatch.waitForExistence(timeout: 5))
+        let subtitle = app.staticTexts.matching(NSPredicate(format: "value CONTAINS 'línea 3 · ahora'"))
+        XCTAssertTrue(subtitle.firstMatch.exists, "the row says the line of the change")
     }
 
     func testLastEditedJumpsExistingNvim() {
@@ -68,10 +72,30 @@ final class EditorTests: SmaltiUITestCase {
         expectTerminals(2)
         expectSocketCount(1)
         sleep(1)
+        app.typeKey("1", modifierFlags: .command)
 
         app.typeKey("l", modifierFlags: [.command, .shift])
 
         expectTerminals(2)
+        let focused = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == 'focused'"),
+            object: app.elements("smalti.pane").element(boundBy: 1))
+        XCTAssertEqual(XCTWaiter().wait(for: [focused], timeout: 5), .completed, "the jump focuses the Neovim pane")
+        let nvim = app.elements("smalti.terminal").element(boundBy: 1)
+        let shown = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (nvim.value as? String)?.contains("func greet()") == true }, object: nil)
+        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: 10), .completed, "Neovim shows the edited file")
+    }
+
+    /// ⌘⇧E leaves the focus on Neovim; ⌘⇧L from there still finds the agent's edit.
+    func testLastEditedFromTheNvimPane() {
+        injectEdit()
+        app.typeKey("e", modifierFlags: [.command, .shift])
+        expectSocketCount(1)
+        sleep(1)
+
+        app.typeKey("l", modifierFlags: [.command, .shift])
+
         let nvim = app.elements("smalti.terminal").element(boundBy: 1)
         let shown = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in (nvim.value as? String)?.contains("func greet()") == true }, object: nil)
@@ -79,10 +103,11 @@ final class EditorTests: SmaltiUITestCase {
     }
 
     func testCmdClickOnPathLineOpensNvim() {
-        app.run("echo reminder.service.ts:3")
+        // Absolute: the tests' `zsh -f` does not report its directory, so a relative path has nothing to resolve against.
+        app.run("echo '\(work)/reminder.service.ts:3'")
         sleep(1)
 
-        commandClickFirstWord()
+        app.element("smalti.terminal").commandClick(onRowStartingWith: "\(work)/reminder.service.ts:3")
 
         expectTerminals(2)
         expectSocketCount(1)
@@ -92,16 +117,9 @@ final class EditorTests: SmaltiUITestCase {
         app.run("printf 'x\\000y' > blob.bin && clear && echo blob.bin")
         sleep(1)
 
-        commandClickFirstWord()
+        app.element("smalti.terminal").commandClick(onRowStartingWith: "blob.bin")
 
         sleep(2)
         XCTAssertEqual(app.elements("smalti.terminal").count, 1)
-    }
-
-    /// ⌘-click on the first word of the line under the cleared screen's prompt.
-    private func commandClickFirstWord() {
-        let terminal = app.element("smalti.terminal")
-        let line = terminal.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 30, dy: 30))
-        XCUIElement.perform(withKeyModifiers: .command) { line.click() }
     }
 }

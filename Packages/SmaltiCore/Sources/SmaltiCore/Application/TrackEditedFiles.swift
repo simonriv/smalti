@@ -20,6 +20,16 @@ public final class TrackEditedFiles {
 
     public func recent(in pane: PaneID) -> [EditedFile] { files[pane]?.recent ?? [] }
 
+    /// `pane`'s edits; a pane without any (the Neovim ⌘⇧E just focused) shows its workspace's, newest first, each
+    /// file once, up to the same limit.
+    public func recent(in pane: PaneID, workspace: [PaneID]) -> [EditedFile] {
+        let own = recent(in: pane)
+        guard own.isEmpty else { return own }
+        let merged = workspace.flatMap { recent(in: $0) }.sorted { $0.at > $1.at }
+        var seen: Set<String> = []
+        return Array(merged.filter { seen.insert($0.path).inserted }.prefix(EditedFiles.limit))
+    }
+
     public func forget(_ pane: PaneID) { files[pane] = nil }
 
     /// The first line holding the change's first non-empty line; 1 when it is not found.

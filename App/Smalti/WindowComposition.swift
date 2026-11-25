@@ -7,6 +7,8 @@ import SmaltiCore
 struct WindowServices {
     let engine: GhosttyTerminalEngine
     let harnesses: HarnessRegistry
+    /// F6: the session search's state and opener, one per card or restore screen.
+    let makeSessionSearch: () -> SessionSearchModel
     /// The window's workspaces, frame or full screen changed: the session keeper and the input coordinator follow.
     let changed: () -> Void
     /// The user chose on the resume screen of the window passed; the app restores every window from it.
@@ -238,7 +240,7 @@ final class WindowComposition {
             windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
             closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
         let screen = RestoreController(
-            listing, theme: controller.theme, preferences: preferences, harnesses: services.harnesses
+            listing, theme: controller.theme, preferences: preferences, sessions: services.makeSessionSearch()
         ) {
             [weak self] choice in self?.finishAsking(choice, snapshot: snapshot)
         }
@@ -348,7 +350,7 @@ final class WindowComposition {
         }
         self.help = help
         let sessions = SessionSearchController(
-            window: window, harnesses: services.harnesses,
+            window: window, model: services.makeSessionSearch(),
             open: { [weak controller] plan, directory in controller?.openHarnessSession(plan, directory: directory) })
         sessions.onOpenChange = { [weak self] isOpen in
             guard let self else { return }
@@ -388,7 +390,9 @@ final class WindowComposition {
             case .workspaceRename: palette.beginRename(theme: theme)
             case .observatoryToggle: screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
-            case .observatoryFilter: screen?.cycleFilter()
+            // From ⌘K or the menu with the observatory closed, it opens it first.
+            case .observatoryFilter:
+                if screen?.isOpen == true { screen?.cycleFilter() } else { screen?.toggle(theme: theme) }
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
             case .previewQuickLook:
@@ -480,8 +484,12 @@ final class WindowComposition {
         }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
         if hasHistoryPaletteOpen { return .overlay(allowing: []) }
-        if observatoryScreen?.isOpen == true { return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod]) }
-        return KeyContext(passingThrough: [.observatoryPeriod])
+        // F6: the ⌘⇧O card owns the keyboard (⌘1…⌘5 change its chips, ⌘V pastes in its field).
+        if sessions?.isOpen == true { return .overlay(allowing: [.harnessSearch, .paletteOpen, .helpShow]) }
+        if observatoryScreen?.isOpen == true {
+            return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod, .observatoryFilter])
+        }
+        return KeyContext(passingThrough: [.observatoryPeriod, .observatoryFilter])
     }
 
     /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).

@@ -62,7 +62,7 @@ public struct OpenCodeUsage: HarnessUsage {
             UsageRow(
                 harness: .opencode, sessionID: $0.id, directory: $0.directory, model: $0.model,
                 isLocal: $0.provider.map(Self.localProviders.contains) ?? false, input: $0.input, output: $0.output,
-                startedAt: $0.createdAt, updatedAt: $0.updatedAt)
+                startedAt: $0.createdAt, updatedAt: $0.updatedAt, cacheRead: $0.cacheRead)
         }
     }
 }

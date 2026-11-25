@@ -36,7 +36,7 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
     private var notice: String?
 
     init(
-        _ content: Content, theme: Theme, preferences: any RestorePreferenceStore, harnesses: HarnessRegistry,
+        _ content: Content, theme: Theme, preferences: any RestorePreferenceStore, sessions: SessionSearchModel,
         onChoice: @escaping (RestoreChoice) -> Void
     ) {
         self.content = content
@@ -44,13 +44,17 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
         self.onChoice = onChoice
         selection = .defaults(for: content.snapshot)
         view = RestoreView(theme: theme, windows: content.windows, closedAt: content.closedAt)
-        sessions = SessionSearchModel(registry: harnesses)
+        self.sessions = sessions
         super.init()
         view.onKey = { [weak self] key in self?.handle(key) ?? false }
         view.onToggleRow = { [weak self] id in self?.toggle(id) }
         view.onAction = { [weak self] action in self?.perform(action) }
         view.search.field.delegate = self
         view.search.onChip = { [weak self] index in self?.sessions.selectChip(index) }
+        view.search.onCommandReturn = { [weak self] in
+            guard let self, isSearchFocused else { return }
+            sessions.whenSettled { [weak self] in self?.openSession(forking: true) }
+        }
         view.search.onClickRow = { [weak self] id in
             self?.sessions.select(id: id)
             self?.openSession(forking: false)
@@ -79,13 +83,18 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
         case #selector(NSResponder.moveLeft(_:)) where fieldIsEmpty: sessions.moveChip(by: -1)
         case #selector(NSResponder.moveRight(_:)) where fieldIsEmpty: sessions.moveChip(by: 1)
         case #selector(NSResponder.insertNewline(_:)):
-            openSession(forking: NSApp.currentEvent?.modifierFlags.contains(.command) == true)
+            sessions.whenSettled { [weak self] in self?.openSession(forking: false) }
         case #selector(NSResponder.cancelOperation(_:)), #selector(NSResponder.insertTab(_:)),
             #selector(NSResponder.insertBacktab(_:)):
             focusList()
         default: return false
         }
         return true
+    }
+
+    /// ⌘↩ forks only from the search column; on the list it means nothing.
+    private var isSearchFocused: Bool {
+        (view.window?.firstResponder as? NSTextView)?.delegate === view.search.field
     }
 
     private func focusSearch() {

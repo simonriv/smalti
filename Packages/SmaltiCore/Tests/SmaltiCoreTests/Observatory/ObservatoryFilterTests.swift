@@ -84,6 +84,20 @@ struct ObservatoryFilterTests {
         #expect(report.detail?.sessionID == "claude-1")
     }
 
+    @Test func cacheShareCountsOpenCodeCacheReads() {
+        let row = UsageRow(
+            harness: .opencode, sessionID: "oc-1", directory: "/w", model: "qwen3:4b", isLocal: true, input: 300,
+            output: 40, startedAt: now.addingTimeInterval(-3600), updatedAt: now.addingTimeInterval(-600),
+            cacheRead: 100)
+
+        #expect(report(.all, usage: [row]).summary.cacheShare == 8)
+        #expect(report(.opencode, usage: [row]).summary.cacheShare == 33)
+    }
+
+    @Test func opencodeLifetimeIsADash() {
+        #expect(report(.opencode, usage: [opencode("oc-1")]).rows.first?.lifetime == "—")
+    }
+
     @Test func footerNamesOpenCode() {
         #expect(
             ObservatoryTexts.footnote

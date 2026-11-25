@@ -142,7 +142,7 @@ final class ObservatoryView: NSView {
         separator.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             separator.widthAnchor.constraint(equalToConstant: theme.chrome.hairlineWidth),
-            separator.heightAnchor.constraint(equalToConstant: theme.observatory.pillHeight - 8),
+            separator.heightAnchor.constraint(equalToConstant: theme.observatoryFilter.separatorHeight),
         ])
         let strip = NSStackView(views: [
             title, subtitle, spacer, filters, separator, period, KbdView("esc", theme: theme),
@@ -252,20 +252,26 @@ private final class FilterChips: NSStackView {
     init(theme: Theme) {
         self.theme = theme
         super.init(frame: .zero)
-        spacing = 4
+        let tokens = theme.observatoryFilter
+        spacing = tokens.chipGap
         for filter in ObservatoryFilter.allCases {
             let button = NSButton(title: filter.title, target: self, action: #selector(clicked(_:)))
             button.isBordered = false
             button.wantsLayer = true
-            button.layer?.cornerRadius = theme.observatory.pillRadius
+            button.layer?.cornerRadius = tokens.chipRadius
             button.layer?.borderWidth = theme.chrome.hairlineWidth
             button.tag = ObservatoryFilter.allCases.firstIndex(of: filter) ?? 0
             button.setAccessibilityIdentifier("smalti.observatory.filter.\(button.tag)")
-            button.heightAnchor.constraint(equalToConstant: theme.observatory.pillHeight).isActive = true
+            button.heightAnchor.constraint(equalToConstant: tokens.chipHeight).isActive = true
             buttons[filter] = button
             addArrangedSubview(button)
         }
         show(.all)
+        for button in buttons.values {
+            button.widthAnchor.constraint(
+                equalToConstant: ceil(button.attributedTitle.size().width) + 2 * tokens.chipPadding
+            ).isActive = true
+        }
     }
 
     @available(*, unavailable, message: "Built in code only")
@@ -273,20 +279,17 @@ private final class FilterChips: NSStackView {
 
     func show(_ chosen: ObservatoryFilter) {
         let tokens = theme.observatory
+        let chips = theme.observatoryFilter
         for (filter, button) in buttons {
             let isChosen = filter == chosen
-            let text = isChosen ? theme.text.title : theme.resume.tertiaryButtonText
             button.attributedTitle = NSAttributedString(
-                string: "  \(filter.title)  ",
+                string: filter.title,
                 attributes: [
                     .font: theme.interfaceFont(size: tokens.pillFontSize, weight: tokens.pillWeight),
-                    .foregroundColor: text.nsColor,
+                    .foregroundColor: (isChosen ? chips.chosenText : chips.inactiveText).nsColor,
                 ])
-            button.layer?.borderColor =
-                (isChosen ? theme.focus.ring : RGBAColor(red: 0, green: 0, blue: 0, alpha: 0))
-                .nsColor.cgColor
-            button.layer?.backgroundColor =
-                (isChosen ? theme.focus.glow : RGBAColor(red: 0, green: 0, blue: 0, alpha: 0)).nsColor.cgColor
+            button.layer?.borderColor = (isChosen ? chips.chosenBorder : .clear).nsColor.cgColor
+            button.layer?.backgroundColor = (isChosen ? chips.chosenBackground : .clear).nsColor.cgColor
             button.setAccessibilityValue(isChosen ? "selected" : "")
         }
     }

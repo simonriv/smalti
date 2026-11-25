@@ -22,6 +22,7 @@ struct OpenCodeStore {
         let provider: String?
         let input: Int
         let output: Int
+        let cacheRead: Int
     }
 
     let database: URL
@@ -57,7 +58,8 @@ struct OpenCodeStore {
 
     private static let query = """
         select s.id, s.directory, s.title, s.time_created, s.time_updated, \(String(format: lastModel, "id")),
-               \(String(format: lastModel, "providerID")), s.tokens_input + s.tokens_cache_read, s.tokens_output
+               \(String(format: lastModel, "providerID")), s.tokens_input + s.tokens_cache_read, s.tokens_output,
+               s.tokens_cache_read
         from session_v2 s
         where coalesce(s.parent_id, '') = '' and s.time_archived is null and s.time_updated >= ?
         order by s.time_updated desc
@@ -71,6 +73,7 @@ struct OpenCodeStore {
             id: id, directory: directory, title: row[text: 2] ?? "",
             createdAt: Date(timeIntervalSince1970: TimeInterval(created) / 1000),
             updatedAt: Date(timeIntervalSince1970: TimeInterval(updated) / 1000), model: row[text: 5],
-            provider: row[text: 6], input: Int(row[integer: 7] ?? 0), output: Int(row[integer: 8] ?? 0))
+            provider: row[text: 6], input: Int(row[integer: 7] ?? 0), output: Int(row[integer: 8] ?? 0),
+            cacheRead: Int(row[integer: 9] ?? 0))
     }
 }

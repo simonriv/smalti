@@ -34,6 +34,7 @@ final class ObservatoryRefresher {
     private var refreshLoop: Task<Void, Never>?
     private var samplingLoop: Task<Void, Never>?
     private var loggedStatuses: Set<String> = []
+    private var loggedUsageFailures = 0
     private var lastError: String?
     private var lastHealth = TranscriptHealth.healthy
 
@@ -122,6 +123,11 @@ final class ObservatoryRefresher {
             logger.notice("unknown Claude session status \(status, privacy: .public): shown as working")
             loggedStatuses.insert(status)
         }
+        // F6: OpenCode's store could not be read; its rows are left out, Claude's still show.
+        for failure in observe.usageFailures.dropFirst(loggedUsageFailures) {
+            logger.error("harness usage unreadable: \(failure, privacy: .private)")
+        }
+        loggedUsageFailures = observe.usageFailures.count
         let health = snapshot.activity.health
         if health != lastHealth {
             logger.error(

@@ -1,5 +1,4 @@
 import Foundation
-import NeovimAdapter
 import SmaltiCore
 
 /// What the editor coordinator needs from its window's tiling.
@@ -11,6 +10,8 @@ protocol EditorHost: AnyObject {
     /// Opens a pane next to `beside` running `command` in `directory`; nil when it could not open.
     func openEditorPane(command: String, directory: WorkingDirectory, beside: PaneID) -> PaneID?
     @discardableResult func activate(_ pane: PaneID) -> Bool
+    /// A line in the status bar.
+    func report(_ text: String)
 }
 
 /// F6, Neovim in a window: the panes Smalti opened with a socket, which one had the focus last, "Abrir Neovim junto
@@ -25,15 +26,16 @@ final class EditorCoordinator: EditorPanes {
     private let nvim: String
     private let socketDirectory: String
     private let home: String
-    private let bridge = NeovimBridge()
+    private let bridge: any EditorBridge
     private lazy var opener = OpenInEditor(bridge: bridge, panes: self, socketDirectory: socketDirectory, nvim: nvim)
     private var sockets: [PaneID: String] = [:]
     private var focusOrder: [PaneID] = []
 
-    init(editedFiles: TrackEditedFiles, nvim: String, socketDirectory: String, home: String) {
-        self.editedFiles = editedFiles
-        self.nvim = nvim
-        self.socketDirectory = socketDirectory
+    init(settings: EditorSettings, home: String) {
+        editedFiles = settings.editedFiles
+        nvim = settings.nvim
+        socketDirectory = settings.socketDirectory
+        bridge = settings.bridge
         self.home = home
     }
 
@@ -95,9 +97,13 @@ final class EditorCoordinator: EditorPanes {
         }
     }
 
-    /// ⌘⇧L: the newest file `pane`'s Claude edited.
+    /// ⌘⇧L: the newest file `pane`'s Claude edited (its workspace's, from a pane without edits).
     func openLastEdited(from pane: PaneID) {
-        guard let file = editedFiles.recent(in: pane).first else { return }
+        let workspace = host?.panes(nearEditorOf: pane).map(\.id) ?? []
+        guard let file = editedFiles.recent(in: pane, workspace: workspace).first else {
+            host?.report(EditedFiles.noneText)
+            return
+        }
         open(EditorTarget(path: file.path, line: file.line, column: nil), from: pane)
     }
 
@@ -131,11 +137,10 @@ final class EditorCoordinator: EditorPanes {
         return true
     }
 
+    /// Only a regular file is opened to probe: opening a named pipe for reading would block the main thread.
     static func isTextFile(_ path: String) -> Bool {
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue,
-            let handle = FileHandle(forReadingAtPath: path)
-        else { return false }
+        let isRegular = (try? URL(filePath: path).resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) ?? false
+        guard isRegular, let handle = FileHandle(forReadingAtPath: path) else { return false }
         defer { try? handle.close() }
         let head = (try? handle.read(upToCount: textProbeBytes)) ?? Data()
         return !head.contains(0)

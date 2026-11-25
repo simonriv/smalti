@@ -24,10 +24,21 @@ public struct SessionSearchState: Equatable, Sendable {
         Chip(title: "OpenCode", harness: .opencode),
     ]
 
-    public var text = ""
+    /// New text selects the top match again.
+    public var text = "" {
+        didSet { if text != oldValue { selectedIndex = 0 } }
+    }
     public private(set) var chipIndex = 0
+    /// A late listing (a slow harness) keeps the selected session, wherever it now sits; a session no longer listed
+    /// gives the selection back to the top.
     public var listing = SessionListing(sessions: [], failures: [:]) {
-        didSet { selectedIndex = min(selectedIndex, max(listing.sessions.count - 1, 0)) }
+        didSet {
+            let previous = oldValue.sessions.indices.contains(selectedIndex) ? oldValue.sessions[selectedIndex] : nil
+            selectedIndex =
+                previous.flatMap { kept in
+                    listing.sessions.firstIndex { $0.id == kept.id && $0.harness == kept.harness }
+                } ?? 0
+        }
     }
     public private(set) var selectedIndex = 0
 

@@ -28,7 +28,8 @@ final class RestoreSearchTests: SmaltiUITestCase {
         for code in ["codex resume 0198…", "agy --conversation c41e…", "opencode -s ses_…", "agy -c"] {
             XCTAssertTrue(app.staticTexts[code].waitForExistence(timeout: 5), "row with \(code)")
         }
-        XCTAssertTrue(app.staticTexts["la última del directorio"].exists)
+        let detail = app.staticTexts.matching(NSPredicate(format: "value ENDSWITH '· la última del directorio'"))
+        XCTAssertTrue(detail.firstMatch.exists, "the row without an id continues the directory's last session")
     }
 
     func testTabMovesFocusBetweenColumns() {
@@ -53,6 +54,20 @@ final class RestoreSearchTests: SmaltiUITestCase {
 
         XCTAssertTrue(app.element("smalti.restore").exists, "esc in the search does not start clean")
         XCTAssertFalse(app.element("smalti.terminal").exists)
+        app.typeText("x")
+        XCTAssertEqual(app.element("sessions.field").value as? String ?? "", "", "the keys went back to the list")
+    }
+
+    func testCmdEnterInColumnShowsCannotFork() {
+        launchToRestore([.init(directory: "/tmp")])
+        app.typeKey(.tab, modifierFlags: [])
+        app.typeKey("4", modifierFlags: .command)
+        XCTAssertTrue(app.element("sessions.row.fxagy1").waitForExistence(timeout: 5))
+
+        app.typeKey(.return, modifierFlags: .command)
+
+        XCTAssertTrue(app.staticTexts["Antigravity no permite bifurcar sesiones"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("smalti.restore").exists)
     }
 
     func testEnterOnSessionRestoresThenOpens() {

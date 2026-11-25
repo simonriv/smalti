@@ -32,9 +32,11 @@ final class SessionKeeper {
         periodicScrollback = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.scrollbackInterval)
-                guard !Task.isCancelled, let self, let set = self.latest else { return }
+                guard !Task.isCancelled, let self, self.latest != nil else { return }
                 if self.heldStructure != nil { continue }
                 let editors = await self.editorPositions()
+                // Quit may have saved, or "Empezar limpio" started a hold, while Neovim answered.
+                guard !Task.isCancelled, self.heldStructure == nil, let set = self.latest else { continue }
                 self.report(self.save.saveWithScrollback(of: set, at: .now, editors: editors))
             }
         }

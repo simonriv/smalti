@@ -44,7 +44,8 @@ extension XCUIApplication {
         return [
             "-SmaltiCodexHome", path("codex"), "-SmaltiAntigravityHome", path("antigravity-cli"),
             "-SmaltiOpenCodeDB", path("opencode/opencode.db"), "-SmaltiNvimConfigHome", path("nvim-config/nvim"),
-            "-SmaltiNvimCommand", "nvim --clean", "-SmaltiEditorSocketDir", sockets,
+            // The pane's `zsh -f` has no Homebrew in its PATH (InputTests does the same).
+            "-SmaltiNvimCommand", "/opt/homebrew/bin/nvim --clean", "-SmaltiEditorSocketDir", sockets,
         ]
     }
 

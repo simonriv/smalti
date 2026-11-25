@@ -31,13 +31,18 @@ public final class ClaudecodeNvimInstaller: HarnessIntegration {
     private var file: URL { configHome.appending(path: Self.relativePath) }
 
     public var installState: IntegrationState {
-        get async {
-            guard isNvChad else { return .unknown }
-            guard let text = try? String(contentsOf: file, encoding: .utf8) else {
-                return FileManager.default.fileExists(atPath: file.path) ? .unknown : .notInstalled
-            }
-            return text.hasPrefix(Self.marker) ? .installed : .unknown
+        get async { currentState }
+    }
+
+    /// Only file checks, so restoring can ask without waiting for ⌘K's background check (`--ide`, spec F6).
+    public var isInstalled: Bool { currentState == .installed }
+
+    private var currentState: IntegrationState {
+        guard isNvChad else { return .unknown }
+        guard let text = try? String(contentsOf: file, encoding: .utf8) else {
+            return FileManager.default.fileExists(atPath: file.path) ? .unknown : .notInstalled
         }
+        return text.hasPrefix(Self.marker) ? .installed : .unknown
     }
 
     public func install() async throws(IntegrationError) {

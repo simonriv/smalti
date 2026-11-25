@@ -78,6 +78,51 @@ final class SessionSearchTests: SmaltiUITestCase {
         XCTAssertEqual(app.elements("smalti.terminal").count, 1)
     }
 
+    private func expectChosenChip(_ index: Int) {
+        let chosen = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == 'selected'"), object: app.element("sessions.chip.\(index)"))
+        XCTAssertEqual(XCTWaiter().wait(for: [chosen], timeout: 5), .completed, "chip \(index) chosen")
+    }
+
+    func testCmdDigitChoosesChip() {
+        openCard()
+
+        app.typeKey("3", modifierFlags: .command)
+
+        expectChosenChip(2)
+        XCTAssertEqual(app.elements("smalti.terminal").count, 1, "⌘3 did not reach the panes behind")
+    }
+
+    func testArrowsChangeChipWithEmptyField() {
+        openCard()
+
+        app.typeKey(.rightArrow, modifierFlags: [])
+
+        expectChosenChip(1)
+    }
+
+    func testEscClosesTheCard() {
+        openCard()
+
+        app.typeKey(.escape, modifierFlags: [])
+
+        XCTAssertTrue(card.waitForNonExistence(timeout: 5))
+    }
+
+    func testReopenedCardStartsEmpty() {
+        openCard()
+        app.element("sessions.chip.2").click()
+        expectChosenChip(2)
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(card.waitForNonExistence(timeout: 5))
+
+        openCard()
+
+        XCTAssertEqual(app.element("sessions.field").value as? String ?? "", "")
+        expectChosenChip(0)
+        XCTAssertTrue(app.element("sessions.row.fxagy1").waitForExistence(timeout: 5), "every harness listed again")
+    }
+
     func testMissingDirectoryOpensHomeWithNotice() {
         openCard()
         app.element("sessions.chip.4").click()

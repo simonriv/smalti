@@ -9,13 +9,15 @@ final class SessionSearchView: NSView {
     let field = NSTextField()
     var onChip: ((Int) -> Void)?
     var onClickRow: ((String) -> Void)?
+    /// ⌘↩: fork the selected session. An unbound ⌘↩ never reaches the field as `insertNewline:`.
+    var onCommandReturn: (() -> Void)?
 
     private let theme: Theme
     private let chips = NSStackView()
-    private let list = NSStackView()
+    private let table = NSTableView()
     private let scroll = NSScrollView()
     private let notes = NSStackView()
-    private var rowViews: [String: SessionRowView] = [:]
+    private lazy var source = SessionListSource(theme: theme)
 
     /// `column`: the restore screen's column background and left border; the card gets the ⌘K glass instead.
     init(theme: Theme, column: Bool) {
@@ -60,14 +62,24 @@ final class SessionSearchView: NSView {
         if layer?.shadowOpacity ?? 0 > 0 { OverlayBox.updateShadow(of: self, theme: theme) }
     }
 
-    /// ⌘1…⌘5 choose a chip wherever the focus is inside the search.
+    /// ⌘1…⌘5 choose a chip wherever the focus is inside the search; ⌘↩ forks.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+        if HistoryPaletteView.isCommandReturn(event), let onCommandReturn {
+            onCommandReturn()
+            return true
+        }
+        guard let chip = Self.chipIndex(forCommandDigit: event) else { return super.performKeyEquivalent(with: event) }
+        onChip?(chip)
+        return true
+    }
+
+    /// ⌘1…⌘5 → the chip's index; nil for any other key.
+    static func chipIndex(forCommandDigit event: NSEvent) -> Int? {
+        guard event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
             let digit = event.charactersIgnoringModifiers.flatMap(Int.init),
             (1...SessionSearchState.chips.count) ~= digit
-        else { return super.performKeyEquivalent(with: event) }
-        onChip?(digit - 1)
-        return true
+        else { return nil }
+        return digit - 1
     }
 
     func render(_ state: SessionSearchState, rows: [SessionSearchRow], notice: String? = nil) {
@@ -78,18 +90,10 @@ final class SessionSearchView: NSView {
         notes.setViews(
             ([notice].compactMap { $0 } + state.failureMessages + [state.emptyText].compactMap { $0 }).map { note($0) },
             in: .leading)
-        rowViews = [:]
-        list.setViews(
-            rows.map { row in
-                let view = SessionRowView(row, theme: theme, isSelected: row.id == state.selected?.id)
-                view.onClick = { [weak self] in self?.onClickRow?(row.id) }
-                rowViews[row.id] = view
-                return view
-            }, in: .top)
-        if let id = state.selected?.id, let view = rowViews[id] {
-            list.layoutSubtreeIfNeeded()
-            view.scrollToVisible(view.bounds)
-        }
+        source.rows = rows
+        source.selectedID = state.selected?.id
+        table.reloadData()
+        if let index = rows.firstIndex(where: { $0.id == state.selected?.id }) { table.scrollRowToVisible(index) }
     }
 
     // MARK: - Parts
@@ -100,7 +104,8 @@ final class SessionSearchView: NSView {
         title.attributedStringValue = NSAttributedString(
             string: "TODAS LAS SESIONES DE AGENTES",
             attributes: [
-                .font: theme.interfaceFont(size: theme.resume.tagFontSize), .kern: theme.resume.tagFontSize * 0.06,
+                .font: theme.interfaceFont(size: theme.resume.tagFontSize),
+                .kern: theme.resume.tagFontSize * tokens.headerLetterSpacing,
                 .foregroundColor: tokens.secondaryText.nsColor,
             ])
         title.setAccessibilityLabel("Todas las sesiones de agentes")
@@ -131,7 +136,7 @@ final class SessionSearchView: NSView {
         let icon = NSImageView(
             image: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil) ?? NSImage())
         icon.contentTintColor = tokens.secondaryText.nsColor
-        icon.symbolConfiguration = .init(pointSize: tokens.fieldIconSize - 2, weight: .regular)
+        icon.symbolConfiguration = .init(pointSize: tokens.fieldGlyphSize, weight: .regular)
         let row = NSStackView(views: [icon, field])
         row.spacing = tokens.fieldGap
         row.edgeInsets = NSEdgeInsets(top: 0, left: tokens.fieldPadding, bottom: 0, right: tokens.fieldPadding)
@@ -171,25 +176,25 @@ final class SessionSearchView: NSView {
         return chip
     }
 
+    /// Virtualized like ⌘K's list (spec F6): only the rows on screen have views.
     private func configureList(_ tokens: SessionSearchTokens) {
-        list.orientation = .vertical
-        list.alignment = .leading
-        list.spacing = tokens.rowGap
-        let document = FlippedView()
-        list.translatesAutoresizingMaskIntoConstraints = false
-        document.addSubview(list)
-        document.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            list.leadingAnchor.constraint(equalTo: document.leadingAnchor),
-            list.trailingAnchor.constraint(equalTo: document.trailingAnchor),
-            list.topAnchor.constraint(equalTo: document.topAnchor),
-            list.bottomAnchor.constraint(equalTo: document.bottomAnchor),
-        ])
-        scroll.documentView = document
+        table.addTableColumn(NSTableColumn(identifier: NSUserInterfaceItemIdentifier("session")))
+        table.headerView = nil
+        table.style = .plain
+        table.intercellSpacing = NSSize(width: 0, height: tokens.rowGap)
+        table.backgroundColor = .clear
+        table.selectionHighlightStyle = .none
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        table.usesAutomaticRowHeights = true
+        table.focusRingType = .none
+        table.refusesFirstResponder = true
+        source.onClick = { [weak self] id in self?.onClickRow?(id) }
+        table.dataSource = source
+        table.delegate = source
+        scroll.documentView = table
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
-        document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
         scroll.setContentHuggingPriority(.defaultLow, for: .vertical)
         scroll.setAccessibilityIdentifier("sessions.list")
     }
@@ -276,8 +281,7 @@ final class SessionRowView: NSView {
         wantsLayer = true
         layer?.cornerRadius = tokens.rowCornerRadius
         layer?.backgroundColor =
-            (isSelected ? tokens.rowSelected : RGBAColor(red: 0, green: 0, blue: 0, alpha: 0))
-            .nsColor.cgColor
+            (isSelected ? tokens.rowSelected : .clear).nsColor.cgColor
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -311,7 +315,6 @@ final class ChipButton: NSButton {
         self.title = title
         isBordered = false
         wantsLayer = true
-        layer?.cornerRadius = 99
         layer?.masksToBounds = true
         target = self
         self.action = #selector(clicked)
@@ -334,7 +337,27 @@ final class ChipButton: NSButton {
     @objc private func clicked() { run() }
 }
 
-/// Lists grow down from the top.
-final class FlippedView: NSView {
-    override var isFlipped: Bool { true }
+/// The session list's rows for the table: a fresh row view for each visible row, the selected one highlighted.
+@MainActor
+private final class SessionListSource: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    var rows: [SessionSearchRow] = []
+    var selectedID: String?
+    var onClick: ((String) -> Void)?
+    private let theme: Theme
+
+    init(theme: Theme) {
+        self.theme = theme
+    }
+
+    func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        guard rows.indices.contains(row) else { return nil }
+        let item = rows[row]
+        let view = SessionRowView(item, theme: theme, isSelected: item.id == selectedID)
+        view.onClick = { [weak self] in self?.onClick?(item.id) }
+        return view
+    }
+
+    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool { false }
 }

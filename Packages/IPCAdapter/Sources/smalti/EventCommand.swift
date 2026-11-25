@@ -30,8 +30,12 @@ enum EventCommand {
             if let text = object[key] as? String { kept[key] = String(text.prefix(maxFieldLength)) }
         }
         if let tool = object["tool_input"] as? [String: Any] {
-            let summary = toolInputFields.reduce(into: [String: String]()) { fields, key in
+            var summary: [String: Any] = toolInputFields.reduce(into: [String: String]()) { fields, key in
                 if let text = tool[key] as? String { fields[key] = String(text.prefix(maxFieldLength)) }
+            }
+            // F6: a MultiEdit's first change locates the line, as an Edit's `new_string` does.
+            if let first = (tool["edits"] as? [[String: Any]])?.first?["new_string"] as? String {
+                summary["edits"] = [["new_string": String(first.prefix(maxFieldLength))]]
             }
             if !summary.isEmpty { kept["tool_input"] = summary }
         }
@@ -44,7 +48,8 @@ enum EventCommand {
     /// Longest text kept from a field: the app shows a title or a one-line summary.
     static let maxFieldLength = 2_000
     private static let textFields = ["session_id", "prompt", "message", "error", "source", "tool_name"]
-    private static let toolInputFields = ["command", "file_path"]
+    /// F6 adds what file tools wrote, for the line of "Editados por Claude".
+    private static let toolInputFields = ["command", "file_path", "notebook_path", "new_string", "content"]
 
     static func run(_ invocation: Invocation, transport: any EventTransport) -> Int32 {
         switch invocation.arguments.first {

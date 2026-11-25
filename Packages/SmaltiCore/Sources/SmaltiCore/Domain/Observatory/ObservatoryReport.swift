@@ -26,15 +26,6 @@ public struct ObservatoryReport: Equatable, Sendable {
         /// False while the index still reads files older than the period's start ("leyendo transcripts…").
         public let isComplete: Bool
 
-        /// F6: the same figures with other harnesses' sessions added (their tokens; they are never live).
-        func adding(_ others: [UsageRow]) -> Summary {
-            guard !others.isEmpty else { return self }
-            return Summary(
-                active: active, working: working, waiting: waiting, failed: failed,
-                input: input + others.reduce(0) { $0 + $1.input }, cacheShare: cacheShare,
-                output: output + others.reduce(0) { $0 + $1.output }, peak: peak, cost: cost, isComplete: isComplete)
-        }
-
         public init(
             active: Int, working: Int, waiting: Int, failed: Int, input: Int, cacheShare: Int?, output: Int,
             peak: OutputPeak?, cost: CostEstimate, isComplete: Bool
@@ -111,7 +102,7 @@ public struct ObservatoryReport: Equatable, Sendable {
         let rows =
             sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
         return ObservatoryReport(
-            summary: summary(sessions, in: window, snapshot: snapshot).adding(others),
+            summary: summary(sessions, others: others, in: window, snapshot: snapshot),
             rows: rows,
             detail: detail(selecting: request.selection, sessions: sessions, others: others, snapshot: snapshot))
     }
@@ -128,14 +119,23 @@ public struct ObservatoryReport: Equatable, Sendable {
             ?? others.first.map { detail(for: $0, snapshot) }
     }
 
-    /// F6: an OpenCode session, from its database's totals; no live state is known for it.
+    private static let noFigure = "—"
+
+    /// OpenCode counts cache reads inside its input; Claude's figures keep them apart.
+    private static func tokenUsage(of usage: UsageRow) -> TokenUsage {
+        TokenUsage(
+            input: usage.input - usage.cacheRead, output: usage.output, cacheRead: usage.cacheRead, cacheWrite5m: 0,
+            cacheWrite1h: 0)
+    }
+
+    /// F6: an OpenCode session, from its database's totals; no live state is known for it ("—" en vida).
     private static func row(for usage: UsageRow, _ snapshot: ObservatorySnapshot) -> Row {
         let model = usage.model.map { "\(usage.harness.displayName) · \($0)\(usage.isLocal ? " local" : "")" }
         return Row(
             id: usage.sessionID, state: .stopped,
             label: ObservedSession.label(cwd: usage.directory, home: snapshot.home),
             agentModel: model ?? usage.harness.displayName,
-            lifetime: ObservatoryFormat.agoCompact(snapshot.now.timeIntervalSince(usage.updatedAt)),
+            lifetime: noFigure,
             input: ObservatoryFormat.count(usage.input), output: ObservatoryFormat.count(usage.output),
             context: .unavailable, errorRate: 0, isErrorRateHigh: false, pid: "—", pane: nil)
     }
@@ -161,15 +161,15 @@ public struct ObservatoryReport: Equatable, Sendable {
         return left == right ? lhsID < rhsID : left > right
     }
 
-    private static func summary(_ sessions: [ObservedSession], in window: PeriodWindow, snapshot: ObservatorySnapshot)
-        -> Summary
-    {
+    private static func summary(
+        _ sessions: [ObservedSession], others: [UsageRow], in window: PeriodWindow, snapshot: ObservatorySnapshot
+    ) -> Summary {
         let live = sessions.filter(\.isLive)
         let usage = sessions.map { window.usage(of: $0.activity) }.reduce(into: [ModelID: TokenUsage]()) {
             total, next in
             total.merge(next, uniquingKeysWith: +)
         }
-        let tokens = usage.values.reduce(.zero, +)
+        let tokens = usage.values.reduce(.zero, +) + others.reduce(.zero) { $0 + tokenUsage(of: $1) }
         return Summary(
             active: live.count, working: live.filter { $0.state == .working }.count,
             waiting: live.filter { $0.state == .waiting }.count, failed: live.filter { $0.state == .failed }.count,

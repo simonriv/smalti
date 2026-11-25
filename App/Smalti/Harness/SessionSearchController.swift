@@ -13,10 +13,12 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
     private let open: (OpenPlan, _ directory: String?) -> Void
     private var view: SessionSearchView?
     private var outsideClicks: Any?
+    /// ⌘↩ and ⌘1…⌘5 are the card's while it is open: the keymap and the terminal would take them first.
+    private var cardKeys: Any?
 
-    init(window: SmaltiWindow, harnesses: HarnessRegistry, open: @escaping (OpenPlan, String?) -> Void) {
+    init(window: SmaltiWindow, model: SessionSearchModel, open: @escaping (OpenPlan, String?) -> Void) {
         self.window = window
-        self.model = SessionSearchModel(registry: harnesses)
+        self.model = model
         self.open = open
     }
 
@@ -37,7 +39,9 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
             view.centerXAnchor.constraint(equalTo: content.centerXAnchor),
             view.topAnchor.constraint(equalTo: content.topAnchor, constant: theme.palette.topOffset),
         ])
+        model.reset()
         view.field.delegate = self
+        view.onCommandReturn = { [weak self] in self?.run(forking: true) }
         view.onChip = { [weak self] index in self?.model.selectChip(index) }
         view.onClickRow = { [weak self] id in
             self?.model.select(id: id)
@@ -56,6 +60,9 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
             MainActor.assumeIsolated { self?.closeIfOutside(event) }
             return event
         }
+        cardKeys = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            MainActor.assumeIsolated { self?.handleCardKey(event) == true } ? nil : event
+        }
         onOpenChange?(true)
     }
 
@@ -67,7 +74,21 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
         isOpen = false
         outsideClicks.map(NSEvent.removeMonitor)
         outsideClicks = nil
+        cardKeys.map(NSEvent.removeMonitor)
+        cardKeys = nil
         onOpenChange?(false)
+    }
+
+    /// True when the key was the card's: ⌘↩ forks, ⌘1…⌘5 choose a chip. Only in this card's window.
+    private func handleCardKey(_ event: NSEvent) -> Bool {
+        guard isOpen, event.window === window else { return false }
+        if HistoryPaletteView.isCommandReturn(event) {
+            model.whenSettled { [weak self] in self?.run(forking: true) }
+            return true
+        }
+        guard let chip = SessionSearchView.chipIndex(forCommandDigit: event) else { return false }
+        model.selectChip(chip)
+        return true
     }
 
     // MARK: - NSTextFieldDelegate
@@ -83,8 +104,7 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
         case #selector(NSResponder.moveDown(_:)): model.moveSelection(by: 1)
         case #selector(NSResponder.moveLeft(_:)) where fieldIsEmpty: model.moveChip(by: -1)
         case #selector(NSResponder.moveRight(_:)) where fieldIsEmpty: model.moveChip(by: 1)
-        case #selector(NSResponder.insertNewline(_:)):
-            run(forking: NSApp.currentEvent?.modifierFlags.contains(.command) == true)
+        case #selector(NSResponder.insertNewline(_:)): model.whenSettled { [weak self] in self?.run(forking: false) }
         case #selector(NSResponder.cancelOperation(_:)): close()
         default: return false
         }

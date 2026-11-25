@@ -39,6 +39,16 @@ struct ObserveAgentsTests {
         #expect(snapshot.usage == [row])
     }
 
+    @Test func unreadableUsageIsReportedOnce() async {
+        let broken = FixedUsage(rows: [], failure: .storeMissing(harness: .opencode, path: "/x"))
+        let observe = make(usage: [broken])
+
+        _ = await observe.snapshot(panes: [], now: now)
+        _ = await observe.snapshot(panes: [], now: now)
+
+        #expect(observe.usageFailures == [HarnessError.storeMissing(harness: .opencode, path: "/x").message])
+    }
+
     @Test func snapshotAsksForThirtyDays() async {
         let transcripts = FakeAgentTranscripts()
 

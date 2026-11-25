@@ -10,16 +10,18 @@ final class EditorRestoreTests: SmaltiUITestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        launch(.isolatedSmalti(config: "[window]\nconfirm_close = false\n"))
+        let smalti = XCUIApplication.isolatedSmalti(config: "[window]\nconfirm_close = false\n")
+        smalti.launchArguments += ["-SmaltiExposeCellSize", "YES"]
+        launch(smalti)
         let lines = "$(seq -f 'line-%g' 1 200)"
         app.run("mkdir -p '\(work)' && cd '\(work)' && printf '%s\\n' \(lines) > notes.txt && clear")
     }
 
     override func tearDown() async throws {
-        // A stopped Neovim (the unresponsive case) never outlives the test.
+        // Best effort: the runner may not signal the app's processes, so the busy Neovim also has its own killer.
         let kill = Process()
         kill.executableURL = URL(filePath: "/bin/sh")
-        kill.arguments = ["-c", "pkill -CONT -f -- '\(socketDirectory)'; pkill -KILL -f -- '\(socketDirectory)'; true"]
+        kill.arguments = ["-c", "pkill -KILL -f -- '\(socketDirectory)'; true"]
         try? kill.run()
         kill.waitUntilExit()
         try? FileManager.default.removeItem(atPath: work)
@@ -29,15 +31,19 @@ final class EditorRestoreTests: SmaltiUITestCase {
 
     /// ⌘-click on `notes.txt:150`: a Neovim with its socket at line 150.
     private func openNvimAtLine150() {
-        app.run("echo notes.txt:150")
+        // Absolute: the tests' `zsh -f` does not report its directory.
+        app.run("echo '\(work)/notes.txt:150'")
         sleep(1)
-        let terminal = app.element("smalti.terminal")
-        let line = terminal.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 30, dy: 30))
-        XCUIElement.perform(withKeyModifiers: .command) { line.click() }
+        app.element("smalti.terminal").commandClick(onRowStartingWith: "\(work)/notes.txt:150")
         let nvim = app.elements("smalti.terminal").element(boundBy: 1)
         let shown = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in (nvim.value as? String)?.contains("line-150") == true }, object: nil)
-        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: 10), .completed, "Neovim opened at line 150")
+        let terminals = app.elements("smalti.terminal").allElementsBoundByIndex.map {
+            ($0.value as? String ?? "").suffix(600)
+        }
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [shown], timeout: 10), .completed,
+            "Neovim opened at line 150; terminals: \(terminals)")
     }
 
     private func quit() {
@@ -77,17 +83,22 @@ final class EditorRestoreTests: SmaltiUITestCase {
 
     func testUnresponsiveNvimRestoresAsProcess() throws {
         openNvimAtLine150()
-        let stop = Process()
-        stop.executableURL = URL(filePath: "/usr/bin/pkill")
-        stop.arguments = ["-STOP", "-f", "--", socketDirectory]
-        try stop.run()
-        stop.waitUntilExit()
+        // A Neovim busy in Lua still owns the terminal (a SIGSTOP would hand it back to zsh) but answers no RPC. The
+        // keys go from the first pane's shell, which reaches the socket as the app does.
+        app.typeKey("1", modifierFlags: .command)
+        app.run(
+            "/opt/homebrew/bin/nvim --clean --headless --server '\(socketDirectory)'/*.sock "
+                + "--remote-send ':lua while true do end<CR>'")
+        sleep(2)
+        // The test runner cannot signal the app's processes: the shell leaves a detached killer for the busy Neovim.
+        app.run("(sleep 5; pkill -KILL -f -- '\(socketDirectory)/') &!")
 
         quit()
 
+        let panes = try savedPanes()
         let nvimPane = try XCTUnwrap(
-            try savedPanes().first { ($0["relaunch"] as? [String: Any]).map { "\($0)".contains("nvim") } ?? false },
-            "the stopped Neovim is saved as its process")
+            panes.first { ($0["relaunch"] as? [String: Any]).map { "\($0)".contains("nvim") } ?? false },
+            "the busy Neovim is saved as its process; saved: \(panes)")
         XCTAssertNil(nvimPane["editor"])
     }
 }

@@ -432,10 +432,11 @@ final class GhosttySurfaceView: NSView {
         let size = ghostty_surface_size(surface)
         let scale = Double(window?.backingScaleFactor ?? 2)
         let cell = Size(width: Double(size.cell_width_px) / scale, height: Double(size.cell_height_px) / scale)
-        guard PointerGrid(origin: gridPadding, cell: cell).cell(at: topLeft) != nil,
+        guard let clicked = PointerGrid(origin: gridPadding, cell: cell).cell(at: topLeft),
             let word = PointerWordReader.word(in: surface, cell: cell)
         else { return false }
-        return commandClick(word.text)
+        let row = PointerWordReader.rowText(in: surface, row: clicked.row, columns: Int(size.columns))
+        return commandClick(CommandClickWord.extended(word.text, row: row, column: clicked.column))
     }
 
     /// F4.5: set by the engine; the app builds the menu (Copiar, Pegar, Buscar…).

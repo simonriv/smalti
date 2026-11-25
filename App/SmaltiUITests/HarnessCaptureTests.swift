@@ -30,7 +30,8 @@ final class HarnessCaptureTests: SmaltiUITestCase {
 
         XCTAssertTrue(relaunched.element("smalti.restore").waitForExistence(timeout: 10))
         XCTAssertTrue(relaunched.staticTexts["codex resume --last"].waitForExistence(timeout: 5))
-        XCTAssertTrue(relaunched.staticTexts["la última del directorio"].exists)
+        let detail = relaunched.staticTexts.matching(NSPredicate(format: "value ENDSWITH '· la última del directorio'"))
+        XCTAssertTrue(detail.firstMatch.exists, "the row says it continues the directory's last session")
     }
 
     /// ⌘Q, confirming the running program, then the same isolated launch again.

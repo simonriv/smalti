@@ -11,34 +11,70 @@ final class SessionSearchModel {
     private let search: SearchHarnessSessions
     private let opener: OpenHarnessSession
     private var running: Task<Void, Never>?
+    /// The query's listing is not complete yet (the pause runs, or a harness has not answered): Enter waits for it.
+    private var isSettling = false
+    private var whenSettledAction: (() -> Void)?
+    /// Typing waits this long before reading the stores again, so a word is one search, not one per letter.
+    static let typingPause: Duration = .milliseconds(100)
 
-    init(registry: HarnessRegistry) {
+    init(registry: HarnessRegistry, connectsEditor: @escaping () -> Bool) {
         search = SearchHarnessSessions(registry: registry)
         opener = OpenHarnessSession(
-            registry: registry, directoryExists: { FileManager.default.fileExists(atPath: $0) }, clock: { Date() })
+            registry: registry, directoryExists: { FileManager.default.fileExists(atPath: $0) }, clock: { Date() },
+            connectsEditor: connectsEditor)
     }
 
-    func refresh() {
+    /// A new card starts empty: no text and the "Todas" chip.
+    func reset() {
+        stop()
+        state = SessionSearchState()
+    }
+
+    func refresh(after pause: Duration = .zero) {
         running?.cancel()
-        let stream = search.run(state.query)
-        running = Task { [weak self] in
-            for await listing in stream {
+        isSettling = true
+        let query = state.query
+        running = Task { [weak self, search] in
+            if pause > .zero {
+                try? await Task.sleep(for: pause)
+                guard !Task.isCancelled else { return }
+            }
+            for await listing in search.run(query) {
                 guard let self, !Task.isCancelled else { return }
                 state.listing = listing
                 onChange?()
             }
+            // Every harness answered (or ran out of its 500 ms): the listing is the typed text's, whole.
+            guard let self, !Task.isCancelled else { return }
+            settle()
         }
+    }
+
+    /// Runs `action` once the listing matches the query: now, or when every harness has answered.
+    func whenSettled(_ action: @escaping () -> Void) {
+        guard isSettling else { return action() }
+        whenSettledAction = action
+    }
+
+    private func settle() {
+        guard isSettling else { return }
+        isSettling = false
+        let action = whenSettledAction
+        whenSettledAction = nil
+        action?()
     }
 
     func stop() {
         running?.cancel()
         running = nil
+        isSettling = false
+        whenSettledAction = nil
     }
 
     func setText(_ text: String) {
         guard text != state.text else { return }
         state.text = text
-        refresh()
+        refresh(after: Self.typingPause)
     }
 
     func selectChip(_ index: Int) {

@@ -50,6 +50,11 @@ struct StatusMessage: Equatable {
         StatusMessage(text: text, isTransient: true)
     }
 
+    /// F6: what "Abrir en Neovim" could not do (nothing edited yet).
+    static func editor(_ text: String) -> StatusMessage {
+        StatusMessage(text: text, isTransient: true)
+    }
+
     /// The observatory could not read Claude's transcripts; it keeps showing what it read before.
     static func transcriptsUnreadable(_ message: String) -> StatusMessage {
         StatusMessage(text: message, isTransient: true)

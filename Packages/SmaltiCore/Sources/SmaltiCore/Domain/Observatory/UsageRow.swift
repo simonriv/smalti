@@ -11,13 +11,16 @@ public struct UsageRow: Equatable, Sendable {
     /// Input tokens, cache reads included, as the Observatory counts Claude's.
     public let input: Int
     public let output: Int
+    /// The part of `input` read from the cache, for "desde caché".
+    public let cacheRead: Int
     public let startedAt: Date
     public let updatedAt: Date
 
     public init(
         harness: HarnessID, sessionID: String, directory: String, model: String?, isLocal: Bool, input: Int,
-        output: Int, startedAt: Date, updatedAt: Date
+        output: Int, startedAt: Date, updatedAt: Date, cacheRead: Int = 0
     ) {
+        self.cacheRead = cacheRead
         self.harness = harness
         self.sessionID = sessionID
         self.directory = directory

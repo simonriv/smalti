@@ -28,6 +28,10 @@ public struct SessionSearchTokens: Equatable, Sendable {
     public let rowDetailFontSize: Double = 11.5
     public let footerFontSize: Double = 11.5
     public let footerLineHeight: Double = 1.5
+    /// "TODAS LAS SESIONES DE AGENTES": `letter-spacing: 0.06em`.
+    public let headerLetterSpacing: Double = 0.06
+    /// The magnifying glass inside the field.
+    public let fieldGlyphSize: Double = 12
     /// The standalone card (⌘⇧O): the column's content on the ⌘K glass, this tall.
     public let cardHeight: Double = 560
 
@@ -55,6 +59,28 @@ public struct SessionSearchTokens: Equatable, Sendable {
     }
 }
 
+/// The observatory's harness chips (Observatorio.dc.html, F6): the strip's pills, the chosen one with the accent's ring
+/// and glow, then a hairline before the period.
+public struct ObservatoryFilterTokens: Equatable, Sendable {
+    public let chipHeight: Double = 26
+    public let chipPadding: Double = 10
+    public let chipRadius: Double = 7
+    public let chipGap: Double = 10
+    public let separatorHeight: Double = 18
+    public let inactiveText: RGBAColor
+    public let chosenText: RGBAColor
+    public let chosenBorder: RGBAColor
+    public let chosenBackground: RGBAColor
+
+    init(theme: Theme) {
+        inactiveText = theme.strip.inactiveText
+        chosenText = theme.text.title
+        chosenBorder = theme.focus.ring
+        chosenBackground = theme.focus.glow
+    }
+}
+
 extension Theme {
     public var sessionSearch: SessionSearchTokens { SessionSearchTokens(theme: self) }
+    public var observatoryFilter: ObservatoryFilterTokens { ObservatoryFilterTokens(theme: self) }
 }

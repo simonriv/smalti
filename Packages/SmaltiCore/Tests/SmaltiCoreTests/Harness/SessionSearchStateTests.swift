@@ -80,6 +80,37 @@ struct SessionSearchStateTests {
 
         #expect(state.failureMessages == ["No se pudo leer Codex: esquema desconocido (falta cwd)"])
     }
+    @Test func lateListingKeepsTheSelectedSession() {
+        var state = SessionSearchState()
+        state.listing = SessionListing(sessions: [session("a", .codex), session("b", .codex)], failures: [:])
+        state.moveSelection(by: 1)
+
+        state.listing = SessionListing(
+            sessions: [session("new", .claude, hoursAgo: 0.1), session("a", .codex), session("b", .codex)],
+            failures: [:])
+
+        #expect(state.selected?.id == "b")
+    }
+
+    @Test func goneSelectionGoesBackToTheTop() {
+        var state = SessionSearchState()
+        state.listing = SessionListing(sessions: [session("a", .codex), session("b", .codex)], failures: [:])
+        state.moveSelection(by: 1)
+
+        state.listing = SessionListing(sessions: [session("a", .codex)], failures: [:])
+
+        #expect(state.selected?.id == "a")
+    }
+
+    @Test func typingSelectsTheTopMatch() {
+        var state = SessionSearchState()
+        state.listing = SessionListing(sessions: [session("a", .codex), session("b", .codex)], failures: [:])
+        state.moveSelection(by: 1)
+
+        state.text = "x"
+
+        #expect(state.selected?.id == "a")
+    }
 }
 
 @Suite("Relative day")
@@ -113,5 +144,26 @@ struct SessionSearchTokensTests {
         #expect(tokens.fieldBorder == RGBAColor(red: 255, green: 255, blue: 255, alpha: 0.09))
         #expect(tokens.background.alpha == 0.55)
         #expect(tokens.selectedText == Theme.obsidian.text.title)
+    }
+
+    @Test func pillsHeaderAndGlyphFromTheBoard() {
+        let tokens = Theme.obsidian.sessionSearch
+
+        #expect(tokens.headerLetterSpacing == 0.06)
+        #expect(tokens.fieldGlyphSize == 12)
+        #expect(RGBAColor.clear.alpha == 0)
+    }
+
+    @Test func observatoryFilterChipsFromTheBoard() {
+        let tokens = Theme.obsidian.observatoryFilter
+
+        #expect(tokens.chipHeight == 26)
+        #expect(tokens.chipPadding == 10)
+        #expect(tokens.chipRadius == 7)
+        #expect(tokens.chipGap == 10)
+        #expect(tokens.separatorHeight == 18)
+        #expect(tokens.inactiveText == Theme.obsidian.strip.inactiveText)
+        #expect(tokens.chosenBorder == Theme.obsidian.focus.ring)
+        #expect(tokens.chosenBackground == Theme.obsidian.focus.glow)
     }
 }
