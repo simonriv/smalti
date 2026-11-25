@@ -107,6 +107,26 @@ struct GuardMutantKillerTests {
         #expect(verdict("< .env").isDenied)
     }
 
+    // MARK: - Closing mutation survivors
+
+    @Test func parentOfARelativePathIsKept() {
+        #expect(GuardPathResolver.fold("../.env") == "../.env")
+        #expect(GuardPathResolver.fold("/../.env") == "/.env")
+    }
+
+    @Test func emptyPatternLabelsDoNotMatch() {
+        #expect(!HostPattern.matches("db..x.com", "db.x.com"))
+    }
+
+    @Test(arguments: ["node --env-file=.env --print process.env", "node --env-file=.env --eval=\"1\" app.js"])
+    func longPrintingOptionsGetNoEnvFileExemption(command: String) {
+        #expect(verdict(command).isDenied)
+    }
+
+    @Test func sshOptionsBeforeTheHostAreSkipped() {
+        #expect(guardFindings("ssh -p 22 ops 'terraform destroy'").map(\.rule) == ["terraform destroy"])
+    }
+
     // MARK: - CommandCatalog: approval and secret entries are never "current"
 
     @Test func guardEntriesAreNotCurrent() throws {

@@ -373,20 +373,20 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · `ShellCommandLine`
-- [ ] T2 · `SecretPaths` y reglas de secretos
-- [ ] T3 · Reglas destructivas, entorno y redacción
-- [ ] T4 · `ScreenToolUse` y `[guards]`
-- [ ] T5 · `AgentApprovals` y estado del panel
-- [ ] T6 · `ProtectProjectSecrets`, integración desactualizada y ⌘K
+- [x] T1 · `ShellCommandLine`
+- [x] T2 · `SecretPaths` y reglas de secretos
+- [x] T3 · Reglas destructivas, entorno y redacción
+- [x] T4 · `ScreenToolUse` y `[guards]`
+- [x] T5 · `AgentApprovals` y estado del panel
+- [x] T6 · `ProtectProjectSecrets`, integración desactualizada y ⌘K
 #### Bloque 2 · Adaptadores
-- [ ] T7 · Protocolo `guard`, servidor y CLI
-- [ ] T8 · `ClaudeProjectPermissions`, versión del plugin y `[guards]` en TOML
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T7 · Protocolo `guard`, servidor y CLI
+- [x] T8 · `ClaudeProjectPermissions`, versión del plugin y `[guards]` en TOML
+- [x] Revisión intermedia 1 + mutación incremental
 #### Bloque 3 · App
-- [ ] T9 · Aprobaciones en la app
-- [ ] T10 · Proteger secretos, integración desactualizada y documentos
-- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+- [x] T9 · Aprobaciones en la app
+- [x] T10 · Proteger secretos, integración desactualizada y documentos
+- [x] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre
-- [ ] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
+- [x] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
 - [ ] T12 · 0.7.5, PRs y despliegue
