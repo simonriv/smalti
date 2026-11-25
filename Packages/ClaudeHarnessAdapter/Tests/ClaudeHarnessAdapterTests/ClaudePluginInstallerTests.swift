@@ -151,11 +151,12 @@ struct ClaudePluginInstallerTests {
         #expect(await installer().installState == .installed)
     }
 
-    @Test func installStateWithoutCopyIsOutdated() async throws {
+    /// Without a local copy its version is unknown: no nagging to update (T10 ruling).
+    @Test func installStateWithoutCopyIsInstalled() async throws {
         try await installer().install()
         try FileManager.default.removeItem(at: installDirectory)
 
-        #expect(await installer().installState == .outdated)
+        #expect(await installer().installState == .installed)
     }
 
     @Test func versionsCompareNumerically() {

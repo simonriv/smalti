@@ -33,7 +33,9 @@ public struct LaunchSettings: Equatable, Sendable {
     public static let telemetryArgumentKeys = [managedSettingsKey, telemetryProbeKey]
     /// F7.5 (tests): how long an approval waits, in seconds.
     public static let approvalTimeoutKey = "SmaltiApprovalTimeoutSeconds"
-    public static let guardArgumentKeys = [approvalTimeoutKey]
+    /// F7.5 (tests): the project ⌘K writes the secret rules into, instead of the focused pane's.
+    public static let projectPermissionsRootKey = "SmaltiProjectPermissionsRoot"
+    public static let guardArgumentKeys = [approvalTimeoutKey, projectPermissionsRootKey]
     /// Every key the composition root reads, arguments and environment alike.
     public static let harnessArgumentKeys = [
         codexHomeKey, antigravityHomeKey, opencodeDatabaseKey, nvimConfigHomeKey, nvimCommandKey,
@@ -75,6 +77,7 @@ public struct LaunchSettings: Equatable, Sendable {
     public let telemetryProbe: URL?
     /// F7.5: how long a guarded command waits for the user before it is denied.
     public let approvalTimeout: Double
+    public let projectPermissionsRoot: String?
 
     public init(arguments: [String: String], home: URL, defaultStateDirectory: URL) {
         let value = { (key: String) in arguments[key].flatMap { $0.isEmpty ? nil : $0 } }
@@ -106,6 +109,7 @@ public struct LaunchSettings: Equatable, Sendable {
         approvalTimeout =
             value(Self.approvalTimeoutKey).flatMap(Double.init).flatMap { $0 > 0 ? $0 : nil }
             ?? AgentApprovals.standardTimeout
+        projectPermissionsRoot = value(Self.projectPermissionsRootKey)
     }
 
     // A literal that always parses; the fallback only exists to keep the type non-optional.

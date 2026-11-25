@@ -967,9 +967,13 @@ final class AppComposition {
         approvals.onChange = { [weak self] change in self?.approvalChanged(change) }
         self.approvals = approvals
         var agents = base
+        let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        let fixedRoot = startup.settings.projectPermissionsRoot
         agents.guards = TilingController.GuardDependencies(
             approvals: approvals, entries: { [weak self] in self?.approvalEntries() ?? [] },
-            panesChanged: { [weak self] in self?.retainApprovals() })
+            panesChanged: { [weak self] in self?.retainApprovals() },
+            secrets: ProtectProjectSecrets(permissions: ClaudeProjectPermissions(), home: home),
+            projectRoot: { directory in fixedRoot ?? ClaudeProjectPermissions.projectRoot(containing: directory) })
         return agents
     }
 

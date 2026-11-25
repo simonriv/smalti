@@ -80,6 +80,9 @@ final class TilingController {
         let approvals: AgentApprovals
         let entries: () -> [ApprovalEntry]
         let panesChanged: () -> Void
+        /// ⌘K's secret rules, and the project a pane's folder belongs to.
+        let secrets: ProtectProjectSecrets
+        let projectRoot: (String) -> String
     }
 
     var onChange: ((TilingState) -> Void)?
@@ -202,6 +205,32 @@ final class TilingController {
         }
     }
 
+    /// The focused pane's project for the secret rules; nil without a pane.
+    private var secretsProject: String? {
+        guard let guards = deps.agents.guards, let pane = set.active.focusedPane,
+            let directory = set.active.panes.first(where: { $0.id == pane })?.workingDirectory.path
+        else { return nil }
+        return guards.projectRoot(directory)
+    }
+
+    private func secretsProjectState() -> SecretsProjectState? {
+        guard let guards = deps.agents.guards, let project = secretsProject else { return nil }
+        // An unreadable settings file offers protecting, which then says why it cannot.
+        let isProtected = (try? guards.secrets.isProtected(project)) ?? false
+        return SecretsProjectState(name: URL(filePath: project).lastPathComponent, isProtected: isProtected)
+    }
+
+    private func changeSecretRules(protect: Bool) {
+        guard let guards = deps.agents.guards, let project = secretsProject else { return }
+        let name = URL(filePath: project).lastPathComponent
+        do {
+            if protect { try guards.secrets.protect(project) } else { try guards.secrets.unprotect(project) }
+            show(protect ? .secretsProtected(name) : .secretsUnprotected(name))
+        } catch {
+            show(.secretsFailed(error.message))
+        }
+    }
+
     /// An approval changed somewhere: the window that has the pane shows it.
     func handleApproval(_ change: AgentApprovalChange) {
         if case .blocked(let pane, let path) = change {
@@ -237,6 +266,7 @@ final class TilingController {
                 deps.editor.editedFiles.recent(in: $0, workspace: set.active.panes.map(\.id))
             } ?? [])
         state.pendingApprovals = deps.agents.guards?.entries() ?? []
+        state.secretsProject = secretsProjectState()
         return state
     }
 
@@ -412,6 +442,8 @@ final class TilingController {
             },
             .guardApprove: { [unowned self] in decideOldest(approve: true) },
             .guardReject: { [unowned self] in decideOldest(approve: false) },
+            .secretsProtect: { [unowned self] in changeSecretRules(protect: true) },
+            .secretsUnprotect: { [unowned self] in changeSecretRules(protect: false) },
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
             .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
             .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },

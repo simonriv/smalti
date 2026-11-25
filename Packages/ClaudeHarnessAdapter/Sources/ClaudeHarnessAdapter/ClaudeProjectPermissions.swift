@@ -44,6 +44,20 @@ public struct ClaudeProjectPermissions: ProjectPermissions {
         }
     }
 
+    /// The project a folder belongs to for ⌘K (spec F7.5): the nearest folder with `.git`, or the folder itself.
+    public static func projectRoot(containing directory: String) -> String {
+        var current = URL(filePath: directory).standardizedFileURL
+        while true {
+            if FileManager.default.fileExists(atPath: current.appending(path: ".git").path(percentEncoded: false)) {
+                let path = current.path(percentEncoded: false)
+                return path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
+            }
+            let parent = current.deletingLastPathComponent()
+            guard parent.path(percentEncoded: false) != current.path(percentEncoded: false) else { return directory }
+            current = parent
+        }
+    }
+
     private static func file(in project: String) -> URL {
         URL(filePath: project).appending(path: ".claude/settings.local.json")
     }

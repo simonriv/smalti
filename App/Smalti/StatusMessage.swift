@@ -42,6 +42,18 @@ struct StatusMessage: Equatable {
     static let noApprovalWaiting = StatusMessage(
         text: "No hay comandos esperando en este panel (⌘J salta al agente que espera)", isTransient: true)
 
+    static func secretsProtected(_ project: String) -> StatusMessage {
+        StatusMessage(text: "Secretos protegidos en \(project)", isTransient: true)
+    }
+
+    static func secretsUnprotected(_ project: String) -> StatusMessage {
+        StatusMessage(text: "Protección de secretos quitada en \(project)", isTransient: true)
+    }
+
+    static func secretsFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: reason, isTransient: true)
+    }
+
     static func secretBlocked(_ path: String) -> StatusMessage {
         StatusMessage(text: "Smalti bloqueó la lectura de \(path)", isTransient: true)
     }

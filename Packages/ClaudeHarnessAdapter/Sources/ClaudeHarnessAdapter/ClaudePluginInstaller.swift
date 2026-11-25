@@ -49,7 +49,7 @@ public final class ClaudePluginInstaller: HarnessIntegration {
     }
 
     /// A missing `claude`, a shell that cannot start or a failing list leave the state unknown (spec F5.6). F7.5: an
-    /// installed plugin whose copy is missing or older than the one this Smalti ships is outdated.
+    /// installed plugin whose local copy is older than the one this Smalti ships is outdated.
     public var installState: IntegrationState {
         get async {
             let result = await runner.run(command + ["plugin", "list"])
@@ -63,7 +63,8 @@ public final class ClaudePluginInstaller: HarnessIntegration {
 
     private var isCopyOutdated: Bool {
         guard let shipped = Self.version(at: pluginSource.appending(path: Self.manifest)) else { return false }
-        guard let installed = Self.version(at: installDirectory.appending(path: Self.manifest)) else { return true }
+        // Without a local copy the installed version is unknown: no update is offered.
+        guard let installed = Self.version(at: installDirectory.appending(path: Self.manifest)) else { return false }
         return shipped > installed
     }
 

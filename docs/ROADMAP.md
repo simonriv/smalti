@@ -21,7 +21,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6 y F7.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7 y F7.5.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -151,6 +151,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - **Entorno detectado** por el host del `DATABASE_URL` y por una lista de hosts de producción en `config.toml`; si no se puede determinar, se asume producción (falla cerrado).
 - **Criterio de cierre:** una prueba reproduce los comandos de los tres incidentes y cada uno queda bloqueado hasta la aprobación; ninguna lectura de los archivos de secretos de una lista de prueba llega al agente; sin respuesta de Smalti (app cerrada o socket caído), el hook bloquea.
 - **Fuera:** el proxy SQL con `libpg_query` y el proxy HTTPS de valores de relleno (ver «Ideas evaluadas»).
+- **Spec:** `docs/specs/F7.5-guardas.md`. PocketOS no usó `railway … delete` sino `curl` contra la API GraphQL de Railway: la guardia también vigila las peticiones HTTP que modifican algo en las APIs de los proveedores.
 - **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
 
 ## F7.6 · Distribución y actualizaciones

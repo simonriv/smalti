@@ -83,6 +83,25 @@ struct ClaudeProjectPermissionsTests {
         #expect(String(decoding: try Data(contentsOf: target), as: UTF8.self).contains("Read(**/.env)"))
     }
 
+    /// T10: ⌘K protects the git root of the focused pane's folder, or the folder itself outside git.
+    @Test func projectRootIsTheNearestGitFolder() throws {
+        let nested = project.appending(path: "apps/web/src")
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: project.appending(path: ".git"), withIntermediateDirectories: true)
+
+        #expect(ClaudeProjectPermissions.projectRoot(containing: nested.path(percentEncoded: false)) == path)
+    }
+
+    @Test func projectRootWithoutGitIsTheFolder() throws {
+        let alone = URL(filePath: "/tmp").appending(path: "smalti-nogit-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: alone, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: alone) }
+
+        #expect(
+            ClaudeProjectPermissions.projectRoot(containing: alone.path(percentEncoded: false))
+                == alone.path(percentEncoded: false))
+    }
+
     @Test func unwritableProjectSaysSo() {
         #expect(throws: ProjectPermissionsError.self) {
             try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: "/nonexistent-smalti/p")

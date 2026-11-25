@@ -49,4 +49,11 @@ struct ApprovalLaunchSettingsTests {
     @Test func timeoutKeyIsLaunchArgument() {
         #expect(LaunchSettings.guardArgumentKeys.contains(LaunchSettings.approvalTimeoutKey))
     }
+
+    /// T10: UI tests point ⌘K's secret rules at a temporary project.
+    @Test func projectPermissionsRootIsRead() {
+        #expect(settings([LaunchSettings.projectPermissionsRootKey: "/tmp/p"]).projectPermissionsRoot == "/tmp/p")
+        #expect(settings([:]).projectPermissionsRoot == nil)
+        #expect(LaunchSettings.guardArgumentKeys.contains(LaunchSettings.projectPermissionsRootKey))
+    }
 }
