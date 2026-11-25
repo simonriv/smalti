@@ -67,16 +67,34 @@ final class LayoutSharing {
         }
     }
 
+    /// Reads the file; when its root is missing here, asks for the folder first, so the confirmation shows the paths
+    /// that will really run (review 2); then confirms and saves.
     private func preview(_ file: URL, in window: NSWindow, report: @escaping (StatusMessage) -> Void) {
-        let preview: ImportPreview
-        do { preview = try importer.preview(file) } catch {
+        let first: ImportPreview
+        do { first = try importer.preview(file) } catch {
             report(.layoutImportFailed(error.message))
             return
         }
-        confirm(preview, in: window) { [weak self] isConfirmed in
-            guard isConfirmed, let self else { return }
-            chooseRoot(for: preview, in: window) { root in self.save(preview, root: root, report: report) }
+        chooseRoot(for: first, in: window) { [weak self] root in
+            guard let self else { return }
+            let preview: ImportPreview
+            switch rooted(first, file: file, root: root) {
+            case .success(let value): preview = value
+            case .failure(let error):
+                report(.layoutImportFailed(error.message))
+                return
+            }
+            confirm(preview, in: window) { [weak self] isConfirmed in
+                guard isConfirmed else { return }
+                self?.save(preview, root: root, report: report)
+            }
         }
+    }
+
+    /// The preview again under the folder the user picked; the first one when the root was there already.
+    private func rooted(_ first: ImportPreview, file: URL, root: String) -> Result<ImportPreview, LayoutShareError> {
+        guard root != first.root else { return .success(first) }
+        do { return .success(try importer.preview(file, root: root)) } catch { return .failure(error) }
     }
 
     /// "¿Importar el layout “…”?" with every command it will run; nothing is saved without "Importar".

@@ -90,9 +90,12 @@ final class TelemetryTests: SmaltiUITestCase {
         let shown = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in (line.value as? String ?? "").contains("3 peticiones") }, object: nil)
         wait(for: [shown], timeout: 20)
+        // The whole line but the clock: durations 1200, 1300 and 1400 ms (fake-claude.py) give a 1,3 s median.
         let text = line.value as? String ?? ""
-        XCTAssertTrue(text.hasPrefix("Telemetría · desde "), text)
-        XCTAssertTrue(text.contains("· 1 error de API · $0.04 según Claude Code"), text)
+        let clock = try XCTUnwrap(text.range(of: #"desde [0-9]{2}:[0-9]{2}"#, options: .regularExpression))
+        XCTAssertEqual(
+            text.replacingCharacters(in: clock, with: "desde HH:MM"),
+            "Telemetría · desde HH:MM · 3 peticiones · mediana 1,3 s · 1 error de API · $0.04 según Claude Code")
         XCTAssertEqual(
             app.element("smalti.observatory.footnote").value as? String,
             "Datos: hooks, transcripts y telemetría de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
@@ -129,5 +132,19 @@ final class TelemetryTests: SmaltiUITestCase {
         waitForShells(count: 2)
 
         XCTAssertEqual(paneTelemetryVariables(), [])
+    }
+
+    func testReloadTurnsReceiverOn() throws {
+        try launchTelemetry(
+            config: "[shell]\ncommand = \"\(XCUIApplication.isolatedShell)\"\n\n[extras]\notlp = false\n")
+        waitForProbe("off")
+
+        app.writeConfig("[shell]\ncommand = \"\(XCUIApplication.isolatedShell)\"\n")
+        reloadConfigFromPalette()
+        waitForProbe("listening")
+        app.typeKey("d", modifierFlags: .command)
+        waitForShells(count: 2)
+
+        XCTAssertEqual(paneTelemetryVariables().count, 8)
     }
 }

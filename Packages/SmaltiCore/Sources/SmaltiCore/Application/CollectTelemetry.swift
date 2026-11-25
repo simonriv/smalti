@@ -25,9 +25,14 @@ public final class CollectTelemetry: TelemetryVariablesSource {
         return TelemetryEnvironment.variables(for: endpoint)
     }
 
+    /// Asks the user's settings every time: a configuration that appeared or went away since the last apply wins.
     private func turnOn() {
+        if settings.isConfiguredByUser() {
+            if case .listening = status { receiver.stop() }
+            if status != .configuredByUser { change(to: .configuredByUser) }
+            return
+        }
         if case .listening = status { return }
-        guard !settings.isConfiguredByUser() else { return change(to: .configuredByUser) }
         do {
             let endpoint = try receiver.start { [weak self] events in self?.record(events) }
             change(to: .listening(endpoint))

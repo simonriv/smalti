@@ -53,9 +53,11 @@ final class SharedLayoutTests: SmaltiUITestCase {
         expect(app.element("smalti.statusBar"), value: text)
     }
 
+    /// The palette's rows for `query`, read once the first row has drawn.
     private func paletteTitles(_ query: String) -> [String] {
         openPalette()
         app.typeText(query)
+        _ = app.elements("smalti.paletteRow").firstMatch.waitForExistence(timeout: 5)
         let titles = app.elements("smalti.paletteRow").allElementsBoundByIndex.map(\.label)
         app.typeKey(.escape, modifierFlags: [])
         return titles
@@ -73,6 +75,10 @@ final class SharedLayoutTests: SmaltiUITestCase {
         expectStatus("Layout “compartir-ui” exportado")
         let text = try String(contentsOf: folder.appending(path: "compartir-ui.smalti-layout.json"), encoding: .utf8)
         XCTAssertTrue(text.contains(#""command" : ["#), text)
+        XCTAssertTrue(text.contains(#""directory" : ".""#), text)
+        XCTAssertTrue(text.contains(#""smaltiLayout" : 1"#), text)
+        XCTAssertFalse(text.contains("sessionID"))
+        XCTAssertFalse(text.contains("\"title\""))
         XCTAssertTrue(text.contains(#""sleep""#), text)
         XCTAssertFalse(text.contains(FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false) + "/"))
         XCTAssertFalse(text.contains("\"id\""))
@@ -97,7 +103,12 @@ final class SharedLayoutTests: SmaltiUITestCase {
 
         runFromPalette("importar layout")
 
-        XCTAssertFalse(paletteTitles("equipo").contains("Restaurar layout “equipo”"))
+        let layouts = app.stateDirectory.appending(path: "layouts").path(percentEncoded: false)
+        XCTAssertEqual((try? FileManager.default.contentsOfDirectory(atPath: layouts)) ?? [], [])
+        // Positive control: "layout" always lists "Importar layout…", so an empty list cannot pass by accident.
+        let titles = paletteTitles("layout")
+        XCTAssertTrue(titles.contains("Importar layout…"), "\(titles)")
+        XCTAssertFalse(titles.contains("Restaurar layout “equipo”"), "\(titles)")
     }
 
     func testImportMissingRootAsksFolder() throws {

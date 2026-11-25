@@ -168,4 +168,25 @@ struct TelemetryLedgerTests {
 
         #expect(ledger.telemetry(of: "s1")?.medianMilliseconds == Int.max)
     }
+
+    // MARK: Review 2
+
+    @Test func repeatsAreRecognizedWithinTheDeliveryWindow() {
+        var ledger = TelemetryLedger()
+        ledger.record([request(sequence: 0, after: 0)])
+        ledger.record((1..<SessionTelemetry.deliveryWindow).map { request(sequence: $0, after: 0) })
+
+        ledger.record([request(sequence: 0, after: 0)])
+
+        #expect(ledger.telemetry(of: "s1")?.requests == SessionTelemetry.deliveryWindow)
+    }
+
+    @Test func theDeliveryWindowForgetsTheOldest() {
+        var ledger = TelemetryLedger()
+        ledger.record((0...SessionTelemetry.deliveryWindow).map { request(sequence: $0, after: 0) })
+
+        ledger.record([request(sequence: 0, after: 0)])
+
+        #expect(ledger.telemetry(of: "s1")?.requests == SessionTelemetry.deliveryWindow + 2)
+    }
 }

@@ -43,9 +43,10 @@ struct TelemetryGuardTests {
 
     @Test(.enabled(if: isInRepository))
     func onlyTheOTLPReceiverOpensTCPSockets() {
-        let offenders = Self.lines(matching: "AF_INET", in: Self.productionFiles())
-            .filter { !$0.contains("/Packages/OTLPReceiverAdapter/Sources/") }
+        let all = Self.lines(matching: "AF_INET", in: Self.productionFiles())
+        let offenders = all.filter { !$0.contains("/Packages/OTLPReceiverAdapter/Sources/") }
 
+        #expect(all.count > offenders.count, "the scan must see the receiver's own socket")
         #expect(offenders.isEmpty, "TCP sockets outside OTLPReceiverAdapter: \(offenders)")
     }
 
@@ -64,9 +65,10 @@ struct TelemetryGuardTests {
 
     @Test(.enabled(if: isInRepository))
     func managedSettingsPathOnlyAsTheCheckDefault() {
-        let offenders = Self.lines(matching: "ClaudeCode/managed-settings", in: Self.productionFiles())
-            .filter { !$0.contains("ClaudeSettingsTelemetryCheck.swift") }
+        let all = Self.lines(matching: "ClaudeCode/managed-settings", in: Self.productionFiles())
+        let offenders = all.filter { !$0.contains("ClaudeSettingsTelemetryCheck.swift") }
 
+        #expect(all.count == offenders.count + 1, "the scan must see the check's default")
         #expect(offenders.isEmpty, "the managed settings path outside its check: \(offenders)")
     }
 }

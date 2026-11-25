@@ -9,9 +9,9 @@ struct HarnessIsolationGuardTests {
     /// that merely contains it (`my.codex.plugin`).
     // The regex is a constant only read by the tests, so sharing it across concurrent tests is safe.
     nonisolated(unsafe) static let realHomes =
-        #/(^|["/~])\.(claude|codex|gemini)(["/]|$)|\.local/share/opencode|\.config/nvim/#
+        #/(^|["/~])\.(claude|codex|gemini)(["/]|$)|\.local/share/opencode|\.config/nvim|Application Support/ClaudeCode/#
     /// The one place that resolves real homes from the launch arguments (as F3 does for Claude).
-    static let homeResolvers = ["LaunchSettings.swift"]
+    static let homeResolvers = ["LaunchSettings.swift", "ClaudeSettingsTelemetryCheck.swift"]
 
     private var packages: URL {
         URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -47,9 +47,11 @@ struct HarnessIsolationGuardTests {
             "let x = 1", "let home = base.appending(path: \".codex\")", "// \".gemini\" in a comment",
             "let a = home.appending(path: \".gemini/antigravity-cli\")", "let b = \"/Users/s/.codex/sessions\"",
             "let c = \"~/.claude\"", "let d = \"my.codex.plugin\"",
+            "let e = URL(filePath: \"/Library/Application Support/ClaudeCode/managed-settings.json\")",
         ].joined(separator: "\n")
 
-        #expect(Self.hits(in: text, file: "X.swift") == ["X.swift:2", "X.swift:4", "X.swift:5", "X.swift:6"])
+        #expect(
+            Self.hits(in: text, file: "X.swift") == ["X.swift:2", "X.swift:4", "X.swift:5", "X.swift:6", "X.swift:8"])
     }
 
     @Test func adaptersNeverBuildRealHarnessHomes() throws {

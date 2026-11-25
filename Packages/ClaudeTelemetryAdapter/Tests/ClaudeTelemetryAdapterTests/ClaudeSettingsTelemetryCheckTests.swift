@@ -55,4 +55,18 @@ struct ClaudeSettingsTelemetryCheckTests {
 
         #expect(!check.isConfiguredByUser())
     }
+
+    @Test func processEnvironmentWithOtelIsConfigured() {
+        let check = ClaudeSettingsTelemetryCheck(
+            claudeHome: home, managedSettings: managed, environment: ["OTEL_EXPORTER_OTLP_ENDPOINT": "https://x"])
+
+        #expect(check.isConfiguredByUser())
+    }
+
+    @Test func processEnvironmentWithoutTelemetryIsNot() {
+        let check = ClaudeSettingsTelemetryCheck(
+            claudeHome: home, managedSettings: managed, environment: ["PATH": "/bin", "MY_OTEL": "x"])
+
+        #expect(!check.isConfiguredByUser())
+    }
 }

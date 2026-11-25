@@ -2,22 +2,29 @@ import Foundation
 import SmaltiCore
 import os
 
-/// Whether Claude Code's own settings already set its telemetry up (spec F7): the `env` block of the user's
-/// `settings.json` or of the managed settings names `CLAUDE_CODE_ENABLE_TELEMETRY` or any `OTEL_` variable. A
-/// repository's `.claude/settings.json` does not count: Claude ignores exporter variables there.
+/// Whether the user already set Claude Code's telemetry up (spec F7, amendment 7): the `env` block of their
+/// `settings.json` or of the managed settings, or Smalti's own process environment (which every pane inherits), names
+/// `CLAUDE_CODE_ENABLE_TELEMETRY` or any `OTEL_` variable. A repository's `.claude/settings.json` does not count:
+/// Claude ignores exporter variables there.
 public struct ClaudeSettingsTelemetryCheck: ClaudeTelemetrySettings {
     public static let defaultManagedSettings = URL(
         filePath: "/Library/Application Support/ClaudeCode/managed-settings.json")
     private static let log = Logger(subsystem: "dev.simonriv.smalti", category: "telemetry")
 
     private let files: [URL]
+    private let environment: [String: String]
 
-    public init(claudeHome: URL, managedSettings: URL = Self.defaultManagedSettings) {
+    public init(
+        claudeHome: URL, managedSettings: URL = Self.defaultManagedSettings,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
         files = [claudeHome.appending(path: "settings.json"), managedSettings]
+        self.environment = environment
     }
 
     public func isConfiguredByUser() -> Bool {
-        files.contains { Self.environment(in: $0).keys.contains(where: Self.isTelemetryVariable) }
+        environment.keys.contains(where: Self.isTelemetryVariable)
+            || files.contains { Self.environment(in: $0).keys.contains(where: Self.isTelemetryVariable) }
     }
 
     private static func isTelemetryVariable(_ name: String) -> Bool {

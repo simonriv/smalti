@@ -38,6 +38,8 @@ final class ObservatoryRefresher {
     private var loggedUsageFailures = 0
     private var lastError: String?
     private var lastHealth = TranscriptHealth.healthy
+    /// F7 review 2: telemetry refreshes the open observatory at most once per open interval.
+    private var telemetryThrottle = RefreshThrottle(interval: TimeInterval(openInterval.components.seconds))
 
     static let openInterval: Duration = .seconds(2)
     static let closedInterval: Duration = .seconds(10)
@@ -100,7 +102,8 @@ final class ObservatoryRefresher {
 
     /// F7: new telemetry shows at once while the observatory is open; closed, the next 10 s refresh takes it.
     func telemetryChanged() {
-        if isObservatoryOpen { refreshNow() }
+        guard isObservatoryOpen, telemetryThrottle.shouldRefresh(at: .now) else { return }
+        refreshNow()
     }
 
     func agentEvent(_ event: AgentEvent) {

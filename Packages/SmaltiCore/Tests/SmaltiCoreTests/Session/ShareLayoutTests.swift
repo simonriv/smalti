@@ -246,4 +246,23 @@ struct ShareLayoutTests {
 
         #expect(saved.rawValue == "solen-dev 2")
     }
+
+    // MARK: Review 2
+
+    @Test func previewWithChosenRootShowsItsPaths() throws {
+        files.files[file] = try shared([pane(editor: EditorPosition(file: root + "/src/a.ts", line: 42))])
+
+        let preview = try importer().preview(file, root: "/Volumes/work/solen")
+
+        #expect(preview.root == "/Volumes/work/solen")
+        #expect(preview.commands == ["nvim +42 /Volumes/work/solen/src/a.ts"])
+        #expect(!preview.isRootPresent)
+    }
+
+    @Test func previewWithChosenExistingRootIsPresent() throws {
+        files.files[file] = try shared([pane()])
+
+        #expect(
+            try importer(existing: ["/Volumes/work/solen"]).preview(file, root: "/Volumes/work/solen").isRootPresent)
+    }
 }

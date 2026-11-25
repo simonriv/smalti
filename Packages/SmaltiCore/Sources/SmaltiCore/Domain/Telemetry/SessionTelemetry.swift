@@ -3,6 +3,8 @@ import Foundation
 /// What one session's telemetry says while the app is open: requests, failures, latency and Claude Code's own cost.
 public struct SessionTelemetry: Equatable, Sendable {
     public static let recentDurationLimit = 200
+    /// How many recent deliveries a session remembers to recognize a repeat; older ones are forgotten (bounded memory).
+    public static let deliveryWindow = 1000
 
     public var since: Date
     public var requests = 0
@@ -14,6 +16,7 @@ public struct SessionTelemetry: Equatable, Sendable {
     private var recentDurations: [Int] = []
     /// Deliveries seen, by sequence and time: a relaunched Claude on the same session starts its sequence again.
     private var deliveries: Set<Delivery> = []
+    private var deliveryOrder: [Delivery] = []
 
     private struct Delivery: Hashable {
         let sequence: Int
@@ -37,6 +40,14 @@ public struct SessionTelemetry: Equatable, Sendable {
         return low / 2 + high / 2 + (low % 2 + high % 2 + 1) / 2
     }
 
+    /// False for a delivery already seen; remembers a new one, forgetting the oldest past `deliveryWindow`.
+    private mutating func remember(_ delivery: Delivery) -> Bool {
+        guard deliveries.insert(delivery).inserted else { return false }
+        deliveryOrder.append(delivery)
+        if deliveryOrder.count > Self.deliveryWindow { deliveries.remove(deliveryOrder.removeFirst()) }
+        return true
+    }
+
     private static func saturatingSum(_ lhs: Int, _ rhs: Int) -> Int {
         let (sum, overflow) = lhs.addingReportingOverflow(rhs)
         return overflow ? (rhs > 0 ? Int.max : Int.min) : sum
@@ -44,9 +55,7 @@ public struct SessionTelemetry: Equatable, Sendable {
 
     /// Folds one event of this session; a sequence already seen is a repeated delivery and is ignored.
     mutating func apply(_ event: TelemetryEvent) {
-        if let sequence = event.sequence, !deliveries.insert(Delivery(sequence: sequence, at: event.at)).inserted {
-            return
-        }
+        if let sequence = event.sequence, !remember(Delivery(sequence: sequence, at: event.at)) { return }
         since = min(since, event.at)
         lastEventAt = max(lastEventAt, event.at)
         switch event {

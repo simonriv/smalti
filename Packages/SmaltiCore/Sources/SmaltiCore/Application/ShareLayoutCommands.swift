@@ -69,12 +69,13 @@ public struct ImportLayout {
         self.directoryExists = directoryExists
     }
 
-    public func preview(_ file: URL) throws(LayoutShareError) -> ImportPreview {
+    public func preview(_ file: URL, root chosen: String? = nil) throws(LayoutShareError) -> ImportPreview {
         let shared: SharedLayout
         do { shared = try files.read(from: file) } catch { throw .file(error) }
         let validated: ValidatedLayout
         do { validated = try shared.validated() } catch { throw .file(.invalid(error)) }
-        let root = validated.layout.resolvedRoot(home: home)
+        // The folder picked for a root this Mac lacks: the confirmation then shows the paths that will run.
+        let root = chosen ?? validated.layout.resolvedRoot(home: home)
         return ImportPreview(
             name: validated.name, commands: commands(of: validated.layout, root: root), root: root,
             isRootPresent: directoryExists(root), warnings: validated.warnings, layout: validated.layout)

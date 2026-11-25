@@ -163,6 +163,31 @@ struct CollectTelemetryTests {
         #expect(ExtrasSettings.standard == ExtrasSettings(otlp: true))
         #expect(SmaltiConfig.defaults.extras.otlp)
     }
+
+    @Test func userConfigurationAppearingWhileListeningStopsTheReceiver() {
+        let settings = MutableTelemetrySettings()
+        let collector = CollectTelemetry(receiver: receiver, settings: settings)
+        collector.apply(on)
+
+        settings.isConfigured = true
+        collector.apply(on)
+
+        #expect(collector.status == .configuredByUser)
+        #expect(collector.currentVariables().isEmpty)
+        #expect(receiver.stops == 1)
+    }
+
+    @Test func userConfigurationGoneStartsTheReceiver() {
+        let settings = MutableTelemetrySettings()
+        settings.isConfigured = true
+        let collector = CollectTelemetry(receiver: receiver, settings: settings)
+        collector.apply(on)
+
+        settings.isConfigured = false
+        collector.apply(on)
+
+        #expect(collector.status == .listening(receiver.endpoint))
+    }
 }
 
 @MainActor
@@ -175,4 +200,11 @@ private final class FixedTelemetryVariables: TelemetryVariablesSource {
 
     func currentVariables() -> [String: String] { variables }
 
+}
+
+private final class MutableTelemetrySettings: ClaudeTelemetrySettings, @unchecked Sendable {
+    // Only touched from the main actor by these tests.
+    var isConfigured = false
+
+    func isConfiguredByUser() -> Bool { isConfigured }
 }
