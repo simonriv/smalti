@@ -10,7 +10,8 @@ required="$(sed -n 's/.*\.minimum_zig_version *= *"\([^"]*\)".*/\1/p' "$ghostty/
 found="$("$zig" version)"
 # The same Zig line as the minimum (F7.6): at least that version, and no newer minor, so CI and local agree.
 line="${required%.*}"
-if [[ "$(printf '%s\n%s\n' "$required" "$found" | sort -V | head -1)" != "$required" || "${found%.*}" != "$line" ]]; then
+lowest="$(printf '%s\n%s\n' "$required" "$found" | sort -V)"  # not piped into head: SIGPIPE under pipefail
+if [[ "${lowest%%$'\n'*}" != "$required" || "${found%.*}" != "$line" ]]; then
   echo "vendor/ghostty requires Zig $line.x (found $found)" >&2
   exit 1
 fi

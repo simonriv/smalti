@@ -20,7 +20,8 @@ settings=(ARCHS=arm64 ONLY_ACTIVE_ARCH=NO)
 [[ -n "${SMALTI_ED_PUBLIC_KEY:-}" ]] && settings+=(SMALTI_ED_PUBLIC_KEY="$SMALTI_ED_PUBLIC_KEY")
 
 mkdir -p "$out"
-xcodebuild -version | head -1
+xcode="$(xcodebuild -version)"  # captured: piping it into head aborted xcodebuild on SIGPIPE in CI
+echo "${xcode%%$'\n'*}"
 xcodebuild -project "$root/App/Smalti.xcodeproj" -scheme Smalti -configuration Release \
   -derivedDataPath "$out/dd" "${settings[@]}" build > "$out/xcodebuild.log" 2>&1 \
   || { tail -30 "$out/xcodebuild.log"; die "xcodebuild failed (see $out/xcodebuild.log)"; }
