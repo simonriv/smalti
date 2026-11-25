@@ -21,7 +21,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7 y F7.5.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7, F7.5 y F7.6.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -155,6 +155,8 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
 
 ## F7.6 · Distribución y actualizaciones
+
+> **Cerrada el 2026-11-25** con la 0.7.6, primer release público (spec `docs/specs/F7.6-distribucion.md`, checklist `docs/specs/F7.6-checklist.md`). El criterio de cierre quedó concretado en la spec (C1–C4) y en verde.
 
 - **Objetivo:** que cualquiera instale Smalti en un minuto y que cada versión nueva llegue sola, **sin pagar el Apple Developer Program** (decidido por Simón, 2026-11-25: la app es gratis y no debe costar 99 USD al año).
 - **Entregables:**

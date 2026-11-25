@@ -417,4 +417,4 @@
 - [x] Revisión intermedia 2 (1 crítico, 6 importantes, 10 menores; corregidos) + regresión de UI (86/86) + mutación incremental (sin archivos de SmaltiCore nuevos desde la revisión 1)
 #### Bloque 4 · Cierre
 - [x] T11 · Verificación, capturas y checklist
-- [ ] T12 · Público, release y despliegue
+- [x] T12 · Público, release y despliegue (repo público el 2026-11-25; PRs #43–#48; 0.7.6 instalada, la 0.7.5 en `/Applications/Smalti.app.old`; release `v0.7.6` por el pipeline, appcast smalti-web #8 y cask homebrew-tap #3; web smalti-web #6, #7 y #9)
