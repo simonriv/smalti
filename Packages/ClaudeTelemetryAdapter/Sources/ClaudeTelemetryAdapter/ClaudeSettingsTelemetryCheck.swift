@@ -23,25 +23,26 @@ public struct ClaudeSettingsTelemetryCheck: ClaudeTelemetrySettings {
     }
 
     public func isConfiguredByUser() -> Bool {
-        environment.keys.contains(where: Self.isTelemetryVariable)
-            || files.contains { Self.environment(in: $0).keys.contains(where: Self.isTelemetryVariable) }
+        environment.keys.contains(where: Self.isTelemetryVariable) || files.contains(where: Self.setsTelemetry)
     }
 
     private static func isTelemetryVariable(_ name: String) -> Bool {
         name == "CLAUDE_CODE_ENABLE_TELEMETRY" || name.hasPrefix("OTEL_")
     }
 
-    /// The file's `env` object; empty when the file is missing or unreadable (logged, never fatal).
-    private static func environment(in file: URL) -> [String: Any] {
-        guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return [:] }
+    /// Whether the file's `env` object names a telemetry variable. A missing file does not; one that exists but cannot
+    /// be read or parsed does (fail closed: it may hold the user's telemetry, which Smalti must not redirect).
+    private static func setsTelemetry(_ file: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return false }
         do {
             let object = try JSONSerialization.jsonObject(with: Data(contentsOf: file))
-            return ((object as? [String: Any])?["env"] as? [String: Any]) ?? [:]
+            let environment = ((object as? [String: Any])?["env"] as? [String: Any]) ?? [:]
+            return environment.keys.contains(where: isTelemetryVariable)
         } catch {
             log.error(
-                "claude settings unreadable \(file.path(percentEncoded: false), privacy: .private): \(error.localizedDescription, privacy: .private)"
+                "claude settings unreadable, telemetry left alone \(file.path(percentEncoded: false), privacy: .private): \(error.localizedDescription, privacy: .private)"
             )
-            return [:]
+            return true
         }
     }
 }

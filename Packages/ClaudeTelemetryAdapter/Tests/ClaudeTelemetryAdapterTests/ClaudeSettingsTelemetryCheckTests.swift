@@ -49,8 +49,14 @@ struct ClaudeSettingsTelemetryCheckTests {
         #expect(!check.isConfiguredByUser())
     }
 
-    @Test func malformedSettingsDoesNotCount() throws {
+    /// Final review: fail closed. A settings file that exists but cannot be read may hold the user's telemetry.
+    @Test func unreadableSettingsCountsAsConfigured() throws {
         try write("{not json", to: home.appending(path: "settings.json"))
+
+        #expect(check.isConfiguredByUser())
+    }
+
+    @Test func settingsWithoutAnEnvObjectDoNotCount() throws {
         try write(#"{"env":"OTEL_LOGS_EXPORTER"}"#, to: managed)
 
         #expect(!check.isConfiguredByUser())

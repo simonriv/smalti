@@ -93,13 +93,23 @@ public struct ImportLayout {
     /// What each pane will run, read through `PaneLaunch.saved`: the same choice restoring makes.
     private func commands(of layout: SharedLayout, root: String) -> [String] {
         layout.workspaceSnapshot(root: root, home: home).panes.compactMap { pane in
-            switch PaneLaunch.saved(pane) {
-            case .shell: nil
-            case .relaunch(let command): command.displayText
-            case .editor(let position): position.plainCommand
-            case .resume(let agent): harnesses.adapter(for: agent.harness)?.continueCommand()
-            }
+            let command: String? =
+                switch PaneLaunch.saved(pane) {
+                case .shell: nil
+                case .relaunch(let command): command.displayText
+                case .editor(let position): position.plainCommand
+                case .resume(let agent): harnesses.adapter(for: agent.harness)?.continueCommand()
+                }
+            return command.map { located($0, in: pane.workingDirectory, root: root) }
         }
+    }
+
+    /// "make en api", "claude --continue en ~/.ssh": a command that does not run in the layout's root says where.
+    private func located(_ command: String, in directory: String, root: String) -> String {
+        guard let place = PortablePaths.relative(directory, to: root) else {
+            return "\(command) en \(PortablePaths(home: home).portable(directory))"
+        }
+        return place == "." ? command : "\(command) en \(place)"
     }
 
     private func freeName(for name: LayoutName) -> LayoutName {

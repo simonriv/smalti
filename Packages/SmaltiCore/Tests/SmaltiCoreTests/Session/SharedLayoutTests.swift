@@ -364,4 +364,38 @@ struct SharedLayoutTests {
         #expect(layout.root == "~/Projects/solen")
         #expect(layout.panes[0].directory == "api")
     }
+
+    // MARK: Final review
+
+    @Test func exportRewritesHomeInsideArguments() {
+        let source = snapshot([
+            pane(
+                root,
+                relaunch: [
+                    "vite", "--config=\(home)/Projects/x/vite.config.ts", "PATH=\(home)/bin:/usr/bin",
+                    "--dir=\(home)", "--other=/Users/simonx/y",
+                ])
+        ])
+
+        let layout = SharedLayout(exporting: source, named: name, home: home)
+
+        #expect(
+            layout.panes[0].command == [
+                "vite", "--config=~/Projects/x/vite.config.ts", "PATH=~/bin:/usr/bin", "--dir=~",
+                "--other=/Users/simonx/y",
+            ])
+    }
+
+    @Test func importExpandsTildeInsideArgumentsWithThisHome() throws {
+        let shared = SharedLayout(
+            exporting: snapshot([pane(root, relaunch: ["vite", "--config=\(home)/x.ts", "PATH=\(home)/bin:/usr/bin"])]),
+            named: name, home: home)
+
+        let restored = try shared.validated().layout.workspaceSnapshot(root: root, home: "/Users/ana")
+
+        #expect(
+            restored.panes[0].relaunch?.arguments == [
+                "vite", "--config=/Users/ana/x.ts", "PATH=/Users/ana/bin:/usr/bin",
+            ])
+    }
 }

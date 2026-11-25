@@ -218,16 +218,38 @@ struct PortablePaths {
         return Self.relative(path, to: home).map { "~/" + $0 } ?? path
     }
 
-    /// A command argument with this home written as `~`, so the file never carries the home's path.
+    /// A command argument with this home written as `~` wherever a path starts in it: at the start, after `=` or
+    /// after `:` (`--config=~/x`, `PATH=~/bin:/usr/bin`), so the file never carries the home's path.
     func portableArgument(_ argument: String) -> String {
-        if argument == home { return "~" }
-        return Self.relative(argument, to: home).map { "~/" + $0 } ?? argument
+        Self.replacingAtPathStarts(in: argument, token: home, with: "~")
     }
 
     /// The inverse of `portableArgument` with this machine's home: the shell will not expand a quoted `~`.
     func expandedArgument(_ argument: String) -> String {
-        if argument == "~" { return home }
-        return argument.hasPrefix("~/") ? home + argument.dropFirst(1) : argument
+        Self.replacingAtPathStarts(in: argument, token: "~", with: home)
+    }
+
+    /// `token` replaced where a path starts (start of the argument, after `=` or `:`) and ends a component (followed
+    /// by the end, `/` or `:`): `/Users/simonx` is not the home `/Users/simon`, nor is `~user` the `~`.
+    private static func replacingAtPathStarts(in argument: String, token: String, with replacement: String) -> String {
+        var result = ""
+        var rest = Substring(argument)
+        var isPathStart = true
+        while let next = rest.first {
+            if isPathStart, rest.hasPrefix(token) {
+                let after = rest.dropFirst(token.count)
+                if after.first.map({ $0 == "/" || $0 == ":" }) ?? true {
+                    result += replacement
+                    rest = after
+                    isPathStart = false
+                    continue
+                }
+            }
+            result.append(next)
+            isPathStart = next == "=" || next == ":"
+            rest = rest.dropFirst()
+        }
+        return result
     }
 
     func absolute(_ path: String, base: String) -> String {

@@ -20,7 +20,7 @@
 | # | Resultado | Evidencia |
 | --- | --- | --- |
 | C1 | ✅ | `listensOnlyOnLoopback` (`getsockname` → `127.0.0.1`), `connectViaLanAddressFails` (`ECONNREFUSED` por la IPv4 de la red local), `connectViaIPv6LoopbackFails`; `endpointUsesTheLoopbackLiteral`; `TelemetryTests.testPaneReceivesTelemetryVariables` (el panel recibe `http://127.0.0.1:<puerto>/v1/logs`) |
-| C2 | ✅ (GPU no atribuible) | Ver «Mediciones». F0 A12 y A14 sin cambio; F4 C1 independiente de los extras; F4 C13 sin empeorar; GPU en reposo con ruido del sistema, sin diferencia en la CPU de la app ni de WindowServer |
+| C2 | ✅ | Ver «Mediciones». F0 A12 y A14 sin cambio; GPU en reposo alternada (8 rondas, receptor comprobado por la sonda en cada corrida) sin empeorar; F4 C1 independiente de los extras; F4 C13 sin empeorar |
 | C3 | ✅ | `acceptsLogsWithToken`, `rejectsMissingToken`, `rejectsWrongToken`, `unknownPathIs404`, `getIs405`, `gzipIs415`, `missingContentLengthIs411`, `chunkedIs411`, `oversizedBodyIs413WithoutReadingIt`, `undecodableBodyIs400`, `keepAliveServesThreeRequests`, `answersTwoPipelinedRequests`, `assemblesRequestSplitAcrossReads`, `idleConnectionClosesAfterTimeout`, `slowHeadersAreCutAtTheIdleTimeout`, `seventeenthConnectionIsRefused`, `stopClosesOpenConnections`; parser byte a byte (`HTTPRequestParserTests`) |
 | C4 | ✅ | `OTLPLogsDecoderTests` sobre fixtures con los atributos de Claude Code 2.1.332: `intValue` en número y texto, `doubleValue`, nombre por `event.name` (con y sin prefijo) o por `body`, marca de tiempo con respaldo a `timeUnixNano`, registros sin `session.id`, de otro evento o fuera de rango omitidos |
 | C5 | ✅ | `CollectTelemetryTests` (variables exactas, apagado, fallo, configurado por el usuario, configuración que aparece o desaparece en caliente); `ClaudeSettingsTelemetryCheckTests` (`settings.json`, managed settings y entorno del proceso); `TelemetryTests`: `testPaneReceivesTelemetryVariables`, `testOtlpOffInjectsNothing`, `testUserConfiguredTelemetryIsRespected`, `testReloadTurnsReceiverOff`, `testReloadTurnsReceiverOn` |
@@ -44,11 +44,17 @@ Smalti Dev (Debug), `env -i`, config y estado temporales, `zsh -f`. «Encendido 
 | `seq5m` | 8,08 s | 8,08 s | 8,02 s |
 | Memoria en reposo (`footprint`) | 131 MB | 131 MB | 132 MB (+0,8 %) |
 
-**GPU en reposo** (`scripts/measure-gpu-idle.sh`, `OTLP=off|on`, delante de `gpu-backdrop`):
-- Tanda de 5 + 5: 7,0 % apagado y 10,9 % encendido.
-- Repetición alternada de 6 pares: 4,5 % y 6,7 % de media (medianas 4,25 % y 5,15 %), con un pico de 14,9 % en una sola corrida encendida. Solo con el receptor apagado varía entre 1,9 % y 8,8 %.
-- La CPU de la app (0,6 %) y la de WindowServer (1,8 %) son idénticas en los dos modos, y el receptor no tiene temporizadores: sin tráfico no hace nada.
-- Conclusión: la utilización de GPU de `ioreg` es de todo el sistema y su ruido supera la diferencia. **No atribuible a F7** (como C12 de F5.6).
+**GPU en reposo** (`scripts/measure-extras-gpu.sh 8`, revisión final): los tres modos alternados en cada ronda (apagado, encendido, encendido + carga) para que la deriva de la máquina les toque igual; la sonda confirma en cada corrida que el receptor está apagado o escuchando, con managed settings temporales; 20 muestras de un segundo por corrida, delante de `gpu-backdrop`.
+
+| Mediana de 8 | Apagado | Encendido | Encendido + carga |
+| --- | --- | --- | --- |
+| GPU del sistema (`Device Utilization %`) | 9,18 % | 8,65 % | 8,28 % |
+| CPU de WindowServer (compone la ventana) | 1,82 % | 1,82 % | 1,87 % |
+| CPU de la app | 0,67 % | 0,67 % | 0,91 % |
+
+- La GPU no empeora con el receptor encendido ni con carga. La CPU de la app sube 0,24 puntos solo con tráfico (recibir y decodificar 3 lotes cada 5 s), y no es una medición de F0 ni de F4.
+- El tiempo de GPU por proceso no está disponible: el `AGXDeviceUserClient` de la app tiene `AppUsage` vacío incluso con salida continua (control positivo hecho), así que se mide la GPU del sistema y se atribuye con la CPU de WindowServer.
+- Antes de la revisión final, dos tandas sin alternar el modo con carga ni sonda dieron 7,0 % → 10,9 % y 4,5 % → 6,7 %; con la medición alternada y verificada, la diferencia desaparece (era deriva de la máquina).
 
 **F4 · C1** (`scripts/measure-input.sh 5`): p99 de extremo a extremo 5,41–5,52 ms (p50 4,61–4,67 ms). El benchmark no pasa por la app ni por el receptor, así que no depende de los extras.
 
@@ -72,4 +78,4 @@ Smalti Dev (Debug), `env -i`, config y estado temporales, `zsh -f`. «Encendido 
 
 - Intermedia 1 (dominio y adaptadores): 3 críticos, 6 importantes y 8 menores, corregidos con su prueba RED→GREEN; enmiendas 1–6.
 - Intermedia 2 (app): 0 críticos, 2 importantes y 9 menores, corregidos; enmiendas 7–9.
-- Final: ver abajo.
+- Final: 0 críticos, 2 importantes (evidencia de C2 insuficiente; el home dentro de argumentos como `--config=/Users/…`) y 3 menores (un `settings.json` ilegible ahora cuenta como configurado, la confirmación dice la carpeta de cada comando fuera de la raíz, riesgo residual de `tmux`/`nohup` documentado), corregidos en una tanda con su prueba RED→GREEN (`exportRewritesHomeInsideArguments`, `importExpandsTildeInsideArgumentsWithThisHome`, `previewNamesTheFolderOfCommandsOutsideTheRoot`, `unreadableSettingsCountsAsConfigured`); enmienda 10.

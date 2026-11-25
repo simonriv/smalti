@@ -265,4 +265,18 @@ struct ShareLayoutTests {
         #expect(
             try importer(existing: ["/Volumes/work/solen"]).preview(file, root: "/Volumes/work/solen").isRootPresent)
     }
+
+    // MARK: Final review
+
+    @Test func previewNamesTheFolderOfCommandsOutsideTheRoot() throws {
+        let agent = AgentSnapshot(harness: .claude, sessionID: "s", title: nil, lastState: nil)
+        files.files[file] = try shared([
+            pane(relaunch: ["pnpm", "dev"]), pane(root + "/api", relaunch: ["make"]),
+            pane(home + "/.ssh", agent: agent),
+        ])
+
+        let preview = try importer(existing: [root]).preview(file)
+
+        #expect(preview.commands == ["pnpm dev", "make en api", "fake --continue en ~/.ssh"])
+    }
 }
