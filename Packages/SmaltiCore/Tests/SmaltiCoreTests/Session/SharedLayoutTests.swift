@@ -398,4 +398,19 @@ struct SharedLayoutTests {
                 "vite", "--config=/Users/ana/x.ts", "PATH=/Users/ana/bin:/usr/bin",
             ])
     }
+
+    @Test func homeRightAfterAReplacementIsNotAPathStart() {
+        let layout = SharedLayout(
+            exporting: snapshot([pane(root, relaunch: ["ls", "\(home)\(home)/x"])]), named: name, home: home)
+
+        #expect(layout.panes[0].command == ["ls", "~\(home)/x"])
+    }
+
+    @Test(arguments: ["a\("/Users/simon")/x", "--x\("/Users/simon")"])
+    func homeInsideAWordIsKept(argument: String) {
+        let layout = SharedLayout(
+            exporting: snapshot([pane(root, relaunch: ["ls", argument])]), named: name, home: home)
+
+        #expect(layout.panes[0].command == ["ls", argument])
+    }
 }

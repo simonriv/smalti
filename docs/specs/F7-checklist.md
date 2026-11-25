@@ -72,7 +72,7 @@ Smalti Dev (Debug), `env -i`, config y estado temporales, `zsh -f`. «Encendido 
 
 - Revisión intermedia 1 (`--changed-since origin/develop`): **97,4 %** (206 mutantes, 4 sobrevivientes). Tres muertos con pruebas verificadas aplicando el mutante a mano (`exportIsNeverMarkedCurrent`, `extrasStandardTurnsOtlpOn`, `homeWithTrailingSlashStillBecomesTilde`); el cuarto era una rama inalcanzable y se quitó.
 - Revisión intermedia 2 (`--changed-since cf704a5`): **100 %** (107 mutantes).
-- Cierre: ver abajo.
+- Cierre (decisión de Simón: solo los archivos que cambió la rama, `--changed-since origin/develop`, en lugar de la mutación completa de SmaltiCore, que se detuvo en 166/1961 sin sobrevivientes): **97,8 %** (253 mutantes, 4 sobrevivientes, todos en el reemplazo del home dentro de argumentos). Los cuatro muertos con `homeRightAfterAReplacementIsNotAPathStart` y `homeInsideAWordIsKept`, verificados aplicando cada mutante a mano.
 
 ## Revisiones
 
