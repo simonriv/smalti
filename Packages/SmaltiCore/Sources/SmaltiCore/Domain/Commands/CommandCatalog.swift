@@ -3,7 +3,7 @@ public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
     public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
-        let context = Context(workspaces: state.workspaces, keymap: keymap, claudeIntegration: state.claudeIntegration)
+        let context = Context(workspaces: state.workspaces, keymap: keymap, integrations: state.integrations)
         return tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
@@ -73,7 +73,7 @@ public enum CommandCatalog {
     fileprivate struct Context {
         let workspaces: WorkspaceSet
         let keymap: Keymap
-        let claudeIntegration: IntegrationState
+        let integrations: [IntegrationID: IntegrationState]
 
         var paneCount: Int { workspaces.active.panes.count }
 
@@ -164,38 +164,36 @@ public enum CommandCatalog {
         [
             context.command(
                 .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
-        ] + claudeIntegrationCommands(context) + [
+        ] + integrationCommands(context) + [
             context.titled(.configOpen, group: .configuration),
             context.titled(.secureInputToggle, group: .configuration),
         ] + CommandID.appearance.map { context.titled($0, group: .configuration) }
     }
 }
 
-/// Only the action that applies to the integration's state; none while it is unknown (spec F5.6).
-private func claudeIntegrationCommands(_ context: CommandCatalog.Context) -> [Command] {
-    switch context.claudeIntegration {
-    case .notInstalled:
-        [context.command(.claudeIntegrationInstall, "Instalar integración con Claude Code", group: .configuration)]
-    case .installed:
-        [context.command(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code", group: .configuration)]
-    case .unknown: []
+/// One action per integration, the one its state allows (spec F5.6, F6).
+private func integrationCommands(_ context: CommandCatalog.Context) -> [Command] {
+    IntegrationID.allCases.compactMap { integration in
+        integration.commandID(for: context.integrations[integration, default: .unknown]).map {
+            context.command($0.id, $0.title, group: .configuration)
+        }
     }
 }
 
 /// What the catalog needs from the app besides the keymap and the layouts: the workspaces, the saved layouts and the
-/// Claude integration's state.
+/// integrations' states (missing ones are unknown).
 public struct CatalogState: Sendable {
     public let workspaces: WorkspaceSet
     public let savedLayouts: [NamedLayoutSummary]
-    public let claudeIntegration: IntegrationState
+    public let integrations: [IntegrationID: IntegrationState]
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
-        claudeIntegration: IntegrationState = .unknown
+        integrations: [IntegrationID: IntegrationState] = [:]
     ) {
         self.workspaces = workspaces
         self.savedLayouts = savedLayouts
-        self.claudeIntegration = claudeIntegration
+        self.integrations = integrations
     }
 }
 

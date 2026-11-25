@@ -20,6 +20,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let agentJump = CommandID(rawValue: "agent.jump")
     public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
     public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
+    /// F6: claudecode.nvim in the user's NvChad config.
+    public static let claudecodeNvimInstall = CommandID(rawValue: "claudecodeNvim.install")
+    public static let claudecodeNvimUninstall = CommandID(rawValue: "claudecodeNvim.uninstall")
     public static let observatoryToggle = CommandID(rawValue: "observatory.toggle")
     /// Cycles the observatory's period; acts only while the observatory is open, the terminal gets the key otherwise.
     public static let observatoryPeriod = CommandID(rawValue: "observatory.period")

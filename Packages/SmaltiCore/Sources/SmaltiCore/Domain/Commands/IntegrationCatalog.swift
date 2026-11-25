@@ -1,0 +1,43 @@
+/// Smalti's integrations with other tools, each installed and removed from ⌘K (F5.6 had only Claude's; F6 adds
+/// claudecode.nvim). A new integration is a new case with its own commands and titles.
+public enum IntegrationID: CaseIterable, Hashable, Sendable {
+    case claudePlugin
+    case claudecodeNvim
+
+    public var installCommand: CommandID {
+        switch self {
+        case .claudePlugin: .claudeIntegrationInstall
+        case .claudecodeNvim: .claudecodeNvimInstall
+        }
+    }
+
+    public var uninstallCommand: CommandID {
+        switch self {
+        case .claudePlugin: .claudeIntegrationUninstall
+        case .claudecodeNvim: .claudecodeNvimUninstall
+        }
+    }
+
+    public var installTitle: String {
+        switch self {
+        case .claudePlugin: "Instalar integración con Claude Code"
+        case .claudecodeNvim: "Instalar claudecode.nvim en Neovim"
+        }
+    }
+
+    public var uninstallTitle: String {
+        switch self {
+        case .claudePlugin: "Desinstalar integración con Claude Code"
+        case .claudecodeNvim: "Desinstalar claudecode.nvim"
+        }
+    }
+
+    /// Only the action that applies to the state; none while it is unknown (spec F5.6).
+    func commandID(for state: IntegrationState) -> (id: CommandID, title: String)? {
+        switch state {
+        case .notInstalled: (installCommand, installTitle)
+        case .installed: (uninstallCommand, uninstallTitle)
+        case .unknown: nil
+        }
+    }
+}
