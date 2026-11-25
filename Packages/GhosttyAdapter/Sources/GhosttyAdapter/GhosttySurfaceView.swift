@@ -412,7 +412,30 @@ final class GhosttySurfaceView: NSView {
         window?.makeFirstResponder(self)
         // ⌃click is macOS's right click: the menu, unless the program in the terminal takes the mouse.
         if event.modifierFlags.contains(.control), showContextMenu(for: event) { return }
+        if event.modifierFlags.contains(.command), takeCommandClick(event) {
+            swallowsRelease = true
+            return
+        }
         mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_LEFT, event)
+    }
+
+    /// F6: set by the engine; the app opens a text file under a ⌘-click in Neovim and answers true.
+    var commandClick: ((String) -> Bool)?
+    private var swallowsRelease = false
+
+    /// The word under the click, offered to the app before the terminal sees the click.
+    private func takeCommandClick(_ event: NSEvent) -> Bool {
+        guard let surface, let commandClick, !ghostty_surface_mouse_captured(surface) else { return false }
+        let point = convert(event.locationInWindow, from: nil)
+        let topLeft = Point(x: point.x, y: frame.height - point.y)
+        ghostty_surface_mouse_pos(surface, topLeft.x, topLeft.y, GhosttyInput.mods(event.modifierFlags))
+        let size = ghostty_surface_size(surface)
+        let scale = Double(window?.backingScaleFactor ?? 2)
+        let cell = Size(width: Double(size.cell_width_px) / scale, height: Double(size.cell_height_px) / scale)
+        guard PointerGrid(origin: gridPadding, cell: cell).cell(at: topLeft) != nil,
+            let word = PointerWordReader.word(in: surface, cell: cell)
+        else { return false }
+        return commandClick(word.text)
     }
 
     /// F4.5: set by the engine; the app builds the menu (Copiar, Pegar, Buscar…).
@@ -428,7 +451,13 @@ final class GhosttySurfaceView: NSView {
         NSMenu.popUpContextMenu(menu, with: event, for: self)
         return true
     }
-    override func mouseUp(with event: NSEvent) { mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, event) }
+    override func mouseUp(with event: NSEvent) {
+        guard !swallowsRelease else {
+            swallowsRelease = false
+            return
+        }
+        mouseButton(GHOSTTY_MOUSE_RELEASE, GHOSTTY_MOUSE_LEFT, event)
+    }
     override func rightMouseDown(with event: NSEvent) {
         if showContextMenu(for: event) { return }
         mouseButton(GHOSTTY_MOUSE_PRESS, GHOSTTY_MOUSE_RIGHT, event)

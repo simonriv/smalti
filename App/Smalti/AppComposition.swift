@@ -9,6 +9,7 @@ import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import ImageIOAdapter
+import NeovimAdapter
 import IPCAdapter
 import OllamaAdapter
 import OpenCodeHarnessAdapter
@@ -106,6 +107,21 @@ final class AppComposition {
         return arguments
     }
 
+    /// F6: the first 2 MB of an edited file, to find the line of the change ("Editados por Claude").
+    nonisolated private static func fileHead(_ path: String) -> String? {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? handle.close() }
+        return (try? handle.read(upToCount: 2 * 1024 * 1024)).map { String(decoding: $0, as: UTF8.self) }
+    }
+
+    /// F6: Neovim sockets under a short owner-only folder (`sun_path` holds 104 bytes).
+    private static func editorSocketDirectory(_ settings: LaunchSettings) -> String {
+        let directory = settings.editorSocketDirectory ?? "/private/tmp/smalti-\(getuid())"
+        try? FileManager.default.createDirectory(
+            atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        return directory
+    }
+
     /// F6: the four harnesses, each reading its own home as `LaunchSettings` resolved it.
     private static func harnessRegistry(_ settings: LaunchSettings) -> HarnessRegistry {
         HarnessRegistry([
@@ -155,10 +171,13 @@ final class AppComposition {
         harnesses = Self.harnessRegistry(startup.settings)
         let captures = HarnessCaptures(registry: harnesses)
         self.captures = captures
+        let editor = EditorSettings(
+            editedFiles: TrackEditedFiles(readFile: Self.fileHead), nvim: startup.settings.nvimCommand,
+            socketDirectory: Self.editorSocketDirectory(startup.settings))
         let dependencies = TilingController.Dependencies(
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
-            harnesses: harnesses, captures: captures,
+            harnesses: harnesses, captures: captures, editor: editor,
             agents: Self.agentDependencies(notifier: makeNotifier()),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
@@ -458,6 +477,13 @@ final class AppComposition {
         menu.install()
         mainMenu = menu
         engine.contextMenu = { [weak self] pane in self?.contextMenu(for: pane) }
+        // F6: ⌘-click on a text file opens it in the window's Neovim.
+        engine.commandClick = { [weak self] pane, word in
+            guard let owner = self?.compositions.first(where: { $0.controller.pane(byID: pane) != nil }) else {
+                return false
+            }
+            return owner.controller.editors.commandClick(on: word, in: pane)
+        }
         // UI tests read the cell size to see ⌘+ and ⌘− take effect (F4.5 C9).
         engine.exposesCellSize = UserDefaults.standard.bool(forKey: "SmaltiExposeCellSize")
     }

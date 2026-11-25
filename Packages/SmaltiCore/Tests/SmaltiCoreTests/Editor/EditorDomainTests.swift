@@ -139,12 +139,13 @@ struct OpenInEditorTests {
 
         let outcome = await open.open(target, from: origin)
 
-        guard case .opened(let pane, let command, let beside) = outcome else {
+        guard case .opened(let socket, let command, let beside) = outcome else {
             Issue.record("expected a new pane, got \(outcome)")
             return
         }
         #expect(beside == origin)
-        #expect(command == "nvim --listen \(try EditorSocketPath.make(directory: "/s", pane: pane)) +12 '/w/a b.ts'")
+        #expect(socket.hasPrefix("/s/nvim-") && socket.hasSuffix(".sock"))
+        #expect(command == "nvim --listen \(socket) +12 '/w/a b.ts'")
     }
 
     @Test func deadNvimFallsBackToTheNextThenANewPane() async {
@@ -172,4 +173,42 @@ final class ThreadFlag: @unchecked Sendable {
     private var stored: Bool?
     var value: Bool? { lock.withLock { stored } }
     func set(_ flag: Bool) { lock.withLock { stored = flag } }
+}
+
+@Suite("Edited files in the palette")
+struct EditedFilesPaletteTests {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func editedFilesAreAGroupWithLineAndAge() throws {
+        let workspace = Workspace.empty(name: "w", rootDirectory: try WorkingDirectory(path: "/w"), layout: DwindleLayout())
+        let edited = [
+            EditedFile(path: "/w/src/reminder.service.ts", line: 42, at: now.addingTimeInterval(-120)),
+            EditedFile(path: "/w/a b.ts", line: 1, at: now.addingTimeInterval(-10)),
+        ]
+
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: WorkspaceSet(first: workspace), editedFiles: edited, now: now),
+            keymap: .standard, layouts: .standard
+        ).filter { $0.group == .editedFiles }
+
+        #expect(commands.map(\.title) == ["reminder.service.ts", "a b.ts"])
+        #expect(commands.map(\.subtitle) == ["línea 42 · hace 2 min", "línea 1 · ahora"])
+        #expect(commands.first?.id.editorTarget == EditorTarget(path: "/w/src/reminder.service.ts", line: 42, column: nil))
+        #expect(CommandGroup.editedFiles.rawValue == "Editados por Claude")
+    }
+
+    @Test func editorOpenRoundTripsHostilePaths() {
+        let id = CommandID.editorOpen(path: "/w/a:b 'c'.ts", line: 7)
+
+        #expect(id.editorTarget == EditorTarget(path: "/w/a:b 'c'.ts", line: 7, column: nil))
+        #expect(CommandID.paletteOpen.editorTarget == nil)
+    }
+
+    @Test func elapsedPhrases() {
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-30), now: now) == "ahora")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-60), now: now) == "hace 1 min")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3599), now: now) == "hace 59 min")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-7200), now: now) == "hace 2 h")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3 * 86_400), now: now) == "hace 3 d")
+    }
 }

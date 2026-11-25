@@ -3,8 +3,8 @@ import Foundation
 public enum EditorOutcome: Equatable, Sendable {
     /// An existing editor pane opened the file: focus it.
     case jumped(PaneID)
-    /// No editor answered: open `pane` beside `beside`, running `command`.
-    case opened(pane: PaneID, command: String, beside: PaneID)
+    /// No editor answered: open a pane beside `beside` running `command`, whose Neovim listens on `socket`.
+    case opened(socket: String, command: String, beside: PaneID)
     case ignored
 }
 
@@ -33,9 +33,8 @@ public final class OpenInEditor {
                 continue
             }
         }
-        let new = PaneID()
-        guard let socket = try? EditorSocketPath.make(directory: socketDirectory, pane: new) else { return .ignored }
+        guard let socket = try? EditorSocketPath.make(directory: socketDirectory, pane: PaneID()) else { return .ignored }
         return .opened(
-            pane: new, command: EditorCommand.launch(nvim: nvim, socket: socket, target: target), beside: pane)
+            socket: socket, command: EditorCommand.launch(nvim: nvim, socket: socket, target: target), beside: pane)
     }
 }

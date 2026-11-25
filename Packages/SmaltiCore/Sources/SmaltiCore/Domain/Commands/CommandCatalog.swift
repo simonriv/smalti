@@ -1,3 +1,5 @@
+import Foundation
+
 /// Builds the commands the palette offers for the current state, in display order.
 public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
@@ -12,6 +14,15 @@ public enum CommandCatalog {
             + windowCommands(context)
             + configurationCommands(context)
             + helpCommands(context)
+            + state.editedFiles.map { editedFileCommand($0, now: state.now) }
+    }
+
+    /// "reminder.service.ts", "línea 42 · hace 2 min".
+    private static func editedFileCommand(_ file: EditedFile, now: Date) -> Command {
+        Command(
+            id: .editorOpen(path: file.path, line: file.line), title: file.fileName,
+            subtitle: "línea \(file.line) · \(ElapsedPhrase.text(since: file.at, now: now))", group: .editedFiles,
+            shortcut: nil, isCurrent: false)
     }
 
     /// F4.5: titles as in the spec's menu table; the menu and the help reuse them.
@@ -193,14 +204,19 @@ public struct CatalogState: Sendable {
     public let workspaces: WorkspaceSet
     public let savedLayouts: [NamedLayoutSummary]
     public let integrations: [IntegrationID: IntegrationState]
+    /// F6: what the focused pane's Claude edited, newest first, and the time their age is told from.
+    public let editedFiles: [EditedFile]
+    public let now: Date
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
-        integrations: [IntegrationID: IntegrationState] = [:]
+        integrations: [IntegrationID: IntegrationState] = [:], editedFiles: [EditedFile] = [], now: Date = Date()
     ) {
         self.workspaces = workspaces
         self.savedLayouts = savedLayouts
         self.integrations = integrations
+        self.editedFiles = editedFiles
+        self.now = now
     }
 }
 

@@ -110,6 +110,19 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
 
     private static let layoutSavePrefix = "layout.save:"
     private static let layoutRestorePrefix = "layout.restore:"
+    private static let editorOpenPrefix = "editor.open:"
+
+    /// F6: opens a file the pane's Claude edited, at its line (`editor.open:<line>:<path>`).
+    public static func editorOpen(path: String, line: Int) -> CommandID {
+        CommandID(rawValue: "\(editorOpenPrefix)\(line):\(path)")
+    }
+
+    public var editorTarget: EditorTarget? {
+        guard rawValue.hasPrefix(Self.editorOpenPrefix) else { return nil }
+        let rest = rawValue.dropFirst(Self.editorOpenPrefix.count)
+        guard let colon = rest.firstIndex(of: ":"), let line = Int(rest[..<colon]) else { return nil }
+        return EditorTarget(path: String(rest[rest.index(after: colon)...]), line: line, column: nil)
+    }
 
     public static func layoutSave(_ name: LayoutName) -> CommandID {
         CommandID(rawValue: layoutSavePrefix + name.rawValue)
