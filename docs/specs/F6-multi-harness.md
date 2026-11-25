@@ -1,6 +1,6 @@
 # F6 · Multi-harness y Neovim — Spec
 
-Estado: borrador para aprobar · 2026-11-24 · Roadmap: `docs/ROADMAP.md#f6--multi-harness-y-neovim`
+Estado: aprobada · 2026-11-24 · Roadmap: `docs/ROADMAP.md#f6--multi-harness-y-neovim`
 Diseño: columna derecha de `Reanudar.dc.html` («Todas las sesiones de agentes»), filas de agentes y de nvim de su columna izquierda, y los filtros y la fila de OpenCode de `Observatorio.dc.html`. Los enlaces «Abrir en Neovim» no salen en ningún tablero: se resolvieron en el brainstorming (ver «Abrir en Neovim»).
 
 ## Objetivo
