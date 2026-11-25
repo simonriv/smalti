@@ -35,6 +35,7 @@ extension HarnessAdapter {
 /// knows an editor integration is installed (spec F6, `--ide`).
 public protocol EditorConnectable {
     func resumeCommandConnectingEditor(sessionID: String) -> String
+    func forkCommandConnectingEditor(sessionID: String) -> String
 }
 
 /// Process names compared by their last path component, so a wrapper or an absolute path still matches.

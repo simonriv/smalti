@@ -36,6 +36,10 @@ public struct ClaudeHarness: HarnessAdapter, EditorConnectable {
         resumeCommand(sessionID: sessionID) + " --ide"
     }
 
+    public func forkCommandConnectingEditor(sessionID: String) -> String {
+        resumeCommand(sessionID: sessionID) + " --fork-session --ide"
+    }
+
     public func continueCommand() -> String { "claude --continue" }
 
     public func forkCommand(sessionID: String) -> String? {

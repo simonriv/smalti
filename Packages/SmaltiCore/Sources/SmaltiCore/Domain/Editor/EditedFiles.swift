@@ -27,7 +27,9 @@ public struct EditedFiles: Equatable, Sendable {
 
     public mutating func record(_ edit: FileEdit, line: Int, at date: Date) {
         recent.removeAll { $0.path == edit.path }
-        recent.insert(EditedFile(path: edit.path, line: line, at: date), at: 0)
+        // Files are read off the main actor, so records arrive out of order: keep the newest first by time.
+        let index = recent.firstIndex { $0.at < date } ?? recent.endIndex
+        recent.insert(EditedFile(path: edit.path, line: line, at: date), at: index)
         if recent.count > Self.limit { recent.removeLast(recent.count - Self.limit) }
     }
 }

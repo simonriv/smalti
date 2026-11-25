@@ -11,7 +11,7 @@ final class SessionSearchModel {
     private let search: SearchHarnessSessions
     private let opener: OpenHarnessSession
     private var running: Task<Void, Never>?
-    /// The query's listing is not complete yet (the pause runs, or a harness has not answered): Enter waits for it.
+    /// The query's first listing has not arrived yet (the typing pause runs, or the stores are read): ↩ waits for it.
     private var isSettling = false
     private var whenSettledActions: [() -> Void] = []
     /// Typing waits this long before reading the stores again, so a word is one search, not one per letter.
@@ -43,14 +43,14 @@ final class SessionSearchModel {
                 guard let self, !Task.isCancelled else { return }
                 state.listing = listing
                 onChange?()
+                // The first listing is the query's: every harness answered, or the 500 ms ran out. A slower store
+                // that answers later updates the rows but never holds ↩ back (final review I2).
+                settle()
             }
-            // Every harness answered (or ran out of its 500 ms): the listing is the typed text's, whole.
-            guard let self, !Task.isCancelled else { return }
-            settle()
         }
     }
 
-    /// Runs `action` once the listing matches the query: now, or when every harness has answered.
+    /// Runs `action` once a listing matches the query: now, or when its first listing arrives.
     func whenSettled(_ action: @escaping () -> Void) {
         guard isSettling else { return action() }
         whenSettledActions.append(action)

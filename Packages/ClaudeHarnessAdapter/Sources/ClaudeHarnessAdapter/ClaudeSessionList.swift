@@ -24,15 +24,33 @@ struct ClaudeSessionList {
         guard FileManager.default.fileExists(atPath: root.path) else {
             throw .storeMissing(harness: harness, path: root.path)
         }
-        let folder = root.appending(path: Self.projectFolder(for: directory))
+        guard let folder = projectFolderURL(for: directory) else { return [] }
         let files = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.pathExtension == "jsonl" && Self.born($0) >= born }
         return files.compactMap(session)
     }
 
-    /// Claude names a project's folder after its directory with `/` and `.` turned into `-`.
+    /// Claude Code (2.1) names a project's folder `cwd.replace(/[^a-zA-Z0-9]/g, "-")`: every UTF-16 unit that is not
+    /// an ASCII letter or digit becomes `-`.
     static func projectFolder(for directory: String) -> String {
-        String(directory.map { $0 == "/" || $0 == "." ? "-" : $0 })
+        String(
+            directory.utf16.map { unit in
+                let scalar = Unicode.Scalar(unit).map(Character.init)
+                return scalar.map { $0.isASCII && ($0.isLetter || $0.isNumber) ? $0 : "-" } ?? "-"
+            })
+    }
+
+    /// Past 200 characters Claude cuts the name and adds a hash of its own: the one folder with that prefix.
+    static let longNameLimit = 200
+
+    private func projectFolderURL(for directory: String) -> URL? {
+        let name = Self.projectFolder(for: directory)
+        guard name.count > Self.longNameLimit else { return root.appending(path: name) }
+        let prefix = String(name.prefix(Self.longNameLimit)) + "-"
+        let matches = ((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []).filter {
+            $0.hasPrefix(prefix)
+        }
+        return matches.count == 1 ? root.appending(path: matches[0]) : nil
     }
 
     private func allTranscripts() throws(HarnessError) -> [URL] {

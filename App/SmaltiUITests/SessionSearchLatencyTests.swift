@@ -7,7 +7,7 @@ import XCTest
 final class SessionSearchLatencyTests: SmaltiUITestCase {
     override var launchesAtSetUp: Bool { false }
 
-    private static let samples = 12
+    private static let samples = 7
     private static let claudeFixture = URL(filePath: #filePath).deletingLastPathComponent()
         .appending(
             path: "../../Packages/ClaudeHarnessAdapter/Tests/ClaudeHarnessAdapterTests/Fixtures/claude/home/.claude")

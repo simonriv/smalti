@@ -16,10 +16,12 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
     private var outsideClicks: Any?
     /// ⌘↩ and ⌘1…⌘5 are the card's while it is open: the keymap and the terminal would take them first.
     private var cardKeys: Any?
-    /// C7: the card opens in 100 ms or less with every store read; "sessions.open" spans the open until every harness
+    /// C7: the card opens in 100 ms or less with every store read; "harness.search.open" spans the open until every harness
     /// answered. `-SmaltiSessionSearchTimings <file>` also writes each open's milliseconds (measurements only).
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "sessions")
     private let timings = UserDefaults.standard.string(forKey: "SmaltiSessionSearchTimings").map { URL(filePath: $0) }
+    /// The open still measuring: a card closed before its listing ends it too.
+    private var openInterval: OSSignpostIntervalState?
 
     init(window: SmaltiWindow, model: SessionSearchModel, open: @escaping (OpenPlan, String?) -> Void) {
         self.window = window
@@ -34,7 +36,8 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
     func show(theme: Theme) {
         guard !isOpen, let content = window.contentView else { return }
         let opened = ContinuousClock.now
-        let interval = signposter.beginInterval("sessions.open")
+        let interval = signposter.beginInterval("harness.search.open")
+        openInterval = interval
         let view = SessionSearchView(theme: theme, column: false)
         view.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(view, positioned: .above, relativeTo: nil)
@@ -63,7 +66,7 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
         view.render(model.state, rows: [])
         model.refresh()
         model.whenSettled { [weak self, timings] in
-            self?.signposter.endInterval("sessions.open", interval)
+            self?.endOpenInterval()
             if let timings { TimingLog.append(since: opened, to: timings, label: "session search timings") }
         }
         window.makeFirstResponder(view.field)
@@ -77,8 +80,15 @@ final class SessionSearchController: NSObject, NSTextFieldDelegate {
         onOpenChange?(true)
     }
 
+    private func endOpenInterval() {
+        guard let interval = openInterval else { return }
+        openInterval = nil
+        signposter.endInterval("harness.search.open", interval)
+    }
+
     func close() {
         guard isOpen else { return }
+        endOpenInterval()
         model.stop()
         view?.removeFromSuperview()
         view = nil

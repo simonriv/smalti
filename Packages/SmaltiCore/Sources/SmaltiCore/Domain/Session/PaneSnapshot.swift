@@ -80,9 +80,13 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         self.scrollbackLines = scrollbackLines
         commandCount = pane.commandCount
         // A finished agent whose pane is back at its shell is a shell again: it restores with its scrollback.
-        let agent = pane.agent.flatMap { $0.state.isActive || !pane.isAtShell ? $0 : nil }
-        // A harness without hooks counts while its own process is in the foreground (F6).
+        // A harness without hooks counts while its own process is in the foreground (F6); a finished agent of another
+        // harness that ran here before gives way to it (final review I1).
         let harness = pane.liveHarnessBinding
+        let agent = pane.agent.flatMap { agent in
+            let isReplaced = harness.map { $0.harness != agent.harness } == true && !agent.state.isActive
+            return (agent.state.isActive || !pane.isAtShell) && !isReplaced ? agent : nil
+        }
         self.agent =
             agent?.snapshot
             ?? harness.map { AgentSnapshot(harness: $0.harness, sessionID: $0.sessionID, title: nil, lastState: nil) }

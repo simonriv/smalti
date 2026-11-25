@@ -44,6 +44,26 @@ public struct CaptureStart: Equatable, Sendable {
 /// yet (harnesses create it with the first message). Spec F6, "Captura del ID", with review 1's rule: when another
 /// pane of the same harness and directory is also waiting, no pane gets an id (timestamps cannot tell them apart),
 /// so each falls back to "la última del directorio" instead of resuming another pane's conversation.
+/// What a capture asks the panes around it, each time it looks: how many others of the same harness and directory still
+/// wait (`competitors`), which ids are taken (`claimed`), whether its process still runs, and where to report a session
+/// it gave up because another pane competed for it (`disputed`, final review C1).
+public struct CaptureContext {
+    let competitors: () -> Int
+    let claimed: () -> Set<String>
+    let isStillRunning: () -> Bool
+    let disputed: (String) -> Void
+
+    public init(
+        competitors: @escaping () -> Int, claimed: @escaping () -> Set<String>,
+        isStillRunning: @escaping () -> Bool, disputed: @escaping (String) -> Void
+    ) {
+        self.competitors = competitors
+        self.claimed = claimed
+        self.isStillRunning = isStillRunning
+        self.disputed = disputed
+    }
+}
+
 @MainActor
 public final class CaptureHarnessSession {
     public static let retryEvery: Duration = .seconds(2)
@@ -87,29 +107,29 @@ public final class CaptureHarnessSession {
 
     /// The binding for the process: with the session found, or without an id (the fallback) when another pane
     /// competes, the store cannot be read or ten minutes pass. Nil only if the process leaves first.
-    /// `competitors` counts the other panes of the same harness and directory still waiting for their id.
-    public func capture(
-        _ start: CaptureStart, competitors: () -> Int, claimed: () -> Set<String>, isStillRunning: () -> Bool
-    ) async -> HarnessBinding? {
+    public func capture(_ start: CaptureStart, _ context: CaptureContext) async -> HarnessBinding? {
         switch start.decision {
         case .known(let id): return binding(start, id)
         case .continuing: return binding(start, nil)
-        case .search: return await search(start, competitors: competitors, claimed: claimed, running: isStillRunning)
+        case .search: return await search(start, context)
         }
     }
 
-    private func search(
-        _ start: CaptureStart, competitors: () -> Int, claimed: () -> Set<String>, running: () -> Bool
-    ) async -> HarnessBinding? {
+    private func search(_ start: CaptureStart, _ context: CaptureContext) async -> HarnessBinding? {
         guard let adapter = registry.adapter(for: start.harness) else { return binding(start, nil) }
         let deadline = start.processStartedAt.addingTimeInterval(Self.giveUpAfter)
         while clock() < deadline {
-            guard running() else { return nil }
+            guard context.isStillRunning() else { return nil }
             let window = CaptureWindow(
-                directory: start.directory, processStartedAt: start.processStartedAt, excludedIDs: claimed())
+                directory: start.directory, processStartedAt: start.processStartedAt, excludedIDs: context.claimed())
             do {
                 if let found = try await adapter.captureSessionId(in: window) {
-                    return binding(start, competitors() == 0 ? found : nil)
+                    guard context.competitors() == 0 else {
+                        // Nobody may take it later: the pane that searches next would see no competitor left.
+                        context.disputed(found)
+                        return binding(start, nil)
+                    }
+                    return binding(start, found)
                 }
             } catch {
                 if case .storeMissing = error { return binding(start, nil) }

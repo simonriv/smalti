@@ -25,6 +25,13 @@ public struct Pane: Equatable, Sendable {
         return binding.isPending || binding.pid == foregroundPID ? binding : nil
     }
 
+    /// The capture of `harness` still applies: its process (`pid`) is in front, and no agent of that same harness
+    /// names its session through hooks. An agent of another harness that ran here before does not count (final
+    /// review I1).
+    public func runsHarness(_ harness: HarnessID, pid: Int32?) -> Bool {
+        agent?.harness != harness && foregroundPID == pid
+    }
+
     public init(id: PaneID, workingDirectory: WorkingDirectory) {
         self.id = id
         self.workingDirectory = workingDirectory

@@ -9,16 +9,18 @@ final class HarnessCaptures {
     private let capture: CaptureHarnessSession
     private var waiting: [PaneID: CaptureStart] = [:]
     private var held: [PaneID: String] = [:]
+    /// Sessions a pane gave up because another competed for them: no pane takes them afterwards (final review C1).
+    private var disputed: Set<String> = []
 
     init(registry: HarnessRegistry) {
         capture = CaptureHarnessSession(
             registry: registry, clock: { Date() }, sleep: { try? await Task.sleep(for: $0) },
-            resolve: { URL(filePath: $0).resolvingSymlinksInPath().path(percentEncoded: false) })
+            resolve: Self.realPath)
     }
 
-    /// `isStillRunning` says whether the pane still runs that process; `apply` puts the binding on the pane.
+    /// `currentPane` gives the pane as it is now (nil once closed); `apply` puts the binding on the pane.
     func processChanged(
-        in pane: Pane, to process: ForegroundProcess, isStillRunning: @escaping () -> Bool,
+        in pane: Pane, to process: ForegroundProcess, currentPane: @escaping () -> Pane?,
         apply: @escaping (HarnessBinding) -> Void
     ) {
         guard let start = capture.processChanged(in: pane, to: process) else { return }
@@ -27,10 +29,21 @@ final class HarnessCaptures {
         Task { [weak self] in
             guard let self else { return }
             let binding = await capture.capture(
-                start, competitors: { self.competitors(of: start) }, claimed: { self.claimed(besides: start.pane) },
-                isStillRunning: isStillRunning)
+                start,
+                CaptureContext(
+                    competitors: { self.competitors(of: start) }, claimed: { self.claimed(besides: start.pane) },
+                    isStillRunning: { currentPane()?.runsHarness(start.harness, pid: start.pid) ?? false },
+                    disputed: { self.disputed.insert($0) }))
             finish(start, with: binding, apply: apply)
         }
+    }
+
+    /// The path as the kernel sees it, as harnesses store their `cwd` (`/tmp/x` is `/private/tmp/x`):
+    /// `resolvingSymlinksInPath` would drop `/private` instead (final review).
+    nonisolated static func realPath(_ path: String) -> String {
+        guard let resolved = realpath(path, nil) else { return path }
+        defer { free(resolved) }
+        return String(cString: resolved)
     }
 
     func forget(_ pane: PaneID) {
@@ -54,6 +67,6 @@ final class HarnessCaptures {
     }
 
     private func claimed(besides pane: PaneID) -> Set<String> {
-        Set(held.filter { $0.key != pane }.values)
+        Set(held.filter { $0.key != pane }.values).union(disputed)
     }
 }

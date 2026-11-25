@@ -58,6 +58,16 @@ struct EditedFilesTests {
 
     private func edit(_ path: String) -> FileEdit { FileEdit(tool: "Edit", path: path, newText: "x") }
 
+    /// Final review: reads finish in any order; the newest edit still comes first.
+    @Test func lateRecordOfAnOlderEditStaysBelow() {
+        var files = EditedFiles()
+        files.record(edit("/w/new.ts"), line: 1, at: t0.addingTimeInterval(10))
+
+        files.record(edit("/w/old.ts"), line: 1, at: t0)
+
+        #expect(files.recent.map(\.path) == ["/w/new.ts", "/w/old.ts"])
+    }
+
     @Test func capsAtTwentyAndDeduplicates() {
         var files = EditedFiles()
         for index in 0..<25 {
@@ -250,6 +260,16 @@ struct EditorReopenTests {
         #expect(
             EditorCommand.reopen(nvim: "nvim", socketDirectory: "/tmp/s", position: position, pane: pane)
                 == "nvim --listen /tmp/s/nvim-7f3a9c2e-0000-4000-8000-000000000001.sock +42 /w/reminder.service.ts")
+    }
+
+    /// Final review: a Neovim saved as its process still listens on Smalti's socket after a restore.
+    @Test func listenSocketIsFoundOnlyInSmaltisFolder() {
+        let ours = ["nvim", "--clean", "--listen", "/tmp/s/nvim-1.sock", "+3", "a.ts"]
+
+        #expect(EditorCommand.listenSocket(in: ours, directory: "/tmp/s") == "/tmp/s/nvim-1.sock")
+        #expect(EditorCommand.listenSocket(in: ours, directory: "/tmp/other") == nil)
+        #expect(EditorCommand.listenSocket(in: ["nvim", "--listen"], directory: "/tmp/s") == nil)
+        #expect(EditorCommand.listenSocket(in: ["nvim", "a.ts"], directory: "/tmp/s") == nil)
     }
 
     @Test func tooLongSocketFallsBackToPlainCommand() {

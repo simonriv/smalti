@@ -1,4 +1,4 @@
-import ClaudeHarnessAdapter
+@testable import ClaudeHarnessAdapter
 import Foundation
 import SmaltiCore
 import SmaltiCoreTestSupport
@@ -56,6 +56,8 @@ struct ClaudeHarnessTests {
 
     @Test func ideFlagAppended() {
         #expect(detached.resumeCommandConnectingEditor(sessionID: "7f3a") == "claude --resume 7f3a --ide")
+        #expect(
+            detached.forkCommandConnectingEditor(sessionID: "7f3a") == "claude --resume 7f3a --fork-session --ide")
     }
 
     @Test func readsShortResumeFlag() {
@@ -70,6 +72,35 @@ struct ClaudeHarnessTests {
 
     /// I2: the capture reads only the project folder of the pane's directory, so a session with the same cwd in
     /// another folder is never even opened.
+    /// Final review: Claude Code 2.1 names the folder with `cwd.replace(/[^a-zA-Z0-9]/g, "-")`, per UTF-16 unit.
+    @Test func projectFolderTurnsEveryNonAlphanumericIntoADash() {
+        #expect(ClaudeSessionList.projectFolder(for: "/Users/s/my_app v2.1") == "-Users-s-my-app-v2-1")
+        #expect(ClaudeSessionList.projectFolder(for: "/w/año") == "-w-a-o")
+        #expect(ClaudeSessionList.projectFolder(for: "/w/🙂") == "-w---")
+    }
+
+    /// Past 200 characters Claude cuts the folder name and adds its own hash: the one folder with that prefix is read.
+    @Test func longDirectoryFindsItsHashedFolder() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "claude-long-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let directory = "/w/" + String(repeating: "d", count: 250)
+        let name = ClaudeSessionList.projectFolder(for: directory)
+        let folder = root.appending(path: String(name.prefix(ClaudeSessionList.longNameLimit)) + "-1a2b3c")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let source = try #require(Bundle.module.url(forResource: "Fixtures/claude", withExtension: nil))
+        try FileManager.default.copyItem(
+            at: source.appending(
+                path:
+                    "home/.claude/projects/-private-tmp-smalti-fx-claude-work-a/401a63e1-c076-45fe-9f09-432da1c8cfa6.jsonl"
+            ),
+            to: folder.appending(path: "401a63e1-c076-45fe-9f09-432da1c8cfa6.jsonl"))
+
+        let found = try ClaudeSessionList(root: root, harness: .claude).sessions(
+            inProjectOf: directory, bornSince: .distantPast)
+
+        #expect(found.map(\.id) == ["401a63e1-c076-45fe-9f09-432da1c8cfa6"])
+    }
+
     @Test func captureReadsOnlyTheProjectFolderOfTheDirectory() async throws {
         let home = try FixtureHome.materialize(try ClaudeFixture.description)
         let projects = home.appending(path: ".claude/projects")

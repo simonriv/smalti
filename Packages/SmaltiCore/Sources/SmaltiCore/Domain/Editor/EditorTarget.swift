@@ -63,6 +63,14 @@ public enum EditorCommand {
         return words.joined(separator: " ")
     }
 
+    /// The socket a Neovim command line listens on, when it is one of Smalti's (inside `directory`).
+    public static func listenSocket(in arguments: [String], directory: String) -> String? {
+        guard let flag = arguments.firstIndex(of: "--listen"), arguments.indices.contains(flag + 1) else { return nil }
+        let socket = arguments[flag + 1]
+        let folder = directory.hasSuffix("/") ? directory : directory + "/"
+        return socket.hasPrefix(folder) ? socket : nil
+    }
+
     /// A saved Neovim pane reopens at its file and line, listening on its pane's socket again; without a usable socket
     /// it still reopens there, as a plain `nvim +42 <file>`.
     public static func reopen(nvim: String, socketDirectory: String, position: EditorPosition, pane: PaneID) -> String {

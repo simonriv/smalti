@@ -33,7 +33,7 @@ public struct OpenHarnessSession {
         let command: String
         if forking {
             guard let fork = adapter.forkCommand(sessionID: session.id) else { return .cannotFork(session.harness) }
-            command = fork
+            command = editorAware(adapter)?.forkCommandConnectingEditor(sessionID: session.id) ?? fork
         } else {
             command = resumeCommand(adapter, sessionID: session.id)
         }
@@ -46,10 +46,13 @@ public struct OpenHarnessSession {
     }
 
     private func resumeCommand(_ adapter: any HarnessAdapter, sessionID: String) -> String {
-        guard connectsEditor(), let editorAware = adapter as? any EditorConnectable else {
-            return adapter.resumeCommand(sessionID: sessionID)
-        }
-        return editorAware.resumeCommandConnectingEditor(sessionID: sessionID)
+        editorAware(adapter)?.resumeCommandConnectingEditor(sessionID: sessionID)
+            ?? adapter.resumeCommand(sessionID: sessionID)
+    }
+
+    /// The adapter as one that connects to the editor, while an editor integration is installed.
+    private func editorAware(_ adapter: any HarnessAdapter) -> (any EditorConnectable)? {
+        connectsEditor() ? adapter as? any EditorConnectable : nil
     }
 
     public static func folderMissingMessage(_ path: String) -> String {

@@ -70,7 +70,10 @@ struct CaptureHarnessSessionTests {
         _ capture: CaptureHarnessSession, _ start: CaptureStart, competitors: Int = 0,
         claimed: Set<String> = [], running: @escaping () -> Bool = { true }
     ) async -> HarnessBinding? {
-        await capture.capture(start, competitors: { competitors }, claimed: { claimed }, isStillRunning: running)
+        await capture.capture(
+            start,
+            CaptureContext(
+                competitors: { competitors }, claimed: { claimed }, isStillRunning: running, disputed: { _ in }))
     }
 
     @Test func pendingIdFromRestoreIsKeptAndBoundToTheProcess() async throws {
@@ -176,6 +179,32 @@ struct CaptureHarnessSessionTests {
         #expect(second?.sessionID == nil)
     }
 
+    /// Final review C1: the pane that searches second finds no competitor left waiting, yet must not take the session
+    /// the first one gave up because of it.
+    @Test func disputedSessionIsNeverTakenLater() async throws {
+        let world = World(now: t0.addingTimeInterval(40))
+        world.sessions = [(t0, session("typed-in-late", created: 30))]
+        let session = make(world)
+        let early = try #require(session.processChanged(in: try pane(), to: codex(startedAt: 0)))
+        let late = try #require(session.processChanged(in: try pane(), to: codex(startedAt: 10, pid: 43)))
+        var disputed: Set<String> = []
+
+        let lateBinding = await session.capture(
+            late,
+            CaptureContext(
+                competitors: { 1 }, claimed: { disputed }, isStillRunning: { true },
+                disputed: { disputed.insert($0) }))
+        let earlyBinding = await session.capture(
+            early,
+            CaptureContext(
+                competitors: { 0 }, claimed: { disputed }, isStillRunning: { true },
+                disputed: { disputed.insert($0) }))
+
+        #expect(lateBinding?.sessionID == nil)
+        #expect(disputed == ["typed-in-late"])
+        #expect(earlyBinding?.sessionID == nil)
+    }
+
     @Test func restoredPaneKeepsIdWhileNewPaneCapturesFreshOne() async throws {
         let world = World(now: t0.addingTimeInterval(30))
         world.sessions = [(t0, session("restored", created: -3600)), (t0, session("fresh", created: 5))]
@@ -254,6 +283,31 @@ struct PaneHarnessTests {
         #expect(process.pid == 7)
         #expect(process.startedAt == t0)
         #expect(ForegroundProcess(name: "zsh").pid == nil)
+    }
+
+    private func paneThatRanClaude(state: AgentState) throws -> Pane {
+        Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
+            .attaching(AgentSession(harness: .claude, sessionID: "old", title: nil, state: state, startedAt: t0))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex", pid: 42)))
+    }
+
+    /// Final review I1: a Claude that finished in the pane does not stop the capture of the Codex run after it.
+    @Test func stoppedAgentOfAnotherHarnessLetsTheCaptureRun() throws {
+        let pane = try paneThatRanClaude(state: .stopped)
+
+        #expect(pane.runsHarness(.codex, pid: 42))
+        #expect(!pane.runsHarness(.codex, pid: 43))
+        #expect(!pane.runsHarness(.claude, pid: 42))
+    }
+
+    @Test func codexAfterAFinishedClaudeIsSavedAsCodex() throws {
+        let binding = HarnessBinding(harness: .codex, sessionID: "fresh", processStartedAt: t0, pid: 42)
+        let pane = try paneThatRanClaude(state: .stopped).binding(binding)
+
+        let saved = PaneSnapshot(pane, scrollbackLines: 0)
+
+        #expect(saved.agent?.harness == .codex)
+        #expect(saved.agent?.sessionID == "fresh")
     }
 
     @Test func paneRemembersTheForegroundPid() throws {

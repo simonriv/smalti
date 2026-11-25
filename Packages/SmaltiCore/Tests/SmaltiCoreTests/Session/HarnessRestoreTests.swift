@@ -10,7 +10,10 @@ struct CodexLikeHarness: HarnessAdapter {
     func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] { [] }
     func resumeCommand(sessionID: String) -> String { "codex resume \(sessionID)" }
     func continueCommand() -> String { "codex resume --last" }
-    func forkCommand(sessionID: String) -> String? { nil }
+    func forkCommand(sessionID: String) -> String? { resumeCommand(sessionID: sessionID) + " --fork-session" }
+    func forkCommandConnectingEditor(sessionID: String) -> String {
+        resumeCommand(sessionID: sessionID) + " --fork --ide"
+    }
     func sessionID(fromCommandLine arguments: [String]) -> String? { nil }
 }
 
@@ -22,7 +25,10 @@ struct EditorAwareHarness: HarnessAdapter, EditorConnectable {
     func resumeCommand(sessionID: String) -> String { "claude --resume \(sessionID)" }
     func resumeCommandConnectingEditor(sessionID: String) -> String { resumeCommand(sessionID: sessionID) + " --ide" }
     func continueCommand() -> String { "claude --continue" }
-    func forkCommand(sessionID: String) -> String? { nil }
+    func forkCommand(sessionID: String) -> String? { resumeCommand(sessionID: sessionID) + " --fork-session" }
+    func forkCommandConnectingEditor(sessionID: String) -> String {
+        resumeCommand(sessionID: sessionID) + " --fork --ide"
+    }
     func sessionID(fromCommandLine arguments: [String]) -> String? { nil }
 }
 

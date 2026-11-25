@@ -386,6 +386,26 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "f6-observatory-filters.png")
     }
 
+    /// F6: ⌘K with "Editados por Claude", from an edit injected through the IPC socket.
+    func testCaptureF6EditedFiles() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        launch(app)
+        let work = FileManager.default.temporaryDirectory.appending(path: "smalti-capture-work").path(
+            percentEncoded: false)
+        app.run(
+            "mkdir -p '\(work)' && printf 'import x\\n\\nfunc greet() {\\n}\\n' > '\(work)/reminder.service.ts' && clear"
+        )
+        let payload =
+            #"{"session_id":"7f3a9c2e-0000-4000-8000-000000000001","tool_name":"Edit","tool_input":{"file_path":"\#(work)/reminder.service.ts","new_string":"func greet() {"}}"#
+        app.run("printf '%s' '\(payload)' | \"$SMALTI_CLI\" event PostToolUse && clear")
+        Thread.sleep(forTimeInterval: 1)
+        app.typeKey("k", modifierFlags: .command)
+        app.typeText("reminder")
+        Thread.sleep(forTimeInterval: 1)
+
+        try save(app.windows.firstMatch.screenshot(), as: "f6-edited-files.png")
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

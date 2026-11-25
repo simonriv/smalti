@@ -15,7 +15,8 @@ public final class SearchHarnessSessions {
     }
 
     public func run(_ query: SessionQuery) -> AsyncStream<SessionListing> {
-        let adapters = registry.all
+        // A chip reads only its own store (final review I2).
+        let adapters = registry.all.filter { query.harness == nil || $0.harness == query.harness }
         let timeout = timeout
         return AsyncStream { continuation in
             let task = Task {

@@ -265,11 +265,18 @@ final class TilingController {
     /// F6: the Neovim panes reopened with `--listen` answer "Abrir en Neovim" and are saved at their line again.
     private func adoptRestoredEditors(_ plan: RestorePlan) {
         for planned in plan.workspaces.flatMap(\.panes) {
-            guard case .editor = planned.launch,
-                let socket = try? EditorSocketPath.make(
-                    directory: deps.editor.socketDirectory, pane: PaneID(rawValue: planned.id))
-            else { continue }
+            guard let socket = restoredSocket(planned) else { continue }
             editors.adopt(PaneID(rawValue: planned.id), socket: socket)
+        }
+    }
+
+    /// An editor pane's socket, or the one a Neovim saved as its process listened on (final review).
+    private func restoredSocket(_ planned: PlannedPane) -> String? {
+        let directory = deps.editor.socketDirectory
+        switch planned.launch {
+        case .editor: return try? EditorSocketPath.make(directory: directory, pane: PaneID(rawValue: planned.id))
+        case .relaunch(let command): return EditorCommand.listenSocket(in: command.arguments, directory: directory)
+        case .shell, .resume: return nil
         }
     }
 
@@ -619,10 +626,7 @@ final class TilingController {
         guard let current = pane(id) else { return }
         deps.captures.processChanged(
             in: current, to: process,
-            isStillRunning: { [weak self] in
-                guard let pane = self?.pane(id) else { return false }
-                return pane.agent == nil && pane.foregroundPID == process.pid
-            },
+            currentPane: { [weak self] in self?.pane(id) },
             apply: { [weak self] binding in
                 guard let self, let owner = set.workspace(containing: id) else { return }
                 set = set.updating(owner) { $0.binding(binding, to: id) }

@@ -118,10 +118,7 @@ final class AppComposition {
 
     /// F6: Neovim sockets under a short owner-only folder (`sun_path` holds 104 bytes).
     private static func editorSocketDirectory(_ settings: LaunchSettings) -> String {
-        let directory = settings.editorSocketDirectory ?? "/private/tmp/smalti-\(getuid())"
-        try? FileManager.default.createDirectory(
-            atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        return directory
+        EditorSocketDirectory.prepare(settings.editorSocketDirectory ?? "/private/tmp/smalti-\(getuid())")
     }
 
     /// F6: the four harnesses, each reading its own home as `LaunchSettings` resolved it.
