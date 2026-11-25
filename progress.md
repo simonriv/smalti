@@ -332,5 +332,5 @@
 - [x] T19 · Restaurar nvim, `--ide` e integraciones en ⌘K
 - [x] Revisión intermedia 2 + mutación incremental (10 importantes y 9 menores corregidos; mutación 95,9 %, 9 sobrevivientes muertos)
 #### Bloque 5 · Cierre
-- [ ] T20 · Mediciones, capturas, checklist y revisión final
-- [ ] T21 · Limpieza, PRs y despliegue
+- [x] T20 · Mediciones, capturas, checklist y revisión final (C7 p95 53,6 ms; revisión final: 1 crítico, 2 importantes y 6 menores corregidos; mutación completa 99,9 %)
+- [x] T21 · Limpieza (modelo, Codex, OpenCode y Ollama desinstalados; grabaciones crudas borradas), 0.6.0, PRs y despliegue
