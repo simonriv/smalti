@@ -17,7 +17,8 @@ public final class LoopbackOTLPReceiver: TelemetryReceiver {
     private var server: LoopbackServer?
 
     public init(
-        decode: @escaping @Sendable (Data) throws -> [TelemetryEvent], idleTimeout: Duration = .seconds(30),
+        decode: @escaping @Sendable (Data) throws -> [TelemetryEvent] = { body in try OTLPLogsDecoder.decode(body) },
+        idleTimeout: Duration = .seconds(30),
         maximumBody: Int = 4 << 20, token: @escaping @Sendable () -> String = LoopbackOTLPReceiver.randomToken
     ) {
         self.decode = decode
