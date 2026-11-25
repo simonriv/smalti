@@ -90,7 +90,8 @@ struct MenuModelTests {
             ])
         #expect(
             menus[5].items.map(\.title) == [
-                "Ayuda de Smalti", "", "Reportar un problema o una idea…", "Mostrar registros…",
+                "Ayuda de Smalti", "Abrir la documentación", "", "Reportar un problema o una idea…",
+                "Mostrar registros…", "", "Apoyar Smalti…",
             ])
     }
 

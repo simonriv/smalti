@@ -5,7 +5,8 @@ public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
     public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
-        let context = Context(workspaces: state.workspaces, keymap: keymap, integrations: state.integrations)
+        let context = Context(
+            workspaces: state.workspaces, keymap: keymap, integrations: state.integrations, updates: state.updates)
         return state.pendingApprovals.flatMap(approvalCommands)
             + tilingCommands(context, layouts)
             + paneCommands(context)
@@ -76,7 +77,13 @@ public enum CommandCatalog {
         .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
         .editorOpenLastEdited: "Abrir en Neovim el último archivo editado",
         .observatoryFilter: "Filtrar el Observatorio", .layoutImport: "Importar layout…",
+        .updatesCheck: "Buscar actualizaciones…", .helpDocs: "Abrir la documentación", .appSupport: "Apoyar Smalti…",
     ]
+
+    /// F7.6: the toggle says what choosing it does.
+    static func automaticUpdatesTitle(isAutomatic: Bool) -> String {
+        isAutomatic ? "Desactivar actualizaciones automáticas" : "Activar actualizaciones automáticas"
+    }
 
     static let terminalIDs: [CommandID] = [
         .terminalCopy, .terminalPaste, .terminalSelectAll, .terminalClear, .searchOpen, .searchNext, .searchPrevious,
@@ -96,7 +103,19 @@ public enum CommandCatalog {
     }
 
     private static func helpCommands(_ context: Context) -> [Command] {
-        [CommandID.helpShow, .feedbackReport, .logsShow, .appAbout].map { context.titled($0, group: .help) }
+        [CommandID.helpShow, .helpDocs, .feedbackReport, .logsShow].map { context.titled($0, group: .help) }
+            + updateCommands(context)
+            + [CommandID.appSupport, .appAbout].map { context.titled($0, group: .help) }
+    }
+
+    /// F7.6: only in a build that can update itself.
+    private static func updateCommands(_ context: Context) -> [Command] {
+        guard case .available(let isAutomatic) = context.updates else { return [] }
+        return [
+            context.titled(.updatesCheck, group: .help),
+            context.command(
+                .updatesAutomatic, automaticUpdatesTitle(isAutomatic: isAutomatic), group: .help),
+        ]
     }
 
     /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
@@ -128,6 +147,7 @@ public enum CommandCatalog {
         let workspaces: WorkspaceSet
         let keymap: Keymap
         let integrations: [IntegrationID: IntegrationState]
+        let updates: UpdatesAvailability
 
         var paneCount: Int { workspaces.active.panes.count }
 
@@ -253,6 +273,8 @@ public struct CatalogState: Sendable {
     public var pendingApprovals: [ApprovalEntry] = []
     /// F7.5: the focused pane's project and whether its secrets are protected; nil without a pane.
     public var secretsProject: SecretsProjectState?
+    /// F7.6: whether the build can update itself and checks on its own.
+    public var updates = UpdatesAvailability.unavailable
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],

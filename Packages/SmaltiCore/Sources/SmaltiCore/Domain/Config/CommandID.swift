@@ -49,6 +49,11 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let logsShow = CommandID(rawValue: "logs.show")
     public static let appAbout = CommandID(rawValue: "app.about")
     public static let configOpen = CommandID(rawValue: "config.open")
+    // F7.6: updates, documentation and support.
+    public static let updatesCheck = CommandID(rawValue: "updates.check")
+    public static let updatesAutomatic = CommandID(rawValue: "updates.automatic")
+    public static let helpDocs = CommandID(rawValue: "help.docs")
+    public static let appSupport = CommandID(rawValue: "app.support")
     public static let terminalCopy = CommandID(rawValue: "terminal.copy")
     public static let terminalPaste = CommandID(rawValue: "terminal.paste")
     public static let terminalSelectAll = CommandID(rawValue: "terminal.selectAll")
@@ -197,7 +202,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         ]
         + basics
         + appearance
-        + [previewQuickLook]
+        + [previewQuickLook, updatesCheck, updatesAutomatic, helpDocs, appSupport]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }
