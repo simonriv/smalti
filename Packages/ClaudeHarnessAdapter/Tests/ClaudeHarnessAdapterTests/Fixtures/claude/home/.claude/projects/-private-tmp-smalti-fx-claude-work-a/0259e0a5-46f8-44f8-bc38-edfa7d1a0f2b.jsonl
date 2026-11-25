@@ -4,7 +4,7 @@
 {"type": "derived-from", "v": 1, "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "sessions": [{"type": "claude_code_session", "id": "401a63e1-c076-45fe-9f09-432da1c8cfa6", "via": "fork"}]}
 {"type": "queue-operation", "redacted": true}
 {"type": "queue-operation", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:32.151Z", "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "uuid": "9d39e4e2-63e3-4253-bc5b-888662931580", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:32.151Z", "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "uuid": "9d39e4e2-63e3-4253-bc5b-888662931580", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt F"}}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}
@@ -18,7 +18,7 @@
 {"type": "attachment", "redacted": true}
 {"type": "assistant", "timestamp": "2026-11-23T05:58:33.156Z", "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "uuid": "8636c06b-d3d7-42eb-99ab-aa6cdbc8fe6b", "parentUuid": "9d3ffec1-9d87-4101-93ea-93d9ce07f2e2", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"id": "msg_011ChKM6RmcRGEs98GfmrUFT", "model": "claude-haiku-5-5", "usage": {"input_tokens": 2, "cache_creation_input_tokens": 7292, "cache_read_input_tokens": 9449, "output_tokens": 4, "output_tokens_details": {"thinking_tokens": 0}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 7292, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 4, "cache_read_input_tokens": 9449, "cache_creation_input_tokens": 7292, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 7292}, "type": "message"}], "speed": "standard", "fallback_credit": null}, "stop_reason": "end_turn", "role": "assistant", "content": [{"type": "text", "text": "hola"}]}}
 {"type": "attachment", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:59.922Z", "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "uuid": "5f15c3bc-fe12-4b42-885d-0096328b3630", "parentUuid": "3b8da4b0-bc9f-41a3-bee9-32f5912a25e9", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:59.922Z", "sessionId": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b", "uuid": "5f15c3bc-fe12-4b42-885d-0096328b3630", "parentUuid": "3b8da4b0-bc9f-41a3-bee9-32f5912a25e9", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt F"}}
 {"type": "attachment", "redacted": true}
 {"type": "data-flow-records", "redacted": true}
 {"type": "last-prompt", "redacted": true}

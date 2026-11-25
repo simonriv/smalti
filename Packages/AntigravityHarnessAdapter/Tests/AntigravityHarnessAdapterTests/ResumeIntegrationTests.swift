@@ -24,6 +24,7 @@ extension AntigravityHarnessTests {
         @Test func resumesFixtureWithRealCommand() throws {
             let fixture = try AntigravityFixture.description
             let home = try FixtureHome.materialize(fixture)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
             try copyLogin(into: home)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
 
@@ -36,7 +37,11 @@ extension AntigravityHarnessTests {
                     ],
                     directory: URL(filePath: newest.directory), needle: newest.title, root: fixture.root))
 
-            #expect(result.found, "screen: \(result.transcript.suffix(800))")
+            let expired = result.transcript.contains("not signed in")
+            #expect(
+                result.found,
+                "\(expired ? "the recorded login expired: re-record it with record-fixtures.sh antigravity. " : "")screen: \(result.transcript.suffix(800))"
+            )
             #expect(result.leftovers.isEmpty, "left running: \(result.leftovers)")
         }
 

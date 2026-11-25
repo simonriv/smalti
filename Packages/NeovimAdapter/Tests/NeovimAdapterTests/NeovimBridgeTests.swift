@@ -77,6 +77,13 @@ struct NeovimBridgeTests {
         #expect(await NeovimBridge().current(socket: nvim.socket) == EditorPosition(file: path, line: 2))
     }
 
+    @Test func helpOrScratchBufferIsNotAPosition() async throws {
+        let nvim = try TestNeovim()
+        _ = try NeovimRPC.call(socket: nvim.socket, method: "nvim_command", params: [.string("help")], timeout: 1)
+
+        #expect(await NeovimBridge().current(socket: nvim.socket) == nil)
+    }
+
     @Test func deadSocketIsTypedError() async {
         do {
             try await NeovimBridge().open(

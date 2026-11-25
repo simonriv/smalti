@@ -13,6 +13,7 @@ extension OpenCodeHarnessTests {
         @Test func resumesFixtureWithRealCommand() throws {
             let fixture = try OpenCodeFixture.description
             let home = try FixtureHome.materialize(fixture)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
             let config = home.appending(path: ".config/opencode/opencode.json")
             let text = try String(contentsOf: config, encoding: .utf8)
             try text.replacing(/http:\/\/127\.0\.0\.1:\d+/, with: "http://127.0.0.1:9").write(

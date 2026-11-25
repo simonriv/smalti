@@ -58,6 +58,23 @@ struct CodexHarnessTests {
         #expect(sessions.count == expected.sessions.count - 1)
     }
 
+    @Test func subagentAndNonInteractiveThreadsAreNotListed() async throws {
+        let home = try FixtureHome.materialize(try CodexFixture.description)
+        let ids = try FixtureExpectations.load(from: try CodexFixture.description.source).sessions.map(\.id)
+        try CodexFixture.sql(
+            "update threads set attached_thread_parent_id = '\(ids[1])' where id = '\(ids[0])'", in: home)
+        try CodexFixture.sql("update threads set source = 'mcp' where id = '\(ids[1])'", in: home)
+
+        #expect(try await CodexFixture.harness(home: home).listSessions(SessionQuery()).isEmpty)
+    }
+
+    @Test func interactiveSourcesAreListed() async throws {
+        let home = try FixtureHome.materialize(try CodexFixture.description)
+        try CodexFixture.sql("update threads set source = 'cli'", in: home)
+
+        #expect(try await CodexFixture.harness(home: home).listSessions(SessionQuery()).count == 2)
+    }
+
     @Test func missingStateDbIsStoreMissing() async throws {
         let home = try FixtureHome.materialize(try CodexFixture.description)
         try FileManager.default.removeItem(at: home.appending(path: "codex/state_5.sqlite"))

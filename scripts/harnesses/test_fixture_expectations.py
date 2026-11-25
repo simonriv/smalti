@@ -62,6 +62,7 @@ class Expectations(unittest.TestCase):
         sessions = expectations("claude", self.home)["sessions"]
         self.assertEqual([(s["id"], s["directory"], s["title"]) for s in sessions], [("s1", "/w/a", "hola")])
         self.assertEqual(sessions[0]["createdAt"], "2026-11-24T10:00:00Z")
+        self.assertEqual(sessions[0]["updatedAt"], "2026-11-24T10:00:00Z")
 
 
 if __name__ == "__main__":

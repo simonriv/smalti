@@ -118,6 +118,13 @@ record_claude() {
         >$projects/$encoded/${file:t}
     done
   done
+  # A distinct first prompt per session, so the resume test sees the right one came back (review 1, M6).
+  local -A markers=(401a63e1-c076-45fe-9f09-432da1c8cfa6 A 0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b F
+    7b1f7b2a-0c81-4aa0-8229-85de52add2e8 B)
+  for transcript in $projects/*/*.jsonl; do
+    local id=${transcript:t:r}
+    [[ -n ${markers[$id]:-} ]] && python3 -I $here/mark_claude_prompt.py $transcript "fixture prompt ${markers[$id]}"
+  done
 }
 
 fresh_root

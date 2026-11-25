@@ -82,7 +82,7 @@ def claude(home):
                         title = first_text((record.get("message") or {}).get("content"))
             created = first[:19] + "Z" if first else None
             sessions.append({"id": name[:-len(".jsonl")], "directory": directory, "title": title or "",
-                             "createdAt": created, "_last": last})
+                             "createdAt": created, "updatedAt": last[:19] + "Z" if last else None, "_last": last})
     sessions.sort(key=lambda session: session.pop("_last"), reverse=True)
     return sessions
 

@@ -4,20 +4,23 @@
     {
       "id": "0259e0a5-46f8-44f8-bc38-edfa7d1a0f2b",
       "directory": "/private/tmp/smalti-fx/claude/work-a",
-      "title": "<redacted>",
-      "createdAt": "2026-11-23T05:58:32Z"
+      "title": "fixture prompt F",
+      "createdAt": "2026-11-23T05:58:32Z",
+      "updatedAt": "2026-11-23T05:59:01Z"
     },
     {
       "id": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8",
       "directory": "/private/tmp/smalti-fx/claude/work-b",
-      "title": "<redacted>",
-      "createdAt": "2026-11-23T05:58:34Z"
+      "title": "fixture prompt B",
+      "createdAt": "2026-11-23T05:58:34Z",
+      "updatedAt": "2026-11-23T05:58:43Z"
     },
     {
       "id": "401a63e1-c076-45fe-9f09-432da1c8cfa6",
       "directory": "/private/tmp/smalti-fx/claude/work-a",
-      "title": "<redacted>",
-      "createdAt": "2026-11-23T05:58:32Z"
+      "title": "fixture prompt A",
+      "createdAt": "2026-11-23T05:58:32Z",
+      "updatedAt": "2026-11-23T05:58:33Z"
     }
   ]
 }

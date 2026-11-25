@@ -20,7 +20,12 @@ public final class NeovimBridge: EditorBridge {
           vim.api.nvim_win_set_cursor(0, { math.min(line, last), math.max(col, 0) })
         end
         """
-    static let currentChunk = "return { vim.api.nvim_buf_get_name(0), vim.api.nvim_win_get_cursor(0)[1] }"
+    /// Only a file buffer counts (not help, a file tree or a terminal), and only one Neovim can read.
+    static let currentChunk = """
+        local name = vim.api.nvim_buf_get_name(0)
+        if vim.bo.buftype ~= "" or name == "" or vim.fn.filereadable(name) ~= 1 then return vim.NIL end
+        return { name, vim.api.nvim_win_get_cursor(0)[1] }
+        """
 
     public init() {}
 

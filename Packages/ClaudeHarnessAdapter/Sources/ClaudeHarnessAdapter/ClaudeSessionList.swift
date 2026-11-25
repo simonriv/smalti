@@ -12,19 +12,53 @@ struct ClaudeSessionList {
     let root: URL
     let harness: HarnessID
 
-    func sessions() throws(HarnessError) -> [HarnessSession] {
+    /// The `newest` transcripts by modification time, read; a whole-machine listing never opens them all.
+    func sessions(newest limit: Int) throws(HarnessError) -> [HarnessSession] {
+        let transcripts = try allTranscripts()
+        let newest = transcripts.map { ($0, Self.modified($0)) }.sorted { $0.1 > $1.1 }.prefix(limit).map(\.0)
+        return try read(Array(newest), checking: transcripts)
+    }
+
+    /// The transcripts of `directory`'s project folder born since `born`.
+    func sessions(inProjectOf directory: String, bornSince born: Date) throws(HarnessError) -> [HarnessSession] {
+        guard FileManager.default.fileExists(atPath: root.path) else {
+            throw .storeMissing(harness: harness, path: root.path)
+        }
+        let folder = root.appending(path: Self.projectFolder(for: directory))
+        let files = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "jsonl" && Self.born($0) >= born }
+        return files.compactMap(session)
+    }
+
+    /// Claude names a project's folder after its directory with `/` and `.` turned into `-`.
+    static func projectFolder(for directory: String) -> String {
+        String(directory.map { $0 == "/" || $0 == "." ? "-" : $0 })
+    }
+
+    private func allTranscripts() throws(HarnessError) -> [URL] {
         let files = FileManager.default
         guard files.fileExists(atPath: root.path) else { throw .storeMissing(harness: harness, path: root.path) }
         let projects = (try? files.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
-        let transcripts = projects.flatMap { project in
+        return projects.flatMap { project in
             ((try? files.contentsOfDirectory(at: project, includingPropertiesForKeys: nil)) ?? [])
                 .filter { $0.pathExtension == "jsonl" }
         }
-        let read = transcripts.compactMap(session)
-        if !transcripts.isEmpty, read.isEmpty, transcripts.contains(where: hasRecords) {
+    }
+
+    private func read(_ files: [URL], checking all: [URL]) throws(HarnessError) -> [HarnessSession] {
+        let read = files.compactMap { file in autoreleasepool { session(file) } }
+        if !all.isEmpty, read.isEmpty, all.contains(where: hasRecords) {
             throw .unknownSchema(harness: harness, path: root.path, missing: "cwd")
         }
         return read
+    }
+
+    private static func modified(_ file: URL) -> Date {
+        (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date ?? .distantPast
+    }
+
+    private static func born(_ file: URL) -> Date {
+        (try? FileManager.default.attributesOfItem(atPath: file.path))?[.creationDate] as? Date ?? .distantPast
     }
 
     private func session(_ file: URL) -> HarnessSession? {

@@ -16,8 +16,16 @@ public struct ClaudeHarness: HarnessAdapter, EditorConnectable {
     public func detect(_ process: ForegroundProcess) -> Bool { ProcessNames.matches(process, ["claude"]) }
 
     public func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] {
-        let sessions = try ClaudeSessionList(root: projectsRoot, harness: harness).sessions()
+        let sessions = try ClaudeSessionList(root: projectsRoot, harness: harness).sessions(newest: query.readLimit)
         return SessionCatalog.merge([.success(sessions)], query: query).sessions
+    }
+
+    /// Only the project folder of the pane's directory, and only transcripts born since the start (review 1, I2):
+    /// the capture repeats every 2 s and must not read every transcript of the machine.
+    public func captureSessionId(in window: CaptureWindow) async throws(HarnessError) -> String? {
+        let list = ClaudeSessionList(root: projectsRoot, harness: harness)
+        let born = window.processStartedAt.addingTimeInterval(-CaptureWindow.margin)
+        return window.choose(try list.sessions(inProjectOf: window.directory, bornSince: born))
     }
 
     public func resumeCommand(sessionID: String) -> String {
@@ -35,7 +43,9 @@ public struct ClaudeHarness: HarnessAdapter, EditorConnectable {
     }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {
-        guard let first = arguments.first, detect(ForegroundProcess(name: first)) else { return nil }
+        guard let first = arguments.first, detect(ForegroundProcess(name: first)),
+            !arguments.contains("--fork-session")
+        else { return nil }
         return ProcessNames.value(after: ["--resume", "-r"], in: arguments)
     }
 }

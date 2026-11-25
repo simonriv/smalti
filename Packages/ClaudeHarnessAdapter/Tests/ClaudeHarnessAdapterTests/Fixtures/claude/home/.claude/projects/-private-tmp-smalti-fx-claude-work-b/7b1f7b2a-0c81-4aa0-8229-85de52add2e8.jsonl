@@ -1,7 +1,7 @@
 {"type": "session-owner", "redacted": true}
 {"type": "queue-operation", "redacted": true}
 {"type": "queue-operation", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:34.110Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "a5b0cb33-c495-448a-b30a-09af8ab3d871", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:34.110Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "a5b0cb33-c495-448a-b30a-09af8ab3d871", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt B"}}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}
@@ -47,7 +47,7 @@
 {"type": "tools-used", "redacted": true}
 {"type": "queue-operation", "redacted": true}
 {"type": "queue-operation", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:38.489Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "4975b5e3-9c42-4279-8012-3d19db4cb965", "parentUuid": "a72ec81f-c06e-4891-b473-ef72528a3d97", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:38.489Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "4975b5e3-9c42-4279-8012-3d19db4cb965", "parentUuid": "a72ec81f-c06e-4891-b473-ef72528a3d97", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt B"}}
 {"type": "attachment", "redacted": true}
 {"type": "api-request-blob", "redacted": true}
 {"type": "api-request", "redacted": true}
@@ -65,7 +65,7 @@
 {"type": "cost-state", "redacted": true}
 {"type": "queue-operation", "redacted": true}
 {"type": "queue-operation", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:41.708Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "caa3fb0a-faea-4f8d-b1aa-be843e1cd8b3", "parentUuid": "ab5063a3-1d94-47c0-8623-f01f079bdd14", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:41.708Z", "sessionId": "7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "uuid": "caa3fb0a-faea-4f8d-b1aa-be843e1cd8b3", "parentUuid": "ab5063a3-1d94-47c0-8623-f01f079bdd14", "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-b", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt B"}}
 {"type": "attachment", "redacted": true}
 {"type": "api-request", "redacted": true}
 {"type": "data-flow-records", "redacted": true}

@@ -6,6 +6,8 @@ import SmaltiCore
 /// indexed in `state_5.sqlite`, table `threads`: the listing reads only the index (spec F6).
 public struct CodexHarness: HarnessAdapter {
     static let requiredColumns = ["id", "cwd", "title", "created_at", "updated_at", "archived"]
+    /// What Codex's own resume picker lists (`INDEXED_INTERACTIVE_SOURCES`), plus `exec` sessions (spec F6).
+    static let listedSources = ["cli", "vscode", "exec"]
 
     public let harness = HarnessID.codex
     private let home: URL
@@ -30,9 +32,14 @@ public struct CodexHarness: HarnessAdapter {
                 throw HarnessError.unknownSchema(harness: harness, path: store.path, missing: missing)
             }
             let extras = ["model_provider", "tokens_used"].map { columns.contains($0) ? $0 : "null" }
+            var conditions = ["archived = 0"]
+            if columns.contains("source") {
+                conditions.append("source in (\(Self.listedSources.map { "'\($0)'" }.joined(separator: ", ")))")
+            }
+            if columns.contains("attached_thread_parent_id") { conditions.append("attached_thread_parent_id is null") }
             let rows = try reader.rows(
                 "select id, cwd, title, created_at, updated_at, \(extras.joined(separator: ", ")) from threads "
-                    + "where archived = 0 order by updated_at desc")
+                    + "where \(conditions.joined(separator: " and ")) order by updated_at desc")
             return SessionCatalog.merge([.success(rows.compactMap(session))], query: query).sessions
         } catch let error as HarnessError {
             throw error

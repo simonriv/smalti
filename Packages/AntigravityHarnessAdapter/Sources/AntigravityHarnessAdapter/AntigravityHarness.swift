@@ -49,8 +49,9 @@ public struct AntigravityHarness: HarnessAdapter {
             let updated = row[text: 4].flatMap(Self.timestamp)
         else { return nil }
         let title = row[text: 1].flatMap { $0.isEmpty ? nil : $0 } ?? row[text: 2] ?? ""
+        // Without its conversation file the creation is unknown: never newer than a process start (review 1, M2).
         return HarnessSession(
-            harness: harness, id: id, directory: directory, title: title, createdAt: born(id) ?? updated,
+            harness: harness, id: id, directory: directory, title: title, createdAt: born(id) ?? .distantPast,
             updatedAt: updated, detail: nil)
     }
 

@@ -72,7 +72,7 @@ struct AntigravityHarnessTests {
         #expect(sessions.first { $0.id == id }?.directory == "/tmp/dir con ñ")
     }
 
-    @Test func missingConversationFileFallsBackToModifiedTime() async throws {
+    @Test func missingConversationFileIsNeverCapturable() async throws {
         let home = try FixtureHome.materialize(try AntigravityFixture.description)
         let expected = try FixtureExpectations.load(from: try AntigravityFixture.description.source)
         let id = try #require(expected.sessions.first?.id)
@@ -81,7 +81,7 @@ struct AntigravityHarnessTests {
         let sessions = try await AntigravityFixture.harness(home: home).listSessions(SessionQuery())
         let session = try #require(sessions.first { $0.id == id })
 
-        #expect(session.createdAt == session.updatedAt)
+        #expect(session.createdAt == .distantPast)
     }
 
     @Test func parsesSummaryTimestamps() {

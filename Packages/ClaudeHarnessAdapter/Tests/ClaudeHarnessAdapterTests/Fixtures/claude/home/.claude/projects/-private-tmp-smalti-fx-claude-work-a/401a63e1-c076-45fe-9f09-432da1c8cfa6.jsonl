@@ -1,7 +1,7 @@
 {"type": "session-owner", "redacted": true}
 {"type": "queue-operation", "redacted": true}
 {"type": "queue-operation", "redacted": true}
-{"type": "user", "timestamp": "2026-11-23T05:58:32.151Z", "sessionId": "401a63e1-c076-45fe-9f09-432da1c8cfa6", "uuid": "9d39e4e2-63e3-4253-bc5b-888662931580", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "<redacted>"}}
+{"type": "user", "timestamp": "2026-11-23T05:58:32.151Z", "sessionId": "401a63e1-c076-45fe-9f09-432da1c8cfa6", "uuid": "9d39e4e2-63e3-4253-bc5b-888662931580", "parentUuid": null, "isSidechain": false, "cwd": "/private/tmp/smalti-fx/claude/work-a", "version": "2.1.330", "message": {"role": "user", "content": "fixture prompt A"}}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}
 {"type": "attachment", "redacted": true}

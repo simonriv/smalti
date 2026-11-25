@@ -46,6 +46,12 @@ class SanitizeTree(unittest.TestCase):
         sanitize_tree(self.source, self.target, MARKERS)
         self.assertEqual(self.read("a/state.pbtxt"), b'email: "fixture@example.invalid"\nname: "Fixture User"\n')
 
+    def test_installation_ids_are_zeroed(self):
+        self.write("a/jetski_state.pbtxt", 'installation_uuid: "3f2a9c1e-1111-4222-8333-444455556666"\nother: "x"\n')
+        sanitize_tree(self.source, self.target, MARKERS)
+        self.assertEqual(self.read("a/jetski_state.pbtxt"),
+                         b'installation_uuid: "00000000-0000-4000-8000-000000000000"\nother: "x"\n')
+
     def test_replaces_markers_in_sqlite_text_columns(self):
         path = self.write("db/sessions.db", b"")
         os.remove(path)

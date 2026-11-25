@@ -12,6 +12,7 @@ extension ClaudeHarnessTests {
         @Test func resumesFixtureWithRealCommand() throws {
             let fixture = try ClaudeFixture.description
             let home = try FixtureHome.materialize(fixture)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
             try onboardingDone(home: home, fixture: fixture)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
             let binary = try #require(PtyResume.binary("claude")).deletingLastPathComponent().path
@@ -23,7 +24,7 @@ extension ClaudeHarnessTests {
                         "HOME": home.path, "CLAUDE_CONFIG_DIR": home.appending(path: ".claude").path,
                         "PATH": "\(binary):/opt/homebrew/bin:/usr/bin:/bin", "TERM": "xterm-256color",
                     ],
-                    directory: URL(filePath: newest.directory), needle: "<redacted>", root: fixture.root))
+                    directory: URL(filePath: newest.directory), needle: newest.title, root: fixture.root))
 
             #expect(result.found, "screen: \(result.transcript.suffix(800))")
             #expect(result.leftovers.isEmpty, "left running: \(result.leftovers)")

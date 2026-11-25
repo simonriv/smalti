@@ -4,7 +4,7 @@ post_onboarding:  {
   completed_steps:  POST_ONBOARDING_STEP_TYPE_AGENT_CONFIGURATION
   completed_steps:  POST_ONBOARDING_STEP_TYPE_ADD_WORKSPACE
 }
-installation_uuid:  "15752355-edea-41d1-82e1-308e7bac1c8b"
+installation_uuid:  "00000000-0000-4000-8000-000000000000"
 migrations:  {
   key:  3
   value:  MIGRATION_STATUS_COMPLETED

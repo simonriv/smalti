@@ -45,7 +45,12 @@ def is_dropped(relative):
             or any(pattern.search(name) for pattern in DROPPED_PATTERNS))
 
 
+INSTALLATION_ID = re.compile(r'(installation_(?:uuid|id)"?\s*[:=]\s*")[^"]*(")')
+ZERO_UUID = "00000000-0000-4000-8000-000000000000"
+
+
 def replace_markers(text, markers):
+    text = INSTALLATION_ID.sub(lambda match: match.group(1) + ZERO_UUID + match.group(2), text)
     text = EMAIL.sub(lambda match: match.group(0) if match.group(0) == FIXTURE_EMAIL else FIXTURE_EMAIL, text)
     for marker in markers:
         text = re.sub(re.escape(marker), replacement(marker), text, flags=re.IGNORECASE)

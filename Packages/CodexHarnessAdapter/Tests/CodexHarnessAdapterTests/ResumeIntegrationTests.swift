@@ -12,6 +12,7 @@ extension CodexHarnessTests {
         @Test func resumesFixtureWithRealCommand() throws {
             let fixture = try CodexFixture.description
             let home = try FixtureHome.materialize(fixture)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
             try hermeticConfig(home: home, fixture: fixture)
 

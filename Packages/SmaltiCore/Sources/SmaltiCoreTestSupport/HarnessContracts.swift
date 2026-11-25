@@ -10,6 +10,8 @@ public struct FixtureExpectations: Decodable, Sendable {
         public let directory: String
         public let title: String
         public let createdAt: Date
+        /// Only where the store's order comes from file times (Claude's transcripts).
+        public let updatedAt: Date?
     }
 
     public let harness: String
@@ -36,11 +38,14 @@ public struct HarnessFixtureDescription: Sendable {
     public let commandLine: @Sendable (String) -> [String]
     /// The file whose creation date is the session's (Antigravity), relative to the home.
     public let createdFile: (@Sendable (String) -> String)?
+    /// The file whose modification date is the session's last activity (Claude), relative to the home.
+    public let modifiedFile: (@Sendable (String) -> String)?
 
     public init(
         harness: HarnessID, source: URL, processName: String, resume: @escaping @Sendable (String) -> String,
         continueCommand: String, fork: (@Sendable (String) -> String)?,
-        commandLine: @escaping @Sendable (String) -> [String], createdFile: (@Sendable (String) -> String)? = nil
+        commandLine: @escaping @Sendable (String) -> [String], createdFile: (@Sendable (String) -> String)? = nil,
+        modifiedFile: (@Sendable (String) -> String)? = nil
     ) {
         self.harness = harness
         self.source = source
@@ -51,6 +56,7 @@ public struct HarnessFixtureDescription: Sendable {
         self.fork = fork
         self.commandLine = commandLine
         self.createdFile = createdFile
+        self.modifiedFile = modifiedFile
     }
 }
 
@@ -66,10 +72,14 @@ public enum FixtureHome {
         for work in ["work-a", "work-b"] {
             try files.createDirectory(at: fixture.root.appending(path: work), withIntermediateDirectories: true)
         }
-        if let createdFile = fixture.createdFile {
-            for session in try FixtureExpectations.load(from: fixture.source).sessions {
+        for session in try FixtureExpectations.load(from: fixture.source).sessions {
+            if let createdFile = fixture.createdFile {
                 let file = home.appending(path: createdFile(session.id))
                 try files.setAttributes([.creationDate: session.createdAt], ofItemAtPath: file.path)
+            }
+            if let modifiedFile = fixture.modifiedFile, let updated = session.updatedAt {
+                let file = home.appending(path: modifiedFile(session.id))
+                try files.setAttributes([.modificationDate: updated], ofItemAtPath: file.path)
             }
         }
         return home

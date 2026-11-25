@@ -16,6 +16,11 @@ public struct SessionQuery: Equatable, Sendable {
         self.limit = limit
     }
 
+    /// How many of the newest sessions an adapter reads to answer: the limit, or more when text or a directory
+    /// narrows them afterwards (bounded, so a whole-machine store is never read entirely).
+    public var readLimit: Int { text.isEmpty && directory == nil ? limit : max(limit, Self.narrowedReadLimit) }
+    public static let narrowedReadLimit = 500
+
     /// Text matches the title or the project fuzzily, like ⌘K (F1).
     public func matches(_ session: HarnessSession) -> Bool {
         if let harness, harness != session.harness { return false }
