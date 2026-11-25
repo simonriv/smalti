@@ -147,11 +147,12 @@ public enum HarnessAdapterContract {
 
     static func checkCommands(_ adapter: any HarnessAdapter, _ fixture: HarnessFixtureDescription) {
         for id in ["01a210a3-2dac-78c0", "a'b c$d"] {
-            let agent = AgentSnapshot(harness: fixture.harness, sessionID: id, title: nil, lastState: .working)
             let quoted = ShellWord.quoted(id)
-            #expect(adapter.resumeCommand(for: agent) == fixture.resume(quoted), "resume command for \(id)")
-            #expect(adapter.forkCommand(for: agent) == fixture.fork?(quoted), "fork command for \(id)")
-            #expect(adapter.sessionID(fromCommandLine: fixture.commandLine(id)) == id, "reads \(id) back")
+            #expect(adapter.resumeCommand(sessionID: id) == fixture.resume(quoted), "resume command for \(id)")
+            #expect(!adapter.resumeCommand(sessionID: id).contains("\n"), "the command is one line")
+            #expect(adapter.forkCommand(sessionID: id) == fixture.fork?(quoted), "fork command for \(id)")
+            let readBack = adapter.sessionID(fromCommandLine: fixture.commandLine(id))
+            #expect(readBack == (ShellWord.isSafeID(id) ? id : nil), "reads \(id) back only when it is safe")
         }
         #expect(adapter.continueCommand() == fixture.continueCommand)
         #expect(adapter.sessionID(fromCommandLine: [fixture.processName]) == nil)

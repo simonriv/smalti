@@ -14,6 +14,7 @@ struct CaptureHarnessSessionTests {
         var now: Date
         var sessions: [(appearsAt: Date, session: HarnessSession)] = []
         var sleeps = 0
+        var failure: HarnessError?
         init(now: Date) { self.now = now }
         var visible: [HarnessSession] { sessions.filter { $0.appearsAt <= now }.map(\.session) }
     }
@@ -23,11 +24,12 @@ struct CaptureHarnessSessionTests {
         let harness = HarnessID.codex
         func detect(_ process: ForegroundProcess) -> Bool { ProcessNames.matches(process, ["codex"]) }
         func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] {
-            SessionCatalog.merge([.success(world.visible)], query: query).sessions
+            if let failure = world.failure { throw failure }
+            return SessionCatalog.merge([.success(world.visible)], query: query).sessions
         }
-        func resumeCommand(for agent: AgentSnapshot) -> String { "codex resume \(agent.sessionID)" }
+        func resumeCommand(sessionID: String) -> String { "codex resume \(sessionID)" }
         func continueCommand() -> String { "codex resume --last" }
-        func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+        func forkCommand(sessionID: String) -> String? { nil }
         func sessionID(fromCommandLine arguments: [String]) -> String? {
             ProcessNames.value(after: ["resume"], in: arguments)
         }
@@ -40,63 +42,100 @@ struct CaptureHarnessSessionTests {
             detail: nil)
     }
 
-    private func make(_ world: World) -> CaptureHarnessSession {
+    private func make(_ world: World, resolve: @escaping (String) -> String = { $0 }) -> CaptureHarnessSession {
         CaptureHarnessSession(
             registry: HarnessRegistry([WorldAdapter(world: world)]), clock: { world.now },
             sleep: { duration in
                 world.sleeps += 1
                 world.now = world.now.addingTimeInterval(TimeInterval(duration.components.seconds))
-            })
+            }, resolve: resolve)
     }
 
-    private func pane() throws -> Pane {
-        Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: directory))
+    private func pane(pending: HarnessBinding? = nil) throws -> Pane {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: directory))
+        return pending.map(pane.binding) ?? pane
     }
 
-    private func codex(_ arguments: [String] = ["codex"], startedAt offset: TimeInterval = 0) -> ForegroundProcess {
-        ForegroundProcess(name: "codex", commandLine: arguments, pid: 42, startedAt: t0.addingTimeInterval(offset))
+    private func codex(_ arguments: [String] = ["codex"], startedAt offset: TimeInterval = 0, pid: Int32 = 42)
+        -> ForegroundProcess
+    {
+        ForegroundProcess(name: "codex", commandLine: arguments, pid: pid, startedAt: t0.addingTimeInterval(offset))
     }
 
-    @Test func knownIdIsKept() async throws {
+    private func pending(_ id: String?) -> HarnessBinding {
+        HarnessBinding(harness: .codex, sessionID: id, processStartedAt: t0, pid: nil)
+    }
+
+    private func capture(
+        _ capture: CaptureHarnessSession, _ start: CaptureStart, competitors: Int = 0,
+        claimed: Set<String> = [], running: @escaping () -> Bool = { true }
+    ) async -> HarnessBinding? {
+        await capture.capture(start, competitors: { competitors }, claimed: { claimed }, isStillRunning: running)
+    }
+
+    @Test func pendingIdFromRestoreIsKeptAndBoundToTheProcess() async throws {
         let world = World(now: t0)
-        let capture = make(world)
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(pending: pending("restored")), to: codex()))
 
-        let start = capture.processChanged(in: try pane(), to: codex(), knownID: "restored")
-        let binding = await capture.capture(try #require(start), claimed: { [] }, isStillRunning: { true })
+        let binding = await capture(session, start)
 
-        #expect(binding == HarnessBinding(harness: .codex, sessionID: "restored", processStartedAt: t0))
+        #expect(binding == HarnessBinding(harness: .codex, sessionID: "restored", processStartedAt: t0, pid: 42))
         #expect(world.sleeps == 0)
     }
 
     @Test func idFromCommandLineWins() async throws {
-        let capture = make(World(now: t0))
+        let session = make(World(now: t0))
 
-        let start = try #require(
-            capture.processChanged(in: try pane(), to: codex(["codex", "resume", "0198"]), knownID: nil))
+        let start = try #require(session.processChanged(in: try pane(), to: codex(["codex", "resume", "0198"])))
 
-        #expect(start.decided == "0198")
+        #expect(start.decision == .known("0198"))
+    }
+
+    @Test func continuePaneNeverCapturesAnotherPanesSession() async throws {
+        let world = World(now: t0.addingTimeInterval(30))
+        world.sessions = [(t0, session("other-pane", created: 5))]
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(pending: pending(nil)), to: codex()))
+
+        let binding = await capture(session, start)
+
+        #expect(start.decision == .continuing)
+        #expect(binding?.sessionID == nil)
+        #expect(binding?.harness == .codex)
+        #expect(world.sleeps == 0)
+    }
+
+    @Test func boundBindingOfAFinishedProcessIsNotReused() async throws {
+        let old = HarnessBinding(harness: .codex, sessionID: "old", processStartedAt: t0, pid: 7)
+        let session = make(World(now: t0))
+
+        let start = try #require(session.processChanged(in: try pane(pending: old), to: codex(pid: 42)))
+
+        #expect(start.decision == .search)
     }
 
     @Test func capturesWhenSessionAppearsLater() async throws {
         let world = World(now: t0)
         world.sessions = [(t0.addingTimeInterval(5), session("new", created: 4))]
-        let capture = make(world)
-        let start = try #require(capture.processChanged(in: try pane(), to: codex(), knownID: nil))
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
 
-        let binding = await capture.capture(start, claimed: { [] }, isStillRunning: { true })
+        let binding = await capture(session, start)
 
         #expect(binding?.sessionID == "new")
+        #expect(binding?.pid == 42)
         #expect(world.sleeps == 3)
     }
 
-    @Test func stopsRetryingAfterTenMinutes() async throws {
+    @Test func givesUpAfterTenMinutesKeepingTheHarnessForTheFallback() async throws {
         let world = World(now: t0)
-        let capture = make(world)
-        let start = try #require(capture.processChanged(in: try pane(), to: codex(), knownID: nil))
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
 
-        let binding = await capture.capture(start, claimed: { [] }, isStillRunning: { true })
+        let binding = await capture(session, start)
 
-        #expect(binding == nil)
+        #expect(binding == HarnessBinding(harness: .codex, sessionID: nil, processStartedAt: t0, pid: 42))
         #expect(world.now >= t0.addingTimeInterval(CaptureHarnessSession.giveUpAfter))
         #expect(world.now < t0.addingTimeInterval(CaptureHarnessSession.giveUpAfter + 3))
     }
@@ -104,10 +143,10 @@ struct CaptureHarnessSessionTests {
     @Test func stopsWhenProcessLeaves() async throws {
         let world = World(now: t0)
         world.sessions = [(t0.addingTimeInterval(60), session("late", created: 59))]
-        let capture = make(world)
-        let start = try #require(capture.processChanged(in: try pane(), to: codex(), knownID: nil))
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
 
-        let binding = await capture.capture(start, claimed: { [] }, isStillRunning: { world.sleeps < 2 })
+        let binding = await capture(session, start, running: { world.sleeps < 2 })
 
         #expect(binding == nil)
     }
@@ -115,44 +154,60 @@ struct CaptureHarnessSessionTests {
     @Test func neverTakesSessionBeforeStartMinusMargin() async throws {
         let world = World(now: t0.addingTimeInterval(1))
         world.sessions = [(t0, session("older", created: -3))]
-        let capture = make(world)
-        let start = try #require(capture.processChanged(in: try pane(), to: codex(), knownID: nil))
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
 
-        let binding = await capture.capture(start, claimed: { [] }, isStillRunning: { world.sleeps < 3 })
+        let binding = await capture(session, start, running: { world.sleeps < 3 })
 
         #expect(binding == nil)
     }
 
-    @Test func twoPanesSameDirectoryGetDistinctIds() async throws {
-        let world = World(now: t0.addingTimeInterval(30))
-        world.sessions = [(t0, session("second", created: 12)), (t0, session("first", created: 3))]
-        let capture = make(world)
-        let early = try #require(capture.processChanged(in: try pane(), to: codex(startedAt: 0), knownID: nil))
-        let late = try #require(capture.processChanged(in: try pane(), to: codex(startedAt: 10), knownID: nil))
+    @Test func earlierPaneTypingFirstNeverLosesItsSession() async throws {
+        let world = World(now: t0.addingTimeInterval(40))
+        world.sessions = [(t0, session("a-typed-first", created: 30))]
+        let session = make(world)
+        let early = try #require(session.processChanged(in: try pane(), to: codex(startedAt: 0)))
+        let late = try #require(session.processChanged(in: try pane(), to: codex(startedAt: 10, pid: 43)))
 
-        let first = await capture.capture(
-            early, laterStarts: [late.processStartedAt], claimed: { [] },
-            isStillRunning: { true })
-        let second = await capture.capture(
-            late, claimed: { Set([first?.sessionID].compactMap { $0 }) },
-            isStillRunning: { true })
+        let first = await capture(session, early, competitors: 1)
+        let second = await capture(session, late, competitors: 1)
 
-        #expect(first?.sessionID == "first")
-        #expect(second?.sessionID == "second")
+        #expect(first?.sessionID == nil)
+        #expect(second?.sessionID == nil)
     }
 
     @Test func restoredPaneKeepsIdWhileNewPaneCapturesFreshOne() async throws {
         let world = World(now: t0.addingTimeInterval(30))
         world.sessions = [(t0, session("restored", created: -3600)), (t0, session("fresh", created: 5))]
-        let capture = make(world)
-        let restored = try #require(capture.processChanged(in: try pane(), to: codex(), knownID: "restored"))
-        let fresh = try #require(capture.processChanged(in: try pane(), to: codex(startedAt: 2), knownID: nil))
+        let session = make(world)
+        let restored = try #require(session.processChanged(in: try pane(pending: pending("restored")), to: codex()))
+        let fresh = try #require(session.processChanged(in: try pane(), to: codex(startedAt: 2, pid: 43)))
 
-        let kept = await capture.capture(restored, claimed: { [] }, isStillRunning: { true })
-        let captured = await capture.capture(fresh, claimed: { ["restored"] }, isStillRunning: { true })
+        let kept = await capture(session, restored)
+        let captured = await capture(session, fresh, claimed: ["restored"])
 
         #expect(kept?.sessionID == "restored")
         #expect(captured?.sessionID == "fresh")
+    }
+
+    @Test func missingStoreGoesToTheFallbackAtOnce() async throws {
+        let world = World(now: t0)
+        world.failure = .storeMissing(harness: .codex, path: "/c")
+        let session = make(world)
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
+
+        let binding = await capture(session, start)
+
+        #expect(binding?.sessionID == nil)
+        #expect(world.sleeps == 0)
+    }
+
+    @Test func directoryIsResolvedBeforeComparing() throws {
+        let session = make(World(now: t0), resolve: { $0 == self.directory ? "/Volumes/real/w" : $0 })
+
+        let start = try #require(session.processChanged(in: try pane(), to: codex()))
+
+        #expect(start.directory == "/Volumes/real/w")
     }
 
     @Test func claudeHookIdOverridesDiskCapture() throws {
@@ -162,20 +217,17 @@ struct CaptureHarnessSessionTests {
             AgentEvent(pane: PaneID(), hook: .sessionStart, at: t0, sessionID: "from-hook")
         ).0
 
-        #expect(claude.processChanged(in: hooked, to: ForegroundProcess(name: "fake"), knownID: nil) == nil)
+        #expect(claude.processChanged(in: hooked, to: ForegroundProcess(name: "fake")) == nil)
     }
 
     @Test func otherProcessesAreNotCaptured() throws {
-        let capture = make(World(now: t0))
-
-        #expect(capture.processChanged(in: try pane(), to: ForegroundProcess(name: "vim"), knownID: nil) == nil)
+        #expect(make(World(now: t0)).processChanged(in: try pane(), to: ForegroundProcess(name: "vim")) == nil)
     }
 
     @Test func missingStartTimeUsesTheClock() throws {
-        let capture = make(World(now: t0.addingTimeInterval(7)))
+        let session = make(World(now: t0.addingTimeInterval(7)))
 
-        let start = try #require(
-            capture.processChanged(in: try pane(), to: ForegroundProcess(name: "codex"), knownID: nil))
+        let start = try #require(session.processChanged(in: try pane(), to: ForegroundProcess(name: "codex")))
 
         #expect(start.processStartedAt == t0.addingTimeInterval(7))
     }
@@ -186,7 +238,7 @@ struct PaneHarnessTests {
     private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
 
     @Test func returningToShellKeepsLastBindingForSaving() throws {
-        let binding = HarnessBinding(harness: .codex, sessionID: "x", processStartedAt: t0)
+        let binding = HarnessBinding(harness: .codex, sessionID: "x", processStartedAt: t0, pid: nil)
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
             .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex")))
             .binding(binding)
@@ -202,5 +254,12 @@ struct PaneHarnessTests {
         #expect(process.pid == 7)
         #expect(process.startedAt == t0)
         #expect(ForegroundProcess(name: "zsh").pid == nil)
+    }
+
+    @Test func paneRemembersTheForegroundPid() throws {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex", pid: 42)))
+
+        #expect(pane.foregroundPID == 42)
     }
 }

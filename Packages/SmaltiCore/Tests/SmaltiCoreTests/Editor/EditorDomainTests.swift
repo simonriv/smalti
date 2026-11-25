@@ -79,19 +79,35 @@ struct EditedFilesTests {
     }
 
     @MainActor
-    @Test func tracksOnlyTheEditsOfEachPane() {
+    @Test func tracksOnlyTheEditsOfEachPane() async {
         let paneA = PaneID()
         let paneB = PaneID()
         let tracker = TrackEditedFiles(readFile: { _ in "a\nfunc greet() {\n" })
 
-        tracker.record(
+        await tracker.record(
             AgentEvent(
                 pane: paneA, hook: .postToolUse, at: t0, sessionID: nil,
                 edit: FileEdit(tool: "Edit", path: "/w/a.ts", newText: "func greet() {")))
-        tracker.record(AgentEvent(pane: paneB, hook: .stop, at: t0, sessionID: nil))
+        await tracker.record(AgentEvent(pane: paneB, hook: .stop, at: t0, sessionID: nil))
 
         #expect(tracker.recent(in: paneA) == [EditedFile(path: "/w/a.ts", line: 2, at: t0)])
         #expect(tracker.recent(in: paneB).isEmpty)
+    }
+
+    @MainActor
+    @Test func fileIsReadOffTheMainActor() async {
+        let readOnMain = ThreadFlag()
+        let tracker = TrackEditedFiles(readFile: { _ in
+            readOnMain.set(Thread.isMainThread)
+            return "x\n"
+        })
+
+        await tracker.record(
+            AgentEvent(
+                pane: PaneID(), hook: .postToolUse, at: t0, sessionID: nil,
+                edit: FileEdit(tool: "Edit", path: "/w/a.ts", newText: "x")))
+
+        #expect(readOnMain.value == false)
     }
 }
 
@@ -147,4 +163,11 @@ struct OpenInEditorTests {
 
         #expect(command == "nvim --clean --listen /s/x.sock /w/a.ts")
     }
+}
+
+final class ThreadFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Bool?
+    var value: Bool? { lock.withLock { stored } }
+    func set(_ flag: Bool) { lock.withLock { stored = flag } }
 }

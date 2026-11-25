@@ -31,14 +31,14 @@ public struct OpenCodeHarness: HarnessAdapter {
         return SessionCatalog.merge([.success(sessions)], query: query).sessions
     }
 
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "opencode -s \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func resumeCommand(sessionID: String) -> String {
+        "opencode -s \(ShellWord.quoted(sessionID))"
     }
 
     public func continueCommand() -> String { "opencode -c" }
 
     /// OpenCode 2.x has no fork.
-    public func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+    public func forkCommand(sessionID: String) -> String? { nil }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {
         guard let first = arguments.first, detect(ForegroundProcess(name: first)) else { return nil }

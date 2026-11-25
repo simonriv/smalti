@@ -81,8 +81,8 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         commandCount = pane.commandCount
         // A finished agent whose pane is back at its shell is a shell again: it restores with its scrollback.
         let agent = pane.agent.flatMap { $0.state.isActive || !pane.isAtShell ? $0 : nil }
-        // A harness without hooks counts while it is in the foreground (F6).
-        let harness = pane.isAtShell ? nil : pane.harnessBinding
+        // A harness without hooks counts while its own process is in the foreground (F6).
+        let harness = pane.liveHarnessBinding
         self.agent =
             agent?.snapshot
             ?? harness.map { AgentSnapshot(harness: $0.harness, sessionID: $0.sessionID, title: nil, lastState: nil) }

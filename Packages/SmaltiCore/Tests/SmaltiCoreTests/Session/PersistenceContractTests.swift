@@ -21,9 +21,9 @@ struct HarnessRegistryTests {
         let process: String
         func detect(_ candidate: ForegroundProcess) -> Bool { ProcessNames.matches(candidate, [process]) }
         func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] { [] }
-        func resumeCommand(for agent: AgentSnapshot) -> String { "other" }
+        func resumeCommand(sessionID: String) -> String { "other" }
         func continueCommand() -> String { "other -c" }
-        func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+        func forkCommand(sessionID: String) -> String? { nil }
         func sessionID(fromCommandLine arguments: [String]) -> String? { nil }
     }
 
@@ -31,7 +31,7 @@ struct HarnessRegistryTests {
         let registry = HarnessRegistry([FakeHarnessAdapter(), Other(harness: .claude, process: "other")])
         let agent = AgentSnapshot(harness: .claude, sessionID: "1", title: nil, lastState: .working)
 
-        #expect(registry.adapter(for: .claude)?.resumeCommand(for: agent) == "fake --resume 1")
+        #expect(registry.adapter(for: .claude)?.resumeCommand(sessionID: "1") == "fake --resume 1")
         #expect(registry.all.count == 1)
     }
 
@@ -54,5 +54,6 @@ struct HarnessRegistryTests {
         #expect(ProcessNames.value(after: ["resume"], in: ["codex", "resume"]) == nil)
         #expect(ProcessNames.value(after: ["resume"], in: ["codex", "resume", "--last"]) == nil)
         #expect(ProcessNames.value(after: ["-s"], in: ["opencode", "-s", ""]) == nil)
+        #expect(ProcessNames.value(after: ["-s"], in: ["opencode", "-s", "ses\u{15}1"]) == nil)
     }
 }

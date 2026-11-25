@@ -3,17 +3,18 @@ import Foundation
 /// Keeps "Editados por Claude" per pane from the `PostToolUse` events of file tools (spec F6).
 @MainActor
 public final class TrackEditedFiles {
-    private let readFile: (String) -> String?
+    private let readFile: @Sendable (String) -> String?
     private var files: [PaneID: EditedFiles] = [:]
 
-    /// `readFile` gives a file's text, to find the line of the change.
-    public init(readFile: @escaping (String) -> String?) {
+    /// `readFile` gives (the start of) a file's text, to find the line of the change; it runs off the main actor.
+    public init(readFile: @escaping @Sendable (String) -> String?) {
         self.readFile = readFile
     }
 
-    public func record(_ event: AgentEvent) {
+    public func record(_ event: AgentEvent) async {
         guard let edit = event.edit else { return }
-        let line = Self.lineOf(newText: edit.newText, in: readFile(edit.path) ?? "")
+        let read = readFile
+        let line = await Task.detached { Self.lineOf(newText: edit.newText, in: read(edit.path) ?? "") }.value
         files[event.pane, default: EditedFiles()].record(edit, line: line, at: event.at)
     }
 

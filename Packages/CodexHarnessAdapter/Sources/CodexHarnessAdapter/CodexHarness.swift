@@ -58,14 +58,14 @@ public struct CodexHarness: HarnessAdapter {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "codex resume \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func resumeCommand(sessionID: String) -> String {
+        "codex resume \(ShellWord.quoted(sessionID))"
     }
 
     public func continueCommand() -> String { "codex resume --last" }
 
-    public func forkCommand(for agent: AgentSnapshot) -> String? {
-        "codex fork \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func forkCommand(sessionID: String) -> String? {
+        "codex fork \(ShellWord.quoted(sessionID))"
     }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {

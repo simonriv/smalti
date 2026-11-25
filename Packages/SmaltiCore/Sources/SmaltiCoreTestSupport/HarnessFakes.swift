@@ -44,14 +44,14 @@ public struct FakeHarnessAdapter: HarnessAdapter {
         return SessionCatalog.merge([.success(sessions)], query: query).sessions
     }
 
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "\(Self.binary) --resume \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func resumeCommand(sessionID: String) -> String {
+        "\(Self.binary) --resume \(ShellWord.quoted(sessionID))"
     }
 
     public func continueCommand() -> String { "\(Self.binary) --continue" }
 
-    public func forkCommand(for agent: AgentSnapshot) -> String? {
-        "\(Self.binary) --fork \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func forkCommand(sessionID: String) -> String? {
+        "\(Self.binary) --fork \(ShellWord.quoted(sessionID))"
     }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {

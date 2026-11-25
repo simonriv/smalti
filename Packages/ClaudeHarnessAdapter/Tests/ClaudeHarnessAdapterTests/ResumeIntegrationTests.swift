@@ -14,12 +14,11 @@ extension ClaudeHarnessTests {
             let home = try FixtureHome.materialize(fixture)
             try onboardingDone(home: home, fixture: fixture)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
-            let agent = AgentSnapshot(harness: .claude, sessionID: newest.id, title: nil, lastState: nil)
             let binary = try #require(PtyResume.binary("claude")).deletingLastPathComponent().path
 
             let result = try PtyResume.run(
                 .init(
-                    command: ClaudeFixture.harness(home: home).resumeCommand(for: agent),
+                    command: ClaudeFixture.harness(home: home).resumeCommand(sessionID: newest.id),
                     environment: [
                         "HOME": home.path, "CLAUDE_CONFIG_DIR": home.appending(path: ".claude").path,
                         "PATH": "\(binary):/opt/homebrew/bin:/usr/bin:/bin", "TERM": "xterm-256color",

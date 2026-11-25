@@ -52,6 +52,17 @@ struct SessionCatalogTests {
         #expect(listing.sessions.map(\.id) == ["a"])
     }
 
+    @Test func unsafeIdsAreDropped() {
+        let lists: [Result<[HarnessSession], HarnessError>] = [
+            .success([
+                session("ok-1_A", .codex, updated: 1), session("bad\u{15}id", .codex, updated: 2),
+                session("x y", .codex, updated: 3), session("", .codex, updated: 4),
+            ])
+        ]
+
+        #expect(SessionCatalog.merge(lists, query: SessionQuery()).sessions.map(\.id) == ["ok-1_A"])
+    }
+
     @Test func emptyListsGiveEmptyListing() {
         let listing = SessionCatalog.merge([], query: SessionQuery())
 

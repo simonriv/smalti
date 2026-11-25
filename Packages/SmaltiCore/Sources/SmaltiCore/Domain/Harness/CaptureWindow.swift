@@ -9,24 +9,17 @@ public struct CaptureWindow: Equatable, Sendable {
     public let directory: String
     public let processStartedAt: Date
     public let excludedIDs: Set<String>
-    /// When other panes of the same harness, in the same directory, started after this one: a session created after
-    /// one of them belongs to that pane.
-    public let laterStarts: [Date]
 
-    public init(directory: String, processStartedAt: Date, excludedIDs: Set<String>, laterStarts: [Date] = []) {
+    public init(directory: String, processStartedAt: Date, excludedIDs: Set<String>) {
         self.directory = directory
         self.processStartedAt = processStartedAt
         self.excludedIDs = excludedIDs
-        self.laterStarts = laterStarts
     }
 
     public func admits(_ session: HarnessSession) -> Bool {
         ResolvedPath.same(directory, session.directory)
             && session.createdAt >= processStartedAt.addingTimeInterval(-Self.margin)
             && !excludedIDs.contains(session.id)
-            && !laterStarts.contains {
-                $0 > processStartedAt && $0.addingTimeInterval(-Self.margin) <= session.createdAt
-            }
     }
 
     /// The first session created after the start: the one this process wrote.

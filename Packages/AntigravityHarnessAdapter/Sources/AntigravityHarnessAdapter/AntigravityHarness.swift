@@ -89,14 +89,14 @@ public struct AntigravityHarness: HarnessAdapter {
         return sign * ((parts.first ?? 0) * 3600 + (parts.last ?? 0) * 60)
     }
 
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "agy --conversation \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func resumeCommand(sessionID: String) -> String {
+        "agy --conversation \(ShellWord.quoted(sessionID))"
     }
 
     public func continueCommand() -> String { "agy -c" }
 
     /// Antigravity has no fork.
-    public func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+    public func forkCommand(sessionID: String) -> String? { nil }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {
         guard let first = arguments.first, detect(ForegroundProcess(name: first)) else { return nil }

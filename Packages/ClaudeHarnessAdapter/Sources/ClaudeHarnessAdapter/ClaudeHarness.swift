@@ -20,18 +20,18 @@ public struct ClaudeHarness: HarnessAdapter, EditorConnectable {
         return SessionCatalog.merge([.success(sessions)], query: query).sessions
     }
 
-    public func resumeCommand(for agent: AgentSnapshot) -> String {
-        "claude --resume \(ShellWord.quoted(agent.sessionID ?? ""))"
+    public func resumeCommand(sessionID: String) -> String {
+        "claude --resume \(ShellWord.quoted(sessionID))"
     }
 
-    public func resumeCommandConnectingEditor(for agent: AgentSnapshot) -> String {
-        resumeCommand(for: agent) + " --ide"
+    public func resumeCommandConnectingEditor(sessionID: String) -> String {
+        resumeCommand(sessionID: sessionID) + " --ide"
     }
 
     public func continueCommand() -> String { "claude --continue" }
 
-    public func forkCommand(for agent: AgentSnapshot) -> String? {
-        resumeCommand(for: agent) + " --fork-session"
+    public func forkCommand(sessionID: String) -> String? {
+        resumeCommand(sessionID: sessionID) + " --fork-session"
     }
 
     public func sessionID(fromCommandLine arguments: [String]) -> String? {

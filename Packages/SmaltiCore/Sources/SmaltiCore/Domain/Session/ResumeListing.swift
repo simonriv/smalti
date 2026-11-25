@@ -124,9 +124,7 @@ public enum ResumeListing {
     private static func shortResumeCommand(for agent: AgentSnapshot, id: String, with adapter: any HarnessAdapter)
         -> String
     {
-        let short = String(id.prefix(shortIDLength))
-        let shortened = AgentSnapshot(harness: agent.harness, sessionID: short, title: nil, lastState: agent.lastState)
-        let command = adapter.resumeCommand(for: shortened)
+        let command = adapter.resumeCommand(sessionID: String(id.prefix(shortIDLength)))
         return id.count > shortIDLength ? command + "…" : command
     }
 

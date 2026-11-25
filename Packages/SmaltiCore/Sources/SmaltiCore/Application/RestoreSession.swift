@@ -168,7 +168,7 @@ public struct RestoreSession {
             return Startup(input: adapter.continueCommand() + "\n", binding: binding)
         }
         let editorAware = deps.connectsEditor ? adapter as? any EditorConnectable : nil
-        let command = editorAware?.resumeCommandConnectingEditor(for: agent) ?? adapter.resumeCommand(for: agent)
+        let command = editorAware?.resumeCommandConnectingEditor(sessionID: id) ?? adapter.resumeCommand(sessionID: id)
         let session = agent.lastState.map { _ in
             AgentSession(
                 harness: agent.harness, sessionID: id, title: agent.title,

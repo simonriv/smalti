@@ -8,9 +8,9 @@ struct CodexLikeHarness: HarnessAdapter {
     let harness = HarnessID.codex
     func detect(_ process: ForegroundProcess) -> Bool { ProcessNames.matches(process, ["codex"]) }
     func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] { [] }
-    func resumeCommand(for agent: AgentSnapshot) -> String { "codex resume \(agent.sessionID ?? "")" }
+    func resumeCommand(sessionID: String) -> String { "codex resume \(sessionID)" }
     func continueCommand() -> String { "codex resume --last" }
-    func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+    func forkCommand(sessionID: String) -> String? { nil }
     func sessionID(fromCommandLine arguments: [String]) -> String? { nil }
 }
 
@@ -19,10 +19,10 @@ struct EditorAwareHarness: HarnessAdapter, EditorConnectable {
     let harness = HarnessID.claude
     func detect(_ process: ForegroundProcess) -> Bool { ProcessNames.matches(process, ["claude"]) }
     func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession] { [] }
-    func resumeCommand(for agent: AgentSnapshot) -> String { "claude --resume \(agent.sessionID ?? "")" }
-    func resumeCommandConnectingEditor(for agent: AgentSnapshot) -> String { resumeCommand(for: agent) + " --ide" }
+    func resumeCommand(sessionID: String) -> String { "claude --resume \(sessionID)" }
+    func resumeCommandConnectingEditor(sessionID: String) -> String { resumeCommand(sessionID: sessionID) + " --ide" }
     func continueCommand() -> String { "claude --continue" }
-    func forkCommand(for agent: AgentSnapshot) -> String? { nil }
+    func forkCommand(sessionID: String) -> String? { nil }
     func sessionID(fromCommandLine arguments: [String]) -> String? { nil }
 }
 
@@ -57,6 +57,7 @@ struct HarnessRestoreTests {
         #expect(engine.openedSpecs[0].initialInput == "codex resume 0198\n")
         let pane = result.set?.active.panes.first
         #expect(pane?.harnessBinding?.sessionID == "0198")
+        #expect(pane?.harnessBinding?.pid == nil)
         #expect(pane?.agent == nil)
     }
 
@@ -150,10 +151,27 @@ struct HarnessResumeRowTests {
 struct HarnessPaneSnapshotTests {
     private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
 
-    private func codexPane(id: String?) throws -> Pane {
+    private func codexPane(id: String?, pid: Int32? = 42) throws -> Pane {
         Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
-            .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex", commandLine: ["codex"])))
-            .binding(HarnessBinding(harness: .codex, sessionID: id, processStartedAt: t0))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex", commandLine: ["codex"], pid: pid)))
+            .binding(HarnessBinding(harness: .codex, sessionID: id, processStartedAt: t0, pid: pid))
+    }
+
+    @Test func anotherProgramAfterTheHarnessIsSavedAsItself() throws {
+        let pane = try codexPane(id: "old").applying(
+            .foregroundProcessChanged(ForegroundProcess(name: "node", commandLine: ["npm", "run", "dev"], pid: 99)),
+            at: t0)
+
+        let snapshot = PaneSnapshot(pane, scrollbackLines: 0)
+
+        #expect(snapshot.agent == nil)
+        #expect(snapshot.relaunch == RelaunchCommand(arguments: ["npm", "run", "dev"]))
+    }
+
+    @Test func pendingRestoredBindingIsSavedWhileItsHarnessStarts() throws {
+        let pane = try codexPane(id: "restored", pid: nil)
+
+        #expect(PaneSnapshot(pane, scrollbackLines: 0).agent?.sessionID == "restored")
     }
 
     @Test func runningHarnessIsSavedAsStatelessAgent() throws {

@@ -20,7 +20,7 @@ public enum SessionCatalog {
         var failures: [HarnessID: HarnessError] = [:]
         for list in lists {
             switch list {
-            case .success(let found): sessions += found.filter(query.matches)
+            case .success(let found): sessions += found.filter { ShellWord.isSafeID($0.id) && query.matches($0) }
             case .failure(let error): failures[error.harness] = error
             }
         }

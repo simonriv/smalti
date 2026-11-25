@@ -18,11 +18,10 @@ extension OpenCodeHarnessTests {
             try text.replacing(/http:\/\/127\.0\.0\.1:\d+/, with: "http://127.0.0.1:9").write(
                 to: config, atomically: true, encoding: .utf8)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
-            let agent = AgentSnapshot(harness: .opencode, sessionID: newest.id, title: nil, lastState: nil)
 
             let result = try PtyResume.run(
                 .init(
-                    command: OpenCodeFixture.harness(home: home).resumeCommand(for: agent),
+                    command: OpenCodeFixture.harness(home: home).resumeCommand(sessionID: newest.id),
                     environment: [
                         "HOME": home.path, "XDG_DATA_HOME": home.appending(path: ".local/share").path,
                         "XDG_CONFIG_HOME": home.appending(path: ".config").path,

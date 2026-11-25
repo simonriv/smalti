@@ -14,11 +14,10 @@ extension CodexHarnessTests {
             let home = try FixtureHome.materialize(fixture)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
             try hermeticConfig(home: home, fixture: fixture)
-            let agent = AgentSnapshot(harness: .codex, sessionID: newest.id, title: nil, lastState: nil)
 
             let result = try PtyResume.run(
                 .init(
-                    command: CodexFixture.harness(home: home).resumeCommand(for: agent),
+                    command: CodexFixture.harness(home: home).resumeCommand(sessionID: newest.id),
                     environment: [
                         "HOME": home.path, "CODEX_HOME": home.appending(path: "codex").path,
                         "PATH": "/opt/homebrew/bin:/usr/bin:/bin", "TERM": "xterm-256color",

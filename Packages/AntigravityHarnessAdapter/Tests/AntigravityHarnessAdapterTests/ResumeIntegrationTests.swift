@@ -26,11 +26,10 @@ extension AntigravityHarnessTests {
             let home = try FixtureHome.materialize(fixture)
             try copyLogin(into: home)
             let newest = try #require(try FixtureExpectations.load(from: fixture.source).sessions.first)
-            let agent = AgentSnapshot(harness: .antigravity, sessionID: newest.id, title: nil, lastState: nil)
 
             let result = try PtyResume.run(
                 .init(
-                    command: AntigravityFixture.harness(home: home).resumeCommand(for: agent),
+                    command: AntigravityFixture.harness(home: home).resumeCommand(sessionID: newest.id),
                     environment: [
                         "HOME": home.path, "PATH": "/opt/homebrew/bin:/usr/bin:/bin", "TERM": "xterm-256color",
                         "USER": NSUserName(),

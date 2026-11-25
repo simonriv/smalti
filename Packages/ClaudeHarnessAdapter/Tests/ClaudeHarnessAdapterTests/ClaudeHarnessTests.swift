@@ -45,11 +45,11 @@ struct ClaudeHarnessTests {
     }
 
     @Test func resumeCommandUsesSessionID() {
-        #expect(detached.resumeCommand(for: agent("7f3a9c2e")) == "claude --resume 7f3a9c2e")
+        #expect(detached.resumeCommand(sessionID: "7f3a9c2e") == "claude --resume 7f3a9c2e")
     }
 
     @Test func ideFlagAppended() {
-        #expect(detached.resumeCommandConnectingEditor(for: agent("7f3a")) == "claude --resume 7f3a --ide")
+        #expect(detached.resumeCommandConnectingEditor(sessionID: "7f3a") == "claude --resume 7f3a --ide")
     }
 
     @Test func readsShortResumeFlag() {

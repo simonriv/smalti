@@ -13,11 +13,11 @@ public protocol HarnessAdapter: Sendable {
     /// The sessions saved on disk that match `query`, newest first.
     func listSessions(_ query: SessionQuery) async throws(HarnessError) -> [HarnessSession]
     /// The shell command that resumes `agent` (e.g. `codex resume 0198…`), on one line.
-    func resumeCommand(for agent: AgentSnapshot) -> String
+    func resumeCommand(sessionID: String) -> String
     /// The fallback when no id was captured: continue the directory's last session (`agy -c`).
     func continueCommand() -> String
     /// The command that forks `agent` into a new session; nil when the harness cannot fork.
-    func forkCommand(for agent: AgentSnapshot) -> String?
+    func forkCommand(sessionID: String) -> String?
     /// The session a command line resumes by name (`codex resume <id>`), so a resumed pane keeps its id.
     func sessionID(fromCommandLine arguments: [String]) -> String?
 }
@@ -34,7 +34,7 @@ extension HarnessAdapter {
 /// A harness that can connect to the editor (Claude with claudecode.nvim): restored with its editor flag when Smalti
 /// knows an editor integration is installed (spec F6, `--ide`).
 public protocol EditorConnectable {
-    func resumeCommandConnectingEditor(for agent: AgentSnapshot) -> String
+    func resumeCommandConnectingEditor(sessionID: String) -> String
 }
 
 /// Process names compared by their last path component, so a wrapper or an absolute path still matches.
@@ -50,7 +50,7 @@ public enum ProcessNames {
             return nil
         }
         let value = arguments[index + 1]
-        return value.hasPrefix("-") || value.isEmpty ? nil : value
+        return ShellWord.isSafeID(value) && !value.hasPrefix("-") ? value : nil
     }
 
     private static func lastComponent(_ path: String) -> String {

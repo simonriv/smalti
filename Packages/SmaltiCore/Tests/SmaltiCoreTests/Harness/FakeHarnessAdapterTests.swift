@@ -23,6 +23,6 @@ struct FakeHarnessAdapterTests {
     @Test func keepsPosingAsClaudeForRestoreTests() {
         let agent = AgentSnapshot(harness: .claude, sessionID: "7f3a", title: nil, lastState: .waiting)
 
-        #expect(FakeHarnessAdapter().resumeCommand(for: agent) == "fake --resume 7f3a")
+        #expect(FakeHarnessAdapter().resumeCommand(sessionID: "7f3a") == "fake --resume 7f3a")
     }
 }
