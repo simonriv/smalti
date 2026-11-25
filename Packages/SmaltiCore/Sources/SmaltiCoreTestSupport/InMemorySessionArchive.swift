@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 
 /// In-memory `SessionArchive`, `PaneTranscripts` and `RestorePreferenceStore`, like the file adapter.
@@ -77,5 +78,27 @@ public final class FakeScrollbackSource: ScrollbackSource {
         requestedLines.insert(lastLines)
         if failing.contains(pane) { throw .unavailable(pane: pane, reason: "fake failure") }
         return contents[pane] ?? Scrollback(text: "", format: .plain)
+    }
+}
+
+/// Shared layout files in memory (F7); files in `failing` can be neither read nor written.
+@MainActor
+public final class InMemoryLayoutFiles: LayoutFiles {
+    public var files: [URL: SharedLayout] = [:]
+    public var failing: Set<URL> = []
+
+    public init() {}
+
+    public func write(_ layout: SharedLayout, to file: URL) throws(LayoutFileError) {
+        if failing.contains(file) { throw .unwritable(path: file.path(percentEncoded: false), reason: "fake failure") }
+        files[file] = layout
+    }
+
+    public func read(from file: URL) throws(LayoutFileError) -> SharedLayout {
+        if failing.contains(file) { throw .unreadable(path: file.path(percentEncoded: false), reason: "fake failure") }
+        guard let layout = files[file] else {
+            throw .unreadable(path: file.path(percentEncoded: false), reason: "no such file")
+        }
+        return layout
     }
 }

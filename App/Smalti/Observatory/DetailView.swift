@@ -11,6 +11,8 @@ final class DetailView: NSView {
     private let activityRows = NSStackView()
     private let chart = Sparkline()
     private let compaction: NSTextField
+    /// F7: "Telemetría · …", under the compaction line in its style; hidden without telemetry.
+    private let telemetry: NSTextField
     private let empty: NSTextField
     private var activity: NSStackView?
 
@@ -22,6 +24,7 @@ final class DetailView: NSView {
         let tokens = theme.observatory
         activityTitle = ObservatoryText.caption("Actividad", theme: theme)
         compaction = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
+        telemetry = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         empty = ObservatoryText.label(
             Self.noActivity, .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         super.init(frame: .zero)
@@ -41,11 +44,21 @@ final class DetailView: NSView {
         chart.setAccessibilityRole(.image)
         chart.setAccessibilityIdentifier("smalti.observatory.chart")
         let right = column(
-            [ObservatoryText.caption("Tokens por minuto · última hora", theme: theme), chart, empty, compaction],
+            [
+                ObservatoryText.caption("Tokens por minuto · última hora", theme: theme), chart, empty, compaction,
+                telemetry,
+            ],
             identifier: "smalti.observatory.output")
         content.setViews([left, right], in: .leading)
         left.widthAnchor.constraint(equalTo: right.widthAnchor, multiplier: tokens.spacing.detailRatio).isActive = true
         chart.widthAnchor.constraint(equalTo: right.widthAnchor).isActive = true
+        // The line is longer than the column: it wraps instead of losing the cost at its end.
+        telemetry.lineBreakMode = .byWordWrapping
+        telemetry.maximumNumberOfLines = 0
+        telemetry.isHidden = true
+        telemetry.setAccessibilityIdentifier("smalti.observatory.telemetry")
+        telemetry.translatesAutoresizingMaskIntoConstraints = false
+        telemetry.widthAnchor.constraint(equalTo: right.widthAnchor).isActive = true
     }
 
     private func column(_ views: [NSView], identifier: String) -> NSStackView {
@@ -67,6 +80,8 @@ final class DetailView: NSView {
             chart.isHidden = true
             empty.isHidden = false
             compaction.stringValue = ""
+            telemetry.stringValue = ""
+            telemetry.isHidden = true
             return
         }
         activityTitle.attributedStringValue = ObservatoryText.caption(detail.title, theme: theme).attributedStringValue
@@ -81,6 +96,8 @@ final class DetailView: NSView {
         chart.setAccessibilityValue(
             detail.peak.map { ObservatoryTexts.chartPeak($0, timeZone: timeZone) } ?? Self.noActivity)
         ObservatoryText.setText(compaction, detail.compaction)
+        telemetry.isHidden = detail.telemetry == nil
+        ObservatoryText.setText(telemetry, detail.telemetry ?? "")
     }
 
     private func chartStyle(_ peak: OutputPeak?, timeZone: TimeZone) -> Sparkline.Style {

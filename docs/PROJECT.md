@@ -57,7 +57,7 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 - Layouts automáticos: **Dwindle** (cada panel nuevo divide el último), **Columnas** y **Maestro + pila**. Cambio con atajo o ⌘K.
 - Igualar tamaños, mover y redimensionar paneles por teclado; arrastre con el mouse como opción.
 - Workspaces por proyecto (solen, rizaria, xolken) en la franja superior, con un punto de estado.
-- Layouts guardables y restaurables por nombre ("solen-dev"), con el comando de arranque de cada panel.
+- Layouts guardables y restaurables por nombre ("solen-dev"), con el comando de arranque de cada panel; desde F7 se exportan e importan como archivo portátil (`.smalti-layout.json`).
 - Cabecera mínima por panel: proceso, proyecto, modelo, % de contexto, tiempo de vida y atajo (⌥1…⌥9).
 - Espacios de 8 px entre paneles, radio de 11 px y un brillo sutil en el panel activo.
 
@@ -95,7 +95,7 @@ Gemini CLI quedó fuera: Google retiró su login individual y Antigravity lo cub
 - Detalle de la sesión seleccionada: últimas herramientas usadas y tokens por minuto, con las compactaciones.
 - Modelos locales de Ollama: cargados, tamaño en memoria, contexto y tokens/s.
 - Sistema: CPU, GPU y memoria unificada, desglosada en modelo, agentes y resto.
-- Fuentes: hooks, transcripts en disco (todas las sesiones de Claude de la máquina, por periodos de hoy, 7 y 30 días) y la API local de Ollama. La telemetría OpenTelemetry de Claude Code (receptor OTLP local) queda como extra de F7 (decidido por Simón, 2026-11-22).
+- Fuentes: hooks, transcripts en disco (todas las sesiones de Claude de la máquina, por periodos de hoy, 7 y 30 días) y la API local de Ollama. Desde F7, la telemetría OpenTelemetry de los Claude Code que corren en paneles de Smalti llega a un receptor OTLP local (solo `127.0.0.1`) y añade al detalle de la sesión peticiones, latencia, errores de API y el costo según Claude Code (spec F7).
 
 ### 5. Input inteligente y predicción
 
@@ -103,8 +103,7 @@ Gemini CLI quedó fuera: Google retiró su login individual y Antigravity lo cub
 - Completions declarativas compatibles con las specs de Fig; las propias se escriben en el mismo formato.
 - Historial por directorio y búsqueda difusa con ⌃R.
 - **Predicción heurística por defecto** (texto fantasma, en menos de 16 ms): frecuencia y recencia por directorio, secuencias aprendidas (`git add` → `git commit`), contexto del proyecto (scripts de `package.json`, Makefile, estado de git) y sugerencias de recuperación según el código de salida.
-- **Modo con API propia, opcional y bajo demanda:** `#` + lenguaje natural produce un comando; "Arreglar" propone una corrección después de un error. Proveedores: Anthropic, OpenAI, OpenRouter o cualquier endpoint compatible, con la clave del usuario. También puede usar `claude -p` con la suscripción instalada.
-- Antes de enviar contexto a una API se filtran secretos (tokens, claves, variables `*_KEY`).
+- **Sin predicción por API ni por `claude -p`** (decidido por Simón, 2026-11-25): todo se calcula en local, sin gasto y sin enviar contexto fuera de la máquina.
 
 ### 6. Neovim (NvChad)
 
@@ -185,8 +184,7 @@ Smalti es una app nativa en Swift sobre libghostty, organizada en arquitectura h
 └───────────────────────┘   └────────▲─────────┘   └───────────────────────┘
                                      │
 ┌────────────────────────────────────┴─────────────────────────────────┐
-│ IPC: socket Unix — CLI smalti · plugin de Claude Code (hooks) ·      │
-│ futuro daemon smaltid                                                │
+│ IPC: socket Unix — CLI smalti · plugin de Claude Code (hooks)        │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -210,16 +208,14 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
 - **Adaptadores:**
     - `TerminalEngine` → libghostty.
     - `HarnessAdapter` → Claude Code, Codex, Antigravity, OpenCode. Cada uno implementa `detect`, `captureSessionId`, `listSessions` y `resumeCommand`.
-    - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. Receptor OTLP local en F7.
+    - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. `TelemetryReceiver` → receptor OTLP/HTTP local en `127.0.0.1` (F7).
     - `CompletionProvider` → specs de Fig e historial.
-    - `PredictionProvider` → heurístico (por defecto), API del usuario, `claude -p`.
+    - `PredictionProvider` → heurístico, local.
     - `EditorBridge` → Neovim por socket.
     - `SystemMetrics` → métricas de CPU, GPU y memoria de macOS sin sudo.
     - `ConfigStore` → TOML. `Notifier` → notificaciones de macOS.
 
 **Plugin de Claude Code:** hooks (`SessionStart`, `Stop`, `Notification`, `PostToolUse`) que llaman `smalti event …`; el CLI reenvía al socket de la app. Un solo plugin alimenta estado de paneles, IDs de sesión, observatorio y enlaces a Neovim.
-
-**Más adelante:** un daemon `smaltid` dueño de los PTY, como el servidor de tmux. Si la ventana se cierra, los procesos siguen vivos y al reabrir se reconectan. Candidato a escribirse en Rust.
 
 ## Decisiones
 
@@ -227,16 +223,16 @@ Estas decisiones están cerradas; cambiarlas exige volver a este documento.
 
 | Decisión | Elegido | Descartado y por qué |
 | --- | --- | --- |
-| Alcance | Herramienta personal, solo macOS | Producto de Xolken: no hace falta licencia comercial, soporte multiplataforma ni registro de marca |
+| Alcance | Gratis y pública para otros usuarios, solo macOS, con web propia y donaciones (Simón, 2026-11-25; antes herramienta personal) | Producto de Xolken o de pago: nadie paga por una terminal (análisis de diferenciación). Windows y Linux: ver «Multiplataforma» en el roadmap |
 | Nombre | Smalti (repo existente `termotty` se renombra) | Termotty: casi descriptivo, copia el patrón de Ghostty y kitty, "termo" evoca otra cosa |
 | Motor | libghostty | Escribir un emulador propio: años de trabajo en casos raros |
 | Stack | Swift + AppKit + libghostty | Rust + GPUI + alacritty_terminal: misma velocidad, framework pre-1.0 que rompe compatibilidad, sin imágenes en terminal, vidrio puenteado. Fork de Warp: código enorme acoplado a Oz. Tauri o Electron: más lento y mal manejo de teclado |
 | Velocidad | Depende del núcleo (Zig + Metal), no del lenguaje de la UI | — |
-| Predicción | Heurística local + API propia opcional bajo demanda | Modelo local: arranque en frío, compite por 16 GB de RAM. API gratuita: se agota |
+| Predicción | Heurística local | Modelo local: arranque en frío, compite por 16 GB de RAM. API propia o `claude -p`: cuesta dinero y saca contexto de la máquina (Simón, 2026-11-25) |
 | Plugins | Integraciones propias (Claude Code, harnesses, Neovim, Ollama) | Sistema de plugins genérico en la v1: frena el proyecto |
 | Autocompletado | Solo en el prompt del shell | Dentro de Claude Code: el input es de Claude |
 | Input en el prompt | zsh (ZLE) edita; Smalti sugiere por un widget y un socket | Editor propio estilo Warp: pierde ZLE y rompe TUIs (spec F4) |
-| Procesos al reabrir | Se relanzan (shell, agentes con su comando) | Revivirlos en vivo: requiere el daemon, queda para después |
+| Procesos al reabrir | Se relanzan (shell, agentes con su comando) | Revivirlos en vivo con un daemon dueño de los PTY (`smaltid`): choca con que libghostty sea dueño del PTY; descartado por Simón (2026-11-25) |
 | Prompt | Generado por Smalti (zsh lo pinta; datos de git y runtime asíncronos), exportable a Starship (spec F5) | Powerlevel10k: lento y genérico. Capa AppKit sobre la terminal: frágil con el scroll y el scrollback guardaría un prompt vacío |
 
 ## Fases propuestas
@@ -267,10 +263,17 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
     - **F5.6 · Resaltado del input.** Coloreado nativo de la línea de comando con los colores del tema, sin plugins de zsh, más dos correcciones de ⌘K y los iconos del prompt a la altura del texto (idea de Simón, 2026-11-24; spec F5.6).
 7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Antigravity y OpenCode (sin Gemini CLI); buscador de sesiones; puente con Neovim e instalador de claudecode.nvim (spec F6).
     - Cierre: se retoman sesiones de los 4 harnesses y los diffs de Claude se aprueban en Neovim.
-8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.
+8. **F7 · Extras.** Layouts compartibles y receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
+    - **F7.5 · Guardas para agentes.** Bloqueo de lectura de secretos y guardia de comandos destructivos con aprobación nativa (evaluación de `smalti-diferenciacion.md`, Simón, 2026-11-25).
+    - **F7.6 · Distribución y actualizaciones.** Firma Developer ID y notarización, Sparkle con appcast en el dominio de la web, DMG y Homebrew, pipeline de release.
+    - **F7.7 · Primer uso e inglés.** Interfaz en inglés y español, primer arranque guiado, valores por defecto neutrales, privacidad explícita.
 9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
     - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
+    - **F8.5 · Proyectos.** Layout del repo (`.smalti/layout.json`) que se abre con un atajo.
+10. **F9 · Timeline de la sesión.** Turnos y herramientas de cada agente, con búsqueda y copia de salidas antiguas.
+11. **F10 · Revisión con Neovim.** Comentarios en el diff que vuelven al agente como prompt.
+12. **F11 · Baúl de secretos.** Secretos en el Keychain, inyectados al lanzar y enmascarados en lo que Smalti guarda.
 
 ## Riesgos y preguntas abiertas
 
@@ -290,7 +293,6 @@ El riesgo principal es depender de APIs ajenas que cambian sin aviso: la de libg
 
 - [ ] ¿Qué shell además de zsh debe soportar la integración? (por defecto, solo zsh)
 - [ ] ¿Cuántas líneas de scrollback guardar por panel al cerrar? (propuesta: 10.000)
-- [ ] ¿El daemon `smaltid` se hace en Swift o en Rust cuando llegue su fase?
 - [ ] ¿Homebrew tiene algo llamado smalti? Verificar antes de crear el cask.
 
 ## Nombre

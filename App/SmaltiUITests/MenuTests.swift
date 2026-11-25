@@ -63,7 +63,10 @@ final class MenuTests: SmaltiUITestCase {
         click(
             "Acerca de Smalti", in: app.menuBars.firstMatch.children(matching: .menuBarItem).element(boundBy: 1).title)
 
-        let version = app.staticTexts.matching(NSPredicate(format: "value CONTAINS '0.5.6 ('")).firstMatch
+        // Any release version followed by its commit: the test must not change with every release.
+        let version = app.staticTexts.matching(
+            NSPredicate(format: "value MATCHES %@", "(?s).*[0-9]+[.][0-9]+[.][0-9]+ [(][0-9a-f]+.*")
+        ).firstMatch
         XCTAssertTrue(version.waitForExistence(timeout: 5))
     }
 

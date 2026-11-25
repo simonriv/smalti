@@ -10,7 +10,7 @@ public enum CommandCatalog {
             + paneCommands(context)
             + terminalCommands(context)
             + workspaceCommands(context)
-            + state.savedLayouts.map(restoreCommand)
+            + state.savedLayouts.flatMap { [restoreCommand($0), exportCommand($0)] }
             + windowCommands(context)
             + configurationCommands(context)
             + helpCommands(context)
@@ -42,7 +42,7 @@ public enum CommandCatalog {
         .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
         .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
         .editorOpenLastEdited: "Abrir en Neovim el último archivo editado",
-        .observatoryFilter: "Filtrar el Observatorio",
+        .observatoryFilter: "Filtrar el Observatorio", .layoutImport: "Importar layout…",
     ]
 
     static let terminalIDs: [CommandID] = [
@@ -82,6 +82,13 @@ public enum CommandCatalog {
         return Command(
             id: .layoutRestore(layout.name), title: "Restaurar layout “\(layout.name.rawValue)”",
             subtitle: "— \(panes)\(agents)", group: .workspaces, shortcut: nil, isCurrent: false)
+    }
+
+    /// F7: "Exportar layout “solen-dev”…", right after its restore.
+    private static func exportCommand(_ layout: NamedLayoutSummary) -> Command {
+        Command(
+            id: .layoutExport(layout.name), title: "Exportar layout “\(layout.name.rawValue)”…", subtitle: nil,
+            group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
     fileprivate struct Context {
@@ -168,6 +175,7 @@ public enum CommandCatalog {
             context.command(.harnessSearch, "Buscar sesiones de agentes", group: .workspaces),
             context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
             context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
+            context.titled(.layoutImport, group: .workspaces),
         ]
         let others = context.workspaces.workspaces.filter { $0.id != context.workspaces.activeID }
         commands += others.map {

@@ -8,15 +8,20 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
                           (terminal diaria)              │
    ┌─────────────────────────────────────────────────────┘
    ▼
-F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras ──▶ F8 Puertos y procesos
+F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras
+   ┌──────────────────────────────────────────────────────────────────────────────────────────────────┘
+   ▼
+F7.5 Guardas para agentes ──▶ F7.6 Distribución y actualizaciones ──▶ F7.7 Primer uso e inglés ──▶ F8 Puertos y procesos ──▶ F8.5 Proyectos ──▶ F9 Timeline ──▶ F10 Revisión con Neovim ──▶ F11 Baúl de secretos
 ```
+
+F7.5 y F8.5–F11 salen de la evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25): ver «Ideas evaluadas» al final. F7.6 y F7.7 salen de la decisión de publicar Smalti para otros usuarios, gratis, con web en Vercel y dominio propio (Simón, 2026-11-25): van antes de las fases de producto para que esas lleguen ya por actualización automática.
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
 
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5 y F5.6.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6 y F7.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -87,7 +92,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - app: "Acerca de Smalti" con la versión, abrir la configuración (⌘,), registros para diagnosticar y accesibilidad básica (VoiceOver y tamaño de texto).
 - **Entregables:** el informe de la auditoría (`docs/specs/F4.5-auditoria.md`) aprobado por Simón; después, la vista de ayuda, la pantalla completa, las varias ventanas con workspaces propios, el canal de feedback y los huecos de la auditoría marcados como "entra en F4.5".
 - **Spec:** `docs/specs/F4.5-ayuda-ventanas.md` (aprobada 2026-11-23), sobre la auditoría `docs/specs/F4.5-auditoria.md` (aprobada).
-- **Límites:** no adelanta trabajo de F5 (temas, vidrio, botones de ventana, tipografía, estudio de prompt; la ventana de configuración visual es de F5, en F4.5 ⌘, solo abre el TOML), de F6 (multi-harness, Neovim) ni de F7 (daemon `smaltid`, layouts compartibles). Nada de producto de venta: ni licencias, ni actualizaciones automáticas, ni telemetría de uso.
+- **Límites:** no adelanta trabajo de F5 (temas, vidrio, botones de ventana, tipografía, estudio de prompt; la ventana de configuración visual es de F5, en F4.5 ⌘, solo abre el TOML), de F6 (multi-harness, Neovim) ni de F7 (layouts compartibles, OTLP). Nada de producto de venta: ni licencias, ni actualizaciones automáticas, ni telemetría de uso.
 - **Criterio de cierre:** se define en su spec, a partir de la auditoría. Como mínimo: cada acción de ⌘K aparece en la ayuda y en el menú con el mismo atajo (prueba automática), y dos ventanas con workspaces distintos se restauran cada una con los suyos (XCUITest).
 - **Dependencias:** F4 (sus atajos aparecen en la ayuda) y F2 (la persistencia pasa de una ventana a varias). Añadida por Simón en el brainstorming de F4 (2026-11-23) y ampliada el mismo día con la auditoría de funciones básicas.
 
@@ -129,9 +134,48 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F7 · Extras
 
 - **Objetivo:** capacidades opcionales que no tocan el rendimiento base.
-- **Entregables:** predicción con API propia (Anthropic, OpenAI, OpenRouter o compatible) y con `claude -p`; daemon `smaltid` dueño de los PTY (se decide en Swift o Rust al llegar); layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
-- **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Ningún secreto sale a una API; las pruebas del filtro lo cubren.
-- **Dependencias:** F4 (`PredictionProvider`) y F2 (persistencia). El daemon choca con que libghostty sea dueño del PTY (ver riesgos de F0) y necesita su propio spike.
+- **Entregables:** layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
+- **Fuera (Simón, 2026-11-25):** la predicción con API propia o `claude -p` (cuesta dinero y saca contexto de la máquina) y el daemon `smaltid` dueño de los PTY (choca con que libghostty sea dueño del PTY). Al reabrir, los procesos se siguen relanzando.
+- **Spec:** `docs/specs/F7-extras.md` (aprobada 2026-11-25).
+- **Cerrada (2026-11-25):** ver `docs/specs/F7-checklist.md`. C1 con prueba de red; C2 con las mediciones de F0 y F4 con el receptor apagado, encendido y con carga.
+- **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Nada sale de la máquina: el receptor OTLP escucha solo en `127.0.0.1`, y una prueba lo cubre.
+- **Dependencias:** F2 (persistencia y layouts con nombre) y F3 (Observatorio, que recibe la telemetría OTLP).
+
+## F7.5 · Guardas para agentes
+
+- **Objetivo:** que un agente en un panel de Smalti no pueda leer secretos ni ejecutar un comando destructivo contra producción sin que Simón lo apruebe. Los controles viven fuera del agente: las instrucciones del prompt no bastan (incidentes de Replit, DataTalks.Club y PocketOS).
+- **Entregables:**
+  - **Bloqueo de lectura de secretos:** el plugin de Claude Code que Smalti ya instala suma un hook `PreToolUse` que bloquea `Read` y `Bash` sobre `.env*`, `*.pem`, `~/.ssh`, `~/.aws` y similares, y Smalti genera las reglas `permissions.deny` con la sintaxis correcta (rutas absolutas con `//`) en el proyecto que se le pida.
+  - **Guardia de comandos destructivos:** el mismo hook detecta comandos de alto riesgo (`supabase db push`/`reset`, `prisma migrate reset`, `drizzle-kit push`, `npm run db:push`, `terraform destroy`/`apply`, `railway … delete`, `psql` con `DROP`/`TRUNCATE`, cualquier comando con un `DATABASE_URL` de producción) y espera la decisión de Smalti.
+  - **Aprobación nativa:** Smalti muestra en el panel y en una notificación el workspace, el comando completo y el entorno detectado («rizaria: `supabase db push` contra **PROD**»), con aprobar y rechazar por teclado y en ⌘K. El canal hook → Smalti pasa de aviso a petición con respuesta por el socket de F2.
+  - **Entorno detectado** por el host del `DATABASE_URL` y por una lista de hosts de producción en `config.toml`; si no se puede determinar, se asume producción (falla cerrado).
+- **Criterio de cierre:** una prueba reproduce los comandos de los tres incidentes y cada uno queda bloqueado hasta la aprobación; ninguna lectura de los archivos de secretos de una lista de prueba llega al agente; sin respuesta de Smalti (app cerrada o socket caído), el hook bloquea.
+- **Fuera:** el proxy SQL con `libpg_query` y el proxy HTTPS de valores de relleno (ver «Ideas evaluadas»).
+- **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
+
+## F7.6 · Distribución y actualizaciones
+
+- **Objetivo:** que cualquiera instale Smalti en un minuto, que macOS lo abra sin avisos de seguridad y que cada versión nueva llegue sola.
+- **Entregables:**
+  - **Firma Developer ID y notarización** de Apple, con «stapling» del ticket. Sustituye la firma ad hoc de `CLAUDE.md`: sin ella, Gatekeeper bloquea una app descargada y Homebrew deja de aceptar casks sin notarizar. **Cuesta dinero** (Apple Developer Program, 99 USD al año): la spec no avanza sin la aprobación explícita de Simón.
+  - **Actualización automática con Sparkle 2:** firma EdDSA de cada versión, `appcast.xml` servido desde el dominio de la web (Vercel), notas de versión en la ventana de actualización, comprobación al arrancar y a demanda («Buscar actualizaciones…» en el menú Smalti y en ⌘K), opción de desactivarla. La comprobación solo pide el appcast: no envía datos de uso.
+  - **Entrega:** DMG firmado en GitHub Releases; cask de Homebrew en un tap propio (`brew install --cask simonriv/tap/smalti`) con `auto_updates true`, y propuesta al tap oficial cuando cumpla sus criterios de notoriedad. Comprobar antes que el nombre `smalti` está libre en Homebrew (pregunta abierta de `PROJECT.md`).
+  - **Pipeline de release** en GitHub Actions: compilar el Release, firmar, notarizar, crear el DMG, publicar la release con sus notas, actualizar el appcast y el cask. Los secretos de firma viven en los secretos del repo, nunca en el código.
+  - **Compatibilidad entre versiones:** los formatos de sesión, layouts, índice del Observatorio y `config.toml` llevan versión, se migran hacia delante, y una versión vieja que encuentra datos de una nueva no los rompe.
+  - **Repositorio público:** licencia elegida por Simón, `THIRD_PARTY_NOTICES` (libghostty MIT, Inter y JetBrains Mono OFL, specs de Fig ISC, Sparkle MIT), `README` de instalación y desinstalación, y el canal de feedback de F4.5 apuntando a los issues públicos.
+- **Criterio de cierre:** por definir en su spec; como mínimo, un Mac limpio instala por DMG y por Homebrew sin avisos de Gatekeeper (`spctl --assess` acepta la app), y una versión instalada se actualiza a la siguiente desde un appcast de prueba sin perder sesión, layouts ni configuración.
+- **Dependencias:** F4.5 (feedback, «Acerca de» con versión). Cambia la Decisión «Alcance» de `PROJECT.md` y la línea de firma de `CLAUDE.md`.
+
+## F7.7 · Primer uso e inglés
+
+- **Objetivo:** que alguien que no es Simón entienda y use Smalti desde el primer arranque.
+- **Entregables:**
+  - **Interfaz en inglés y español**, según el idioma del sistema: todos los textos de la app pasan a un catálogo de cadenas; los tableros de `docs/design/` siguen en español como referencia.
+  - **Primer arranque:** pantalla breve que explica ⌘K y los atajos clave, ofrece instalar la integración con Claude Code y la de Neovim, y elige tema; se puede saltar y volver a abrir desde la ayuda.
+  - **Valores por defecto neutrales:** revisar lo que asume el flujo de Simón (instalador solo para NvChad, ⌥ reservado al teclado latinoamericano, ejemplos con sus proyectos) y dejarlo configurable o documentado.
+  - **Privacidad explícita:** una página en la ayuda y en la web: nada sale de la máquina salvo la comprobación de actualizaciones; la telemetría de Claude Code se queda en `127.0.0.1`.
+- **Criterio de cierre:** por definir en su spec; como mínimo, con el sistema en inglés no queda ningún texto de interfaz en español (prueba que recorre ⌘K, menús, ayuda y Observatorio), y el primer arranque se completa y se salta por teclado.
+- **Dependencias:** F7.6 (la app ya es pública).
 
 ## F8 · Puertos y procesos
 
@@ -143,3 +187,66 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Criterio de cierre:** por definir en su spec. Como mínimo, la lista de puertos coincide con `lsof -iTCP -sTCP:LISTEN -nP` en una prueba con puertos abiertos a propósito, y detener nunca toca procesos de otro usuario ni el propio Smalti.
 - **Diseño:** no hay tablero. La fase empieza con su maqueta para aprobar, en la línea del Observatorio.
 - **Dependencias:** F3 (puerto `SystemMetrics`, sin sudo) y F2 (relación panel ↔ proceso).
+
+## F8.5 · Proyectos
+
+- **Objetivo:** abrir un proyecto tal como se trabaja en él con un atajo, sin buscar el layout guardado.
+- **Entregables:** un layout compartible de F7 dentro del repo (`.smalti/layout.json`) se descubre al abrir un panel o workspace en esa carpeta y se ofrece en ⌘K como «Abrir proyecto “rizaria”»; con la misma confirmación de comandos de F7 la primera vez que cambia el archivo. Atajo para saltar entre proyectos recientes.
+- **Criterio de cierre:** por definir en su spec; como mínimo, un repo con `.smalti/layout.json` se abre con su layout y sus comandos tras confirmar, y un archivo modificado vuelve a pedir confirmación.
+- **Dependencias:** F7 (formato y validación del layout compartible).
+
+## F9 · Timeline de la sesión
+
+- **Objetivo:** recuperar lo que un agente hizo aunque ya no se vea: Claude Code usa la pantalla alternativa y su historial no queda en el scrollback.
+- **Entregables:** panel lateral (con atajo y en ⌘K) que lee los transcripts y muestra los turnos con las herramientas plegadas, búsqueda en todas las sesiones del proyecto, copiar cualquier salida antigua y saltar a un turno. Adaptadores de Claude Code y Codex detrás de un puerto, reutilizando los lectores de F3 y F6.
+- **Criterio de cierre:** por definir en su spec; como mínimo, sobre los fixtures reales de F3 y F6, cada turno y cada resultado de herramienta del transcript aparece en el timeline y se copia íntegro.
+- **Diseño:** no hay tablero; empieza con maqueta para aprobar.
+- **Dependencias:** F3 (lector de transcripts) y F6 (fixtures y adaptadores de harness).
+
+## F10 · Revisión con Neovim
+
+- **Objetivo:** revisar los cambios del agente en el editor real y devolverle los comentarios sin copiar y pegar.
+- **Entregables:** desde los archivos editados del último turno (F6), abrir el diff en NvChad; comentarios en líneas o rangos que se convierten en un prompt estructurado y se escriben en el panel de Claude de ese workspace.
+- **Criterio de cierre:** por definir en su spec; como mínimo, comentarios en dos archivos llegan al panel de Claude como un solo prompt con archivo, líneas y texto.
+- **Dependencias:** F6 (`EditorBridge`, claudecode.nvim, «Editados por Claude»).
+
+## F11 · Baúl de secretos
+
+- **Objetivo:** que los secretos de cada proyecto vivan en el Keychain y no en `.env` que un agente pueda leer.
+- **Entregables:** baúl en el Keychain de macOS con Touch ID, por workspace y entorno; migrar un `.env` a referencias; inyectar las variables en los procesos que se lancen con el comando de Smalti para ello (no en todo el shell: Smalti no sabe de antemano si en un panel correrá un agente); enmascarar los valores conocidos en el scrollback guardado en disco, en el Observatorio y en el timeline; auditoría de qué proceso usó qué secreto, sin guardar valores.
+- **Fuera:** enmascarar en la pantalla (libghostty es dueño del render y del PTY: exigiría cambiar esa Decisión) y el proxy HTTPS de valores de relleno.
+- **Criterio de cierre:** por definir en su spec; como mínimo, tras migrar un `.env` de prueba no queda ningún valor en disco, y ningún valor del baúl aparece en el scrollback guardado ni en los registros.
+- **Dependencias:** F7.5 (bloqueo de lectura) y F9 (timeline, para enmascararlo).
+
+## Ideas evaluadas
+
+Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya construido en F0–F7 y las Decisiones:
+
+| Idea | Veredicto | Dónde |
+| --- | --- | --- |
+| Timeline nativo de la sesión | Entra | F9 |
+| Ciclo de revisión con Neovim | Entra lo que falta: comentarios → prompt al agente (los diffs con `:w`/`:q` ya están en F6) | F10 |
+| Workspaces por proyecto | Entra, sobre el formato de F7 | F8.5 |
+| Monitor de contexto por panel | Ya está: modelo y `ctx %` en la cabecera y la barra de estado (F3) | — |
+| Diseño refinado | Ya está (F0, F5) | — |
+| Notificaciones, restauración, temas, prompt, autocompletado | Ya están (F2, F4, F5, F6) | — |
+| Seguro para bases de datos, etapa 1 (guardia de comandos) | Entra, primero: mayor valor por esfuerzo | F7.5 |
+| Bloqueo de lectura de `.env` | Entra con la guardia | F7.5 |
+| Baúl de secretos, etapa 1 | Entra sin el enmascarado en pantalla | F11 |
+| Enmascarado de secretos en el render | Fuera: libghostty es dueño del PTY y del render (Decisión «Procesos al reabrir») | — |
+| Proxy HTTPS de valores de relleno (etapa 2 del baúl) | Fuera: intercepta TLS con un certificado de confianza propio y depende de un proceso largo como `smaltid`, ya descartado | — |
+| Proxy SQL con `libpg_query` (etapa 2) | Fuera por ahora: alto esfuerzo, no cubre PostgREST ni el MCP de Supabase, y la guardia de comandos cubre los incidentes reales | — |
+| Predicción por API y `smaltid` | Ya descartados (Simón, 2026-11-25) | — |
+| Publicar Smalti para otros (web en Vercel, Homebrew, actualización automática) | Entra: decisión de Simón (2026-11-25) | F7.6, F7.7 |
+| Espacio de donaciones | Entra en la web, no en la app; en la app, un enlace discreto en «Acerca de» y en la ayuda | Web, F7.6 |
+| Smalti para Windows y Linux | Fuera por ahora (análisis en «Multiplataforma») | — |
+| Navegador, app móvil, VMs, checkpoints | Fuera (como dice el documento) | — |
+
+### Multiplataforma (análisis, sin fase)
+
+- **Lo que se puede reutilizar:** el dominio y los casos de uso (`SmaltiCore`, Swift puro) compilan en Linux y Windows, y varios adaptadores son portables (IPC por socket Unix, receptor OTLP, TOML, archivos de sesión, SQLite). La arquitectura hexagonal es justo lo que lo hace posible.
+- **Lo que no:** la app entera (AppKit, vidrio de macOS, Metal, ventanas), las notificaciones, el Keychain, las métricas de Darwin, ImageIO, Quick Look y JavaScriptCore de las specs de Fig. Es una app nueva por plataforma sobre el mismo núcleo.
+- **Linux:** viable con mucho esfuerzo. Ghostty tiene su app de GTK sobre el mismo núcleo, pero la API embebida de libghostty que usa Smalti está pensada para macOS; la interfaz habría que escribirla en GTK desde Swift, con bindings aún inmaduros. Estimación: del orden de F1–F5 otra vez.
+- **Windows:** muy difícil hoy. Ghostty no soporta Windows, así que haría falta otro motor de terminal (ConPTY con otro renderer), además de reescribir la interfaz. Sería otro producto.
+- **Recomendación:** quedarse en macOS. Si hubiera demanda, Linux antes que Windows, como fase propia con spec y cambio de la Decisión «Alcance».
+

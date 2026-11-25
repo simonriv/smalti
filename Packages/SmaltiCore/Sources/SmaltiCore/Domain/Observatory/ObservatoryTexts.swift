@@ -17,6 +17,19 @@ public enum ObservatoryTexts {
     public static let footnote =
         "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
 
+    /// F7: the footnote once Claude Code's telemetry arrived.
+    public static let footnoteWithTelemetry =
+        "Datos: hooks, transcripts y telemetría de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
+
+    /// F7: the footnote when the user's own Claude settings send the telemetry elsewhere.
+    public static let footnoteTelemetryElsewhere =
+        "Telemetría de Claude Code configurada fuera de Smalti: no se recibe aquí."
+
+    public static func footnote(status: TelemetryStatus, hasTelemetry: Bool) -> String {
+        if status == .configuredByUser { return footnoteTelemetryElsewhere }
+        return hasTelemetry ? footnoteWithTelemetry : footnote
+    }
+
     /// "2 trabajando · 1 esperando" (the board's summary card says "esperando"), "· 1 error" only with errors.
     public static func sessions(_ summary: ObservatoryReport.Summary) -> String {
         let base = "\(summary.working) trabajando · \(summary.waiting) esperando"

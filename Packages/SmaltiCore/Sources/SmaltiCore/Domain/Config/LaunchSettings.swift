@@ -26,6 +26,11 @@ public struct LaunchSettings: Equatable, Sendable {
     public static let nvimConfigHomeKey = "SmaltiNvimConfigHome"
     public static let nvimCommandKey = "SmaltiNvimCommand"
     public static let editorSocketDirectoryKey = "SmaltiEditorSocketDir"
+    /// F7 (tests): the managed Claude settings to check instead of the machine's, and a file where the app writes
+    /// the telemetry receiver's status.
+    public static let managedSettingsKey = "SmaltiManagedSettings"
+    public static let telemetryProbeKey = "SmaltiTelemetryProbe"
+    public static let telemetryArgumentKeys = [managedSettingsKey, telemetryProbeKey]
     /// Every key the composition root reads, arguments and environment alike.
     public static let harnessArgumentKeys = [
         codexHomeKey, antigravityHomeKey, opencodeDatabaseKey, nvimConfigHomeKey, nvimCommandKey,
@@ -62,6 +67,9 @@ public struct LaunchSettings: Equatable, Sendable {
     public let nvimConfigHome: URL
     public let nvimCommand: String
     public let editorSocketDirectory: String?
+    /// F7: nil uses the machine's managed settings; tests point it at a temporary file.
+    public let managedSettings: URL?
+    public let telemetryProbe: URL?
 
     public init(arguments: [String: String], home: URL, defaultStateDirectory: URL) {
         let value = { (key: String) in arguments[key].flatMap { $0.isEmpty ? nil : $0 } }
@@ -88,6 +96,8 @@ public struct LaunchSettings: Equatable, Sendable {
             .appending(path: "nvim")
         nvimCommand = value(Self.nvimCommandKey) ?? "nvim"
         editorSocketDirectory = value(Self.editorSocketDirectoryKey)
+        managedSettings = value(Self.managedSettingsKey).map { URL(filePath: $0) }
+        telemetryProbe = value(Self.telemetryProbeKey).map { URL(filePath: $0) }
     }
 
     // A literal that always parses; the fallback only exists to keep the type non-optional.

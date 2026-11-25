@@ -44,6 +44,28 @@ public protocol NamedLayouts: AnyObject {
     func names() -> [LayoutName]
 }
 
+/// Why a shared layout file could not be read or written (spec F7).
+public enum LayoutFileError: Error, Equatable, Sendable {
+    case unreadable(path: String, reason: String)
+    case unwritable(path: String, reason: String)
+    case invalid(SharedLayoutError)
+
+    public var message: String {
+        switch self {
+        case .unreadable(let path, let reason): "no se pudo leer \(path) (\(reason))"
+        case .unwritable(let path, let reason): "no se pudo escribir \(path) (\(reason))"
+        case .invalid(let error): error.message
+        }
+    }
+}
+
+/// Port (F7): shared layout files, wherever the user picks them.
+@MainActor
+public protocol LayoutFiles: AnyObject {
+    func write(_ layout: SharedLayout, to file: URL) throws(LayoutFileError)
+    func read(from file: URL) throws(LayoutFileError) -> SharedLayout
+}
+
 /// Whether reopening asks first ("Retomar donde quedaste") or restores everything ("Siempre restaurar").
 public enum RestorePreference: String, Codable, Sendable {
     case ask, always

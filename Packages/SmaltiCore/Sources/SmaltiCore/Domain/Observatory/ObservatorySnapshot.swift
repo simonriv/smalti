@@ -155,6 +155,9 @@ public struct ObservatorySnapshot: Equatable, Sendable {
     public let lastError: String?
     /// F6: other harnesses' sessions (OpenCode), as their own stores count them.
     public private(set) var usage: [UsageRow] = []
+    /// F7: what Smalti's panes' Claude Code sent to the local receiver, and where the receiver stands.
+    public private(set) var telemetry = TelemetryLedger()
+    public private(set) var telemetryStatus = TelemetryStatus.off
 
     public init(
         activity: TranscriptActivity, running: [RunningAgent], panes: [PaneAgent], localModels: LocalModelsReport,
@@ -172,6 +175,13 @@ public struct ObservatorySnapshot: Equatable, Sendable {
         self.now = now
         self.home = home
         self.lastError = lastError
+    }
+
+    public func adding(telemetry ledger: TelemetryLedger, status: TelemetryStatus) -> ObservatorySnapshot {
+        var copy = self
+        copy.telemetry = ledger
+        copy.telemetryStatus = status
+        return copy
     }
 
     public func adding(usage rows: [UsageRow]) -> ObservatorySnapshot {

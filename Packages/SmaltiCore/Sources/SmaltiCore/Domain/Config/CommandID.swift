@@ -30,6 +30,8 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let editorOpenLastEdited = CommandID(rawValue: "editor.openLastEdited")
     /// Cycles the observatory's harness filter; like the period, it acts only while the observatory is open.
     public static let observatoryFilter = CommandID(rawValue: "observatory.filter")
+    /// F7: imports a shared layout file as a saved layout.
+    public static let layoutImport = CommandID(rawValue: "layout.import")
     /// Cycles the observatory's period; acts only while the observatory is open, the terminal gets the key otherwise.
     public static let observatoryPeriod = CommandID(rawValue: "observatory.period")
     /// F4: opens the ⌃R history palette for the focused pane (⌃R itself is zsh's key there, not Smalti's).
@@ -110,6 +112,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
 
     private static let layoutSavePrefix = "layout.save:"
     private static let layoutRestorePrefix = "layout.restore:"
+    private static let layoutExportPrefix = "layout.export:"
     private static let editorOpenPrefix = "editor.open:"
 
     /// F6: opens a file the pane's Claude edited, at its line (`editor.open:<line>:<path>`).
@@ -132,6 +135,11 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         CommandID(rawValue: layoutRestorePrefix + name.rawValue)
     }
 
+    /// F7: writes a saved layout as a shared file.
+    public static func layoutExport(_ name: LayoutName) -> CommandID {
+        CommandID(rawValue: layoutExportPrefix + name.rawValue)
+    }
+
     /// The saved-layout action this command stands for, if any.
     public var namedLayout: NamedLayoutCommand? {
         if rawValue.hasPrefix(Self.layoutSavePrefix) {
@@ -139,6 +147,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         }
         if rawValue.hasPrefix(Self.layoutRestorePrefix) {
             return (try? LayoutName(String(rawValue.dropFirst(Self.layoutRestorePrefix.count)))).map { .restore($0) }
+        }
+        if rawValue.hasPrefix(Self.layoutExportPrefix) {
+            return (try? LayoutName(String(rawValue.dropFirst(Self.layoutExportPrefix.count)))).map { .export($0) }
         }
         return nil
     }
@@ -149,6 +160,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
             observatoryPeriod, historySearch, harnessSearch, editorOpenBeside, editorOpenLastEdited, observatoryFilter,
+            layoutImport,
         ]
         + basics
         + appearance
@@ -172,4 +184,5 @@ extension Direction {
 public enum NamedLayoutCommand: Equatable, Sendable {
     case save(LayoutName)
     case restore(LayoutName)
+    case export(LayoutName)
 }

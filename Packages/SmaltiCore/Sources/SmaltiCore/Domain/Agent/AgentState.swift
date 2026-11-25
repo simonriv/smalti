@@ -19,6 +19,9 @@ public struct HarnessID: Hashable, Codable, Sendable, RawRepresentable {
 
     /// Shown in the interface ("Claude Code"); an unknown id shows as it is.
     public var displayName: String { Self.names[self] ?? rawValue }
+
+    /// One of the harnesses Smalti knows (F6); a shared layout from a newer Smalti may name another.
+    public var isKnown: Bool { Self.names[self] != nil }
 }
 
 /// Why an agent waits for the user.
