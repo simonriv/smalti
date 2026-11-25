@@ -80,6 +80,36 @@ struct SessionSearchStateTests {
 
         #expect(state.failureMessages == ["No se pudo leer Codex: esquema desconocido (falta cwd)"])
     }
+    @Test func changingChipSelectsTheTop() {
+        var state = SessionSearchState()
+        state.listing = SessionListing(sessions: [session("a", .codex), session("b", .codex)], failures: [:])
+        state.moveSelection(by: 1)
+
+        state.selectChip(1)
+
+        #expect(state.selected?.id == "a")
+    }
+
+    @Test func selectByIDPicksThatSession() {
+        var state = SessionSearchState()
+        state.listing = SessionListing(
+            sessions: [session("a", .codex), session("b", .codex), session("c", .codex)], failures: [:])
+
+        state.select(id: "c")
+
+        #expect(state.selected?.id == "c")
+    }
+
+    @Test func failuresAreListedByHarnessName() {
+        var state = SessionSearchState()
+        let codex = HarnessError.storeMissing(harness: .codex, path: "/c")
+        let agy = HarnessError.storeMissing(harness: .antigravity, path: "/a")
+
+        state.listing = SessionListing(sessions: [], failures: [.codex: codex, .antigravity: agy])
+
+        #expect(state.failureMessages == [agy.message, codex.message])
+    }
+
     @Test func lateListingKeepsTheSelectedSession() {
         var state = SessionSearchState()
         state.listing = SessionListing(sessions: [session("a", .codex), session("b", .codex)], failures: [:])

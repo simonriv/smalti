@@ -114,6 +114,7 @@ struct EditedFilesTests {
 
         #expect(tracker.recent(in: nvim, workspace: [agent, nvim]).map(\.path) == ["/w/a.ts"])
         #expect(tracker.recent(in: agent, workspace: [agent, nvim, elsewhere]).map(\.path) == ["/w/a.ts"])
+        #expect(tracker.recent(in: nvim, workspace: [agent, elsewhere]).map(\.path) == ["/w/b.ts", "/w/a.ts"])
     }
 
     @Test func noEditsText() {
@@ -218,6 +219,7 @@ struct EditedFilesPaletteTests {
 
         #expect(commands.map(\.title) == ["reminder.service.ts", "a b.ts"])
         #expect(commands.map(\.subtitle) == ["línea 42 · hace 2 min", "línea 1 · ahora"])
+        #expect(commands.allSatisfy { !$0.isCurrent }, "an edited file is never the current item")
         #expect(
             commands.first?.id.editorTarget == EditorTarget(path: "/w/src/reminder.service.ts", line: 42, column: nil))
         #expect(CommandGroup.editedFiles.rawValue == "Editados por Claude")

@@ -64,6 +64,7 @@ struct ObservatoryFilterTests {
         #expect(row?.label == "termotty")
         #expect(row?.state == .stopped)
         #expect(row?.pid == "—")
+        #expect(row?.isErrorRateHigh == false)
         #expect(
             report(.opencode, usage: [opencode("oc-2", local: false)]).rows.first?.agentModel == "OpenCode · qwen3:4b")
     }
