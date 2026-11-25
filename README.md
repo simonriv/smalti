@@ -35,7 +35,7 @@ La app queda en `build/Build/Products/Release/Smalti.app`. Lo que compilas en tu
 
 ## Primera apertura
 
-Smalti está firmada con la clave de Smalti, pero **no está notarizada por Apple** (eso cuesta 99 USD al año y Smalti es gratis). La primera vez que la abras, macOS dirá que no pudo verificarla. Tienes dos formas de abrirla; las dos son de una sola vez.
+Smalti no lleva firma de desarrollador de Apple (está firmada *ad hoc*) ni está **notarizada** (eso cuesta 99 USD al año y Smalti es gratis); sus actualizaciones sí van firmadas con la clave EdDSA de Smalti. La primera vez que la abras, macOS dirá que no pudo verificarla. Tienes dos formas de abrirla; las dos son de una sola vez.
 
 **Desde Ajustes del Sistema**
 
@@ -73,7 +73,7 @@ Smalti acepta issues, no pull requests: ver [CONTRIBUTING.md](CONTRIBUTING.md). 
 
 ## Apoyar
 
-Smalti es gratis. Si te ahorra tiempo, puedes apoyarlo en https://smalti.sh/#support.
+Smalti es gratis. Si te ahorra tiempo, puedes apoyarlo en https://smalti.sh/es#apoyar.
 
 ## Licencia
 

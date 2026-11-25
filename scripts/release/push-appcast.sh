@@ -7,7 +7,8 @@ url="${1:?url}"; tag="${2:?tag}"; item="${3:?item}"
 version="$(version_of_tag "$tag")" || exit 1
 grep -q "<title>$version</title>" "$item" || die "the item is not version $version"
 grep -q 'sparkle:edSignature="[^"]' "$item" || die "the item has no sparkle:edSignature"
-dir="$(clone_satellite "$url")"; trap 'rm -rf "$dir" "$dir.key"' EXIT
+dir="$(mktemp -d "${TMPDIR:-/tmp}/satellite.XXXXXX")"; trap 'rm -rf "$dir"' EXIT
+clone_satellite "$url" "$dir"
 python3 - "$dir/repo/public/appcast.xml" "$item" <<'P'
 import sys
 path, item = sys.argv[1], open(sys.argv[2]).read().rstrip("\n") + "\n"

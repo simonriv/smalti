@@ -31,7 +31,8 @@ test_env_setup() {
   "${d[@]}" SmaltiAntigravityHome -string "$root/antigravity-cli"
   "${d[@]}" SmaltiOpenCodeDB -string "$root/opencode/opencode.db"
   "${d[@]}" SmaltiNvimConfigHome -string "$root/nvim-config/nvim"
-  "${d[@]}" SmaltiEditorSocketDir -string "/private/tmp/smalti-update-$$"
+  TEST_SOCKETS="/private/tmp/smalti-update-$$"
+  "${d[@]}" SmaltiEditorSocketDir -string "$TEST_SOCKETS"
   "${d[@]}" SmaltiDownloadsPath -string "$root/downloads"
 }
 
@@ -69,7 +70,8 @@ test_env_pids() {
 }
 
 test_env_quit() {
-  osascript -e "tell application id \"$TEST_BUNDLE_ID\" to quit" > /dev/null 2>&1 || true
+  # Only when it runs: telling a stopped app to quit would launch some other registered copy of it first.
+  [[ -n "$(test_env_pids)" ]] && osascript -e "tell application id \"$TEST_BUNDLE_ID\" to quit" > /dev/null 2>&1
   local i
   for i in $(seq 1 40); do [[ -z "$(test_env_pids)" ]] && return 0; sleep 0.5; done
   return 1
@@ -79,6 +81,9 @@ test_env_quit() {
 test_env_teardown() {
   local pid
   for pid in $(test_env_pids); do kill "$pid" 2>/dev/null; done
+  # Sparkle's installer runs from the test app's cache; it goes before the cache does.
+  pkill -f "$HOME/Library/Caches/$TEST_BUNDLE_ID" 2>/dev/null
+  [[ -n "${TEST_SOCKETS:-}" ]] && rm -rf "$TEST_SOCKETS"
   find "$TEST_ROOT" -maxdepth 3 -name "*.app" -type d -exec "$lsregister" -u {} \; 2>/dev/null
   test_env_clear_defaults
 }

@@ -7,6 +7,9 @@ source "$(dirname "$0")/lib.sh"
 tag="${1:?tag}"; out="${2:?out dir}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 version="$(version_of_tag "$tag")" || exit 1
+# Prereleases would reach every user through the one appcast and share the release's build number.
+[[ "$version" != *-* ]] || die "prereleases are not published until there are update channels: $tag"
+build_number "$version" > /dev/null || exit 1
 expected="${SMALTI_VERSION:-$(project_version)}"
 [[ "$version" == "$expected" ]] || die "tag $tag does not match MARKETING_VERSION $expected"
 

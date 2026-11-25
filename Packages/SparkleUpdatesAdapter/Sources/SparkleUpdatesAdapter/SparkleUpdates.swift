@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SmaltiCore
 import Sparkle
 
@@ -54,9 +55,11 @@ public enum AppUpdatesError: Error, Equatable {
     case couldNotStart(reason: String)
 }
 
-/// Hands Sparkle the test feed; without one, Sparkle reads `SUFeedURL`.
+/// Hands Sparkle the test feed (without one, Sparkle reads `SUFeedURL`) and logs why an update did not install:
+/// "Mostrar registros…" and the update tests read it (4005 is a signature that does not match `SUPublicEDKey`).
 private final class FeedOverride: NSObject, SPUUpdaterDelegate {
     private let feed: URL?
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "dev.simonriv.smalti", category: "updates")
 
     init(feed: URL?) {
         self.feed = feed
@@ -64,5 +67,12 @@ private final class FeedOverride: NSObject, SPUUpdaterDelegate {
 
     func feedURLString(for updater: SPUUpdater) -> String? {
         feed?.absoluteString
+    }
+
+    func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
+        let error = error as NSError
+        // 1001 is "you are up to date", not a failure.
+        guard error.code != 1001 else { return }
+        logger.error("update aborted: \(error.domain, privacy: .public) \(error.code, privacy: .public)")
     }
 }

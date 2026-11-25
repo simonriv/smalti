@@ -15,9 +15,11 @@ source "$rel/test-builds.sh"
 cache="$root/build/release-test"
 work="$(mktemp -d "${TMPDIR:-/tmp}/smalti-install.XXXXXX")"
 tap="smaltitest/local"
+token="smalti-updatetest"  # Caskroom tokens are global: never "smalti", which a real install may own
 cleanup() {
   if [[ "$mode" == brew ]]; then
-    HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --cask "$tap/smalti" > /dev/null 2>&1  # never --zap
+    # Only the test's own token, never --zap: a real `smalti` cask on this machine is never touched.
+    HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --cask "$tap/$token" > /dev/null 2>&1
     brew untap "$tap" > /dev/null 2>&1
   fi
   hdiutil detach -quiet "$work/mnt" 2>/dev/null
@@ -52,23 +54,35 @@ if [[ "$mode" == dmg ]]; then
 else
   # The documented install: brew install --cask simonriv/tap/smalti, from a local tap with the real template
   # pointed at the local DMG and without zap (never run against this machine's real state).
+  [[ -z "$(brew list --cask 2>/dev/null | grep -x "$token")" ]] || fatal "a_${token}_cask_is_already_installed"
   tapdir="$work/tap"; mkdir -p "$tapdir/Casks"
   "$rel/cask.sh" 0.7.90 "$(shasum -a 256 "$work/Smalti.dmg" | cut -d' ' -f1)" \
-    | sed -e "s#url \".*\"#url \"file://$work/Smalti.dmg\"#" -e '/zap trash:/,/^  \]/d' > "$tapdir/Casks/smalti.rb"
+    | sed -e "s#^cask \"smalti\"#cask \"$token\"#" -e "s#url \".*\"#url \"file://$work/Smalti.dmg\"#" \
+      -e '/zap trash:/,/^  \]/d' > "$tapdir/Casks/$token.rb"
   git -C "$tapdir" init -q && git -C "$tapdir" add -A \
     && git -C "$tapdir" -c user.name=t -c user.email=t@localhost commit -qm cask || fatal tap
   brew tap "$tap" "$tapdir" > /dev/null 2>&1 || fatal tap
   install_copy() {
-    HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --cask "$tap/smalti" > /dev/null 2>&1
-    HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --appdir="$apps" "$tap/smalti" > "$work/brew.log" 2>&1
+    HOMEBREW_NO_AUTO_UPDATE=1 brew uninstall --cask "$tap/$token" > /dev/null 2>&1
+    HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --appdir="$apps" "$tap/$token" > "$work/brew.log" 2>&1
   }
   install_copy || fatal brew_install
   [[ "$(xattr -p com.apple.quarantine "$apps/Smalti.app" 2>/dev/null | cut -d';' -f1)" == 0181 ]]
   step brew_quarantines_without_translocation $?
 fi
 
-# Gatekeeper's verdict on the quarantined copy: rejected (ad hoc, not notarized), which is the first-open warning.
-spctl -a -t exec "$apps/Smalti.app" > /dev/null 2>&1; [[ $? != 0 ]]; step gatekeeper_rejects_the_first_open $?
+# The first open as downloaded: Gatekeeper stops the copy before it runs (the warning the README explains). With
+# SMALTI_TEST_FIRST_OPEN=1 the app is really opened and must not start; macOS shows its warning on screen, closed
+# by restarting its agent (the phase's close captures it). Without it, only spctl's verdict is checked: it rejects
+# every ad hoc build, quarantined or not, so it does not prove the block by itself.
+if [[ "${SMALTI_TEST_FIRST_OPEN:-0}" == 1 ]]; then
+  test_env_open "$apps/Smalti.app"; sleep 8
+  [[ -z "$(test_env_pids)" ]]; step first_open_is_blocked $?
+  [[ -n "${SMALTI_TEST_CAPTURE:-}" ]] && screencapture -x "$SMALTI_TEST_CAPTURE"
+  killall CoreServicesUIAgent 2>/dev/null
+else
+  spctl -a -t exec "$apps/Smalti.app" > /dev/null 2>&1; [[ $? != 0 ]]; step gatekeeper_assessment_rejects_ad_hoc $?
+fi
 
 # Documented step (a): xattr -dr com.apple.quarantine, then open.
 xattr -dr com.apple.quarantine "$apps/Smalti.app"

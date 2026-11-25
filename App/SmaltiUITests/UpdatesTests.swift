@@ -106,6 +106,33 @@ final class UpdatesTests: SmaltiUITestCase {
         wait(for: [shown], timeout: 5)
     }
 
+    /// Review 2 (M9): the same check from the Smalti menu, under "Acerca de Smalti".
+    func testCheckForUpdatesFromTheSmaltiMenu() throws {
+        launch(feed: feed)
+        try serveOlderAppcast()
+
+        appMenu().click()
+        app.menuBars.menuItems["Buscar actualizaciones…"].click()
+
+        XCTAssertTrue(app.staticTexts["¡Estás al día!"].waitForExistence(timeout: 15))
+        app.typeKey(.return, modifierFlags: [])
+    }
+
+    func testSmaltiDevWithoutAFeedHasNoUpdateMenuItems() {
+        launch(feed: nil)
+
+        appMenu().click()
+
+        XCTAssertTrue(app.menuBars.menuItems["Acerca de Smalti"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.menuBars.menuItems["Buscar actualizaciones…"].exists)
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    /// The app's own menu, right of the Apple menu.
+    private func appMenu() -> XCUIElement {
+        app.menuBars.firstMatch.children(matching: .menuBarItem).element(boundBy: 1)
+    }
+
     func testSmaltiDevWithoutAFeedOffersNoUpdates() {
         launch(feed: nil)
 

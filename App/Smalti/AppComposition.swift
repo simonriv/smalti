@@ -87,7 +87,6 @@ final class AppComposition {
         }
         do {
             try start(startup)
-            startUpdates()
         } catch {
             fail(error)
         }
@@ -168,14 +167,6 @@ final class AppComposition {
         } catch {
             Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
                 .error("could not create the state directory \(directory.path(percentEncoded: false)): \(error)")
-        }
-    }
-
-    private func startUpdates() {
-        do {
-            try updates?.start()
-        } catch {
-            logger.error("the updater did not start: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -707,13 +698,22 @@ final class AppComposition {
     }
 
     /// F7.6: Release builds read `SUFeedURL`; Debug ones have none and update only in UI tests, with a local feed.
+    /// An updater that does not start counts as none (review 2, M3): ⌘K never offers a check that would do nothing.
     private static func makeUpdates() -> SparkleUpdates? {
         #if DEBUG
             let override = UserDefaults.standard.string(forKey: updateFeedKey).flatMap(URL.init(string:))
         #else
             let override: URL? = nil
         #endif
-        return SparkleUpdates.make(bundle: .main, feedOverride: override)
+        guard let updates = SparkleUpdates.make(bundle: .main, feedOverride: override) else { return nil }
+        do {
+            try updates.start()
+            return updates
+        } catch {
+            Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "updates")
+                .error("the updater did not start: \(String(describing: error), privacy: .public)")
+            return nil
+        }
     }
 
     /// `-SmaltiUpdateFeedURL <url>` (Debug, UI tests): the feed Smalti Dev checks.

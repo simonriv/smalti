@@ -5,13 +5,31 @@ set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 rel="$root/scripts/release"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-total=16; n=0; failures=0
+total=25; n=0; failures=0
 report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
 
 # shellcheck source=/dev/null
 source "$rel/lib.sh"
-[[ "$(build_number 0.7.6)" == 706 && "$(build_number 1.12.3)" == 11203 && "$(build_number 0.8.0-beta.1)" == 800 ]]
+[[ "$(build_number 0.7.6)" == 706 && "$(build_number 1.12.3)" == 11203 && "$(build_number 0.10.0)" == 1000 ]]
 report build_number_follows_the_formula $?
+
+# Review 2 (M2): MINOR or PATCH of 100 or more would collide (0.7.100 = 0.8.0), so it is refused.
+! build_number 0.7.100 > /dev/null 2>&1 && ! build_number 0.100.0 > /dev/null 2>&1
+report build_number_refuses_components_of_100_or_more $?
+
+# Review 2 (I1): prereleases would reach every user through the stable appcast; refused until there are channels.
+out="$(SMALTI_VERSION=0.8.0-beta.1 "$rel/build.sh" v0.8.0-beta.1 "$work/out" 2>&1)"; status=$?
+[[ $status != 0 && "$out" == *"prerelease"* ]]; report build_refuses_prereleases $?
+
+# Review 2 (M1): bump-version.sh sets both versions in the project; a copy, never the real one.
+mkdir -p "$work/bump/App/Smalti.xcodeproj" "$work/bump/scripts/release"
+cp "$root/App/Smalti.xcodeproj/project.pbxproj" "$work/bump/App/Smalti.xcodeproj/"
+cp "$rel/lib.sh" "$rel/bump-version.sh" "$work/bump/scripts/release/" 2>/dev/null
+"$work/bump/scripts/release/bump-version.sh" 0.8.1 > /dev/null 2>&1
+p="$work/bump/App/Smalti.xcodeproj/project.pbxproj"
+[[ "$(grep -c 'MARKETING_VERSION = 0.8.1;' "$p")" -ge 2 && "$(grep -c 'CURRENT_PROJECT_VERSION = 801;' "$p")" -ge 2 \
+  && "$(grep -c 'MARKETING_VERSION = ' "$p")" == "$(grep -c 'MARKETING_VERSION = 0.8.1;' "$p")" ]]
+report bump_version_sets_marketing_and_build_number $?
 
 [[ "$(version_of_tag v0.7.6)" == 0.7.6 ]] && ! version_of_tag 0.7.6 > /dev/null 2>&1 && ! version_of_tag v0.7 > /dev/null 2>&1
 report tag_must_be_vX_Y_Z $?
@@ -50,6 +68,15 @@ report cask_has_version_sha_and_the_spec_stanzas $?
 mkdir -p "$work/style/Casks" && cp "$work/smalti.rb" "$work/style/Casks/smalti.rb"
 (cd "$work/style" && HOMEBREW_NO_AUTO_UPDATE=1 brew style Casks/smalti.rb > /dev/null 2>&1); report cask_passes_brew_style $?
 
+# Review 2 (M8): brew audit --cask --strict, offline, from a throwaway local tap (untapped right after).
+git -C "$work/style" init -q && git -C "$work/style" add -A && git -C "$work/style" -c user.name=t -c user.email=t@localhost commit -qm c
+# Homebrew 7 audits a third-party tap only once trusted (brew trust); the trust is withdrawn with the tap.
+HOMEBREW_NO_AUTO_UPDATE=1 brew tap smaltitest/audit "$work/style" > /dev/null 2>&1 \
+  && brew trust smaltitest/audit > /dev/null 2>&1 \
+  && HOMEBREW_NO_AUTO_UPDATE=1 brew audit --cask --strict smaltitest/audit/smalti > "$work/audit.log" 2>&1
+status=$?; brew untrust smaltitest/audit > /dev/null 2>&1; brew untap smaltitest/audit > /dev/null 2>&1
+report cask_passes_brew_audit_strict $status
+
 # A fake app, a DMG of it, and its contents.
 mkdir -p "$work/app/Smalti.app/Contents/MacOS" && printf '#!/bin/sh\n' > "$work/app/Smalti.app/Contents/MacOS/Smalti"
 "$rel/make-dmg.sh" "$work/app/Smalti.app" "$work/Smalti.dmg" > /dev/null 2>&1
@@ -62,9 +89,15 @@ hdiutil detach -quiet "$mnt" 2>/dev/null
 # Throwaway EdDSA key: signing reads it from stdin and verifies against it.
 key="$(openssl genpkey -algorithm ed25519 2>/dev/null | openssl pkey -outform DER 2>/dev/null | tail -c 32 | base64)"
 SPARKLE_BIN="${SPARKLE_BIN:-$("$rel/fetch-sparkle-tools.sh" "$work/sparkle")}"; export SPARKLE_BIN
-signed="$(printf '%s' "$key" | "$rel/sign-update.sh" "$work/Smalti.dmg")"
+public="$(printf '%s' "$key" | "$rel/public-key.sh")"
+signed="$(printf '%s' "$key" | "$rel/sign-update.sh" "$work/Smalti.dmg" "$public")"
 [[ "$signed" =~ ^[A-Za-z0-9+/=]+\ [0-9]+$ && "${signed#* }" == "$(stat -f %z "$work/Smalti.dmg")" ]]
 report signing_prints_signature_and_length $?
+
+# Review 2 (I2): a key that is not the app's SUPublicEDKey stops the release before anything is published.
+other="$(openssl genpkey -algorithm ed25519 2>/dev/null | openssl pkey -outform DER 2>/dev/null | tail -c 32 | base64)"
+! printf '%s' "$other" | "$rel/sign-update.sh" "$work/Smalti.dmg" "$public" > /dev/null 2>&1
+report signing_refuses_a_key_that_is_not_the_apps $?
 
 # Local stand-ins for smalti-web and the tap.
 git init -q --bare -b main "$work/web.git" && git init -q "$work/web" && mkdir -p "$work/web/public"
@@ -83,6 +116,28 @@ report appcast_branch_prepends_the_item $?
 "$rel/push-appcast.sh" "$work/web.git" v0.7.7 "$work/item.xml" > /dev/null 2>&1 && git clone -q -b release/v0.7.7 "$work/web.git" "$work/web-check2" 2>/dev/null
 [[ $? != 0 ]] || ! grep -q "<title>0.7.6</title>" "$work/web-check2/public/appcast.xml"
 report appcast_item_must_match_the_tag $?
+
+# Review 2 (I3): pushing the same branch again (a rerun) succeeds when nothing changed and fails when it did.
+"$rel/push-appcast.sh" "$work/web.git" v0.7.6 "$work/item.xml" > /dev/null 2>&1; report rerun_with_the_same_item_succeeds $?
+sed 's/length="18432000"/length="1"/' "$work/item.xml" > "$work/item-changed.xml"
+! "$rel/push-appcast.sh" "$work/web.git" v0.7.6 "$work/item-changed.xml" > /dev/null 2>&1
+report rerun_with_a_different_item_fails $?
+
+# Review 2 (C1): with DEPLOY_KEY, both the clone and the push go through ssh with that key (a fake ssh in PATH
+# records its arguments and runs the git command locally), and the key leaves no file behind.
+mkdir -p "$work/sshbin" && cat > "$work/sshbin/ssh" <<'SSH'
+#!/bin/sh
+echo "$@" >> "$SSH_LOG"
+for last; do :; done
+exec sh -c "$last"
+SSH
+chmod +x "$work/sshbin/ssh"
+sed 's/version "0.7.6"/version "0.7.8"/' "$work/smalti.rb" > "$work/smalti-078.rb"; mkdir -p "$work/tmp"
+SSH_LOG="$work/ssh.log" PATH="$work/sshbin:$PATH" DEPLOY_KEY="fake-key" TMPDIR="$work/tmp" \
+  "$rel/push-cask.sh" "github.local:$work/web.git" v0.7.8 "$work/smalti-078.rb" > /dev/null 2>&1
+[[ "$(grep -c -- '-i ' "$work/ssh.log" 2>/dev/null)" -ge 2 ]] && git --git-dir="$work/web.git" rev-parse -q --verify release/v0.7.8 > /dev/null
+report deploy_key_is_used_for_clone_and_push $?
+[[ -d "$work/tmp" && -z "$(find "$work/tmp" -mindepth 1 2>/dev/null)" ]]; report deploy_key_leaves_no_file $?
 
 git init -q --bare -b main "$work/tap.git" && git init -q "$work/tap" && printf '# tap\n' > "$work/tap/README.md"
 git -C "$work/tap" add -A && git -C "$work/tap" -c user.name=t -c user.email=t@localhost commit -qm init \

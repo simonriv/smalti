@@ -81,6 +81,9 @@ fingerprint() { shasum -a 256 "$TEST_STATE/layouts/prueba.json" "$TEST_CONFIG" "
 before_files="$(fingerprint)"
 before_binary="$(shasum -a 256 "$app/Contents/MacOS/Smalti" | cut -d' ' -f1)"
 
+session_stamp="$(stat -f %m "$TEST_STATE/session.json")"
+sleep 1  # the next save must get a later modification time
+
 # The check: N finds N+1 at launch, downloads it in the background and installs it when the user quits.
 python3 -m http.server "$TEST_PORT" --bind 127.0.0.1 --directory "$feed" > "$work/http.log" 2>&1 &
 server=$!
@@ -91,11 +94,19 @@ for _ in $(seq 1 60); do grep -q "GET /Smalti.dmg" "$work/http.log" && break; sl
 sleep 3  # Sparkle verifies and extracts the download before it schedules the install
 test_env_quit || fatal version_n_quits_for_the_update
 version() { plutil -extract CFBundleVersion raw "$app/Contents/Info.plist" 2>/dev/null; }
-for _ in $(seq 1 60); do [[ "$(version)" == 791 ]] && break; sleep 1; done
+if [[ "$mode" == valid ]]; then
+  for _ in $(seq 1 60); do [[ "$(version)" == 791 ]] && break; sleep 1; done
+else
+  sleep 10  # the refusal is immediate; give the installer time to have done anything it would
+fi
 
 if [[ "$mode" == invalid ]]; then
   grep -q "GET /Smalti.dmg" "$work/http.log"; step downloaded_the_update $?
-  [[ "$(version)" == "$(build_number 0.7.90)" ]]; step refused_the_wrong_signature $?
+  # Sparkle's own reason, as SparkleUpdates logs it: SUSparkleErrorDomain 4005 (signature does not match).
+  log show --last 5m --style compact \
+    --predicate "subsystem == \"$TEST_BUNDLE_ID\" AND category == \"updates\"" 2>/dev/null \
+    | grep -q "update aborted: SUSparkleErrorDomain 4005" && [[ "$(version)" == "$(build_number 0.7.90)" ]]
+  step refused_the_wrong_signature $?
   [[ "$(shasum -a 256 "$app/Contents/MacOS/Smalti" | cut -d' ' -f1)" == "$before_binary" ]]; step app_left_identical $?
   [[ "$(fingerprint)" == "$before_files" ]]; step state_untouched $?
   exit $((failures > 0))
@@ -105,7 +116,9 @@ fi
 [[ "$(xattr -r -l "$app" 2>/dev/null | grep -c com.apple.quarantine)" == 0 ]]; step no_quarantine_after_the_update $?
 test_env_open "$app"; test_env_wait_running "$app"; step opens_without_gatekeeper $?
 test_env_quit; step quits $?
-[[ "$(workspaces)" == "$before_workspaces" && "$before_workspaces" == *segundo* ]]; step session_restored $?
+# Restored and saved again by N+1: the same workspaces, in a session.json written after the update.
+[[ "$(workspaces)" == "$before_workspaces" && "$before_workspaces" == *segundo* \
+  && "$(stat -f %m "$TEST_STATE/session.json")" -gt "$session_stamp" ]]; step session_restored $?
 [[ "$(fingerprint)" == "$before_files" ]]; step layout_and_configuration_untouched $?
 requests="$(sed -nE 's/.*"GET ([^ ]+) HTTP.*/\1/p' "$work/http.log" | sort -u | tr '\n' ' ')"
 [[ "$requests" =~ ^(/Smalti.dmg\ |/appcast.xml\ |/notes.html\ )+$ ]]; step only_the_feed_was_requested $?
