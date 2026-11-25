@@ -56,6 +56,11 @@ Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-ass
 - `Reanudar.dc.html`: sin el chip ni la fila de Gemini (Gemini CLI quedó fuera). La tarjeta «Todas las sesiones de agentes» también se abre sola, centrada, con ⌘⇧O; escribir filtra y el texto sale en el lugar del subtítulo. Una fila de respaldo dice «`agy -c` · la última del directorio».
 - `Observatorio.dc.html`: los filtros también se cambian con ⌘⇧F; el pie añade «base de OpenCode».
 
+## Guardas para agentes (F7.5)
+
+- Ningún tablero dibuja la aprobación. La tarjeta va abajo y centrada en el panel (como máximo 560 pt de ancho, 12 pt de margen), con el fondo, el radio y la sombra de la tarjeta de vista previa de `Main.dc.html` y el borde y el punto en el ámbar de «te espera». Muestra «Espera tu aprobación · <workspace>», «1 de N», «<regla> contra **PROD** · <host o causa>», el comando en mono (máximo 8 líneas, con scroll) y «⌘⇧↩ aprobar   ⌘⇧⎋ rechazar   vence en N min». «PROD» va en negrita, sin color nuevo. La cabecera del panel dice «espera tu aprobación · 2m».
+- `Paleta.dc.html`: el grupo nuevo «Esperan tu aprobación» va primero, con «Aprobar “…” en <workspace>» y «Rechazar…». «Proteger secretos en “<proyecto>”» y «Actualizar integración con Claude Code» van en «Configuración», con el estilo de las integraciones.
+
 ## Extras (F7)
 
 - `Observatorio.dc.html`: con telemetría de Claude Code recibida, el detalle añade bajo la línea de compactación, con su mismo estilo, «Telemetría · desde 10:42 · 42 peticiones · mediana 1,4 s · 2 errores de API · $3.12 según Claude Code», y el pie dice «hooks, transcripts y telemetría de Claude Code». Si la telemetría está configurada fuera de Smalti, el pie lo dice.

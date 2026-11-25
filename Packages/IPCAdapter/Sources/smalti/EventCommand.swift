@@ -1,4 +1,5 @@
 import Foundation
+import SmaltiCore
 import SmaltiIPCProtocol
 
 /// What the CLI was asked: its arguments (without the program name), its environment and, read only when needed,
@@ -42,7 +43,7 @@ enum EventCommand {
         return (try? JSONSerialization.data(withJSONObject: kept)) ?? Data()
     }
 
-    static let version = "0.1.0"
+    static let version = "0.2.0"
     static let usageError: Int32 = 64
     static let connectTimeout: Duration = .milliseconds(500)
     /// Longest text kept from a field: the app shows a title or a one-line summary.
@@ -51,18 +52,47 @@ enum EventCommand {
     /// F6 adds what file tools wrote, for the line of "Editados por Claude".
     private static let toolInputFields = ["command", "file_path", "notebook_path", "new_string", "content"]
 
-    static func run(_ invocation: Invocation, transport: any EventTransport) -> Int32 {
+    static func run(
+        _ invocation: Invocation, transport: any EventTransport, guardTransport: any GuardTransport = SocketTransport()
+    ) -> Int32 {
         switch invocation.arguments.first {
         case "--version":
             print("smalti \(version)")
+            return 0
+        case "guard" where invocation.arguments.count == 2:
+            print(
+                GuardCommand.run(invocation, transport: guardTransport, deadline: GuardCommand.deadline), terminator: ""
+            )
+            return 0
+        case "event" where invocation.arguments.count == 2 && invocation.arguments[1] == "PreToolUse":
+            let input = invocation.input()
+            print(preToolUseOutput(input, environment: invocation.environment), terminator: "")
+            forward(
+                hook: "PreToolUse", Invocation(arguments: [], environment: invocation.environment, input: { input }),
+                transport: transport)
             return 0
         case "event" where invocation.arguments.count == 2:
             forward(hook: invocation.arguments[1], invocation, transport: transport)
             return 0
         default:
             FileHandle.standardError.write(
-                Data("uso: smalti event <Hook> | smalti img [carpeta | archivos…] | smalti --version\n".utf8))
+                Data(
+                    "uso: smalti event <Hook> | smalti guard PreToolUse | smalti img [carpeta | archivos…] | smalti --version\n"
+                        .utf8))
             return usageError
+        }
+    }
+
+    /// F7.5: a plugin from before the guard calls `event PreToolUse` with a 5 s timeout, too short to wait for an
+    /// approval: secrets are denied, and what would need approval is denied asking to update the integration.
+    static func preToolUseOutput(_ input: Data, environment: [String: String]) -> String {
+        guard let screened = ScreenedToolUse(input: input, environment: environment) else {
+            return HookOutput.denial(GuardReasons.unreadableInput)
+        }
+        switch screened.verdict {
+        case .allow: return ""
+        case .deny(let denial): return HookOutput.denial(denial.reason)
+        case .ask: return HookOutput.denial(GuardReasons.outdatedIntegration)
         }
     }
 

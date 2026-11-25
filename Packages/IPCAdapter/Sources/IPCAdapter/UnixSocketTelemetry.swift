@@ -8,41 +8,168 @@ import Synchronization
 /// `smalti` CLI, answered with `{"ok":…}`. A bad request is refused without stopping the server. A socket file left
 /// by a crashed instance is replaced; one a live instance answers on is never touched (`socketInUse`). Two instances
 /// of the same build starting in the same instant could both see the file as stale; that window is accepted.
+///
+/// F7.5: a `guard` request also reports its `PreToolUse` event, then becomes a `GuardRequest` and keeps its
+/// connection open until the app replies (at most `guardWaitSeconds`); stopping the server denies every open one.
 @MainActor
-public final class UnixSocketTelemetry: TelemetrySource {
+public final class UnixSocketTelemetry: TelemetrySource, GuardRequests {
+    /// How long a guard connection waits for the app's decision before it is denied.
+    public nonisolated static let guardWaitSeconds = 620
+    /// Guard connections allowed to wait at once; the next one is denied.
+    public nonisolated static let maximumWaitingGuards = 40
+
     private let path: String
     private let listener: SocketListener
     private let stream = AsyncStream<AgentEvent>.makeStream()
+    private let guards = AsyncStream<GuardRequest>.makeStream()
+    private let cancelled = AsyncStream<UUID>.makeStream()
+    private let waiters = GuardWaiters()
 
     public init(socketFile: URL, clock: @escaping @Sendable () -> Date) throws(IPCError) {
         path = socketFile.path(percentEncoded: false)
-        let continuation = stream.continuation
-        listener = try SocketListener(path: path) { line in
-            Self.answer(line, clock: clock, deliver: { continuation.yield($0) })
-        }
+        let delivery = Delivery(
+            events: stream.continuation, guards: guards.continuation, cancelled: cancelled.continuation,
+            waiters: waiters, clock: clock)
+        listener = try SocketListener(path: path) { line, client in delivery.answer(line, client: client) }
     }
 
     public func events() -> AsyncStream<AgentEvent> { stream.stream }
 
-    /// Stops listening and removes the socket file.
+    public func requests() -> AsyncStream<GuardRequest> { guards.stream }
+
+    public func cancellations() -> AsyncStream<UUID> { cancelled.stream }
+
+    /// Stops listening, denies the guard connections still waiting and removes the socket file.
     public func stop() {
         listener.stop()
+        waiters.close(GuardReasons.unreachable)
         stream.continuation.finish()
+        guards.continuation.finish()
+        cancelled.continuation.finish()
     }
+}
 
-    nonisolated private static func answer(
-        _ line: Data, clock: @Sendable () -> Date, deliver: (AgentEvent) -> Void
-    ) -> IPCResponse {
+/// What a connection does with its request, off the main actor.
+private struct Delivery: Sendable {
+    let events: AsyncStream<AgentEvent>.Continuation
+    let guards: AsyncStream<GuardRequest>.Continuation
+    let cancelled: AsyncStream<UUID>.Continuation
+    let waiters: GuardWaiters
+    let clock: @Sendable () -> Date
+
+    func answer(_ line: Data, client: Int32) -> IPCResponse {
         do {
             let request = try IPCCodec.decodeRequest(line)
-            guard request.version == IPCLimits.version, request.kind == "event" else {
-                return IPCResponse(ok: false, error: "unsupported request v\(request.version) \(request.kind)")
+            guard request.version == IPCLimits.version else { return unsupported(request) }
+            switch request.kind {
+            case IPCRequest.eventKind:
+                events.yield(try HookPayloadTranslator.event(request, at: clock()))
+                return IPCResponse(ok: true, error: nil)
+            case IPCRequest.guardKind:
+                return try decide(request, client: client)
+            default:
+                return unsupported(request)
             }
-            deliver(try HookPayloadTranslator.event(request, at: clock()))
-            return IPCResponse(ok: true, error: nil)
         } catch {
             return IPCResponse(ok: false, error: String(describing: error))
         }
+    }
+
+    private func unsupported(_ request: IPCRequest) -> IPCResponse {
+        IPCResponse(ok: false, error: "unsupported request v\(request.version) \(request.kind)")
+    }
+
+    /// Reports the event, hands the request to the app and blocks this connection's thread until it replies.
+    private func decide(_ request: IPCRequest, client: Int32) throws(IPCError) -> IPCResponse {
+        let now = clock()
+        events.yield(try HookPayloadTranslator.guardEvent(request, at: now))
+        guard let waiter = waiters.add() else {
+            return response(.deny(waiters.isClosed ? GuardReasons.unreachable : GuardReasons.tooManyPending))
+        }
+        defer { waiters.remove(waiter) }
+        let guarded = try HookPayloadTranslator.guardRequest(request, at: now) { waiter.resolve($0) }
+        // Review 1: a server stopping right now finished the stream; nobody would ever answer.
+        if case .terminated = guards.yield(guarded) { waiter.resolve(.deny(GuardReasons.unreachable)) }
+        let decision = waiter.wait(seconds: UnixSocketTelemetry.guardWaitSeconds) { Self.hasHungUp(client) }
+        if decision == nil, Self.hasHungUp(client) {
+            // Final review (I2): the hook was cancelled; the app withdraws the request and its card.
+            cancelled.yield(guarded.id)
+            return response(.deny(GuardReasons.cancelled))
+        }
+        return response(decision ?? .deny(GuardReasons.unreachable))
+    }
+
+    /// The CLI never half-closes: end of stream on its connection means it is gone (Claude cancelled the hook).
+    private static func hasHungUp(_ client: Int32) -> Bool {
+        var byte: UInt8 = 0
+        let count = recv(client, &byte, 1, MSG_PEEK | MSG_DONTWAIT)
+        return count == 0 || (count < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+    }
+
+    private func response(_ decision: GuardDecision) -> IPCResponse {
+        switch decision {
+        case .allow: IPCResponse(ok: true, error: nil, decision: .allow, reason: nil)
+        case .deny(let reason): IPCResponse(ok: true, error: nil, decision: .deny, reason: reason)
+        }
+    }
+}
+
+/// One guard connection waiting for its decision; the first decision wins.
+final class GuardWaiter: Sendable {
+    let id = UUID()
+    private let semaphore = DispatchSemaphore(value: 0)
+    private let decision = Mutex<GuardDecision?>(nil)
+
+    func resolve(_ value: GuardDecision) {
+        let isFirst = decision.withLock { current in
+            guard current == nil else { return false }
+            current = value
+            return true
+        }
+        if isFirst { semaphore.signal() }
+    }
+
+    /// Waits for the decision in short slices, giving up early when `isGone` says the asker left.
+    func wait(seconds: Int, isGone: () -> Bool = { false }) -> GuardDecision? {
+        let deadline = DispatchTime.now() + .seconds(seconds)
+        while DispatchTime.now() < deadline {
+            if semaphore.wait(timeout: min(deadline, .now() + .milliseconds(250))) == .success { break }
+            if isGone() { break }
+        }
+        return decision.withLock { $0 }
+    }
+}
+
+/// The guard connections waiting now, so stopping can deny them and their number stays bounded.
+final class GuardWaiters: Sendable {
+    private let waiting = Mutex<[UUID: GuardWaiter]>([:])
+    private let closed = Mutex(false)
+
+    var isClosed: Bool { closed.withLock { $0 } }
+
+    /// A new waiter; nil when the server stopped or too many already wait.
+    func add() -> GuardWaiter? {
+        waiting.withLock { all in
+            guard !isClosed, all.count < UnixSocketTelemetry.maximumWaitingGuards else { return nil }
+            let waiter = GuardWaiter()
+            all[waiter.id] = waiter
+            return waiter
+        }
+    }
+
+    func remove(_ waiter: GuardWaiter) {
+        _ = waiting.withLock { $0.removeValue(forKey: waiter.id) }
+    }
+
+    /// From now on no guard waits: those waiting are denied, and new ones are refused.
+    func close(_ reason: String) {
+        closed.withLock { $0 = true }
+        denyAll(reason)
+    }
+
+    func denyAll(_ reason: String) {
+        let all = waiting.withLock { Array($0.values) }
+        for waiter in all { waiter.resolve(.deny(reason)) }
     }
 }
 
@@ -58,7 +185,7 @@ private final class SocketListener: @unchecked Sendable {
     private let connections = DispatchQueue(label: "dev.simonriv.smalti.ipc.connections", attributes: .concurrent)
     private let stopped = Mutex(false)
 
-    init(path: String, handle: @escaping @Sendable (Data) -> IPCResponse) throws(IPCError) {
+    init(path: String, handle: @escaping @Sendable (Data, Int32) -> IPCResponse) throws(IPCError) {
         try UnixSocketFile.checkLength(path)
         try UnixSocketFile.claim(path)
         self.path = path
@@ -100,7 +227,7 @@ private final class SocketListener: @unchecked Sendable {
         unlink(path)
     }
 
-    private static func serve(_ client: Int32, handle: (Data) -> IPCResponse) {
+    private static func serve(_ client: Int32, handle: (Data, Int32) -> IPCResponse) {
         guard client >= 0 else { return }
         defer { close(client) }
         // A client that hangs up early (a probe, a killed CLI) must not take the app down with SIGPIPE.
@@ -109,7 +236,7 @@ private final class SocketListener: @unchecked Sendable {
         var timeout = timeval(tv_sec: readTimeoutSeconds, tv_usec: 0)
         setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         let response =
-            readLine(client).map(handle)
+            readLine(client).map { handle($0, client) }
             ?? IPCResponse(ok: false, error: "message over \(IPCLimits.maxMessageBytes) bytes")
         guard let data = try? IPCCodec.encode(response) else { return }
         _ = data.withUnsafeBytes { write(client, $0.baseAddress, data.count) }

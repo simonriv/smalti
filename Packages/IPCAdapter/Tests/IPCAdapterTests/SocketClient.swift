@@ -47,6 +47,18 @@ enum SocketClient {
         return readAll(fd)
     }
 
+    /// Writes `line` and keeps the connection open, as the `smalti` CLI does; the caller reads or closes.
+    static func openWriting(_ line: Data, to path: String) -> Int32? {
+        guard let fd = connected(path) else { return nil }
+        _ = line.withUnsafeBytes { write(fd, $0.baseAddress, line.count) }
+        return fd
+    }
+
+    /// Reads until the peer closes.
+    static func readAll(from fd: Int32) -> Data {
+        readAll(fd)
+    }
+
     /// Connects and says nothing for `duration`.
     static func holdOpenSilently(_ path: String, for duration: Duration) {
         guard let fd = connected(path) else { return }

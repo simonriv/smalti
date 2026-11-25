@@ -215,7 +215,7 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
     - `SystemMetrics` → métricas de CPU, GPU y memoria de macOS sin sudo.
     - `ConfigStore` → TOML. `Notifier` → notificaciones de macOS.
 
-**Plugin de Claude Code:** hooks (`SessionStart`, `Stop`, `Notification`, `PostToolUse`) que llaman `smalti event …`; el CLI reenvía al socket de la app. Un solo plugin alimenta estado de paneles, IDs de sesión, observatorio y enlaces a Neovim.
+**Plugin de Claude Code:** hooks (`SessionStart`, `Stop`, `Notification`, `PostToolUse`) que llaman `smalti event …`; el CLI reenvía al socket de la app. Un solo plugin alimenta estado de paneles, IDs de sesión, observatorio y enlaces a Neovim. Desde F7.5, `PreToolUse` llama a `smalti guard`: deniega la lectura de secretos y retiene los comandos destructivos hasta que el usuario los aprueba en Smalti (la conexión del socket espera la respuesta); falla cerrado si Smalti no contesta.
 
 ## Decisiones
 
@@ -266,7 +266,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
 8. **F7 · Extras.** Layouts compartibles y receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
     - **F7.5 · Guardas para agentes.** Bloqueo de lectura de secretos y guardia de comandos destructivos con aprobación nativa (evaluación de `smalti-diferenciacion.md`, Simón, 2026-11-25).
-    - **F7.6 · Distribución y actualizaciones.** Firma Developer ID y notarización, Sparkle con appcast en el dominio de la web, DMG y Homebrew, pipeline de release.
+    - **F7.6 · Distribución y actualizaciones.** Sin pagar el Apple Developer Program: firma ad hoc con primera apertura guiada, tap propio de Homebrew, Sparkle con firma EdDSA y appcast en el dominio de la web, DMG, pipeline de release. Notarización solo si las donaciones la cubren.
     - **F7.7 · Primer uso e inglés.** Interfaz en inglés y español, primer arranque guiado, valores por defecto neutrales, privacidad explícita.
 9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
     - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.

@@ -1,5 +1,6 @@
 """Tests for the mutant generator of scripts/mutation/mutate.py."""
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -215,3 +216,19 @@ class StrayHelpers(unittest.TestCase):
             self.assertIsNone(other.poll())
             other.kill()
             os.waitpid(other.pid, 0)
+
+
+class Runner(unittest.TestCase):
+    def test_timeout_with_a_cut_character_is_a_timeout(self):
+        # F7.5: a test printed "•••" and the timeout cut it mid-character; decoding must not crash the run.
+        script = "import sys, time; sys.stdout.buffer.write(b'\\xe2\\x80'); sys.stdout.flush(); time.sleep(10)"
+
+        result = run([sys.executable, "-c", script], Path(tempfile.gettempdir()), 1)
+
+        self.assertIsNone(result)
+
+    def test_invalid_utf8_output_is_kept(self):
+        result = run([sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'ok\\xff')"], Path("."), 10)
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result.stdout.startswith("ok"))

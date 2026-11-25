@@ -361,4 +361,32 @@
 - [x] Revisión intermedia 2 (0 críticos, 2 importantes, 9 menores; corregidos, I1 como enmienda 7) + regresión de UI (64/65 → 13/13 tras la tanda; 2 pruebas viejas rotas desde F6 arregladas) + mutación incremental (100 %, 107 mutantes)
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones (C2 ✅: A12/A14 sin cambio, GPU alternada 9,18/8,65/8,28 %, C1 independiente, C13 sin empeorar), capturas, checklist (`docs/specs/F7-checklist.md`), revisión final (2 importantes, 3 menores, corregidos), mutación de la fase 97,8 % (4 sobrevivientes muertos y verificados a mano; completa detenida por decisión de Simón)
-- [ ] T12 · 0.7.0, PRs y despliegue
+- [x] T12 · 0.7.0, PRs #37 y #38, despliegue (0.6.0 en `/Applications/Smalti.app.old`)
+
+## F7.5 · Guardas para agentes
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7.5-guardas.md`): guardia en el CLI con reglas de `SmaltiCore`, aprobación nativa, falla cerrado en tres capas (`onFailure: "block"`, CLI, app); PocketOS cubierto por la regla de APIs de proveedores; Simón aprobó de antemano spec, plan, recomendaciones, merges y despliegue
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7.5-guardas.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [x] T1 · `ShellCommandLine`
+- [x] T2 · `SecretPaths` y reglas de secretos
+- [x] T3 · Reglas destructivas, entorno y redacción
+- [x] T4 · `ScreenToolUse` y `[guards]`
+- [x] T5 · `AgentApprovals` y estado del panel
+- [x] T6 · `ProtectProjectSecrets`, integración desactualizada y ⌘K
+#### Bloque 2 · Adaptadores
+- [x] T7 · Protocolo `guard`, servidor y CLI
+- [x] T8 · `ClaudeProjectPermissions`, versión del plugin y `[guards]` en TOML
+- [x] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App
+- [x] T9 · Aprobaciones en la app
+- [x] T10 · Proteger secretos, integración desactualizada y documentos
+- [x] Revisión intermedia 2 + regresión de UI + mutación incremental
+#### Bloque 4 · Cierre
+- [x] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
+- [ ] T12 · 0.7.5, PRs y despliegue

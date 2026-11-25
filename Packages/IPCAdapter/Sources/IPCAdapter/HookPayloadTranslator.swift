@@ -24,6 +24,49 @@ public enum HookPayloadTranslator {
             edit: hook == .postToolUse ? edit(fields) : nil)
     }
 
+    /// F7.5: the tool call a `guard` request holds, with the CLI's own verdict and how to answer it.
+    public static func guardRequest(
+        _ request: IPCRequest, at date: Date, reply: @escaping @Sendable (GuardDecision) -> Void
+    ) throws(IPCError) -> GuardRequest {
+        guard let uuid = UUID(uuidString: request.pane) else { throw .invalidRequest(reason: "pane \(request.pane)") }
+        let fields = (try? JSONSerialization.jsonObject(with: request.payload)) as? [String: Any] ?? [:]
+        guard let tool = fields["tool_name"] as? String else {
+            throw .invalidRequest(reason: "guard without tool_name")
+        }
+        let input = fields["tool_input"] as? [String: Any] ?? [:]
+        let use = ToolUse(
+            tool: tool, command: input["command"] as? String,
+            filePath: input["file_path"] as? String ?? input["notebook_path"] as? String,
+            searchPath: input["path"] as? String, glob: input["glob"] as? String, cwd: fields["cwd"] as? String)
+        return GuardRequest(
+            id: UUID(), pane: PaneID(rawValue: uuid), use: use,
+            environmentHosts: fields["env_database_hosts"] as? [String] ?? [],
+            localVerdict: localVerdict(fields), receivedAt: date, isTruncated: fields["truncated"] as? Bool ?? false,
+            reply: reply)
+    }
+
+    /// The `PreToolUse` event a guard request also reports, with F2's limits: the summary at most
+    /// `maxSummaryLength` characters, and redacted (review 1).
+    public static func guardEvent(_ request: IPCRequest, at date: Date) throws(IPCError) -> AgentEvent {
+        let event = try self.event(request, at: date)
+        return AgentEvent(
+            pane: event.pane, hook: event.hook, at: event.at, sessionID: event.sessionID, prompt: event.prompt,
+            toolSummary: event.toolSummary.map { CommandRedaction.redacted(String($0.prefix(maxSummaryLength))) },
+            message: event.message, source: event.source, edit: event.edit)
+    }
+
+    public static let maxSummaryLength = 2_000
+
+    /// The CLI's verdict as it travels: only a denial carries what the app needs (its reason).
+    private static func localVerdict(_ fields: [String: Any]) -> GuardVerdict {
+        switch fields["local_verdict"] as? String {
+        case "allow": .allow
+        case "deny":
+            .deny(GuardDenial(kind: .secret(path: ""), reason: fields["local_reason"] as? String ?? ""))
+        default: .ask(ApprovalSubject(command: "", findings: []))
+        }
+    }
+
     private static let fileTools: Set<String> = ["Edit", "MultiEdit", "Write", "NotebookEdit"]
 
     /// F6: which file a file tool wrote and the text it wrote, for "Editados por Claude".

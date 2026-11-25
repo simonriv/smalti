@@ -471,7 +471,8 @@ final class WindowComposition {
 
     private var keyContext: KeyContext {
         if palette?.isOpen == true { return .overlay(allowing: [.paletteOpen, .helpShow]) }
-        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen]) }
+        // F7.5 review 2: the approval keys are no text keys; they decide even over the help or the search bar.
+        if help?.isOpen == true { return .overlay(allowing: [.helpShow, .paletteOpen, .guardApprove, .guardReject]) }
         // F5: in the studio ⌘↑ and ⌘↓ move modules; only its own commands, ⌘K and the help act. ⌘K and the help
         // on top of it come first (block 5 review, M3).
         if studio?.isOpen == true {
@@ -480,12 +481,16 @@ final class WindowComposition {
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
         if feedback?.isOpen == true { return KeyContext(allowing: []) }
         if search?.isOpen == true {
-            return .overlay(allowing: [.searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow])
+            return .overlay(allowing: [
+                .searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow, .guardApprove, .guardReject,
+            ])
         }
         // The ⌃R palette owns the keyboard: no tiling shortcut acts while it is open.
         if hasHistoryPaletteOpen { return .overlay(allowing: []) }
         // F6: the ⌘⇧O card owns the keyboard (⌘1…⌘5 change its chips, ⌘V pastes in its field).
-        if sessions?.isOpen == true { return .overlay(allowing: [.harnessSearch, .paletteOpen, .helpShow]) }
+        if sessions?.isOpen == true {
+            return .overlay(allowing: [.harnessSearch, .paletteOpen, .helpShow, .guardApprove, .guardReject])
+        }
         if observatoryScreen?.isOpen == true {
             return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod, .observatoryFilter])
         }

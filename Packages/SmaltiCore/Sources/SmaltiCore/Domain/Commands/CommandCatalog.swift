@@ -6,15 +6,48 @@ public enum CommandCatalog {
 
     public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
         let context = Context(workspaces: state.workspaces, keymap: keymap, integrations: state.integrations)
-        return tilingCommands(context, layouts)
+        return state.pendingApprovals.flatMap(approvalCommands)
+            + tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
             + workspaceCommands(context)
             + state.savedLayouts.flatMap { [restoreCommand($0), exportCommand($0)] }
             + windowCommands(context)
             + configurationCommands(context)
+            + (state.secretsProject.map { [secretsCommand($0)] } ?? [])
             + helpCommands(context)
             + state.editedFiles.map { editedFileCommand($0, now: state.now) }
+    }
+
+    /// F7.5: the longest part of a command an approval entry quotes.
+    static let approvalQuoteLength = 40
+
+    /// «Aprobar “terraform destroy” en rizaria» and its «Rechazar…», with the rule and the environment below.
+    private static func approvalCommands(_ entry: ApprovalEntry) -> [Command] {
+        let subject = entry.approval.subject
+        let command = subject.command
+        let quote =
+            command.count > approvalQuoteLength ? String(command.prefix(approvalQuoteLength)) + "…" : command
+        // Final review: a quoted command is cut, so the subtitle carries it whole (redacted).
+        let whole = command.count > approvalQuoteLength ? command : nil
+        let subtitle = [subject.summary, subject.environment.detail, whole].compactMap { $0 }.joined(separator: " · ")
+        return [
+            (CommandID.guardApprove(id: entry.approval.id), "Aprobar"),
+            (CommandID.guardReject(id: entry.approval.id), "Rechazar"),
+        ].map { id, verb in
+            Command(
+                id: id, title: "\(verb) “\(quote)” en \(entry.workspace)", subtitle: subtitle, group: .approvals,
+                shortcut: nil, isCurrent: false)
+        }
+    }
+
+    /// F7.5: «Proteger secretos en “rizaria”» or its undo, whichever applies.
+    private static func secretsCommand(_ project: SecretsProjectState) -> Command {
+        let (id, title) =
+            project.isProtected
+            ? (CommandID.secretsUnprotect, "Quitar protección de secretos en “\(project.name)”")
+            : (CommandID.secretsProtect, "Proteger secretos en “\(project.name)”")
+        return Command(id: id, title: title, subtitle: nil, group: .configuration, shortcut: nil, isCurrent: false)
     }
 
     /// "reminder.service.ts", "línea 42 · hace 2 min".
@@ -216,6 +249,10 @@ public struct CatalogState: Sendable {
     /// F6: what the focused pane's Claude edited, newest first, and the time their age is told from.
     public let editedFiles: [EditedFile]
     public let now: Date
+    /// F7.5: the commands waiting for approval in every window, oldest first.
+    public var pendingApprovals: [ApprovalEntry] = []
+    /// F7.5: the focused pane's project and whether its secrets are protected; nil without a pane.
+    public var secretsProject: SecretsProjectState?
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
@@ -226,6 +263,38 @@ public struct CatalogState: Sendable {
         self.integrations = integrations
         self.editedFiles = editedFiles
         self.now = now
+    }
+
+    /// F7.5: the same state plus approvals and the secrets project.
+    public init(
+        workspaces: WorkspaceSet, integrations: [IntegrationID: IntegrationState] = [:],
+        pendingApprovals: [ApprovalEntry] = [], secretsProject: SecretsProjectState? = nil
+    ) {
+        self.init(workspaces: workspaces, savedLayouts: [], integrations: integrations, editedFiles: [], now: Date())
+        self.pendingApprovals = pendingApprovals
+        self.secretsProject = secretsProject
+    }
+}
+
+/// A waiting command and the workspace it waits in, as ⌘K lists it.
+public struct ApprovalEntry: Equatable, Sendable {
+    public let approval: PendingApproval
+    public let workspace: String
+
+    public init(approval: PendingApproval, workspace: String) {
+        self.approval = approval
+        self.workspace = workspace
+    }
+}
+
+/// The focused pane's project for the secret rules: its folder name and whether Smalti's rules are in place.
+public struct SecretsProjectState: Equatable, Sendable {
+    public let name: String
+    public let isProtected: Bool
+
+    public init(name: String, isProtected: Bool) {
+        self.name = name
+        self.isProtected = isProtected
     }
 }
 

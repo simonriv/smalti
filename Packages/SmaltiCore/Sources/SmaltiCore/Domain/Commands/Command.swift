@@ -1,5 +1,7 @@
 /// Section of the command palette a command is listed under.
 public enum CommandGroup: String, Sendable {
+    /// F7.5: commands Smalti holds until the user decides.
+    case approvals = "Esperan tu aprobación"
     case tiling = "Tiling"
     case panes = "Paneles"
     case workspaces = "Workspaces y sesiones"

@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 
 @MainActor
@@ -46,5 +47,46 @@ public final class FakeHarnessIntegration: HarnessIntegration {
     public var installState: IntegrationState {
         if isMissing { return .unknown }
         return installed ? .installed : .notInstalled
+    }
+}
+
+/// F7.5: guarded tool calls sent by hand.
+@MainActor
+public final class FakeGuardRequests: GuardRequests {
+    private let stream = AsyncStream<GuardRequest>.makeStream()
+
+    public init() {}
+
+    public func requests() -> AsyncStream<GuardRequest> { stream.stream }
+
+    private let cancelled = AsyncStream<UUID>.makeStream()
+
+    public func cancellations() -> AsyncStream<UUID> { cancelled.stream }
+
+    public func send(_ request: GuardRequest) {
+        stream.continuation.yield(request)
+    }
+}
+
+/// F7.5: a project's deny rules, kept in memory.
+public final class InMemoryProjectPermissions: ProjectPermissions, @unchecked Sendable {
+    // Only tests touch it, from one task at a time.
+    public var rules: [String: [String]]
+    public var failure: ProjectPermissionsError?
+    public private(set) var writes = 0
+
+    public init(rules: [String: [String]] = [:]) {
+        self.rules = rules
+    }
+
+    public func deniedRules(in project: String) throws(ProjectPermissionsError) -> [String] {
+        if let failure { throw failure }
+        return rules[project] ?? []
+    }
+
+    public func setDeniedRules(_ rules: [String], in project: String) throws(ProjectPermissionsError) {
+        if let failure { throw failure }
+        writes += 1
+        self.rules[project] = rules
     }
 }

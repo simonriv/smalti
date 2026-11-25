@@ -32,6 +32,14 @@ public enum IntegrationID: CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// F7.5: reinstalls an integration older than this Smalti's.
+    public var updateTitle: String {
+        switch self {
+        case .claudePlugin: "Actualizar integración con Claude Code"
+        case .claudecodeNvim: "Actualizar claudecode.nvim"
+        }
+    }
+
     /// The status bar line after a successful install.
     public var installedText: String {
         switch self {
@@ -52,6 +60,7 @@ public enum IntegrationID: CaseIterable, Hashable, Sendable {
         switch state {
         case .notInstalled: (installCommand, installTitle)
         case .installed: (uninstallCommand, uninstallTitle)
+        case .outdated: (installCommand, updateTitle)
         case .unknown: nil
         }
     }

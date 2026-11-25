@@ -15,6 +15,8 @@ final class PaneContainerView: NSView {
     private let header: PaneHeaderView
     /// While panes move, the terminal keeps its final size and only the frame animates (spec: no blank frames).
     private var frozenContentSize: NSSize?
+    /// F7.5: the oldest command waiting for approval in this pane, over the bottom of the terminal.
+    private var approvalCard: ApprovalCardView?
 
     init(pane: PaneID, theme: Theme) {
         self.pane = pane
@@ -47,7 +49,8 @@ final class PaneContainerView: NSView {
         // Frame-based: `layout()` sizes it, and `freezeContent` can hold it during an animation.
         view.translatesAutoresizingMaskIntoConstraints = true
         view.autoresizingMask = []
-        clip.addSubview(view)
+        // Review 2: a new terminal view goes under the approval card, never over it.
+        clip.addSubview(view, positioned: .below, relativeTo: approvalCard)
         needsLayout = true
     }
 
@@ -71,6 +74,35 @@ final class PaneContainerView: NSView {
         glow.shadowRadius = theme.focus.glowRadius / 2
         glow.shadowOffset = .zero
         setAccessibilityValue(isFocused ? "focused" : nil)
+    }
+
+    /// F7.5: shows the card while a command waits for approval here, and removes it when none does.
+    func showApproval(_ content: ApprovalCardContent?) {
+        guard let content else {
+            approvalCard?.removeFromSuperview()
+            approvalCard = nil
+            return
+        }
+        // Review 2: a card styled with another theme is built again.
+        if let shown = approvalCard, shown.theme != theme {
+            shown.removeFromSuperview()
+            approvalCard = nil
+        }
+        let card = approvalCard ?? ApprovalCardView(theme: theme)
+        if approvalCard == nil {
+            approvalCard = card
+            clip.addSubview(card, positioned: .above, relativeTo: nil)
+        }
+        card.show(content)
+        needsLayout = true
+    }
+
+    private func layoutApprovalCard() {
+        guard let card = approvalCard else { return }
+        let tokens = theme.approvalCard
+        let width = max(0, min(bounds.width - tokens.margin * 2, tokens.maximumWidth))
+        let height = max(0, min(card.height(for: width), bounds.height - theme.header.height - tokens.margin * 2))
+        card.frame = NSRect(x: (bounds.width - width) / 2, y: tokens.margin, width: width, height: height)
     }
 
     /// Keeps the terminal at `size` until `unfreezeContent()`, so a frame animation never resizes the surface.
@@ -110,6 +142,7 @@ final class PaneContainerView: NSView {
         let headerHeight = min(theme.header.height, bounds.height)
         header.frame = NSRect(x: 0, y: bounds.height - headerHeight, width: bounds.width, height: headerHeight)
         layoutGlow()
+        layoutApprovalCard()
         guard frozenContentSize == nil else { return }
         terminalView?.frame = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height - headerHeight)
     }
