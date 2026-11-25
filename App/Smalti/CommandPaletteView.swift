@@ -7,11 +7,10 @@ import SmaltiCore
 final class CommandPaletteView: NSView {
     let field = PaletteField()
     private let theme: Theme
-    private let list = NSStackView()
+    private let table = NSTableView()
+    private let source = PaletteListSource()
     private let scroll = NSScrollView()
     private var scrollHeight: NSLayoutConstraint?
-    /// The row the list keeps in view while its frames settle; only the latest one counts.
-    private weak var revealedRow: NSView?
     /// Under the list; hidden with it so the field and the footer never show a doubled line.
     private let listSeparator = NSView()
     private var navigateHint: NSView?
@@ -28,56 +27,43 @@ final class CommandPaletteView: NSView {
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
 
-    /// Rows and group labels in display order; the list grows with them up to `maximumListHeight`.
-    func show(_ views: [NSView], maximumListHeight: Double) {
-        list.setViews(views, in: .top)
+    /// The list's rows: the table builds only the ones in view, and scrolls through all of them (F5.6). The list
+    /// grows with them up to `maximumListHeight`.
+    func show(_ content: PaletteListContent, maximumListHeight: Double) {
+        source.content = content
+        table.reloadData()
         fitList(maximumHeight: maximumListHeight)
-        scroll.isHidden = views.isEmpty
-        listSeparator.isHidden = views.isEmpty
+        scroll.isHidden = content.count == 0
+        listSeparator.isHidden = content.count == 0
     }
 
     /// The list grows with its rows up to `maximumHeight` (recomputed when the window resizes).
     func fitList(maximumHeight: Double) {
-        list.layoutSubtreeIfNeeded()
-        scrollHeight?.constant = min(list.fittingSize.height, maximumHeight)
+        let palette = theme.palette
+        let rows = (0..<source.content.count).reduce(0) { $0 + source.content.height($1) }
+        let height = source.content.count == 0 ? 0 : rows + palette.listPaddingTop + palette.listPaddingBottom
+        scrollHeight?.constant = min(height, maximumHeight)
     }
 
-    /// Scrolls the list just enough to show `row` whole, with its group label when it opens a group. The window of
-    /// built rows counts rows only, while group labels take height too, so the selection can sit below the clipped
-    /// edge without this. Rows were just rebuilt and their frames settle in later layout passes, so the row is kept
-    /// and shown again whenever the list changes size, until another row is revealed.
-    func reveal(_ row: NSView) {
-        revealedRow = row
-        showRevealedRow()
-        DispatchQueue.main.async { [weak self] in self?.showRevealedRow() }
+    /// The row of the table at `index`, if it is built (in view).
+    func builtView(at index: Int) -> NSView? {
+        guard index >= 0, index < table.numberOfRows else { return nil }
+        return table.view(atColumn: 0, row: index, makeIfNecessary: false)
     }
 
-    private func showRevealedRow() {
-        // The rows may have been replaced (rename mode); a detached row has no frame to show.
-        guard let row = revealedRow, let document = scroll.documentView, row.isDescendant(of: document) else { return }
-        window?.layoutIfNeeded()
-        // The first row needs no frame at all: the list goes back to its top. Right after a wrap from the last row,
-        // the rebuilt stack's frames can still be one row off, and that row would hide the top again.
-        if opensTheList(row) {
-            scroll.contentView.scroll(to: .zero)
+    /// Scrolls just enough to show row `index` whole, with the group label above it when `label` names one; the
+    /// first rows take the list back to its top.
+    func reveal(_ index: Int, label: Int?) {
+        guard index >= 0, index < table.numberOfRows else { return }
+        table.layoutSubtreeIfNeeded()
+        if (label ?? index) == 0 {
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: -scroll.contentInsets.top))
             scroll.reflectScrolledClipView(scroll.contentView)
             return
         }
-        var target = row.convert(row.bounds, to: document)
-        if let label = groupLabel(above: row) { target = target.union(label.convert(label.bounds, to: document)) }
-        scroll.contentView.scrollToVisible(target)
-        scroll.reflectScrolledClipView(scroll.contentView)
-    }
-
-    private func opensTheList(_ row: NSView) -> Bool {
-        let views = list.arrangedSubviews
-        return views.first === row || (views.first is CommandGroupLabel && views.dropFirst().first === row)
-    }
-
-    private func groupLabel(above row: NSView) -> NSView? {
-        let views = list.arrangedSubviews
-        guard let index = views.firstIndex(of: row), index > 0 else { return nil }
-        return views[index - 1] is CommandGroupLabel ? views[index - 1] : nil
+        var target = table.rect(ofRow: index)
+        if let label { target = target.union(table.rect(ofRow: label)) }
+        table.scrollToVisible(target)
     }
 
     /// The rename prompt has nothing to navigate; only "↵ ejecutar" applies.
@@ -119,29 +105,27 @@ final class CommandPaletteView: NSView {
 
     private func listArea() -> NSView {
         let palette = theme.palette
-        list.orientation = .vertical
-        list.alignment = .width
-        list.spacing = 0
-        list.edgeInsets = NSEdgeInsets(
-            top: palette.listPaddingTop, left: palette.listPaddingHorizontal, bottom: palette.listPaddingBottom,
-            right: palette.listPaddingHorizontal)
-        let document = FlippedView()
-        document.translatesAutoresizingMaskIntoConstraints = false
-        document.postsFrameChangedNotifications = true
-        NotificationCenter.default.addObserver(
-            forName: NSView.frameDidChangeNotification, object: document, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.showRevealedRow() }
-        }
-        list.translatesAutoresizingMaskIntoConstraints = false
-        document.addSubview(list)
-        pin(list, to: document)
-        scroll.documentView = document
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("command"))
+        table.addTableColumn(column)
+        table.headerView = nil
+        table.style = .plain
+        table.intercellSpacing = .zero
+        table.backgroundColor = .clear
+        table.selectionHighlightStyle = .none
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        table.focusRingType = .none
+        table.refusesFirstResponder = true
+        source.horizontalPadding = palette.listPaddingHorizontal
+        table.dataSource = source
+        table.delegate = source
+        scroll.documentView = table
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.contentInsets = NSEdgeInsets(
+            top: palette.listPaddingTop, left: 0, bottom: palette.listPaddingBottom, right: 0)
         scroll.setAccessibilityIdentifier("smalti.palette.list")
-        document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
         scrollHeight = scroll.heightAnchor.constraint(equalToConstant: 0)
         scrollHeight?.isActive = true
         return scroll
@@ -186,9 +170,41 @@ final class CommandPaletteView: NSView {
     }
 }
 
-/// Lays the row list out top-down inside the scroll view.
-private final class FlippedView: NSView {
-    override var isFlipped: Bool { true }
+/// What the palette list shows: how many rows, how tall each one is and the view of each (built on demand).
+@MainActor
+struct PaletteListContent {
+    static let empty = PaletteListContent(count: 0, height: { _ in 0 }, view: { _ in NSView() })
+
+    let count: Int
+    let height: (Int) -> Double
+    let view: (Int) -> NSView
+}
+
+/// The table's data source and delegate: rows come from `content`, inset by the list's horizontal padding.
+@MainActor
+private final class PaletteListSource: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    var content = PaletteListContent.empty
+    var horizontalPadding = 0.0
+
+    func numberOfRows(in tableView: NSTableView) -> Int { content.count }
+
+    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { content.height(row) }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let item = content.view(row)
+        let cell = NSView()
+        item.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(item)
+        NSLayoutConstraint.activate([
+            item.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: horizontalPadding),
+            item.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -horizontalPadding),
+            item.topAnchor.constraint(equalTo: cell.topAnchor),
+            item.bottomAnchor.constraint(equalTo: cell.bottomAnchor),
+        ])
+        return cell
+    }
+
+    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool { false }
 }
 
 /// The palette's text field. Smalti has no Edit menu (the terminal owns ⌘C/⌘V), so the editing shortcuts are

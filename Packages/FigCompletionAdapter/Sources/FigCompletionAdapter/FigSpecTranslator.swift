@@ -45,7 +45,7 @@ struct FigSpecTranslator {
             suggestions: Self.elements(of: value["suggestions"]).compactMap(Self.suggestion(from:)),
             templates: Self.templates(of: value["template"]),
             generators: Self.elements(of: value["generators"]).map { register($0, path: path) },
-            isVariadic: value["isVariadic"].toBool())
+            isVariadic: value["isVariadic"].toBool(), isCommand: value["isCommand"].toBool())
     }
 
     private mutating func register(_ generator: JSValue, path: [String]) -> GeneratorID {

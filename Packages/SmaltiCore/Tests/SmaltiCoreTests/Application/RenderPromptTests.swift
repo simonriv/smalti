@@ -378,6 +378,7 @@ struct RenderPromptStyleDeliveryTests {
 
     private final class Settings {
         var appearance = AppearanceSettings.obsidian
+        var highlighting = true
     }
 
     private func make(_ settings: Settings) -> RenderPrompt {
@@ -386,7 +387,7 @@ struct RenderPromptStyleDeliveryTests {
             environment: PromptEnvironment(
                 settings: { (PromptConfig.standard, ThemeCatalog.apply(settings.appearance)) },
                 agents: { _ in WaitingAgents() }, workspace: { _ in nil }, home: "/Users/simon",
-                now: { Date(timeIntervalSince1970: 0) }))
+                now: { Date(timeIntervalSince1970: 0) }, highlighting: { settings.highlighting }))
     }
 
     private let shell = ShellContext(
@@ -395,25 +396,50 @@ struct RenderPromptStyleDeliveryTests {
     @Test func styleNeverDeliveredIsPending() {
         let render = make(Settings())
 
-        #expect(render.pendingStyle(for: pane) == render.styleMessage())
+        #expect(render.pendingStyles(for: pane) == render.styleMessages())
     }
 
     @Test func deliveredStyleIsNotPending() {
         let render = make(Settings())
 
-        render.styleDelivered(render.styleMessage(), to: pane)
+        render.stylesDelivered(render.styleMessages(), to: pane)
 
-        #expect(render.pendingStyle(for: pane) == nil)
+        #expect(render.pendingStyles(for: pane).isEmpty)
     }
 
     @Test func newThemeMakesTheStylePendingAgain() {
         let settings = Settings()
         let render = make(settings)
-        render.styleDelivered(render.styleMessage(), to: pane)
+        render.stylesDelivered(render.styleMessages(), to: pane)
 
         settings.appearance.theme = .niebla
 
-        #expect(render.pendingStyle(for: pane) == render.styleMessage())
+        #expect(render.pendingStyles(for: pane) == render.styleMessages())
+    }
+
+    @Test func styleMessagesIncludeHighlight() {
+        let settings = Settings()
+        let render = make(settings)
+        let palette = ThemeCatalog.apply(settings.appearance).theme.highlightPalette
+
+        #expect(render.styleMessages() == [render.styleMessage(), .highlightStyle(palette)])
+    }
+
+    @Test func highlightOffWhenSettingFalse() {
+        let settings = Settings()
+        settings.highlighting = false
+
+        #expect(make(settings).styleMessages().last == .highlightStyle(nil))
+    }
+
+    @Test func highlightingChangeMakesStylesPendingAgain() {
+        let settings = Settings()
+        let render = make(settings)
+        render.stylesDelivered(render.styleMessages(), to: pane)
+
+        settings.highlighting = false
+
+        #expect(render.pendingStyles(for: pane) == render.styleMessages())
     }
 
     @Test func quietShellsGetTheirPromptAgain() async {

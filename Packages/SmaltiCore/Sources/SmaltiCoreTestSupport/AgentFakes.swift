@@ -27,6 +27,8 @@ public final class RecordingNotifier: Notifier {
 @MainActor
 public final class FakeHarnessIntegration: HarnessIntegration {
     public var failure: IntegrationError?
+    /// The harness is not installed: its state cannot be known.
+    public var isMissing = false
     private var installed = false
 
     public init() {}
@@ -41,5 +43,8 @@ public final class FakeHarnessIntegration: HarnessIntegration {
         installed = false
     }
 
-    public var isInstalled: Bool { installed }
+    public var installState: IntegrationState {
+        if isMissing { return .unknown }
+        return installed ? .installed : .notInstalled
+    }
 }

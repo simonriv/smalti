@@ -24,7 +24,8 @@ struct MenuModelTests {
     ) -> MenuBar {
         let set = set ?? workspaces()
         return MenuModel.bar(
-            keymap: keymap, commands: CommandCatalog.commands(for: set, keymap: keymap, layouts: .standard),
+            keymap: keymap,
+            commands: CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: keymap, layouts: .standard),
             state: MenuState(workspaces: set, checked: checked, context: context))
     }
 

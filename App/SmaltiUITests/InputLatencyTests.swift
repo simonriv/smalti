@@ -17,6 +17,10 @@ final class InputLatencyTests: SmaltiUITestCase {
 
     func testTypingNeverBlocksTheMainThread() throws {
         let app = XCUIApplication.isolatedSmaltiWithIntegration()
+        // F5.6: `SMALTI_MEASURE_NO_HIGHLIGHT=1` measures the same typing with highlighting off, to compare.
+        if ProcessInfo.processInfo.environment["SMALTI_MEASURE_NO_HIGHLIGHT"] == "1" {
+            app.writeConfig("[input]\nhighlighting = false\n")
+        }
         let probe = FileManager.default.temporaryDirectory.appending(path: "input-latency-\(UUID().uuidString).json")
         app.launchArguments += ["-SmaltiLatencyProbe", probe.path(percentEncoded: false)]
         try seedHistory(in: app.stateDirectory)

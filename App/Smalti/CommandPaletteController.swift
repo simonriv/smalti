@@ -27,10 +27,14 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private var view: CommandPaletteView?
     /// The theme the open palette was built with.
     private var theme = Theme.obsidian
-    /// All results in screen order (sections flattened); only `window.visible` has rows built.
+    /// All results in screen order (sections flattened); the table builds only the rows in view.
     private var results: [RankedCommand] = []
-    private var resultWindow = ResultWindow(count: 0, capacity: 1)
-    private var rows: [CommandRowView] = []
+    /// The list's rows: a group label wherever the group changes, then its commands (indices into `results`).
+    private var items: [PaletteItem] = []
+    /// The selected result; ↑↓ wrap at the ends.
+    private var selection = 0
+    /// A group label's height in this theme, measured once per opening rather than per keystroke.
+    private var groupLabelHeight = 0.0
     private var mode = Mode.searching
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "palette")
     private var outsideClicks: Any?
@@ -63,7 +67,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
         window.undoManager?.removeAllActions()
         view?.removeFromSuperview()
         view = nil
-        rows = []
+        items = []
         isOpen = false
         stopObserving()
         onOpenChange?(false)
@@ -74,8 +78,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
         if !isOpen { present(theme: theme, mode: .renaming) }
         guard let view else { return }
         mode = .renaming
-        rows = []
-        view.show([], maximumListHeight: 0)
+        items = []
+        view.show(.empty, maximumListHeight: 0)
         view.showNavigationHint(false)
         view.field.stringValue = actions.currentWorkspaceName()
         view.field.currentEditor()?.selectAll(nil)
@@ -83,6 +87,7 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
 
     private func present(theme: Theme, mode: Mode) {
         self.theme = theme
+        groupLabelHeight = CommandGroupLabel(.tiling, theme: theme).fittingSize.height
         let view = CommandPaletteView(theme: theme)
         place(view, theme: theme)
         view.field.delegate = self
@@ -153,55 +158,71 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
     private func refresh() {
         guard let view else { return }
         results = CommandSection.grouping(actions.search(view.field.stringValue)).flatMap(\.commands)
-        resultWindow = ResultWindow(count: results.count, capacity: rowCapacity)
-        renderWindow()
+        items = PaletteItem.items(for: results)
+        selection = 0
+        view.show(listContent(), maximumListHeight: maximumListHeight)
+        revealSelection()
     }
 
-    /// Builds the visible rows only, with a group label wherever the group changes (and at the top of the window).
-    private func renderWindow() {
-        guard let view else { return }
-        var views: [NSView] = []
-        var previous: CommandGroup?
-        rows = resultWindow.visible.map { index in
-            let ranked = results[index]
-            if ranked.command.group != previous { views.append(CommandGroupLabel(ranked.command.group, theme: theme)) }
-            previous = ranked.command.group
-            let row = makeRow(ranked)
-            views.append(row)
+    /// The commands on offer changed while the palette is open (F5.6: the Claude integration's state): the list is
+    /// rebuilt for the same query, keeping the selected command when it is still there.
+    func catalogChanged() {
+        guard isOpen, mode == .searching, let view else { return }
+        let selected = results.indices.contains(selection) ? results[selection].command.id : nil
+        results = CommandSection.grouping(actions.search(view.field.stringValue)).flatMap(\.commands)
+        items = PaletteItem.items(for: results)
+        selection = results.firstIndex { $0.command.id == selected } ?? 0
+        view.show(listContent(), maximumListHeight: maximumListHeight)
+        revealSelection()
+    }
+
+    private func listContent() -> PaletteListContent {
+        let rowHeight = theme.palette.rowHeight
+        let labelHeight = groupLabelHeight
+        return PaletteListContent(
+            count: items.count,
+            height: { [items] in
+                if case .group = items[$0] { return labelHeight }
+                return rowHeight
+            },
+            view: { [weak self] in self?.makeView(at: $0) ?? NSView() })
+    }
+
+    private func makeView(at index: Int) -> NSView {
+        switch items[index] {
+        case .group(let group): return CommandGroupLabel(group, theme: theme)
+        case .command(let result):
+            let ranked = results[result]
+            let row = CommandRowView(ranked.command, theme: theme)
+            row.onClick = { [weak self] in self?.run(ranked.command.id) }
+            row.setSelected(result == selection)
             return row
         }
-        view.show(views, maximumListHeight: maximumListHeight)
-        highlight()
-    }
-
-    private func makeRow(_ ranked: RankedCommand) -> CommandRowView {
-        let row = CommandRowView(ranked.command, theme: theme)
-        row.onClick = { [weak self] in self?.run(ranked.command.id) }
-        return row
     }
 
     private func moveSelection(by step: Int) {
         guard !results.isEmpty, mode == .searching else { return }
-        let moved = resultWindow.moving(by: step)
-        let scrolled = moved.visible != resultWindow.visible
-        resultWindow = moved
-        scrolled ? renderWindow() : highlight()
-    }
-
-    private func highlight() {
-        let selected = resultWindow.selection - resultWindow.visible.lowerBound
-        for (index, row) in rows.enumerated() { row.setSelected(index == selected) }
+        let previous = selection
+        selection = ((selection + step) % results.count + results.count) % results.count
+        setSelected(previous, false)
+        setSelected(selection, true)
         revealSelection()
     }
 
-    private func revealSelection() {
-        let selected = resultWindow.selection - resultWindow.visible.lowerBound
-        if rows.indices.contains(selected) { view?.reveal(rows[selected]) }
+    private func setSelected(_ result: Int, _ isSelected: Bool) {
+        guard let index = itemIndex(of: result) else { return }
+        (view?.builtView(at: index)?.subviews.first as? CommandRowView)?.setSelected(isSelected)
     }
 
-    /// Rows that fit in the list area; group labels take a little more, and the list scrolls if they overflow.
-    private var rowCapacity: Int {
-        Int(maximumListHeight / theme.palette.rowHeight)
+    private func itemIndex(of result: Int) -> Int? {
+        items.firstIndex { if case .command(result) = $0 { true } else { false } }
+    }
+
+    /// The selected row with its group label when it opens a group.
+    private func revealSelection() {
+        guard let index = itemIndex(of: selection) else { return }
+        let label: Int? = index > 0 && items[index - 1].isGroup ? index - 1 : nil
+        view?.reveal(index, label: label)
     }
 
     private func commit() {
@@ -211,8 +232,8 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
             close()
             actions.rename(name)
         case .searching:
-            guard results.indices.contains(resultWindow.selection) else { return }
-            run(results[resultWindow.selection].command.id)
+            guard results.indices.contains(selection) else { return }
+            run(results[selection].command.id)
         }
     }
 
@@ -241,5 +262,27 @@ final class CommandPaletteController: NSObject, NSTextFieldDelegate {
         guard let content = window.contentView else { return 0 }
         let fixed = theme.palette.fieldHeight + theme.palette.footerHeight
         return max(0, content.bounds.height - 2 * theme.palette.topOffset - fixed)
+    }
+}
+
+/// A row of the palette list: a group label or a result.
+enum PaletteItem: Equatable {
+    case group(CommandGroup)
+    case command(Int)
+
+    var isGroup: Bool {
+        if case .group = self { true } else { false }
+    }
+
+    /// A group label wherever the group changes, then the results of that group.
+    static func items(for results: [RankedCommand]) -> [PaletteItem] {
+        var items: [PaletteItem] = []
+        var previous: CommandGroup?
+        for (index, ranked) in results.enumerated() {
+            if ranked.command.group != previous { items.append(.group(ranked.command.group)) }
+            previous = ranked.command.group
+            items.append(.command(index))
+        }
+        return items
     }
 }

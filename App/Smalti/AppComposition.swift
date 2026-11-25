@@ -137,10 +137,7 @@ final class AppComposition {
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
             harnesses: harnesses,
-            agents: .init(
-                notifier: makeNotifier(), integration: Self.claudeIntegration(),
-                // Replaced per window in `makeController`: "visible" is that window's, not the app's.
-                isAppActive: { NSApp.isActive }),
+            agents: Self.agentDependencies(notifier: makeNotifier()),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
@@ -215,6 +212,7 @@ final class AppComposition {
         let visibility = WindowVisibility()
         let agents = TilingController.AgentDependencies(
             notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
+            integrationStatus: dependencies.agents.integrationStatus,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
         let controller = TilingController(dependencies.with(agents: agents), initial: initial)
         controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
@@ -436,8 +434,8 @@ final class AppComposition {
     private func menuBar() -> MenuBar {
         guard let controller else { return .empty }
         let commands = CommandCatalog.commands(
-            for: controller.set, keymap: controller.config.keys, layouts: .standard,
-            savedLayouts: controller.savedLayouts())
+            for: CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts()),
+            keymap: controller.config.keys, layouts: .standard)
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
@@ -707,18 +705,22 @@ final class AppComposition {
     /// ones.
     private func startInput(on socket: URL, settings: InputSettings, startup: Startup, engine: GhosttyTerminalEngine) {
         let state = startup.settings.stateDirectory
+        let specs = FigSpecs(
+            user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
+            runner: GeneratorRunner(timeout: settings.generatorTimeout))
         let ports = InputSession.Ports(
             history: FileCommandHistory(
                 file: state.appending(path: "input/history.jsonl"), limit: settings.historyLimit),
-            project: FileProjectContext(),
-            completions: FigSpecs(
-                user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
-                runner: GeneratorRunner(timeout: settings.generatorTimeout)),
-            predictor: HeuristicPredictor())
+            project: FileProjectContext(), completions: specs, predictor: HeuristicPredictor())
         let session = InputSession(ports: ports, settings: settings, clock: { .now })
         let coordinator = InputCoordinator(session: session, provider: engine) { [weak self] pane in
             self?.composition(containing: pane)?.controller.set.workspaces.lazy.flatMap(\.panes)
                 .first { $0.id == pane }?.workingDirectory.path
+        }
+        // F5.6: the same specs as completion, so a spec loaded for Tab colors subcommands too.
+        coordinator.highlighter = HighlightLine(paths: FileSystemPathFacts(), completions: specs)
+        coordinator.isHighlighting = { [weak self] in
+            Self.isHighlighting(self?.controller?.config ?? startup.initial.config)
         }
         connectPrompt(coordinator, startup: startup)
         do {
@@ -751,7 +753,8 @@ final class AppComposition {
                 self?.workspace(containing: pane)?.waitingAgents(besides: pane) ?? WaitingAgents()
             },
             workspace: { [weak self] pane in self?.workspace(containing: pane)?.id },
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() })
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() },
+            highlighting: { [weak self] in Self.isHighlighting(self?.controller?.config ?? startup.initial.config) })
         let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
         coordinator.renderPrompt = render
         // Only a header that shows the prompt's context changes with it (block 5 review, M2).
@@ -763,6 +766,11 @@ final class AppComposition {
             self?.composition(containing: pane)?.controller.refresh()
         }
         promptHeader = { pane in render.headerText(for: pane) }
+    }
+
+    /// F5.6: `[input] highlighting`, only while the input channel itself is on.
+    private static func isHighlighting(_ config: SmaltiConfig) -> Bool {
+        config.input.isEnabled && config.input.isHighlighting
     }
 
     private func workspace(containing pane: PaneID) -> Workspace? {
@@ -777,15 +785,34 @@ final class AppComposition {
         return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path, inputSocket: inputSocket)
     }
 
-    /// `claude` is wherever the user's interactive zsh puts it; `SMALTI=1` keeps that shell out of tmux.
+    /// The Claude integration and its state, asked once at launch (F5.6).
+    private static func agentDependencies(notifier: any Notifier) -> TilingController.AgentDependencies {
+        let integration = claudeIntegration()
+        let status = ClaudeIntegrationStatus(integration: integration)
+        status.refresh(forced: true)
+        return TilingController.AgentDependencies(
+            notifier: notifier, integration: integration, integrationStatus: status,
+            // Replaced per window in `makeController`: "visible" is that window's, not the app's.
+            isAppActive: { NSApp.isActive })
+    }
+
+    /// `claude` is wherever the user's interactive zsh puts it; `SMALTI=1` keeps that shell out of tmux. UI tests
+    /// pass a fake one with `-SmaltiClaudeCommand` (F5.6), so the real `~/.claude` is never touched.
     private static func claudeIntegration() -> ClaudePluginInstaller {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let source = Bundle.main.resourceURL?.appending(path: "claude-plugin") ?? home
         let environment = ProcessInfo.processInfo.environment.merging(["SMALTI": "1"]) { _, smalti in smalti }
+        // UI tests: a fake `claude` run by a shell without startup files, never the user's login shell (F5.6).
+        let fake = UserDefaults.standard.string(forKey: "SmaltiClaudeCommand")
+        // Shared by both builds on purpose; an isolated launch (`-SmaltiStatePath`, UI tests) keeps it in its own
+        // state, so installing from a test never rewrites the daily Smalti's copy (F5.6).
+        let shared = home.appending(path: "Library/Application Support/Smalti")
+        let state = UserDefaults.standard.string(forKey: "SmaltiStatePath").map { URL(filePath: $0) } ?? shared
         return ClaudePluginInstaller(
-            pluginSource: source,
-            installDirectory: home.appending(path: "Library/Application Support/Smalti/claude-plugin"),
-            runner: ShellCommandRunner(shell: ["/bin/zsh", "-lic"], environment: environment))
+            pluginSource: source, installDirectory: state.appending(path: "claude-plugin"),
+            runner: ShellCommandRunner(
+                shell: fake == nil ? ["/bin/zsh", "-lic"] : ["/bin/zsh", "-fc"], environment: environment),
+            command: fake.map { ["/bin/sh", $0] } ?? ["claude"])
     }
 
     /// The observatory refreshes fast while any window shows it.

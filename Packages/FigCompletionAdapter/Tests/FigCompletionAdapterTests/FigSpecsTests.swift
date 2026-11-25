@@ -99,6 +99,47 @@ struct FigSpecsTests {
         #expect(git.subcommands.map(\.name) == [["only-mine"]])
     }
 
+    @Test func loadedSpecIsNilBeforeLoad() async throws {
+        let subject = specs()
+
+        #expect(await subject.loadedSpec(for: "git") == nil)
+    }
+
+    @Test func loadedSpecAfterSpecFor() async throws {
+        let subject = specs()
+        let git = await subject.spec(for: "git")
+
+        let loaded = await subject.loadedSpec(for: "git")
+
+        #expect(loaded != nil)
+        #expect(loaded == git)
+    }
+
+    @Test func loadedSpecIgnoresStaleUserVersion() async throws {
+        try writeUserSpec("mine", "export default { name: \"mine\", subcommands: [{ name: \"a\" }] };")
+        let subject = specs()
+        _ = await subject.spec(for: "mine")
+        let later = Date().addingTimeInterval(60)
+        try FileManager.default.setAttributes(
+            [.modificationDate: later], ofItemAtPath: userSpecs.appending(path: "mine.js").path(percentEncoded: false))
+
+        #expect(await subject.loadedSpec(for: "mine") == nil)
+    }
+
+    @Test func isCommandTranslated() async throws {
+        try writeUserSpec("wrap", "export default { name: \"wrap\", args: { name: \"command\", isCommand: true } };")
+
+        let wrap = try #require(await specs().spec(for: "wrap"))
+
+        #expect(wrap.args.first?.isCommand == true)
+    }
+
+    @Test func argWithoutIsCommandIsNotCommand() async throws {
+        let cd = try #require(await specs().spec(for: "cd"))
+
+        #expect(cd.args.first?.isCommand == false)
+    }
+
     @Test func commandsListsBundledAndUser() async throws {
         try writeUserSpec("claude", "export default { name: \"claude\" };")
 

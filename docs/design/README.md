@@ -46,3 +46,7 @@ Paleta ANSI completa: ver `Apariencia.dc.html`.
 ## Temas de F5 y maquetas aprobadas
 
 Niebla, Ámbar nocturno y Bosque se completaron a partir de las muestras de `Apariencia.dc.html`: la tabla fuente es `THEMES` en `docs/specs/F5-assets/generate-mockups.py`, que comprueba que todo color protegido da ≥ 4.5:1 sobre el panel de su tema. Maquetas aprobadas con la spec F5: `mockup-themes`, `mockup-buttons`, `mockup-prompt` y `mockup-legibility` en `docs/specs/F5-assets/`.
+
+## Resaltado del input (F5.6)
+
+Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-assets/mockup-highlight.png` (generada por `generate-mockups.py` de esa carpeta con las tablas de temas de F5): comando ANSI 4, desconocido en el color de error, subcomando ANSI 6, opción y variable ANSI 5, cadena ANSI 2, ruta subrayada y operador en texto secundario, con "Proteger legibilidad".

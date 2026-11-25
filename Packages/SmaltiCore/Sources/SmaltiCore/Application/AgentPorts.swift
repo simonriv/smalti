@@ -21,5 +21,5 @@ public enum IntegrationError: Error, Equatable, Sendable {
 public protocol HarnessIntegration: AnyObject {
     func install() async throws(IntegrationError)
     func uninstall() async throws(IntegrationError)
-    var isInstalled: Bool { get async }
+    var installState: IntegrationState { get async }
 }

@@ -56,16 +56,19 @@ public struct ArgSpec: Equatable, Hashable, Sendable {
     public let generators: [GeneratorID]
     /// A variadic argument takes every remaining word: the walk stays on it.
     public let isVariadic: Bool
+    /// The argument is itself a command (`xargs grep`, `sudo …`): highlighting starts a new command position there.
+    public let isCommand: Bool
 
     public init(
         name: String? = nil, suggestions: [Suggestion] = [], templates: Set<ArgTemplate> = [],
-        generators: [GeneratorID] = [], isVariadic: Bool = false
+        generators: [GeneratorID] = [], isVariadic: Bool = false, isCommand: Bool = false
     ) {
         self.name = name
         self.suggestions = suggestions
         self.templates = templates
         self.generators = generators
         self.isVariadic = isVariadic
+        self.isCommand = isCommand
     }
 }
 

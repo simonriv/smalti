@@ -9,6 +9,8 @@ public struct InputSettings: Equatable, Sendable {
     public var hasCompletions: Bool
     public var historyLimit: Int
     public var generatorTimeout: Duration
+    /// F5.6: colors the command line while typing.
+    public var isHighlighting = true
 
     public init(
         isEnabled: Bool, hasPredictions: Bool, hasCompletions: Bool, historyLimit: Int, generatorTimeout: Duration

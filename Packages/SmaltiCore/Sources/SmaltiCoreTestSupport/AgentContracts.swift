@@ -44,8 +44,8 @@ public enum HarnessIntegrationContract {
     @MainActor
     public static func verify(_ integration: some HarnessIntegration) async {
         try? await integration.install()
-        #expect(await integration.isInstalled, "installed after install")
+        #expect(await integration.installState == .installed, "installed after install")
         try? await integration.uninstall()
-        #expect(await !integration.isInstalled, "not installed after uninstall")
+        #expect(await integration.installState == .notInstalled, "not installed after uninstall")
     }
 }

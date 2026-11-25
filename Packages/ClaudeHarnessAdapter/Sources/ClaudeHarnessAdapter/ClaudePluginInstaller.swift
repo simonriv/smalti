@@ -14,17 +14,23 @@ public final class ClaudePluginInstaller: HarnessIntegration {
     private let pluginSource: URL
     private let installDirectory: URL
     private let runner: any CommandRunner
+    /// `claude`, or what the UI tests run instead (`-SmaltiClaudeCommand`): `/bin/sh <script>`, because a script
+    /// written by the sandboxed test runner is quarantined and cannot be executed directly.
+    private let command: [String]
 
-    public init(pluginSource: URL, installDirectory: URL, runner: any CommandRunner) {
+    public init(
+        pluginSource: URL, installDirectory: URL, runner: any CommandRunner, command: [String] = ["claude"]
+    ) {
         self.pluginSource = pluginSource
         self.installDirectory = installDirectory
         self.runner = runner
+        self.command = command
     }
 
     public func install() async throws(IntegrationError) {
         try copyPlugin()
         // A marketplace added before (maybe by the other build) is replaced, so its path is this copy.
-        _ = await runner.run(["claude", "plugin", "marketplace", "remove", Self.marketplace])
+        _ = await runner.run(command + ["plugin", "marketplace", "remove", Self.marketplace])
         try await claude(["plugin", "marketplace", "add", installDirectory.path(percentEncoded: false)])
         try await claude(["plugin", "install", Self.plugin])
     }
@@ -42,15 +48,17 @@ public final class ClaudePluginInstaller: HarnessIntegration {
         if let failure { throw failure }
     }
 
-    public var isInstalled: Bool {
+    /// A missing `claude`, a shell that cannot start or a failing list leave the state unknown (spec F5.6).
+    public var installState: IntegrationState {
         get async {
-            let result = await runner.run(["claude", "plugin", "list"])
-            return result.status == 0 && result.output.contains(Self.plugin)
+            let result = await runner.run(command + ["plugin", "list"])
+            guard result.status == 0 else { return .unknown }
+            return result.output.contains(Self.plugin) ? .installed : .notInstalled
         }
     }
 
     private func claude(_ arguments: [String]) async throws(IntegrationError) {
-        let result = await runner.run(["claude"] + arguments)
+        let result = await runner.run(command + arguments)
         if result.status == CommandResult.launchFailed {
             throw .commandFailed(command: runner.launcher, output: "the shell could not start")
         }
