@@ -40,5 +40,8 @@ struct ListNamedLayoutsTests {
         let restore = commands.first { $0.id == .layoutRestore(summary.name) }
 
         #expect(restore?.subtitle == "— guardado por una versión más nueva de Smalti (formato 2)")
+        // Mutation (review 1): the row is never marked as the current layout.
+        #expect(restore?.isCurrent == false)
+        #expect(restore?.group == .workspaces)
     }
 }
