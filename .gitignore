@@ -21,3 +21,4 @@ scripts/input-bench/.build/
 
 # F6: recording homes for harness fixtures (tokens, configs)
 scripts/harnesses/recording.local/
+__pycache__/

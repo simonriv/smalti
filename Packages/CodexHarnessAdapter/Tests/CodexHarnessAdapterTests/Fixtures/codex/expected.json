@@ -1,0 +1,17 @@
+{
+  "harness": "codex",
+  "sessions": [
+    {
+      "id": "01a210a3-a395-76d2-907f-4477c88dcc16",
+      "directory": "/private/tmp/smalti-fx/codex/work-b",
+      "title": "Responde solo: hola fixture B",
+      "createdAt": "2026-11-25T02:58:09Z"
+    },
+    {
+      "id": "01a210a3-2dac-78c0-ae6f-c353ab314277",
+      "directory": "/private/tmp/smalti-fx/codex/work-a",
+      "title": "Responde solo: hola fixture A",
+      "createdAt": "2026-11-25T02:57:39Z"
+    }
+  ]
+}
