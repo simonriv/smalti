@@ -265,8 +265,13 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
     - Cierre: se retoman sesiones de los 4 harnesses y los diffs de Claude se aprueban en Neovim.
 8. **F7 · Extras.** Layouts compartibles y receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
+    - **F7.5 · Guardas para agentes.** Bloqueo de lectura de secretos y guardia de comandos destructivos con aprobación nativa (evaluación de `smalti-diferenciacion.md`, Simón, 2026-11-25).
 9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
     - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
+    - **F8.5 · Proyectos.** Layout del repo (`.smalti/layout.json`) que se abre con un atajo.
+10. **F9 · Timeline de la sesión.** Turnos y herramientas de cada agente, con búsqueda y copia de salidas antiguas.
+11. **F10 · Revisión con Neovim.** Comentarios en el diff que vuelven al agente como prompt.
+12. **F11 · Baúl de secretos.** Secretos en el Keychain, inyectados al lanzar y enmascarados en lo que Smalti guarda.
 
 ## Riesgos y preguntas abiertas
 
