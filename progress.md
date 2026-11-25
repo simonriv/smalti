@@ -361,4 +361,4 @@
 - [x] Revisión intermedia 2 (0 críticos, 2 importantes, 9 menores; corregidos, I1 como enmienda 7) + regresión de UI (64/65 → 13/13 tras la tanda; 2 pruebas viejas rotas desde F6 arregladas) + mutación incremental (100 %, 107 mutantes)
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones (C2 ✅: A12/A14 sin cambio, GPU alternada 9,18/8,65/8,28 %, C1 independiente, C13 sin empeorar), capturas, checklist (`docs/specs/F7-checklist.md`), revisión final (2 importantes, 3 menores, corregidos), mutación de la fase 97,8 % (4 sobrevivientes muertos y verificados a mano; completa detenida por decisión de Simón)
-- [ ] T12 · 0.7.0, PRs y despliegue
+- [x] T12 · 0.7.0, PRs #37 y #38, despliegue (0.6.0 en `/Applications/Smalti.app.old`)
