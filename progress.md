@@ -389,4 +389,4 @@
 - [x] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
-- [ ] T12 · 0.7.5, PRs y despliegue
+- [x] T12 · 0.7.5, PRs y despliegue (#41, #42; instalada el 2026-11-25, la 0.7.0 en `/Applications/Smalti.app.old`; web smalti-web #5)
