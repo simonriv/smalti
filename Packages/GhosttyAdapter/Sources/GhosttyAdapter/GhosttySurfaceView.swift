@@ -158,7 +158,8 @@ final class GhosttySurfaceView: NSView {
         guard let surface, let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface)),
             let name = ForegroundProcess.name(ofProcessGroup: pid)
         else { return nil }
-        return SmaltiCore.ForegroundProcess(name: name, commandLine: ProcessArguments.of(pid: pid))
+        return SmaltiCore.ForegroundProcess(
+            name: name, commandLine: ProcessArguments.of(pid: pid), pid: pid, startedAt: ProcessStart.of(pid: pid))
     }
 
     private func refreshForegroundProcess() {
@@ -166,7 +167,10 @@ final class GhosttySurfaceView: NSView {
         // 0 means libghostty has no pid (no PTY yet, or the child is gone).
         let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface))
         let name = pid.flatMap(ForegroundProcess.name)
-        if let event = processNames.observe(name, commandLine: { pid.flatMap(ProcessArguments.of) }) {
+        let observed = processNames.observe(
+            name, commandLine: { pid.flatMap(ProcessArguments.of) }, pid: pid,
+            startedAt: { pid.flatMap(ProcessStart.of) })
+        if let event = observed {
             continuation.yield(event)
         }
     }
