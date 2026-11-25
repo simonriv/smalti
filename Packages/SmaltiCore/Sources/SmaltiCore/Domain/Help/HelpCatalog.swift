@@ -42,6 +42,7 @@ private struct Rows {
                 entry(.workspaceNew, "Nuevo workspace"),
                 family("Ir al workspace 1–9", NumberedShortcuts.range.map(CommandID.workspace)),
                 entry(.workspaceRename, "Renombrar workspace…"), entry(.workspaceClose, "Cerrar workspace"),
+                entry(.layoutImport, "Importar layout…"),
             ]
     }
 
