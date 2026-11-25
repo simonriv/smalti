@@ -63,6 +63,26 @@ struct ClaudeProjectPermissionsTests {
         #expect(throws: ProjectPermissionsError.self) { try ClaudeProjectPermissions().deniedRules(in: path) }
     }
 
+    /// Review 1: a symlinked settings file stays a symlink, and its permissions are kept.
+    @Test func keepsSymlinkAndPermissions() throws {
+        let target = project.appending(path: "shared-settings.json")
+        try Data(#"{"model":"x"}"#.utf8).write(to: target)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: target.path(percentEncoded: false))
+        try FileManager.default.createDirectory(
+            at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: settings, withDestinationURL: target)
+
+        try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: path)
+
+        let link = try FileManager.default.destinationOfSymbolicLink(atPath: settings.path(percentEncoded: false))
+        let mode = try FileManager.default.attributesOfItem(atPath: target.path(percentEncoded: false))[
+            .posixPermissions]
+        #expect(link == target.path(percentEncoded: false))
+        #expect((mode as? Int) == 0o600)
+        #expect(String(decoding: try Data(contentsOf: target), as: UTF8.self).contains("Read(**/.env)"))
+    }
+
     @Test func unwritableProjectSaysSo() {
         #expect(throws: ProjectPermissionsError.self) {
             try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: "/nonexistent-smalti/p")

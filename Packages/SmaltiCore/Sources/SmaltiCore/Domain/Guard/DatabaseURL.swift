@@ -11,10 +11,15 @@ public enum DatabaseURL {
         var rest = text[...]
         while let separator = rest.firstRange(of: "://") {
             let scheme = schemeBefore(separator.lowerBound, in: rest)
-            if schemes.contains(scheme.lowercased()) { hosts.append(host(afterScheme: rest[separator.upperBound...])) }
+            if isDatabase(scheme.lowercased()) { hosts.append(host(afterScheme: rest[separator.upperBound...])) }
             rest = rest[separator.upperBound...]
         }
         return hosts
+    }
+
+    /// `postgres`, and a driver variant of it (`postgresql+asyncpg`, review 1).
+    private static func isDatabase(_ scheme: String) -> Bool {
+        schemes.contains(scheme) || scheme.split(separator: "+").first.map { schemes.contains(String($0)) } == true
     }
 
     /// The host of one URL, or nil when it is not a database URL.

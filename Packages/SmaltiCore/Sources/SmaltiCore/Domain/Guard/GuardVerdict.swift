@@ -93,6 +93,7 @@ public enum GuardReasons {
     public static let unreachable = "Smalti no respondió (app cerrada o socket caído): el comando queda bloqueado."
     public static let outdatedIntegration =
         "Este comando necesita la aprobación de Smalti y la integración instalada es antigua: actualízala desde ⌘K."
+    public static let unreadableInput = "Smalti no pudo leer la petición del hook: la herramienta queda bloqueada."
     public static let paneClosed = "El panel de Smalti se cerró antes de aprobar el comando."
     public static let tooManyPending = "Hay demasiados comandos esperando aprobación en Smalti."
 }

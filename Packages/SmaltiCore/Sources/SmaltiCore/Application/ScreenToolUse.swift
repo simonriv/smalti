@@ -4,6 +4,14 @@ public enum ScreenToolUse {
     /// The longest command or path screened; a longer one asks, because it cannot be reviewed.
     public static let maximumInputBytes = 65_536
     public static let oversizedRule = "comando demasiado largo para revisarlo"
+    public static let nestedRule = "comando anidado demasiado para revisarlo"
+
+    /// Review 1 (C1): what the app gets of a command the CLI had to cut; it can only ask.
+    public static func truncatedSubject(_ command: String?) -> ApprovalSubject {
+        ApprovalSubject(
+            command: CommandRedaction.redacted(String((command ?? "").prefix(2_000))),
+            findings: [GuardFinding(rule: oversizedRule, environment: .undetermined)])
+    }
 
     private static let fileTools: Set<String> = ["Read", "Edit", "MultiEdit", "Write", "NotebookEdit"]
 
@@ -40,14 +48,16 @@ public enum ScreenToolUse {
             return .ask(
                 ApprovalSubject(command: CommandRedaction.redacted(String(command.prefix(2_000))), findings: [finding]))
         }
-        let commands = ShellCommandLine.commands(in: command, home: home)
+        let analysis = ShellCommandLine.analysis(in: command, home: home)
         let secrets = SecretPaths(home: home)
-        if let path = commands.lazy.compactMap({ secrets.secretRead(in: $0, cwd: cwd) }).first {
+        if let path = analysis.commands.lazy.compactMap({ secrets.secretRead(in: $0, cwd: cwd) }).first {
             return secretDenial(path)
         }
-        let findings = commands.flatMap { simple in
+        var findings = analysis.commands.flatMap { simple in
             DestructiveCommandRules.all.compactMap { $0.finding(for: simple, context: context) }
         }
+        // Review 1: what is nested deeper than the guard reads cannot be judged, so it asks.
+        if analysis.isTooDeep { findings.append(GuardFinding(rule: nestedRule, environment: .undetermined)) }
         guard !findings.isEmpty else { return .allow }
         return .ask(ApprovalSubject(command: CommandRedaction.redacted(command), findings: findings))
     }

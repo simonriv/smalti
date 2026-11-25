@@ -41,8 +41,21 @@ public enum HookPayloadTranslator {
         return GuardRequest(
             id: UUID(), pane: PaneID(rawValue: uuid), use: use,
             environmentHosts: fields["env_database_hosts"] as? [String] ?? [],
-            localVerdict: localVerdict(fields), receivedAt: date, reply: reply)
+            localVerdict: localVerdict(fields), receivedAt: date, isTruncated: fields["truncated"] as? Bool ?? false,
+            reply: reply)
     }
+
+    /// The `PreToolUse` event a guard request also reports, with F2's limits: the summary at most
+    /// `maxSummaryLength` characters, and redacted (review 1).
+    public static func guardEvent(_ request: IPCRequest, at date: Date) throws(IPCError) -> AgentEvent {
+        let event = try self.event(request, at: date)
+        return AgentEvent(
+            pane: event.pane, hook: event.hook, at: event.at, sessionID: event.sessionID, prompt: event.prompt,
+            toolSummary: event.toolSummary.map { CommandRedaction.redacted(String($0.prefix(maxSummaryLength))) },
+            message: event.message, source: event.source, edit: event.edit)
+    }
+
+    public static let maxSummaryLength = 2_000
 
     /// The CLI's verdict as it travels: only a denial carries what the app needs (its reason).
     private static func localVerdict(_ fields: [String: Any]) -> GuardVerdict {

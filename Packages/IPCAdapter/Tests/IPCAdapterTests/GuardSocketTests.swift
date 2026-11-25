@@ -114,6 +114,40 @@ struct GuardSocketTests {
                 == IPCResponse(ok: true, error: nil, decision: .deny, reason: GuardReasons.unreachable))
     }
 
+    @Test func truncatedFlagReachesTheRequest() async throws {
+        let telemetry = try server()
+        defer { telemetry.stop() }
+        var requests = telemetry.requests().makeAsyncIterator()
+        let payload: [String: Any] = ["tool_name": "Bash", "tool_input": ["command": "echo"], "truncated": true]
+        let line = try IPCCodec.encode(
+            IPCRequest(
+                guardFor: pane.description, hook: "PreToolUse",
+                payload: try JSONSerialization.data(withJSONObject: payload)))
+
+        let answer = send(line)
+        let request = try #require(await requests.next())
+        request.reply(.allow)
+        _ = await answer.value
+
+        #expect(request.isTruncated)
+    }
+
+    /// Review 1: the event a guard reports keeps F2's limits: at most 2,000 characters, and redacted.
+    @Test func guardEventSummaryIsCappedAndRedacted() async throws {
+        let telemetry = try server()
+        defer { telemetry.stop() }
+        var events = telemetry.events().makeAsyncIterator()
+        var requests = telemetry.requests().makeAsyncIterator()
+
+        let answer = send(guardLine("psql postgres://u:p4ss@h/db " + String(repeating: "x", count: 5_000)))
+        let event = await events.next()
+        try #require(await requests.next()).reply(.allow)
+        _ = await answer.value
+
+        #expect((event?.toolSummary?.count ?? 0) <= 2_000)
+        #expect(event?.toolSummary?.contains("p4ss") == false)
+    }
+
     @Test func eventRequestsStillAnswerOk() async throws {
         let telemetry = try server()
         defer { telemetry.stop() }

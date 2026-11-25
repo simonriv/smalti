@@ -15,12 +15,15 @@ public struct GuardRequest: Sendable {
     /// What the CLI decided without the user's settings.
     public let localVerdict: GuardVerdict
     public let receivedAt: Date
+    /// The CLI cut the command to send it: it cannot be judged again, so it always asks.
+    public let isTruncated: Bool
     public let reply: @Sendable (GuardDecision) -> Void
 
     public init(
         id: UUID, pane: PaneID, use: ToolUse, environmentHosts: [String], localVerdict: GuardVerdict, receivedAt: Date,
-        reply: @escaping @Sendable (GuardDecision) -> Void
+        isTruncated: Bool = false, reply: @escaping @Sendable (GuardDecision) -> Void
     ) {
+        self.isTruncated = isTruncated
         self.id = id
         self.pane = pane
         self.use = use

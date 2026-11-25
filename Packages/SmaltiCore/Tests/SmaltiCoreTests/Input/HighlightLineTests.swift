@@ -59,13 +59,15 @@ struct HighlightLineTests {
     }
 
     @Test func slowPathsAnswerWithoutThemAfterBudget() async {
-        let facts = InMemoryPathFacts(kinds: ["/w/a": .file], delay: .milliseconds(300))
+        // The slow path takes 1 s; under the whole suite's load the 3 ms budget can wake up late, so the bound only
+        // proves the first answer did not wait for that path (F7.5: it flaked at 150 ms of 300).
+        let facts = InMemoryPathFacts(kinds: ["/w/a": .file], delay: .seconds(1))
         let subject = highlighter(paths: facts)
         let start = ContinuousClock.now
 
         let first = await subject.firstAnswer(line("cat a"), directory: "/w", home: "/h")
 
-        #expect(ContinuousClock.now - start < .milliseconds(150))
+        #expect(ContinuousClock.now - start < .milliseconds(500))
         #expect(paths(in: first.spans).isEmpty)
         #expect(!first.isComplete)
         let complete = await subject.completeAnswer(line("cat a"), directory: "/w", home: "/h")

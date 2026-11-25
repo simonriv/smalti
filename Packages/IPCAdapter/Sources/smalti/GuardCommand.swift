@@ -49,6 +49,11 @@ struct ScreenedToolUse {
 
 /// The JSON a `PreToolUse` hook prints to refuse a tool call (spec F7.5); allowing prints nothing.
 enum HookOutput {
+    /// Used when the JSON cannot be built: still a denial (review 1).
+    static let fallbackDenial =
+        #"{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Smalti"}}"#
+        + "\n"
+
     static func denial(_ reason: String) -> String {
         let object: [String: Any] = [
             "hookSpecificOutput": [
@@ -56,7 +61,7 @@ enum HookOutput {
             ]
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) else {
-            return ""
+            return fallbackDenial
         }
         return String(decoding: data, as: UTF8.self) + "\n"
     }
@@ -73,8 +78,9 @@ enum GuardCommand {
     static let maxFieldBytes = ScreenToolUse.maximumInputBytes
 
     static func run(_ invocation: Invocation, transport: any GuardTransport, deadline: Duration) -> String {
+        // Review 1: a PreToolUse input Smalti cannot read is refused, not let through.
         guard let screened = ScreenedToolUse(input: invocation.input(), environment: invocation.environment) else {
-            return ""
+            return HookOutput.denial(GuardReasons.unreadableInput)
         }
         let answer = ask(screened, invocation.environment, transport: transport, deadline: deadline)
         return output(local: screened.verdict, app: answer)
@@ -120,6 +126,7 @@ enum GuardCommand {
             "glob": screened.use.glob,
         ]
         kept["tool_input"] = toolInput.compactMapValues { $0.map(truncated) }
+        if toolInput.values.contains(where: { ($0?.utf8.count ?? 0) > maxFieldBytes }) { kept["truncated"] = true }
         kept["cwd"] = screened.use.cwd
         kept["session_id"] = screened.fields["session_id"] as? String
         if case .deny(let denial) = screened.verdict { kept["local_reason"] = denial.reason }

@@ -203,6 +203,21 @@ struct AgentApprovalsTests {
         #expect(approvals.allPending.count == AgentApprovals.maximumPending)
     }
 
+    /// Review 1 (C1): a command the CLI cut to send it cannot be judged again: it always asks.
+    @Test func truncatedRequestAlwaysAsks() {
+        let log = ReplyLog()
+        let approvals = approvals()
+        let use = ToolUse(tool: "Bash", command: "echo hi", cwd: "/p")
+        let request = GuardRequest(
+            id: UUID(), pane: pane, use: use, environmentHosts: [], localVerdict: .allow, receivedAt: t0,
+            isTruncated: true, reply: { log.record($0) })
+
+        approvals.receive(request)
+
+        #expect(log.all.isEmpty)
+        #expect(approvals.pending(in: pane).first?.subject.findings.map(\.rule) == [ScreenToolUse.oversizedRule])
+    }
+
     @Test func approveOnEmptyPaneReturnsFalse() {
         let approvals = approvals()
 

@@ -12,6 +12,14 @@ public struct SimpleCommand: Equatable, Sendable {
     public let arguments: [String]
     /// The command's source text, quotes and all.
     public let rawText: String
+    /// Its here-document bodies, as data.
+    public let heredocs: [String]
+}
+
+/// A shell line split into commands, and whether some of it was nested deeper than the guard looks.
+public struct ShellAnalysis: Sendable {
+    public let commands: [SimpleCommand]
+    public let isTooDeep: Bool
 }
 
 /// Splits a shell line into the simple commands a guard must look at, the nested ones included: `sh/bash/zsh -c`,
@@ -20,30 +28,41 @@ public enum ShellCommandLine {
     public static let maximumDepth = 4
 
     public static func commands(in text: String, home: String) -> [SimpleCommand] {
-        commands(in: text, home: home, depth: 0)
+        analysis(in: text, home: home).commands
     }
 
-    private static func commands(in text: String, home: String, depth: Int) -> [SimpleCommand] {
-        ShellLexer.segments(of: text, home: home).flatMap { segment in
+    /// The commands, and whether some nested script was left unread past `maximumDepth` (review 1: that asks).
+    public static func analysis(in text: String, home: String) -> ShellAnalysis {
+        var isTooDeep = false
+        let found = commands(in: text, home: home, depth: 0, isTooDeep: &isTooDeep)
+        return ShellAnalysis(commands: found, isTooDeep: isTooDeep)
+    }
+
+    private static func commands(in text: String, home: String, depth: Int, isTooDeep: inout Bool) -> [SimpleCommand] {
+        var found: [SimpleCommand] = []
+        for segment in ShellLexer.segments(of: text, home: home) {
             let command = simpleCommand(from: segment)
-            guard depth < maximumDepth else { return [command] }
-            let nested = (nestedScript(of: command).map { [$0] } ?? []) + segment.substitutions
-            return [command] + nested.flatMap { commands(in: $0, home: home, depth: depth + 1) }
+            found.append(command)
+            let nested = nestedScripts(of: command) + segment.substitutions
+            guard !nested.isEmpty else { continue }
+            guard depth < maximumDepth else {
+                isTooDeep = true
+                continue
+            }
+            for script in nested {
+                found += commands(in: script, home: home, depth: depth + 1, isTooDeep: &isTooDeep)
+            }
         }
+        return found
     }
 
     static func simpleCommand(from segment: LexedSegment) -> SimpleCommand {
         var assignments: [String: String] = [:]
-        var rest = segment.words[...]
-        while let first = rest.first, let (name, value) = assignment(first) {
-            assignments[name] = value
-            rest = rest.dropFirst()
-        }
-        rest = ShellWrappers.strip(rest, into: &assignments)
+        let rest = ShellWrappers.strip(segment.words[...], into: &assignments)
         let program = rest.first.map(baseName)
         return SimpleCommand(
             assignments: assignments, words: segment.words, redirections: segment.redirections, program: program,
-            arguments: Array(rest.dropFirst()), rawText: segment.rawText)
+            arguments: Array(rest.dropFirst()), rawText: segment.rawText, heredocs: segment.heredocs)
     }
 
     /// `NAME=value` with a valid shell name.
@@ -56,17 +75,21 @@ public enum ShellCommandLine {
         return (String(name), String(word[word.index(after: equals)...]))
     }
 
+    /// The program's name without its folder nor an npm version (`supabase@latest` → `supabase`).
     static func baseName(_ path: String) -> String {
-        path.split(separator: "/").last.map(String.init) ?? path
+        let name = path.split(separator: "/").last.map(String.init) ?? path
+        guard let at = name.firstIndex(of: "@"), at != name.startIndex else { return name }
+        return String(name[..<at])
     }
 
-    /// The script a command runs itself: `bash -c '<script>'`, `eval <words>`, `ssh host <command>`.
-    private static func nestedScript(of command: SimpleCommand) -> String? {
+    /// The scripts a command runs itself: `bash -c '<script>'`, a shell fed a here-document, `eval <words>`,
+    /// `ssh host <command>`.
+    private static func nestedScripts(of command: SimpleCommand) -> [String] {
         switch command.program {
-        case "sh", "bash", "zsh", "dash", "ksh": shellScript(command.arguments)
-        case "eval": command.arguments.isEmpty ? nil : command.arguments.joined(separator: " ")
-        case "ssh": remoteCommand(command.arguments)
-        default: nil
+        case "sh", "bash", "zsh", "dash", "ksh": shellScript(command.arguments).map { [$0] } ?? command.heredocs
+        case "eval": command.arguments.isEmpty ? [] : [command.arguments.joined(separator: " ")]
+        case "ssh": remoteCommand(command.arguments).map { [$0] } ?? []
+        default: []
         }
     }
 

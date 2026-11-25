@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${SMALTI_CLI:-true}\" guard PreToolUse",
+            "command": "c=\"${SMALTI_CLI:-true}\"; \"$c\" guard PreToolUse; s=$?; [ \"$s\" -eq 64 ] && exec \"$c\" event PreToolUse; exit \"$s\"",
             "timeout": 660,
             "onFailure": "block"
           }

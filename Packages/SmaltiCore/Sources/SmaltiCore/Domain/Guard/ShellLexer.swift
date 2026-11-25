@@ -4,6 +4,8 @@ struct LexedSegment: Equatable {
     var words: [String] = []
     var redirections: [String] = []
     var substitutions: [String] = []
+    /// The bodies of its here-documents (`<<EOF … EOF`), never lexed as commands.
+    var heredocs: [String] = []
     var rawText = ""
 }
 
@@ -19,9 +21,14 @@ struct ShellLexer {
     private var segmentStart = 0
     private var word: String?
     private var pendingRedirection = false
+    /// After `<<` or `<<-`: the next word is a here-document delimiter.
+    private var pendingDelimiter: Bool?
+    /// Here-documents whose body starts after the next newline: delimiter, `<<-`, and the segment they belong to.
+    private var heredocs: [(delimiter: String, stripsTabs: Bool, segment: Int)] = []
 
     init(_ text: String, home: String) {
-        characters = Array(text)
+        // `\r\n` is one Swift `Character`: folded to `\n` so it separates commands as a shell does (review 1).
+        characters = Array(text.replacing("\r\n", with: "\n").replacing("\r", with: "\n"))
         self.home = home
     }
 
@@ -41,7 +48,10 @@ struct ShellLexer {
         switch character {
         case " ", "\t": endWord()
         case "&" where next == ">": redirection()
-        case "\n", ";", "&", "|", "(", ")": separator(character)
+        case "\n":
+            separator(character)
+            readHeredocBodies()
+        case ";", "&", "|", "(", ")": separator(character)
         case "<", ">": redirection()
         case "'": singleQuoted()
         case "\"": doubleQuoted()
@@ -64,7 +74,10 @@ struct ShellLexer {
     private mutating func endWord() {
         guard let finished = word else { return }
         word = nil
-        if pendingRedirection {
+        if let stripsTabs = pendingDelimiter {
+            pendingDelimiter = nil
+            heredocs.append((finished, stripsTabs, segments.count))
+        } else if pendingRedirection {
             pendingRedirection = false
             // `2>&1` duplicates a descriptor: there is no file.
             if !finished.hasPrefix("&") { segment.redirections.append(finished) }
@@ -103,7 +116,15 @@ struct ShellLexer {
     /// `<`, `>`, `>>`, `<<`, `<<<`, `>&`, `&>`, `>|`, with an optional descriptor number before it.
     private mutating func redirection() {
         if let current = word, current.allSatisfy(\.isNumber) { word = nil } else { endWord() }
-        while let following = next, "<>|".contains(following) { index += 1 }
+        var operation = String(characters[index])
+        while let following = next, "<>|".contains(following) {
+            index += 1
+            operation.append(following)
+        }
+        if operation == "<<" {
+            heredocOperator()
+            return
+        }
         if next == "&", index + 2 < characters.count, isDescriptor(characters[index + 2]) {
             index += 1
             while let following = next, isDescriptor(following) { index += 1 }
@@ -111,6 +132,36 @@ struct ShellLexer {
         }
         if next == "&" { index += 1 }
         pendingRedirection = true
+    }
+
+    /// `<<DELIM` or `<<-DELIM` (tabs before the closing line are ignored).
+    private mutating func heredocOperator() {
+        let stripsTabs = next == "-"
+        if stripsTabs { index += 1 }
+        pendingDelimiter = stripsTabs
+    }
+
+    /// After a newline: each pending here-document takes the following lines up to its delimiter, as data.
+    private mutating func readHeredocBodies() {
+        let pending = heredocs
+        heredocs = []
+        for heredoc in pending {
+            var lines: [String] = []
+            while index + 1 < characters.count {
+                let start = index + 1
+                var end = start
+                while end < characters.count, characters[end] != "\n" { end += 1 }
+                let line = String(characters[start..<end])
+                index = end
+                let closing = heredoc.stripsTabs ? String(line.drop { $0 == "\t" }) : line
+                if closing == heredoc.delimiter { break }
+                lines.append(line)
+            }
+            if heredoc.segment < segments.count {
+                segments[heredoc.segment].heredocs.append(lines.joined(separator: "\n"))
+            }
+        }
+        segmentStart = index + 1
     }
 
     private func isDescriptor(_ character: Character) -> Bool {
@@ -176,6 +227,8 @@ struct ShellLexer {
         if next == "(" {
             index += 1
             substitution(closing: ")")
+        } else if next == "'" && !inDoubleQuotes {
+            ansiCQuoted()
         } else if matches("{HOME}") {
             index += 6
             appendToWord(home)
@@ -185,6 +238,47 @@ struct ShellLexer {
         } else {
             appendToWord("$")
         }
+    }
+
+    /// `$'…'`: a quote with C escapes (`\n`, `\t`, `\xHH`, `\NNN`), so `$'.env'` is `.env` (review 1).
+    private mutating func ansiCQuoted() {
+        index += 2
+        var text = ""
+        while index < characters.count, characters[index] != "'" {
+            if characters[index] == "\\", let following = next {
+                index += 1
+                text.append(cEscape(following))
+            } else {
+                text.append(characters[index])
+            }
+            index += 1
+        }
+        appendToWord(text)
+    }
+
+    private mutating func cEscape(_ character: Character) -> String {
+        switch character {
+        case "n": return "\n"
+        case "t": return "\t"
+        case "x": return numericEscape(radix: 16, maximumDigits: 2)
+        case "0"..."7":
+            index -= 1
+            return numericEscape(radix: 8, maximumDigits: 3)
+        default: return String(character)
+        }
+    }
+
+    /// The digits after the current index as one character; the index ends on the last digit.
+    private mutating func numericEscape(radix: Int, maximumDigits: Int) -> String {
+        var digits = ""
+        while digits.count < maximumDigits, let following = next, following.isHexDigit,
+            Int(String(following), radix: radix) != nil
+        {
+            digits.append(following)
+            index += 1
+        }
+        guard let value = UInt32(digits, radix: radix), let scalar = Unicode.Scalar(value) else { return "" }
+        return String(Character(scalar))
     }
 
     private mutating func backquoted() {

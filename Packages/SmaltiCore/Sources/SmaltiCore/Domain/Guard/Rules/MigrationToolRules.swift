@@ -8,8 +8,11 @@ struct SupabaseRule: DestructiveCommandRule {
     func finding(for command: SimpleCommand, context: GuardContext) -> GuardFinding? {
         guard command.program == "supabase" else { return nil }
         let words = DestructiveCommandRules.positional(command.arguments)
-        guard words.count >= 2, Self.destructive.contains(where: { $0 == (words[0], words[1]) }) else { return nil }
-        return GuardFinding(rule: "supabase \(words[0]) \(words[1])", environment: environment(command, context))
+        // Anywhere among the words: an option's value (`--workdir app`) may come first (review 1).
+        guard
+            let pair = zip(words, words.dropFirst()).first(where: { pair in Self.destructive.contains { $0 == pair } })
+        else { return nil }
+        return GuardFinding(rule: "supabase \(pair.0) \(pair.1)", environment: environment(command, context))
     }
 
     private func environment(_ command: SimpleCommand, _ context: GuardContext) -> DetectedEnvironment {
@@ -50,17 +53,16 @@ struct DrizzleRule: DestructiveCommandRule {
 /// A package script named like `db:push` (`(db|database|migrate|prisma|drizzle|supabase)[:._-](push|reset|drop|…)`),
 /// run with npm, pnpm, yarn or bun.
 struct PackageScriptRule: DestructiveCommandRule {
-    private static let managers: Set<String> = ["npm", "pnpm", "yarn", "bun"]
+    private static let managers: Set<String> = ["npm", "pnpm", "yarn", "bun", "turbo"]
     private static let subjects: Set<Substring> = ["db", "database", "migrate", "prisma", "drizzle", "supabase"]
     private static let verbs: Set<Substring> = ["push", "reset", "drop", "destroy", "wipe"]
 
     func finding(for command: SimpleCommand, context: GuardContext) -> GuardFinding? {
         guard let manager = command.program, Self.managers.contains(manager) else { return nil }
+        // Any word: in a monorepo an option's value comes first (`pnpm --filter api db:push`, review 1).
         let words = DestructiveCommandRules.positional(command.arguments)
-        let usesRun = words.first == "run" || words.first == "run-script"
-        guard let script = usesRun ? words.dropFirst().first : words.first, Self.isDestructive(script) else {
-            return nil
-        }
+        guard let script = words.first(where: Self.isDestructive) else { return nil }
+        let usesRun = words.contains("run") || words.contains("run-script")
         return GuardFinding(
             rule: ([manager] + (usesRun ? ["run"] : []) + [script]).joined(separator: " "),
             environment: DestructiveCommandRules.databaseEnvironment(of: command, context: context))

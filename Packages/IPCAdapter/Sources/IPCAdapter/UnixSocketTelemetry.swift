@@ -38,7 +38,7 @@ public final class UnixSocketTelemetry: TelemetrySource, GuardRequests {
     /// Stops listening, denies the guard connections still waiting and removes the socket file.
     public func stop() {
         listener.stop()
-        waiters.denyAll(GuardReasons.unreachable)
+        waiters.close(GuardReasons.unreachable)
         stream.continuation.finish()
         guards.continuation.finish()
     }
@@ -76,11 +76,14 @@ private struct Delivery: Sendable {
     /// Reports the event, hands the request to the app and blocks this connection's thread until it replies.
     private func decide(_ request: IPCRequest) throws(IPCError) -> IPCResponse {
         let now = clock()
-        events.yield(try HookPayloadTranslator.event(request, at: now))
-        guard let waiter = waiters.add() else { return response(.deny(GuardReasons.tooManyPending)) }
+        events.yield(try HookPayloadTranslator.guardEvent(request, at: now))
+        guard let waiter = waiters.add() else {
+            return response(.deny(waiters.isClosed ? GuardReasons.unreachable : GuardReasons.tooManyPending))
+        }
         defer { waiters.remove(waiter) }
         let guarded = try HookPayloadTranslator.guardRequest(request, at: now) { waiter.resolve($0) }
-        guards.yield(guarded)
+        // Review 1: a server stopping right now finished the stream; nobody would ever answer.
+        if case .terminated = guards.yield(guarded) { waiter.resolve(.deny(GuardReasons.unreachable)) }
         return response(waiter.wait(seconds: UnixSocketTelemetry.guardWaitSeconds) ?? .deny(GuardReasons.unreachable))
     }
 
@@ -93,7 +96,7 @@ private struct Delivery: Sendable {
 }
 
 /// One guard connection waiting for its decision; the first decision wins.
-private final class GuardWaiter: Sendable {
+final class GuardWaiter: Sendable {
     let id = UUID()
     private let semaphore = DispatchSemaphore(value: 0)
     private let decision = Mutex<GuardDecision?>(nil)
@@ -114,12 +117,16 @@ private final class GuardWaiter: Sendable {
 }
 
 /// The guard connections waiting now, so stopping can deny them and their number stays bounded.
-private final class GuardWaiters: Sendable {
+final class GuardWaiters: Sendable {
     private let waiting = Mutex<[UUID: GuardWaiter]>([:])
+    private let closed = Mutex(false)
 
+    var isClosed: Bool { closed.withLock { $0 } }
+
+    /// A new waiter; nil when the server stopped or too many already wait.
     func add() -> GuardWaiter? {
         waiting.withLock { all in
-            guard all.count < UnixSocketTelemetry.maximumWaitingGuards else { return nil }
+            guard !isClosed, all.count < UnixSocketTelemetry.maximumWaitingGuards else { return nil }
             let waiter = GuardWaiter()
             all[waiter.id] = waiter
             return waiter
@@ -128,6 +135,12 @@ private final class GuardWaiters: Sendable {
 
     func remove(_ waiter: GuardWaiter) {
         _ = waiting.withLock { $0.removeValue(forKey: waiter.id) }
+    }
+
+    /// From now on no guard waits: those waiting are denied, and new ones are refused.
+    func close(_ reason: String) {
+        closed.withLock { $0 = true }
+        denyAll(reason)
     }
 
     func denyAll(_ reason: String) {

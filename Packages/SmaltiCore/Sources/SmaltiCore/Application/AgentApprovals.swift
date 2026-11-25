@@ -52,6 +52,7 @@ public final class AgentApprovals {
 
     public func receive(_ request: GuardRequest) {
         if case .deny(let denial) = request.localVerdict { return request.reply(.deny(denial.reason)) }
+        if request.isTruncated { return enqueue(request, ScreenToolUse.truncatedSubject(request.use.command)) }
         let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts)
         switch ScreenToolUse.verdict(for: request.use, context: context, home: home) {
         case .allow: request.reply(.allow)

@@ -11,7 +11,11 @@ struct HarnessIsolationGuardTests {
     nonisolated(unsafe) static let realHomes =
         #/(^|["/~])\.(claude|codex|gemini)(["/]|$)|\.local/share/opencode|\.config/nvim|Application Support/ClaudeCode/#
     /// The one place that resolves real homes from the launch arguments (as F3 does for Claude).
-    static let homeResolvers = ["LaunchSettings.swift", "ClaudeSettingsTelemetryCheck.swift"]
+    static let homeResolvers = [
+        "LaunchSettings.swift", "ClaudeSettingsTelemetryCheck.swift",
+        // F7.5: `<project>/.claude/settings.local.json`, relative to a project the user picks, never the home.
+        "ClaudeProjectPermissions.swift",
+    ]
 
     private var packages: URL {
         URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

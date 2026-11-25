@@ -187,8 +187,30 @@ struct GuardCommandTests {
         #expect(run(Self.bash("git status"), .unreachable, environment: outside).transport.sent.isEmpty)
     }
 
-    @Test func unreadableInputIsAllowedWhenItCannotBeTool() {
-        #expect(run("not json", .unreachable).output == "")
+    /// Review 1: a hook input Smalti cannot read is not let through.
+    @Test func unreadableInputIsDenied() {
+        #expect(run("not json", .unreachable).output == Self.denial(GuardReasons.unreadableInput))
+        #expect(run(#"{"cwd":"/p"}"#, .unreachable).output == Self.denial(GuardReasons.unreadableInput))
+    }
+
+    @Test func eventPreToolUseDeniesUnreadableInput() {
+        #expect(
+            EventCommand.preToolUseOutput(Data("{".utf8), environment: Self.environment)
+                == Self.denial(GuardReasons.unreadableInput))
+    }
+
+    /// Review 1 (C1): the app must know the command was cut, so it asks instead of judging the cut text.
+    @Test func oversizedCommandIsSentAsTruncated() {
+        let long = Self.bash("echo " + String(repeating: "a", count: 70_000) + "; terraform destroy")
+        let allow = IPCResponse(ok: true, error: nil, decision: .allow, reason: nil)
+
+        let transport = run(long, .response(allow)).transport
+
+        #expect(transport.payload["truncated"] as? Bool == true)
+    }
+
+    @Test func normalCommandIsNotTruncated() {
+        #expect(run(Self.bash("terraform destroy"), .unreachable).transport.payload["truncated"] == nil)
     }
 
     @Test func oversizedCommandAsks() {

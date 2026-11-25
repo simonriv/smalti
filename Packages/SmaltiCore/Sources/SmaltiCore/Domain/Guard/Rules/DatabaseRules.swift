@@ -2,7 +2,12 @@
 /// file, a redirection or a pipe); `dropdb` always.
 struct SQLClientRule: DestructiveCommandRule {
     private static let clients: Set<String> = ["psql", "pgcli", "mysql", "mariadb"]
-    private static let inlineSQLOptions: Set<String> = ["-c", "--command", "-e", "--execute"]
+    /// psql's `-e` echoes queries; only MySQL's runs SQL.
+    private static let inlineSQLOptions: [String: Set<String>] = [
+        "psql": ["-c", "--command"], "pgcli": ["-c", "--command"], "mysql": ["-e", "--execute"],
+        "mariadb": ["-e", "--execute"],
+    ]
+    private static let fileOptions: Set<String> = ["-f", "--file"]
     private static let informational: Set<String> = ["--version", "-V", "--help", "-?"]
     private static let keywords = ["DROP", "TRUNCATE"]
 
@@ -12,13 +17,21 @@ struct SQLClientRule: DestructiveCommandRule {
         guard Self.clients.contains(program),
             !command.arguments.contains(where: { Self.informational.contains($0) })
         else { return nil }
-        if let keyword = Self.keywords.first(where: { Self.containsWord($0, in: command.rawText) }) {
+        let text = ([command.rawText] + command.heredocs).joined(separator: "\n")
+        if let keyword = Self.keywords.first(where: { Self.containsWord($0, in: text) }) {
             return finding("\(program) con \(keyword)", command, context)
         }
-        let showsSQL = command.arguments.contains { option in
-            Self.inlineSQLOptions.contains(option) || Self.inlineSQLOptions.contains { option.hasPrefix($0 + "=") }
+        let inline = Self.inlineSQLOptions[program] ?? []
+        let showsSQL = command.arguments.contains { Self.isOption($0, in: inline) }
+        let readsFile = command.arguments.contains { Self.isOption($0, in: Self.fileOptions) }
+        return showsSQL && !readsFile ? nil : finding("\(program) sin SQL visible", command, context)
+    }
+
+    /// `-c`, `-cSQL`, `--command`, `--command=SQL`.
+    private static func isOption(_ word: String, in options: Set<String>) -> Bool {
+        options.contains { option in
+            word == option || word.hasPrefix(option + "=") || (!option.hasPrefix("--") && word.hasPrefix(option))
         }
-        return showsSQL ? nil : finding("\(program) sin SQL visible", command, context)
     }
 
     private func finding(_ rule: String, _ command: SimpleCommand, _ context: GuardContext) -> GuardFinding {

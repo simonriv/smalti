@@ -27,9 +27,20 @@ public struct ClaudeProjectPermissions: ProjectPermissions {
                 at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let data = try JSONSerialization.data(
                 withJSONObject: settings, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
-            try (data + Data("\n".utf8)).write(to: file, options: .atomic)
+            try write(data + Data("\n".utf8), to: file)
         } catch {
             throw .unwritable(path: Self.path(in: project), reason: error.localizedDescription)
+        }
+    }
+
+    /// Writes through a symlink (the link stays) and keeps the file's permissions (review 1).
+    private func write(_ data: Data, to file: URL) throws {
+        let target = file.resolvingSymlinksInPath()
+        let path = target.path(percentEncoded: false)
+        let permissions = try? FileManager.default.attributesOfItem(atPath: path)[.posixPermissions]
+        try data.write(to: target, options: .atomic)
+        if let permissions {
+            try FileManager.default.setAttributes([.posixPermissions: permissions], ofItemAtPath: path)
         }
     }
 
