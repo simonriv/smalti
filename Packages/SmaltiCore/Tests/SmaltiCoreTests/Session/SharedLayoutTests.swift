@@ -357,4 +357,11 @@ struct SharedLayoutTests {
 
         #expect(restored.panes[0].relaunch?.arguments == ["tail", "-f", "/Users/ana/x.log", "/Users/ana"])
     }
+
+    @Test func homeWithTrailingSlashStillBecomesTilde() {
+        let layout = SharedLayout(exporting: snapshot([pane(root + "/api")]), named: name, home: home + "/")
+
+        #expect(layout.root == "~/Projects/solen")
+        #expect(layout.panes[0].directory == "api")
+    }
 }

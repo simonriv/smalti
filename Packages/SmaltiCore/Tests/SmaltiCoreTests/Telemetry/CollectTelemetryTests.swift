@@ -159,6 +159,10 @@ struct CollectTelemetryTests {
         #expect(variables["SMALTI_VERSION"] == "7")
         #expect(variables["OTEL_LOGS_EXPORTER"] == "otlp")
     }
+    @Test func extrasStandardTurnsOtlpOn() {
+        #expect(ExtrasSettings.standard == ExtrasSettings(otlp: true))
+        #expect(SmaltiConfig.defaults.extras.otlp)
+    }
 }
 
 @MainActor
@@ -170,4 +174,5 @@ private final class FixedTelemetryVariables: TelemetryVariablesSource {
     }
 
     func currentVariables() -> [String: String] { variables }
+
 }

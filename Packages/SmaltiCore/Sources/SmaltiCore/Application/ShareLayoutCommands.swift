@@ -70,14 +70,10 @@ public struct ImportLayout {
     }
 
     public func preview(_ file: URL) throws(LayoutShareError) -> ImportPreview {
+        let shared: SharedLayout
+        do { shared = try files.read(from: file) } catch { throw .file(error) }
         let validated: ValidatedLayout
-        do { validated = try files.read(from: file).validated() } catch let error as LayoutFileError {
-            throw .file(error)
-        } catch let error as SharedLayoutError {
-            throw .file(.invalid(error))
-        } catch {
-            throw .file(.unreadable(path: file.path(percentEncoded: false), reason: "\(error)"))
-        }
+        do { validated = try shared.validated() } catch { throw .file(.invalid(error)) }
         let root = validated.layout.resolvedRoot(home: home)
         return ImportPreview(
             name: validated.name, commands: commands(of: validated.layout, root: root), root: root,

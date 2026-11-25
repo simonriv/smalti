@@ -122,4 +122,12 @@ struct NamedLayoutCommandTests {
         #expect(CommandID.layoutExport(name).rawValue == "layout.export:solen dev")
         #expect(CommandID.layoutExport(name).namedLayout == .export(name))
     }
+
+    @Test func exportIsNeverMarkedCurrent() throws {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: set, savedLayouts: [try summary("a", panes: 1, agents: 0)]),
+            keymap: .standard, layouts: .standard)
+
+        #expect(commands.first(where: id(.layoutExport(try LayoutName("a"))))?.isCurrent == false)
+    }
 }

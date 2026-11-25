@@ -82,7 +82,8 @@ struct MenuModelTests {
             ])
         #expect(
             menus[3].items.map(\.title) == [
-                "Paleta de comandos", "Observatorio", "Filtrar el Observatorio", "Buscar sesiones de agentes", "",
+                "Paleta de comandos", "Observatorio", "Filtrar el Observatorio", "Buscar sesiones de agentes",
+                "Importar layout…", "",
                 "Layout", "Igualar paneles", "", "Aumentar letra", "Reducir letra", "Tamaño real", "", "Desplazamiento",
                 "Abrir en Quick Look", "Abrir Neovim junto al agente", "Abrir en Neovim el último archivo editado", "",
                 "Pantalla completa",
@@ -198,5 +199,10 @@ struct MenuModelTests {
     @Test func dockMenuHasNewWindow() {
         #expect(MenuModel.dockMenu().map(\.title) == ["Nueva ventana"])
         #expect(MenuModel.dockMenu().first?.command == .windowNew)
+    }
+
+    /// F7: importing a layout is in the View menu, next to the session search.
+    @Test func viewMenuOffersLayoutImport() {
+        #expect(item("Importar layout…", in: "Ver", of: bar())?.action == .command(.layoutImport))
     }
 }
