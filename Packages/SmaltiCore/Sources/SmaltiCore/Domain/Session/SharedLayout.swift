@@ -3,6 +3,8 @@ import Foundation
 /// Why a shared layout file cannot be imported. `message` is the reason the status bar shows.
 public enum SharedLayoutError: Error, Equatable, Sendable {
     case unsupportedFormat(Int)
+    /// F7.6: exported by a newer Smalti.
+    case newerFormat(Int)
     case invalidName(String, reason: String)
     case paneCount(Int)
     case treeMismatch(leaves: Int, panes: Int)
@@ -22,6 +24,8 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     public var message: String {
         switch self {
         case .unsupportedFormat(let format): "formato \(format) no compatible con esta versión de Smalti"
+        case .newerFormat(let format):
+            "lo exportó una versión más nueva de Smalti (formato \(format)); actualiza Smalti para importarlo"
         case .invalidName(let name, let reason): "el nombre «\(name)» no es válido (\(reason))"
         case .paneCount(0): "no tiene paneles"
         case .paneCount(let count): "tiene \(count) paneles; el máximo es \(SharedLayout.maximumPanes)"
@@ -132,7 +136,11 @@ public struct SharedLayout: Codable, Equatable, Sendable {
     public func resolvedRoot(home: String) -> String { PortablePaths(home: home).absolute(root, base: home) }
 
     public func validated() throws(SharedLayoutError) -> ValidatedLayout {
-        guard smaltiLayout == Self.formatVersion else { throw .unsupportedFormat(smaltiLayout) }
+        switch FormatCompatibility.of(stored: smaltiLayout, current: Self.formatVersion) {
+        case .current: break
+        case .newer(let format): throw .newerFormat(format)
+        case .older(let format): throw .unsupportedFormat(format)
+        }
         let layoutName: LayoutName
         do {
             layoutName = try LayoutName(name)

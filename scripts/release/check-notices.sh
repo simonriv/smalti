@@ -16,7 +16,7 @@ fi
 
 always=(
   "libghostty" "Sparkle" "TOMLDecoder" "Fig autocomplete specs" "Inter" "JetBrains Mono" "Symbols Nerd Font"
-  "libxev" "z2d" "uucode" "zig-objc"
+  "Zig standard library and compiler-rt" "libxev" "z2d" "uucode" "zig-objc"
 )
 # symbol (extended regex on `nm` output) | component
 probes=(

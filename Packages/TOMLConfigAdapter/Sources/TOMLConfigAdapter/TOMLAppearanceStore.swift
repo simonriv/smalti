@@ -47,7 +47,7 @@ public final class TOMLAppearanceStore: AppearanceStore {
             FormatCompatibility.of(stored: stored, current: TOMLConfigParser.supportedVersion).isNewer
         else { return }
         throw ConfigError(
-            file: path, line: nil, key: TOMLConfigParser.versionKey,
+            file: path, line: nil, key: nil,
             reason: "theme.toml es de una versión más nueva de Smalti: no se sobrescribe")
     }
 

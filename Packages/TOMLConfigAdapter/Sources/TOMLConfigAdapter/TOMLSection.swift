@@ -37,6 +37,13 @@ struct TOMLSection {
         self.ignored = ignored
     }
 
+    /// F7.6 (review 1): in a newer file, a value this build does not know (a command, a module, a choice) is skipped
+    /// and named, so the rest of the file still applies; in a current file it is the error `error` describes.
+    func skipUnknownValue(_ value: String, at key: String, else error: ConfigError) throws(ConfigError) {
+        guard let ignored else { throw error }
+        ignored.append("\(dotted(key)) = \(value)")
+    }
+
     /// The same table, and every table read from it, collecting unknown keys into `ignored` instead of failing.
     func collectingUnknownKeys(into ignored: IgnoredKeys) -> TOMLSection {
         TOMLSection(name: name, table: table, source: source, ignored: ignored)

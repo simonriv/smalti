@@ -17,6 +17,7 @@ puedes sustituir libintl por tu propia versión y volver a enlazar (LGPL-2.1, se
 | Inter | la de App/Smalti/Fonts | OFL-1.1 | https://rsms.me/inter/ |
 | JetBrains Mono | 2.304 | OFL-1.1 | https://www.jetbrains.com/lp/mono/ |
 | Symbols Nerd Font | 3.4.0 | MIT | https://www.nerdfonts.com |
+| Zig standard library and compiler-rt | la de scripts/build-ghostty.sh | MIT | https://ziglang.org |
 | libxev | 819ffa1 | MIT | https://github.com/mitchellh/libxev |
 | z2d | 0.13.0 | MPL-2.0 | https://github.com/vancluever/z2d |
 | uucode | 0.2.0 | MIT | https://github.com/jacobsandlund/uucode |
@@ -474,6 +475,58 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## Glyph/icon sources
+
+| Project                                          | License         |
+| ------------------------------------------------ | ----------------|
+| Codicons                                         | CC BY 4.0       |
+| Devicons                                         | MIT             |
+| Font Awesome                                     | CC BY 4.0       |
+| Font Awesome Extension                           | MIT             |
+| Font Logos                                       | Unlicensed      |
+| IEC Power Symbols                                | MIT             |
+| Material Design Icons                            | Apache 2.0      |
+| Original Source (Seti-UI but modified)           | MIT             |
+| Octicons                                         | MIT             |
+| Pomicons                                         | SIL OFL 1.1     |
+| Powerline Extra Symbols                          | MIT             |
+| Powerline Symbols                                | Free License    |
+| Weather Icons                                    | SIL OFL 1.1     |
+
+### Additional notes
+
+* font awesome - we use the icons which are CC 4.0.
+* weather icons - project is unfortunately dead, but added the OFL license files to comply.
+```
+
+## Zig standard library and compiler-rt
+
+https://ziglang.org · MIT
+
+```text
+The MIT License (Expat)
+
+Copyright (c) Zig contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```
 
 ## libxev

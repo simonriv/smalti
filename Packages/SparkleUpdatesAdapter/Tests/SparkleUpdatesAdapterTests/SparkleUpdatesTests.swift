@@ -7,9 +7,16 @@ import Testing
 /// so these tests make no request.
 @MainActor
 @Suite("SparkleUpdates")
-struct SparkleUpdatesTests {
-    private static let bundleID = "dev.simonriv.smalti.sparkleadaptertest"
-    private let directory = FileManager.default.temporaryDirectory.appending(path: "smalti-sparkle-\(UUID())")
+final class SparkleUpdatesTests {
+    nonisolated private static let bundleID = "dev.simonriv.smalti.sparkleadaptertest"
+    nonisolated private let directory = FileManager.default.temporaryDirectory.appending(
+        path: "smalti-sparkle-\(UUID())")
+
+    /// Review 1 (M4): every test leaves no folder nor defaults domain behind.
+    deinit {
+        try? FileManager.default.removeItem(at: directory)
+        UserDefaults.standard.removePersistentDomain(forName: Self.bundleID)
+    }
 
     /// A bundle on disk with `keys` in its Info.plist, so Sparkle keeps its defaults in a test domain.
     private func bundle(_ keys: [String: String]) throws -> Bundle {
@@ -57,7 +64,6 @@ struct SparkleUpdatesTests {
     }
 
     @Test func automaticCheckFollowsTheSetting() throws {
-        defer { UserDefaults.standard.removePersistentDomain(forName: Self.bundleID) }
         let updates = try #require(
             SparkleUpdates.make(bundle: try bundle(["SUFeedURL": "https://smalti.sh/appcast.xml"]), feedOverride: nil))
 

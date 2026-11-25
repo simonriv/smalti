@@ -158,10 +158,24 @@ struct SharedLayoutTests {
 
     // MARK: Validation
 
-    @Test func rejectsFormatTwo() {
-        #expect(throws: SharedLayoutError.unsupportedFormat(2)) {
+    /// F7.6 (review 1, M1): format 2 comes from a newer Smalti; 0 or less is not a format at all.
+    @Test func rejectsFormatTwoAsNewer() {
+        #expect(throws: SharedLayoutError.newerFormat(2)) {
             try layout(panes: [SharedPane(directory: ".")], format: 2).validated()
         }
+    }
+
+    @Test(arguments: [0, -1])
+    func rejectsFormatBelowOneAsUnsupported(_ format: Int) {
+        #expect(throws: SharedLayoutError.unsupportedFormat(format)) {
+            try layout(panes: [SharedPane(directory: ".")], format: format).validated()
+        }
+    }
+
+    @Test func newerFormatMessageSaysToUpdate() {
+        #expect(
+            SharedLayoutError.newerFormat(2).message
+                == "lo exportó una versión más nueva de Smalti (formato 2); actualiza Smalti para importarlo")
     }
 
     @Test func rejectsInvalidName() {
@@ -260,7 +274,7 @@ struct SharedLayoutTests {
 
     @Test func errorMessagesAreSpanishAndDistinct() {
         let errors: [SharedLayoutError] = [
-            .unsupportedFormat(2), .invalidName("a/b", reason: "x"), .paneCount(12),
+            .unsupportedFormat(0), .newerFormat(2), .invalidName("a/b", reason: "x"), .paneCount(12),
             .treeMismatch(leaves: 2, panes: 3), .untypeableCommand(pane: 1), .emptyCommand(pane: 1),
             .escapingDirectory(pane: 1, path: "../x"), .tooLarge(bytes: 300_000), .notJSON(reason: "y"),
         ]

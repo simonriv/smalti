@@ -159,7 +159,10 @@ enum Choice {
         _ key: String, in section: TOMLSection, as type: T.Type, prefix: String = ""
     ) throws(ConfigError) -> T? where T.RawValue == String {
         guard let text = try section.text(key, reason: reason(T.self, prefix: prefix)) else { return nil }
-        guard let value = T(rawValue: text) else { throw section.error(at: key, reason(T.self, prefix: prefix)) }
+        guard let value = T(rawValue: text) else {
+            try section.skipUnknownValue(text, at: key, else: section.error(at: key, reason(T.self, prefix: prefix)))
+            return nil
+        }
         return value
     }
 
@@ -259,7 +262,9 @@ private enum TilingReader {
         guard let text = try section.text(key) else { return nil }
         let id = LayoutID(rawValue: text)
         guard LayoutCatalog.standard.strategy(for: id) != nil else {
-            throw section.error(at: key, "layout desconocido; se esperaba \(knownLayouts)")
+            try section.skipUnknownValue(
+                text, at: key, else: section.error(at: key, "layout desconocido; se esperaba \(knownLayouts)"))
+            return nil
         }
         return id
     }

@@ -108,7 +108,7 @@ struct ShareLayoutTests {
         bad.smaltiLayout = 7
         files.files[file] = bad
 
-        #expect(throws: LayoutShareError.file(.invalid(.unsupportedFormat(7)))) { try importer().preview(file) }
+        #expect(throws: LayoutShareError.file(.invalid(.newerFormat(7)))) { try importer().preview(file) }
     }
 
     @Test func previewPropagatesUnreadableFile() {

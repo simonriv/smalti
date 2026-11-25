@@ -128,6 +128,12 @@ public enum CommandCatalog {
 
     /// "Restaurar layout “rizaria-full” — 4 paneles, retoma 2 sesiones de Claude" (Paleta.dc.html).
     private static func restoreCommand(_ layout: NamedLayoutSummary) -> Command {
+        if let format = layout.newerFormat {
+            return Command(
+                id: .layoutRestore(layout.name), title: "Restaurar layout “\(layout.name.rawValue)”",
+                subtitle: "— guardado por una versión más nueva de Smalti (formato \(format))", group: .workspaces,
+                shortcut: nil, isCurrent: false)
+        }
         let panes = "\(layout.paneCount) \(layout.paneCount == 1 ? "panel" : "paneles")"
         let sessions = layout.agentCount == 1 ? "sesión" : "sesiones"
         let agents = layout.agentCount > 0 ? ", retoma \(layout.agentCount) \(sessions) de Claude" : ""
@@ -337,11 +343,21 @@ public struct NamedLayoutSummary: Equatable, Sendable {
     public let name: LayoutName
     public let paneCount: Int
     public let agentCount: Int
+    /// F7.6: set when a newer Smalti saved it; this build lists it but cannot open it.
+    public let newerFormat: Int?
 
     public init(name: LayoutName, paneCount: Int, agentCount: Int) {
         self.name = name
         self.paneCount = paneCount
         self.agentCount = agentCount
+        newerFormat = nil
+    }
+
+    public init(name: LayoutName, newerFormat: Int) {
+        self.name = name
+        paneCount = 0
+        agentCount = 0
+        self.newerFormat = newerFormat
     }
 
     public init(name: LayoutName, layout: WorkspaceSnapshot) {

@@ -281,9 +281,7 @@ final class TilingController {
 
     /// The saved layouts as the palette lists them.
     func savedLayouts() -> [NamedLayoutSummary] {
-        deps.namedLayouts.names().compactMap { name in
-            (try? deps.namedLayouts.layout(named: name)).map { NamedLayoutSummary(name: name, layout: $0) }
-        }
+        ListNamedLayouts(layouts: deps.namedLayouts).execute()
     }
 
     private func perform(_ command: NamedLayoutCommand) {

@@ -3,7 +3,7 @@
 
 Run by hand when a dependency changes; `check-notices.sh` then proves every component found in the binary has its
 section. Sources: the Ghostty submodule, Zig's package cache (filled by `scripts/build-ghostty.sh`), SwiftPM
-checkouts and files in the repo. Upstream texts that no archive carries are passed with --extra NAME=FILE.
+checkouts and files in the repo; texts that no archive carries live in `scripts/release/notices-extra/`.
 """
 import argparse
 import pathlib
@@ -12,6 +12,15 @@ import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ZIG = pathlib.Path.home() / ".cache/zig/p"
+EXTRA = ROOT / "scripts/release/notices-extra"
+EXTRAS = {
+    "simdutf": EXTRA / "simdutf-LICENSE-MIT.txt",
+    "dear_bindings": EXTRA / "dear_bindings-LICENSE.txt",
+    "uucode_hoehrmann": EXTRA / "uucode-LICENSE_Bjoern_Hoehrmann.txt",
+    "uucode_unicode": EXTRA / "uucode-LICENSE_unicode.txt",
+    "zig": EXTRA / "zig-LICENSE.txt",
+    "nerd_fonts_sources": EXTRA / "nerd-fonts-glyph-sources.md",
+}
 
 # (section, version, license, homepage, source) — source: "zig:<hash>:<member>", "repo:<path>" or "extra:<name>".
 COMPONENTS = [
@@ -21,7 +30,8 @@ COMPONENTS = [
     ("Fig autocomplete specs", "@withfig/autocomplete", "MIT", "https://github.com/withfig/autocomplete", "repo:Packages/FigCompletionAdapter/Sources/FigCompletionAdapter/LICENSE-fig.txt"),
     ("Inter", "la de App/Smalti/Fonts", "OFL-1.1", "https://rsms.me/inter/", "repo:App/Smalti/Fonts/LICENSE-Inter.txt"),
     ("JetBrains Mono", "2.304", "OFL-1.1", "https://www.jetbrains.com/lp/mono/", "zig:N-V-__8AAIC5lwAVPJJzxnCAahSvZTIlG-HhtOvnM1uh-66x:OFL.txt"),
-    ("Symbols Nerd Font", "3.4.0", "MIT", "https://www.nerdfonts.com", "zig:N-V-__8AAMVLTABmYkLqhZPLXnMl-KyN38R8UVYqGrxqO26s:LICENSE"),
+    ("Symbols Nerd Font", "3.4.0", "MIT", "https://www.nerdfonts.com", "zig+extra:N-V-__8AAMVLTABmYkLqhZPLXnMl-KyN38R8UVYqGrxqO26s:LICENSE+nerd_fonts_sources"),
+    ("Zig standard library and compiler-rt", "la de scripts/build-ghostty.sh", "MIT", "https://ziglang.org", "extra:zig"),
     ("libxev", "819ffa1", "MIT", "https://github.com/mitchellh/libxev", "zig:libxev-0.0.0-86vtc8QQFACz0sVc7U-VDiDIgH-XfBuEY5JpABLjHNpn:LICENSE"),
     ("z2d", "0.13.0", "MPL-2.0", "https://github.com/vancluever/z2d", "zig:z2d-0.13.0-j5P_HgsRFABzZDH54gI35P0OSrg7HFyJwS2bXX5uBdU4:COPYING"),
     ("uucode", "0.2.0", "MIT", "https://github.com/jacobsandlund/uucode", "zig+extra:uucode-0.2.0-ZZjBPoGFVgCiflJNFc6Io8xzC67B6PA5bUkk4LT0kCxg:LICENSE.md+uucode_hoehrmann,uucode_unicode"),
@@ -76,10 +86,9 @@ def text_of(source: str, extras: dict[str, pathlib.Path]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--extra", action="append", default=[], help="NAME=FILE for texts no archive carries")
     parser.add_argument("--out", default=str(ROOT / "THIRD_PARTY_NOTICES.md"))
     args = parser.parse_args()
-    extras = {name: pathlib.Path(path) for name, path in (item.split("=", 1) for item in args.extra)}
+    extras = EXTRAS
     rows = [f"| {n} | {v} | {lic} | {url} |" for n, v, lic, url, _ in COMPONENTS]
     sections = [f"## {n}\n\n{url} · {lic}\n\n```text\n{text_of(src, extras).strip()}\n```\n" for n, _, lic, url, src in COMPONENTS]
     pathlib.Path(args.out).write_text(HEADER + "\n".join(rows) + "\n\n" + "\n".join(sections), encoding="utf-8")

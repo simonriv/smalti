@@ -4,7 +4,6 @@ public enum FeedbackKind: Equatable, Sendable {
     case bug, idea
 }
 
-/// The GitHub issue a report opens, prefilled. Nothing is sent from the app: the user reads it and submits it.
 /// The GitHub issue a report opens: the public repo's issue form for its kind, with the title started and the build
 /// filled in. Nothing is sent from the app: the user reads it and submits it (F4.5; forms since F7.6).
 public enum FeedbackReport {

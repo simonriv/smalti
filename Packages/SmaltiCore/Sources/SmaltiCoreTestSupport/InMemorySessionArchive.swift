@@ -59,11 +59,17 @@ public final class InMemoryNamedLayouts: NamedLayouts {
     }
 
     public func layout(named name: LayoutName) throws(SessionArchiveError) -> WorkspaceSnapshot {
+        if let version = newer[name] { throw .newerFormat(file: "\(name.rawValue).json", version: version) }
         guard let layout = layouts[name] else { throw .notFound(name: name.rawValue) }
         return layout
     }
 
-    public func names() -> [LayoutName] { layouts.keys.sorted { $0.rawValue < $1.rawValue } }
+    /// F7.6: layouts a newer Smalti saved, by their format version.
+    public var newer: [LayoutName: Int] = [:]
+
+    public func names() -> [LayoutName] {
+        Set(layouts.keys).union(newer.keys).sorted { $0.rawValue < $1.rawValue }
+    }
 }
 
 /// Scrollback per pane; panes in `failing` cannot be read.
