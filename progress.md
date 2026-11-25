@@ -409,11 +409,11 @@
 - [x] T5 · `LICENSE` y avisos de terceros
 - [x] Revisión intermedia 1 (0 críticos, 2 importantes, 8 menores; corregidos) + mutación incremental (99,1 %; 1 sobreviviente muerto y verificado a mano)
 #### Bloque 3 · App, repo y pipeline
-- [ ] T6 · La app
-- [ ] T7 · Documentos del repo
+- [x] T6 · La app
+- [x] T7 · Documentos del repo
 - [x] T8 · Scripts de release y workflow
 - [x] T9 · Repos satélite
-- [ ] T10 · Pruebas de instalación y actualización
+- [x] T10 · Pruebas de instalación y actualización
 - [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre
 - [ ] T11 · Verificación, capturas y checklist
