@@ -1,0 +1,84 @@
+{
+  "frontIndex" : 0,
+  "savedAt" : "2026-11-18T11:06:40Z",
+  "version" : 2,
+  "windows" : [
+    {
+      "activeIndex" : 0,
+      "isFullScreen" : false,
+      "workspaces" : [
+        {
+          "focusedIndex" : 0,
+          "layout" : "dwindle",
+          "name" : "solen",
+          "panes" : [
+            {
+              "agent" : {
+                "harness" : "claude",
+                "lastState" : "waiting",
+                "sessionID" : "7f3a9c2e-1111",
+                "title" : "Agendar"
+              },
+              "commandCount" : 0,
+              "id" : "11111111-0000-4000-8000-000000000001",
+              "processName" : "claude",
+              "scrollbackLines" : 0,
+              "title" : "claude",
+              "workingDirectory" : "\/Users\/s\/dev\/solen"
+            },
+            {
+              "commandCount" : 38,
+              "id" : "11111111-0000-4000-8000-000000000002",
+              "processName" : "zsh",
+              "scrollbackLines" : 1240,
+              "title" : "zsh",
+              "workingDirectory" : "\/Users\/s\/dev\/solen"
+            },
+            {
+              "commandCount" : 1,
+              "id" : "11111111-0000-4000-8000-000000000003",
+              "processName" : "node",
+              "relaunch" : {
+                "arguments" : [
+                  "pnpm",
+                  "dev"
+                ]
+              },
+              "scrollbackLines" : 0,
+              "title" : "pnpm",
+              "workingDirectory" : "\/Users\/s\/dev\/solen"
+            }
+          ],
+          "rootDirectory" : "\/Users\/s\/dev\/solen",
+          "tree" : {
+            "split" : {
+              "axis" : "sideBySide",
+              "first" : {
+                "leaf" : {
+                  "index" : 0
+                }
+              },
+              "ratio" : 0.5,
+              "second" : {
+                "split" : {
+                  "axis" : "stacked",
+                  "first" : {
+                    "leaf" : {
+                      "index" : 1
+                    }
+                  },
+                  "ratio" : 0.5,
+                  "second" : {
+                    "leaf" : {
+                      "index" : 2
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

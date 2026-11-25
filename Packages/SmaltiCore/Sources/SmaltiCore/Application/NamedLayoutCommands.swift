@@ -52,10 +52,9 @@ public struct RestoreNamedLayout {
     {
         var skipped: [String] = []
         let panes = saved.panes.map { pane in
-            var launch: PaneLaunch =
-                pane.agent.map(PaneLaunch.resume) ?? pane.relaunch.map(PaneLaunch.relaunch) ?? .shell
-            if let agent = pane.agent, live.contains(agent.sessionID) {
-                skipped.append(agent.sessionID)
+            var launch = PaneLaunch.saved(pane)
+            if let id = pane.agent?.sessionID, live.contains(id) {
+                skipped.append(id)
                 launch = .shell
             }
             // A layout is a template: fresh identities, no saved output or history.

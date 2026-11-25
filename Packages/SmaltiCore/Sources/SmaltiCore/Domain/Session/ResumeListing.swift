@@ -88,6 +88,11 @@ public enum ResumeListing {
             ?? pane.workingDirectory
         if let agent = pane.agent { return row(for: agent, pane: pane, directory: directory, harnesses: harnesses) }
         let tag = ResumeTag(text: pane.processName ?? "shell", kind: .program)
+        if let editor = pane.editor {
+            return ResumeRow(
+                id: pane.id, tag: tag, title: editor.fileName, detail: "línea \(editor.line)",
+                code: "nvim +\(editor.line)", isFinished: false)
+        }
         if let relaunch = pane.relaunch {
             return ResumeRow(
                 id: pane.id, tag: tag, title: directory, detail: nil, code: relaunch.displayText, isFinished: false)
@@ -103,16 +108,26 @@ public enum ResumeListing {
         let adapter = harnesses.adapter(for: agent.harness)
         let tag = ResumeTag(text: adapter?.displayName ?? agent.harness.rawValue, kind: .agent)
         let isFinished = agent.lastState == .stopped
+        guard let sessionID = agent.sessionID else {
+            return ResumeRow(
+                id: pane.id, tag: tag, title: agent.title ?? directory, detail: continueDetail,
+                code: adapter?.continueCommand(), isFinished: false)
+        }
         return ResumeRow(
             id: pane.id, tag: tag, title: agent.title ?? directory, detail: isFinished ? "terminada" : nil,
-            code: adapter.map { shortResumeCommand(for: agent, with: $0) }, isFinished: isFinished)
+            code: adapter.map { shortResumeCommand(for: agent, id: sessionID, with: $0) }, isFinished: isFinished)
     }
 
-    private static func shortResumeCommand(for agent: AgentSnapshot, with adapter: any HarnessAdapter) -> String {
-        let short = String(agent.sessionID.prefix(shortIDLength))
+    /// F6: a harness pane without a captured id continues the directory's last session, which may be another one.
+    static let continueDetail = "la última del directorio"
+
+    private static func shortResumeCommand(for agent: AgentSnapshot, id: String, with adapter: any HarnessAdapter)
+        -> String
+    {
+        let short = String(id.prefix(shortIDLength))
         let shortened = AgentSnapshot(harness: agent.harness, sessionID: short, title: nil, lastState: agent.lastState)
         let command = adapter.resumeCommand(for: shortened)
-        return agent.sessionID.count > shortIDLength ? command + "…" : command
+        return id.count > shortIDLength ? command + "…" : command
     }
 
     private static func shellDetail(_ pane: PaneSnapshot) -> String? {

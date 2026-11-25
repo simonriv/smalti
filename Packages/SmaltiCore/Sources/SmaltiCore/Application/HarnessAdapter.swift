@@ -25,10 +25,16 @@ public protocol HarnessAdapter: Sendable {
 extension HarnessAdapter {
     public var displayName: String { harness.displayName }
 
-    /// Capture from the listing: the newest session the window admits.
+    /// Capture from the listing: the first session created after the start that the window admits.
     public func captureSessionId(in window: CaptureWindow) async throws(HarnessError) -> String? {
         window.choose(try await listSessions(SessionQuery(directory: window.directory, limit: .max)))
     }
+}
+
+/// A harness that can connect to the editor (Claude with claudecode.nvim): restored with its editor flag when Smalti
+/// knows an editor integration is installed (spec F6, `--ide`).
+public protocol EditorConnectable {
+    func resumeCommandConnectingEditor(for agent: AgentSnapshot) -> String
 }
 
 /// Process names compared by their last path component, so a wrapper or an absolute path still matches.
