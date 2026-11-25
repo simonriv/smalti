@@ -84,4 +84,42 @@ struct NamedLayoutCommandTests {
 
         #expect(Set(firstThree) == [.layoutDwindle, .layoutColumns, .layoutMaster])
     }
+
+    // MARK: F7 · Shared layouts
+
+    @Test func catalogOffersExportRightAfterEachRestore() throws {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(
+                workspaces: set,
+                savedLayouts: [try summary("a", panes: 1, agents: 0), try summary("b", panes: 2, agents: 0)]),
+            keymap: .standard, layouts: .standard)
+
+        let ids = commands.map(\.id)
+        let restoreA = try #require(ids.firstIndex(of: .layoutRestore(try LayoutName("a"))))
+        #expect(ids[restoreA + 1] == .layoutExport(try LayoutName("a")))
+        let export = commands.first(where: id(.layoutExport(try LayoutName("b"))))
+        #expect(export?.title == "Exportar layout “b”…")
+        #expect(export?.group == .workspaces)
+    }
+
+    @Test func catalogOffersImport() {
+        let commands = CommandCatalog.commands(
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+
+        let importCommand = commands.first(where: id(.layoutImport))
+        #expect(importCommand?.title == "Importar layout…")
+        #expect(importCommand?.group == .workspaces)
+    }
+
+    @Test func importIsAStandardCommand() {
+        #expect(CommandID.allStandard.contains(.layoutImport))
+        #expect(CommandID.layoutImport.rawValue == "layout.import")
+    }
+
+    @Test func layoutExportRoundTripsThroughCommandID() throws {
+        let name = try LayoutName("solen dev")
+
+        #expect(CommandID.layoutExport(name).rawValue == "layout.export:solen dev")
+        #expect(CommandID.layoutExport(name).namedLayout == .export(name))
+    }
 }
