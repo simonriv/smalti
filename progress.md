@@ -296,3 +296,41 @@
 - [x] Revisión intermedia 2 (3 importantes, 6 menores) + mutación incremental (22/22)
 #### Bloque 4 · Cierre
 - [x] T14 · Mediciones (C1 ✅ con enmienda 6 y repetición limpia, B7 17,8–23,9 ms, C12 ⚠️ no atribuible al resaltado), capturas, checklist (`docs/specs/F5.6-checklist.md`), revisión final acotada (2 importantes, 4 menores), mutación de la fase 100 % (328 mutantes), PRs #30 y #31, versión 0.5.6 desplegada
+
+## F6 · Multi-harness y Neovim
+
+### Spec
+- [x] Aprobada (2026-11-24, `docs/specs/F6-multi-harness.md`): Gemini CLI fuera, 4 adaptadores, fixtures reales grabados con Ollama (`qwen3:4b`) y la cuenta de Antigravity, captura por disco
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F6-multi-harness.md`)
+
+### Tareas
+#### Bloque 1 · Spike, fixtures y dominio
+- [ ] T1 · Spike de reanudación, nombres de proceso y fixtures reales
+- [ ] T2 · Tipos del multi-harness en el dominio
+- [ ] T3 · Puerto `HarnessAdapter` ampliado, contrato compartido y fake
+- [ ] T4 · Captura del ID y `HarnessBinding`
+- [ ] T5 · Guardar y restaurar con respaldo, y compatibilidad
+#### Bloque 2 · Adaptadores de harness
+- [ ] T6 · `SQLiteReader`
+- [ ] T7 · `CodexHarnessAdapter`
+- [ ] T8 · `AntigravityHarnessAdapter`
+- [ ] T9 · `OpenCodeHarnessAdapter` y `OpenCodeUsage`
+- [ ] T10 · `ClaudeHarness` completo e integración de reanudación
+#### Bloque 3 · Neovim, instalador e IPC
+- [ ] T11 · `ForegroundProcess` con pid y arranque, `PostToolUse` con archivo
+- [ ] T12 · Dominio de Neovim y `NeovimAdapter`
+- [ ] T13 · Catálogo de integraciones, instalador de claudecode.nvim y prueba del diff (C3)
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 4 · App
+- [ ] T14 · Composition root, flags y captura en vivo
+- [ ] T15 · Buscador como tarjeta propia (⌘⇧O)
+- [ ] T16 · Columna del buscador en «Retomar»
+- [ ] T17 · Neovim en la app
+- [ ] T18 · Observatorio con filtros y filas de OpenCode
+- [ ] T19 · Restaurar nvim, `--ide` e integraciones en ⌘K
+- [ ] Revisión intermedia 2 + mutación incremental
+#### Bloque 5 · Cierre
+- [ ] T20 · Mediciones, capturas, checklist y revisión final
+- [ ] T21 · Limpieza, PRs y despliegue

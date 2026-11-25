@@ -354,4 +354,4 @@ Según `.claude/rules/`:
 
 ## Enmiendas
 
-(ninguna todavía)
+1. **2026-11-24 · Plan, Claude.** «Locales» se decide solo por `providerID` (`ollama`, `lmstudio`): `opencode.db` no guarda la `baseURL` del proveedor, que vive en la config de OpenCode, y Smalti no la lee.
