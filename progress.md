@@ -334,3 +334,31 @@
 #### Bloque 5 · Cierre
 - [x] T20 · Mediciones, capturas, checklist y revisión final (C7 p95 53,6 ms; revisión final: 1 crítico, 2 importantes y 6 menores corregidos; mutación completa 99,9 %)
 - [x] T21 · Limpieza (modelo, Codex, OpenCode y Ollama desinstalados; grabaciones crudas borradas), 0.6.0, PRs y despliegue
+
+## F7 · Extras
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7-extras.md`): layouts compartibles en JSON portátil y receptor OTLP en 127.0.0.1 con solo logs `http/json`; Simón aprobó de antemano spec, plan y recomendaciones
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7-extras.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · `SharedLayout`
+- [ ] T2 · `ExportLayout`, `ImportLayout`, `LayoutFiles` y ⌘K
+- [ ] T3 · Dominio de la telemetría
+- [ ] T4 · `[extras]`, puertos, `CollectTelemetry`, entorno y Observatorio
+#### Bloque 2 · Adaptadores
+- [ ] T5 · `OTLPReceiverAdapter`: socket y HTTP
+- [ ] T6 · `OTLPLogsDecoder`
+- [ ] T7 · `ClaudeSettingsTelemetryCheck` y `SharedLayoutFiles`
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App
+- [ ] T8 · Telemetría en la app y emisor falso
+- [ ] T9 · Exportar e importar layouts en la app
+- [ ] T10 · Guardas y documentos
+- [ ] Revisión intermedia 2 + mutación incremental
+#### Bloque 4 · Cierre
+- [ ] T11 · Mediciones, capturas, checklist y revisión final
+- [ ] T12 · 0.7.0, PRs y despliegue
