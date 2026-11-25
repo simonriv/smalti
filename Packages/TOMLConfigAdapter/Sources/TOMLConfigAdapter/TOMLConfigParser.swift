@@ -22,11 +22,26 @@ enum TOMLConfigParser {
 
     static let prompt = "prompt"
 
+    /// F7.6: the file format this build writes and understands; a file without `version` is format 1.
+    static let supportedVersion = 1
+    static let versionKey = "version"
+    private static let versionReason = "se esperaba un entero mayor o igual que 1"
+
+    /// A configuration and what reading it noticed but still applied.
+    struct Parsed {
+        var config: SmaltiConfig
+        var warning: ConfigWarning?
+    }
+
     static func parse(_ text: String, file: String) throws(ConfigError) -> SmaltiConfig {
-        let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
+        try read(text, file: file).config
+    }
+
+    static func read(_ text: String, file: String) throws(ConfigError) -> Parsed {
+        let (root, ignored) = try versionedRoot(text, file: file)
         try root.rejectUnknownKeys(allowed: [
-            Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input, Table.window,
-            prompt, Table.preview, Table.extras, Table.guards,
+            versionKey, Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input,
+            Table.window, prompt, Table.preview, Table.extras, Table.guards,
         ])
         var config = SmaltiConfig.defaults
         try readLook(root, into: &config, scope: .config)
@@ -54,16 +69,43 @@ enum TOMLConfigParser {
         if let section = try root.section(Table.guards) {
             config.guards = try GuardsReader.read(section)
         }
-        return config
+        return Parsed(config: config, warning: ignored.warning)
     }
 
     /// `theme.toml` (spec F5): only `[appearance]`, `[window] buttons` and `[prompt]`, read over `base` key by key.
     static func parseTheme(_ text: String, file: String, over base: SmaltiConfig) throws(ConfigError) -> SmaltiConfig {
-        let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
-        try root.rejectUnknownKeys(allowed: [Table.appearance, Table.window, prompt])
+        try readTheme(text, file: file, over: base).config
+    }
+
+    static func readTheme(_ text: String, file: String, over base: SmaltiConfig) throws(ConfigError) -> Parsed {
+        let (root, ignored) = try versionedRoot(text, file: file)
+        try root.rejectUnknownKeys(allowed: [versionKey, Table.appearance, Table.window, prompt])
         var config = base
         try readLook(root, into: &config, scope: .theme)
-        return config
+        return Parsed(config: config, warning: ignored.warning)
+    }
+
+    /// The stored version when the text parses and writes a valid one; `nil` otherwise (a missing one is 1).
+    static func storedVersion(_ text: String) -> Int? {
+        guard let root = try? TOMLSection.root(of: TOMLSource(text: text, file: "")) else { return nil }
+        return (try? version(of: root)) ?? nil
+    }
+
+    /// The top table, collecting unknown keys when the file is newer than this build.
+    private static func versionedRoot(_ text: String, file: String) throws(ConfigError) -> (TOMLSection, NewerFile) {
+        let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
+        let compatibility = FormatCompatibility.of(stored: try version(of: root), current: supportedVersion)
+        guard case .newer(let version) = compatibility else { return (root, NewerFile(file: file, version: nil)) }
+        let newer = NewerFile(file: file, version: version)
+        return (root.collectingUnknownKeys(into: newer.ignored), newer)
+    }
+
+    private static func version(of root: TOMLSection) throws(ConfigError) -> Int? {
+        guard let number = try root.number(versionKey) else { return nil }
+        guard number >= 1, number == number.rounded(), let version = Int(exactly: number) else {
+            throw root.error(at: versionKey, versionReason)
+        }
+        return version
     }
 
     /// The look tables both files share.
@@ -259,5 +301,18 @@ private enum WindowReader {
         settings.confirmClose = try section.flag(confirmCloseKey) ?? settings.confirmClose
         settings.buttons = try Choice.read(buttonsKey, in: section, as: WindowButtons.self) ?? settings.buttons
         return settings
+    }
+}
+
+/// What a newer file left out, as the warning the app shows; nothing for a current or older file.
+private struct NewerFile {
+    let file: String
+    let version: Int?
+    let ignored = IgnoredKeys()
+
+    var warning: ConfigWarning? {
+        guard let version, !ignored.names.isEmpty else { return nil }
+        let name = file.split(separator: "/").last.map(String.init) ?? file
+        return .newerFormat(file: name, version: version, ignored: ignored.names)
     }
 }

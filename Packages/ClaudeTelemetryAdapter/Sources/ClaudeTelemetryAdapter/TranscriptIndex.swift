@@ -34,10 +34,25 @@ struct TranscriptIndex: Codable {
         return index
     }
 
-    /// Written to a temporary file and renamed, so a half-written index never replaces a good one.
+    /// Written to a temporary file and renamed, so a half-written index never replaces a good one. F7.6: an index
+    /// from a newer Smalti is left as it is, so two versions do not keep rebuilding each other's.
     func save(to file: URL) throws {
+        if let stored = Self.storedVersion(at: file),
+            FormatCompatibility.of(stored: stored, current: Self.formatVersion).isNewer
+        {
+            return
+        }
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(self).write(to: file, options: .atomic)
+    }
+
+    private struct StoredVersion: Decodable {
+        let version: Int?
+    }
+
+    private static func storedVersion(at file: URL) -> Int? {
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        return (try? JSONDecoder().decode(StoredVersion.self, from: data))?.version
     }
 
     /// Drops what was folded from `session`, so all its files are read again from the start.

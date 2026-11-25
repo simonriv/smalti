@@ -7,7 +7,8 @@ enum TOMLWriter {
         + "reescribe entero al guardar."
 
     static func text(_ document: AppearanceDocument) -> String {
-        ([header, ""] + appearance(document.appearance) + ansi(document.appearance.ansiOverrides)
+        ([header, "", "\(TOMLConfigParser.versionKey) = \(TOMLConfigParser.supportedVersion)", ""]
+            + appearance(document.appearance) + ansi(document.appearance.ansiOverrides)
             + window(document.buttons) + prompt(document.prompt)).joined(separator: "\n") + "\n"
     }
 
