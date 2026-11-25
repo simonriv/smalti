@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# F7.6: the release scripts, end to end on local stand-ins (no network, no GitHub, throwaway keys).
+# Prints "[n/total] ok|FAIL <case>".
+set -uo pipefail
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+rel="$root/scripts/release"
+work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
+total=15; n=0; failures=0
+report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
+
+# shellcheck source=/dev/null
+source "$rel/lib.sh"
+[[ "$(build_number 0.7.6)" == 706 && "$(build_number 1.12.3)" == 11203 && "$(build_number 0.8.0-beta.1)" == 800 ]]
+report build_number_follows_the_formula $?
+
+[[ "$(version_of_tag v0.7.6)" == 0.7.6 ]] && ! version_of_tag 0.7.6 > /dev/null 2>&1 && ! version_of_tag v0.7 > /dev/null 2>&1
+report tag_must_be_vX_Y_Z $?
+
+out="$("$rel/build.sh" v9.9.9 "$work/out" 2>&1)"; status=$?
+[[ $status != 0 && "$out" == *"does not match"* ]]; report build_refuses_a_tag_that_is_not_the_project_version $?
+
+cat > "$work/expected-item.xml" <<'X'
+    <item>
+      <title>0.7.6</title>
+      <pubDate>Wed, 25 Nov 2026 20:00:00 +0000</pubDate>
+      <sparkle:version>706</sparkle:version>
+      <sparkle:shortVersionString>0.7.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://smalti.sh/changelog#v0.7.6</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/simonriv/smalti/releases/download/v0.7.6/Smalti.dmg" length="18432000" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJl" />
+    </item>
+X
+"$rel/appcast-item.sh" 0.7.6 18432000 c2lnbmF0dXJl "Wed, 25 Nov 2026 20:00:00 +0000" > "$work/item.xml"
+cmp -s "$work/item.xml" "$work/expected-item.xml"; report appcast_item_has_the_web_format $?
+
+! "$rel/appcast-item.sh" 0.7.6 18432000 "" "Wed, 25 Nov 2026 20:00:00 +0000" > /dev/null 2>&1
+report appcast_item_without_signature_is_refused $?
+
+"$rel/cask.sh" 0.7.6 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef > "$work/smalti.rb"
+grep -q '^  version "0.7.6"$' "$work/smalti.rb" \
+  && grep -q '^  sha256 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"$' "$work/smalti.rb" \
+  && grep -q 'url "https://github.com/simonriv/smalti/releases/download/v#{version}/Smalti.dmg"' "$work/smalti.rb" \
+  && grep -q '^  auto_updates true$' "$work/smalti.rb" && grep -q 'depends_on macos: ">= :golden_gate"' "$work/smalti.rb" \
+  && grep -q 'depends_on arch: :arm64' "$work/smalti.rb" && grep -q '"~/.config/smalti",' "$work/smalti.rb"
+report cask_has_version_sha_and_the_spec_stanzas $?
+
+! "$rel/cask.sh" 0.7.6 abc > /dev/null 2>&1; report cask_refuses_a_bad_sha256 $?
+
+# A fake app, a DMG of it, and its contents.
+mkdir -p "$work/app/Smalti.app/Contents/MacOS" && printf '#!/bin/sh\n' > "$work/app/Smalti.app/Contents/MacOS/Smalti"
+"$rel/make-dmg.sh" "$work/app/Smalti.app" "$work/Smalti.dmg" > /dev/null 2>&1
+mnt="$work/mnt"; mkdir -p "$mnt"
+hdiutil attach -quiet -nobrowse -readonly -mountpoint "$mnt" "$work/Smalti.dmg" \
+  && [[ -d "$mnt/Smalti.app" && -L "$mnt/Applications" && "$(readlink "$mnt/Applications")" == /Applications ]]
+report dmg_holds_the_app_and_an_applications_link $?
+hdiutil detach -quiet "$mnt" 2>/dev/null
+
+# Throwaway EdDSA key: signing reads it from stdin and verifies against it.
+key="$(openssl genpkey -algorithm ed25519 2>/dev/null | openssl pkey -outform DER 2>/dev/null | tail -c 32 | base64)"
+SPARKLE_BIN="${SPARKLE_BIN:-$("$rel/fetch-sparkle-tools.sh" "$work/sparkle")}"; export SPARKLE_BIN
+signed="$(printf '%s' "$key" | "$rel/sign-update.sh" "$work/Smalti.dmg")"
+[[ "$signed" =~ ^[A-Za-z0-9+/=]+\ [0-9]+$ && "${signed#* }" == "$(stat -f %z "$work/Smalti.dmg")" ]]
+report signing_prints_signature_and_length $?
+
+# Local stand-ins for smalti-web and the tap.
+git init -q --bare -b main "$work/web.git" && git init -q "$work/web" && mkdir -p "$work/web/public"
+cp "$root/scripts/release/templates/appcast-empty.xml" "$work/web/public/appcast.xml"
+git -C "$work/web" add -A && git -C "$work/web" -c user.name=t -c user.email=t@localhost commit -qm init \
+  && git -C "$work/web" push -q "$work/web.git" HEAD:main 2>/dev/null
+"$rel/push-appcast.sh" "$work/web.git" v0.7.6 "$work/item.xml" > /dev/null 2>&1
+git clone -q -b release/v0.7.6 "$work/web.git" "$work/web-check" 2>/dev/null \
+  && python3 - "$work/web-check/public/appcast.xml" <<'P'
+import sys, xml.etree.ElementTree as ET
+items = ET.parse(sys.argv[1]).getroot().find("channel").findall("item")
+sys.exit(0 if items and items[0].findtext("title") == "0.7.6" else 1)
+P
+report appcast_branch_prepends_the_item $?
+
+"$rel/push-appcast.sh" "$work/web.git" v0.7.7 "$work/item.xml" > /dev/null 2>&1 && git clone -q -b release/v0.7.7 "$work/web.git" "$work/web-check2" 2>/dev/null
+[[ $? != 0 ]] || ! grep -q "<title>0.7.6</title>" "$work/web-check2/public/appcast.xml"
+report appcast_item_must_match_the_tag $?
+
+git init -q --bare -b main "$work/tap.git" && git init -q "$work/tap" && printf '# tap\n' > "$work/tap/README.md"
+git -C "$work/tap" add -A && git -C "$work/tap" -c user.name=t -c user.email=t@localhost commit -qm init \
+  && git -C "$work/tap" push -q "$work/tap.git" HEAD:main 2>/dev/null
+"$rel/push-cask.sh" "$work/tap.git" v0.7.6 "$work/smalti.rb" > /dev/null 2>&1
+git clone -q -b release/v0.7.6 "$work/tap.git" "$work/tap-check" 2>/dev/null && cmp -s "$work/tap-check/Casks/smalti.rb" "$work/smalti.rb"
+report cask_branch_holds_the_cask $?
+
+# publish.sh: notes are required, and nothing reaches GitHub without them (fake gh records any call).
+mkdir -p "$work/bin" && printf '#!/bin/sh\necho "$@" >> %q/gh.calls\n' "$work" > "$work/bin/gh" && chmod +x "$work/bin/gh"
+PATH="$work/bin:$PATH" "$rel/publish.sh" v9.9.9 "$work/Smalti.dmg" > /dev/null 2>&1; status=$?
+[[ $status != 0 && ! -e "$work/gh.calls" ]]; report publish_needs_release_notes $?
+
+grep -q 'if: ${{ !github.event.repository.private }}' "$root/.github/workflows/release.yml" \
+  && grep -q 'runs-on: xcode-27' "$root/.github/workflows/release.yml"
+report workflow_skips_private_repos_and_runs_on_xcode_27 $?
+
+(cd "$root" && actionlint .github/workflows/*.yml > /dev/null 2>&1); report workflows_pass_actionlint $?
+
+exit $((failures > 0))

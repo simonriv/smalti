@@ -1,0 +1,76 @@
+# F7.6: publishes a version from its tag. Every step is a script of scripts/release/ that also runs locally.
+# The job only runs in the public repo: macOS minutes in a private one cost money (they count 10x).
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (vX.Y.Z)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ !github.event.repository.private }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      OUT: build/release
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -version | grep -q '^Xcode 27\.' || { echo "expected Xcode 27"; exit 1; }
+          git -C vendor/ghostty fetch -q --tags origin
+          scripts/bootstrap
+
+      - name: Build
+        run: scripts/release/build.sh "$TAG" "$OUT"
+
+      - name: DMG
+        run: scripts/release/make-dmg.sh "$OUT/Smalti.app" "$OUT/Smalti.dmg"
+
+      - name: Sign with EdDSA
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          SPARKLE_BIN="$(scripts/release/fetch-sparkle-tools.sh "$RUNNER_TEMP/sparkle")"
+          export SPARKLE_BIN
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | scripts/release/sign-update.sh "$OUT/Smalti.dmg" > "$OUT/signature"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/release/publish.sh "$TAG" "$OUT/Smalti.dmg"
+
+      - name: Appcast pull request (smalti-web)
+        env:
+          DEPLOY_KEY: ${{ secrets.WEB_DEPLOY_KEY }}
+        run: |
+          read -r signature length < "$OUT/signature"
+          scripts/release/appcast-item.sh "${TAG#v}" "$length" "$signature" > "$OUT/item.xml"
+          scripts/release/push-appcast.sh git@github.com:simonriv/smalti-web.git "$TAG" "$OUT/item.xml"
+
+      - name: Cask pull request (homebrew-tap)
+        if: ${{ !contains(env.TAG, '-') }}
+        env:
+          DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+        run: |
+          scripts/release/cask.sh "${TAG#v}" "$(shasum -a 256 "$OUT/Smalti.dmg" | cut -d' ' -f1)" > "$OUT/smalti.rb"
+          scripts/release/push-cask.sh git@github.com:simonriv/homebrew-tap.git "$TAG" "$OUT/smalti.rb"
