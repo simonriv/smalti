@@ -17,6 +17,14 @@ public indirect enum SnapshotTree: Codable, Equatable, Sendable {
 
     private static let unresolvable = -1
 
+    /// How many panes the tree places.
+    public var leafCount: Int {
+        switch self {
+        case .leaf: 1
+        case .split(_, _, let first, let second): first.leafCount + second.leafCount
+        }
+    }
+
     /// The tree with `ids[index]` in each leaf, or `nil` when an index has no id (the caller rebuilds the layout).
     public func layoutTree(ids: [PaneID]) -> LayoutTree? {
         switch self {
