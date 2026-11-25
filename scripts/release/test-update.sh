@@ -38,7 +38,9 @@ feed="$work/feed"; mkdir -p "$feed"
 "$rel/make-dmg.sh" "$new_app" "$feed/Smalti.dmg" > /dev/null || fatal dmg
 key="$cache/keys/$([[ "$mode" == valid ]] && echo good || echo other)"
 SPARKLE_BIN="${SPARKLE_BIN:-$("$rel/fetch-sparkle-tools.sh" "$cache/sparkle")}"; export SPARKLE_BIN
-read -r signature length < <("$rel/sign-update.sh" "$feed/Smalti.dmg" < "$key") || fatal sign
+# The public half of whichever key signs: in "invalid" it is deliberately not the app's, so the app must refuse.
+read -r signature length < <("$rel/sign-update.sh" "$feed/Smalti.dmg" "$("$rel/public-key.sh" < "$key")" < "$key") \
+  || fatal sign
 SMALTI_DOWNLOAD_URL="http://127.0.0.1:$TEST_PORT/Smalti.dmg" SMALTI_NOTES_URL="http://127.0.0.1:$TEST_PORT/notes.html" \
   "$rel/appcast-item.sh" 0.7.91 "$length" "$signature" > "$feed/item.xml"
 sed "/prepends one <item>/r $feed/item.xml" "$rel/templates/appcast-empty.xml" > "$feed/appcast.xml"
