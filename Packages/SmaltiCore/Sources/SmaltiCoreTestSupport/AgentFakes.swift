@@ -1,3 +1,4 @@
+import Foundation
 import SmaltiCore
 
 @MainActor
@@ -57,6 +58,10 @@ public final class FakeGuardRequests: GuardRequests {
     public init() {}
 
     public func requests() -> AsyncStream<GuardRequest> { stream.stream }
+
+    private let cancelled = AsyncStream<UUID>.makeStream()
+
+    public func cancellations() -> AsyncStream<UUID> { cancelled.stream }
 
     public func send(_ request: GuardRequest) {
         stream.continuation.yield(request)

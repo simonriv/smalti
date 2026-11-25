@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import IPCAdapter
 import SmaltiCore
@@ -33,11 +34,15 @@ struct GuardSocketTests {
         return (try? IPCCodec.encode(request)) ?? Data()
     }
 
-    /// Sends in the background; the task ends when the server answers.
+    /// Sends in the background as the CLI does (no half-close: final review I2); the task ends when the server
+    /// answers.
     private func send(_ line: Data) -> Task<IPCResponse?, Never> {
         let path = self.path
         return Task.detached {
-            SocketClient.send(line, to: path).flatMap { try? IPCCodec.decodeResponse($0) }
+            guard let fd = SocketClient.openWriting(line, to: path) else { return nil }
+            defer { close(fd) }
+            let data = SocketClient.readAll(from: fd)
+            return try? IPCCodec.decodeResponse(data)
         }
     }
 
@@ -146,6 +151,22 @@ struct GuardSocketTests {
 
         #expect((event?.toolSummary?.count ?? 0) <= 2_000)
         #expect(event?.toolSummary?.contains("p4ss") == false)
+    }
+
+    /// Final review (I2): Claude cancelled the hook, so the CLI died and its connection closed: the request is
+    /// withdrawn.
+    @Test func hungUpClientCancelsItsRequest() async throws {
+        let telemetry = try server()
+        defer { telemetry.stop() }
+        var requests = telemetry.requests().makeAsyncIterator()
+        var cancellations = telemetry.cancellations().makeAsyncIterator()
+        let fd = try #require(SocketClient.openWriting(guardLine("terraform destroy"), to: path))
+
+        let request = try #require(await requests.next())
+        close(fd)
+        let cancelled = await cancellations.next()
+
+        #expect(cancelled == request.id)
     }
 
     @Test func eventRequestsStillAnswerOk() async throws {

@@ -138,7 +138,7 @@ struct GuardMutantKillerTests {
     }
 
     @Test func emptyFirstHostOfAListIsLocal() {
-        #expect(DatabaseURL.hosts(in: "postgres://,b.x.com/db") == [""])
+        #expect(DatabaseURL.hosts(in: "postgres://,b.x.com/db") == ["", "b.x.com"])
     }
 
     @Test func emptyHostLabelsDoNotMatch() {

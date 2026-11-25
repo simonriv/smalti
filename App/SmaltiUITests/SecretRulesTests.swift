@@ -61,7 +61,7 @@ final class SecretRulesTests: SmaltiUITestCase {
 
         choose("protegersecretos", title: "Proteger secretos en “\(name)”")
 
-        waitForRules(count: 25)
+        waitForRules(count: 34)
         XCTAssertTrue(deniedRules().contains("Read(**/.env)"))
         XCTAssertTrue(deniedRules().contains { $0.hasPrefix("Read(//") && $0.hasSuffix("/.ssh/**)") })
         openPalette()
@@ -74,7 +74,7 @@ final class SecretRulesTests: SmaltiUITestCase {
         try launchWithProject()
         let name = project.lastPathComponent
         choose("protegersecretos", title: "Proteger secretos en “\(name)”")
-        waitForRules(count: 25)
+        waitForRules(count: 34)
 
         choose("quitarproteccion", title: "Quitar protección de secretos en “\(name)”")
 

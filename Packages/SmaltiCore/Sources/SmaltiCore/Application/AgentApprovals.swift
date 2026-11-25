@@ -17,6 +17,14 @@ public struct PendingApproval: Equatable, Sendable {
     }
 }
 
+/// What a key press on a pane's approval did.
+public enum ApprovalOutcome: Equatable, Sendable {
+    case decided
+    case nothingWaiting
+    /// The card showed this command a moment ago: the press was meant for the previous one.
+    case tooSoon
+}
+
 public enum AgentApprovalChange: Equatable, Sendable {
     case waiting(PendingApproval)
     /// Decided, expired or dropped; `remaining` is how many still wait in the same pane.
@@ -37,6 +45,7 @@ public final class AgentApprovals {
     private let home: String
     private let timeout: TimeInterval
     private var queue: [(approval: PendingApproval, reply: @Sendable (GuardDecision) -> Void)] = []
+    private var lastKeyDecision: [PaneID: Date] = [:]
 
     public init(home: String, timeout: TimeInterval = standardTimeout) {
         self.home = home
@@ -79,6 +88,35 @@ public final class AgentApprovals {
             deadline: request.receivedAt.addingTimeInterval(timeout))
         queue.append((approval, request.reply))
         onChange?(.waiting(approval))
+    }
+
+    /// Final review: the hook was cancelled (Claude stopped waiting): its card goes away, nobody is answered.
+    public func cancel(_ id: UUID) {
+        settle(id, with: .deny(GuardReasons.cancelled), approved: false)
+    }
+
+    /// How long after a key decided one command the next key press is ignored: the card has just changed to another
+    /// command the user has not read yet.
+    public nonisolated static let rereadInterval: TimeInterval = 0.4
+
+    /// ⇧⌘↩ on the pane: its oldest command, unless the card changed a moment ago.
+    public func approveOldest(in pane: PaneID, now: Date) -> ApprovalOutcome {
+        decideOldest(in: pane, now: now) { approveOldest(in: pane) }
+    }
+
+    public func rejectOldest(in pane: PaneID, now: Date) -> ApprovalOutcome {
+        decideOldest(in: pane, now: now) { rejectOldest(in: pane) }
+    }
+
+    private func decideOldest(in pane: PaneID, now: Date, _ decide: () -> Bool) -> ApprovalOutcome {
+        if let last = lastKeyDecision[pane], now.timeIntervalSince(last) < Self.rereadInterval,
+            !pending(in: pane).isEmpty
+        {
+            return .tooSoon
+        }
+        guard decide() else { return .nothingWaiting }
+        lastKeyDecision[pane] = now
+        return .decided
     }
 
     @discardableResult
@@ -170,7 +208,7 @@ public struct HandleApprovalChange {
             let pane = workspace.panes.first(where: { $0.id == approval.pane })
         else { return }
         let reason = AttentionReason.approval(
-            rule: approval.subject.headline?.rule ?? "", environment: approval.subject.environment.label)
+            command: approval.subject.shortCommand, environment: approval.subject.environment.label)
         notifier.notify(.make(reason, workspace: workspace.name, directory: pane.workingDirectory, pane: pane.id))
     }
 

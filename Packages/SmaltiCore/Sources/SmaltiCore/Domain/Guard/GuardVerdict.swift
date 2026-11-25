@@ -68,6 +68,13 @@ public struct ApprovalSubject: Equatable, Sendable {
         findings.first { $0.environment.kind == environment.kind }
     }
 
+    /// The command as a notification quotes it (final review: the command, not the rule).
+    public var shortCommand: String {
+        command.count > Self.shortCommandLength ? String(command.prefix(Self.shortCommandLength)) + "…" : command
+    }
+
+    public static let shortCommandLength = 80
+
     /// «terraform destroy contra PROD».
     public var summary: String {
         "\(headline?.rule ?? "comando") contra \(environment.label)"
@@ -93,6 +100,7 @@ public enum GuardReasons {
     public static let unreachable = "Smalti no respondió (app cerrada o socket caído): el comando queda bloqueado."
     public static let outdatedIntegration =
         "Este comando necesita la aprobación de Smalti y la integración instalada es antigua: actualízala desde ⌘K."
+    public static let cancelled = "Claude canceló la herramienta antes de que el usuario decidiera."
     public static let unreadableInput = "Smalti no pudo leer la petición del hook: la herramienta queda bloqueada."
     public static let paneClosed = "El panel de Smalti se cerró antes de aprobar el comando."
     public static let tooManyPending = "Hay demasiados comandos esperando aprobación en Smalti."

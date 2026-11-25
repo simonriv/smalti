@@ -188,8 +188,14 @@ final class TilingController {
     /// ⌘⇧↩ / ⌘⇧⎋: the oldest command waiting in the focused pane.
     private func decideOldest(approve: Bool) {
         guard let approvals = deps.agents.guards?.approvals, let pane = set.active.focusedPane else { return }
-        let decided = approve ? approvals.approveOldest(in: pane) : approvals.rejectOldest(in: pane)
-        show(decided ? (approve ? .commandApproved : .commandRejected) : .noApprovalWaiting)
+        let now = Date()
+        let outcome = approve ? approvals.approveOldest(in: pane, now: now) : approvals.rejectOldest(in: pane, now: now)
+        switch outcome {
+        case .decided: show(approve ? .commandApproved : .commandRejected)
+        case .nothingWaiting: show(.noApprovalWaiting)
+        // Final review: the card has just changed to a command the user has not read; the press is ignored.
+        case .tooSoon: break
+        }
     }
 
     /// ⌘K: one waiting command, wherever it is.

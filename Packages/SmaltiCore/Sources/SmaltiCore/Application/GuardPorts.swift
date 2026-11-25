@@ -39,6 +39,8 @@ public struct GuardRequest: Sendable {
 public protocol GuardRequests: AnyObject {
     /// One consumer: iterate it once.
     func requests() -> AsyncStream<GuardRequest>
+    /// The ids of requests whose hook went away before an answer (final review: Claude cancelled the tool).
+    func cancellations() -> AsyncStream<UUID>
 }
 
 public enum ProjectPermissionsError: Error, Equatable, Sendable {

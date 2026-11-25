@@ -127,6 +127,8 @@ final class ApprovalTests: SmaltiUITestCase {
         waitFor(first, toContain: "exit=0")
         expect(card, value: "1 de 1")
         XCTAssertEqual(contents(second), "")
+        // A press right after the card changed is ignored on purpose (final review M2): read, then decide.
+        Thread.sleep(forTimeInterval: 0.5)
         app.typeKey(.escape, modifierFlags: [.command, .shift])
         waitFor(second, toContain: "exit=0")
     }
@@ -139,7 +141,7 @@ final class ApprovalTests: SmaltiUITestCase {
         expect(app.elements("smalti.paneStatus").firstMatch, value: "waiting")
         let noticed = XCTNSPredicateExpectation(
             predicate: NSPredicate { [self] _, _ in
-                contents(notices).contains("Aprobación: `terraform destroy` contra PROD")
+                contents(notices).contains("Aprobación: `terraform destroy -auto-approve` contra PROD")
             }, object: nil)
         wait(for: [noticed], timeout: 5)
 

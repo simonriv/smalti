@@ -860,6 +860,11 @@ final class AppComposition {
             Task { [weak self] in
                 for await request in requests { self?.approvals?.receive(request) }
             }
+            // Final review: a hook Claude cancelled takes its card away.
+            let cancellations = telemetry.cancellations()
+            Task { [weak self] in
+                for await id in cancellations { self?.approvals?.cancel(id) }
+            }
             Task { [weak self] in
                 for await event in events {
                     // The window that holds the pane applies it; the others ignore a pane they do not have.

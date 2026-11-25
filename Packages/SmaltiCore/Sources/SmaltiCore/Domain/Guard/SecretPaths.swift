@@ -85,7 +85,7 @@ public struct SecretPaths: Sendable {
         if let found = firstSecret(command.redirections, cwd: cwd) { return found }
         guard let program = command.program else { return nil }
         if KeychainRead.matches(program: program, arguments: command.arguments) { return Self.keychain }
-        if let found = firstSecret(ReadArguments.paths(program: program, arguments: command.arguments), cwd: cwd) {
+        if let found = firstSecret(ReadArguments.paths(program: program, command: command), cwd: cwd) {
             return found
         }
         return firstSecret(code(of: program, command).flatMap(pathFragmentsExpanded), cwd: cwd)
@@ -145,14 +145,18 @@ public struct SecretPaths: Sendable {
 /// The words of a command that may name a file it reads (spec F7.5 and review 1 amendments).
 enum ReadArguments {
     /// Runners that load an env file into the program they start without showing it, unless asked to print.
-    private static let envFileRunners: Set<String> = ["node", "bun", "deno", "tsx", "docker", "docker-compose"]
-    private static let printingOptions: Set<String> = ["-e", "--eval", "-p", "--print"]
+    private static let scriptRunners: Set<String> = ["node", "bun", "deno", "tsx"]
+    private static let containerRunners: Set<String> = ["docker", "docker-compose"]
+    private static let printingLongOptions: Set<String> = ["--eval", "--print"]
+    /// Container subcommands that only start what the image defines; `run`, `exec` and `config` can show values.
+    private static let quietContainerVerbs: Set<String> = ["up", "build", "start", "create", "restart"]
 
-    static func paths(program: String, arguments: [String]) -> [String] {
+    static func paths(program: String, command: SimpleCommand) -> [String] {
+        let arguments = command.arguments
         if SecretPaths.isNonReading(program) { return [] }
         if program == "git", arguments.first == "rm" { return [] }
         if program == "cp" || program == "mv" { return sources(arguments) }
-        if envFileRunners.contains(program) { return withoutEnvFiles(arguments) }
+        if isQuietEnvFileRun(program: program, command: command) { return withoutEnvFiles(arguments) }
         return arguments
     }
 
@@ -166,10 +170,26 @@ enum ReadArguments {
         return arguments.filter { $0.hasPrefix("-") } + positional.dropLast()
     }
 
-    /// `node --env-file=.env server.js` passes; with `-e`, `-p` or `docker compose config` the values would show.
+    /// Final review: `node --env-file=.env server.js` and `docker compose --env-file .env up` load values without
+    /// showing them. Code from the command line or stdin (`-e`, `-pe`, `--print`, `deno eval`, a here-document) and
+    /// `docker run`/`exec`/`config` could print them, so they get no exemption.
+    private static func isQuietEnvFileRun(program: String, command: SimpleCommand) -> Bool {
+        guard command.heredocs.isEmpty else { return false }
+        let positional = DestructiveCommandRules.positional(command.arguments)
+        if containerRunners.contains(program) { return positional.contains(where: quietContainerVerbs.contains) }
+        guard scriptRunners.contains(program), !positional.contains("eval"), !positional.contains("-") else {
+            return false
+        }
+        return !command.arguments.contains(where: isPrintingOption)
+    }
+
+    /// `--eval`, `--print=…`, and any short cluster with `e` or `p` (`-e`, `-p`, `-pe`).
+    private static func isPrintingOption(_ word: String) -> Bool {
+        if word.hasPrefix("--") { return printingLongOptions.contains { word == $0 || word.hasPrefix($0 + "=") } }
+        return word.hasPrefix("-") && (word.contains("e") || word.contains("p"))
+    }
+
     private static func withoutEnvFiles(_ arguments: [String]) -> [String] {
-        let prints = arguments.contains { word in printingOptions.contains { word == $0 || word.hasPrefix($0 + "=") } }
-        guard !prints, !arguments.contains("config") else { return arguments }
         var kept: [String] = []
         var skipNext = false
         for word in arguments {

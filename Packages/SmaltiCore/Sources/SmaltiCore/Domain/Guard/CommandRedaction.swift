@@ -5,7 +5,7 @@ public enum CommandRedaction {
 
     public static func redacted(_ text: String) -> String {
         var result = text
-        result.replace(/(?i)([a-z][a-z0-9+.\-]*:\/\/[^\s:\/@'"]*):[^\s'"@]*@/) { "\($0.output.1):\(mask)@" }
+        result.replace(/(?i)([a-z][a-z0-9+.\-]*:\/\/[^\s:\/@'"]*):[^\s'"]*@/) { "\($0.output.1):\(mask)@" }
         result.replace(/(?i)((?:authorization|proxy-authorization)\s*:\s*(?:bearer|basic|token|digest)\s+)[^\s'"]+/) {
             "\($0.output.1)\(mask)"
         }

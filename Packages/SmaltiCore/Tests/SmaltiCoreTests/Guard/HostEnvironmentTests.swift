@@ -74,7 +74,7 @@ struct HostEnvironmentTests {
         ("mysql://root@MySQL.X.com", "mysql.x.com"),
         ("mongodb+srv://u:p@cluster0.x.mongodb.net/db", "cluster0.x.mongodb.net"),
         ("rediss://:pw@cache.x.com:6380", "cache.x.com"), ("libsql://db-x.turso.io", "db-x.turso.io"),
-        ("postgres://u@[::1]:5432/x", "::1"), ("postgres:///app", ""), ("postgres://a,b.x.com/db", "a"),
+        ("postgres://u@[::1]:5432/x", "::1"), ("postgres:///app", ""),
         ("postgres://u:p@w@host.com/db", "host.com"),
     ])
     func databaseURLHost(url: String, host: String) {

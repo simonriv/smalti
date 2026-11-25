@@ -11,7 +11,7 @@ public enum DatabaseURL {
         var rest = text[...]
         while let separator = rest.firstRange(of: "://") {
             let scheme = schemeBefore(separator.lowerBound, in: rest)
-            if isDatabase(scheme.lowercased()) { hosts.append(host(afterScheme: rest[separator.upperBound...])) }
+            if isDatabase(scheme.lowercased()) { hosts += Self.hosts(afterScheme: rest[separator.upperBound...]) }
             rest = rest[separator.upperBound...]
         }
         return hosts
@@ -41,13 +41,31 @@ public enum DatabaseURL {
 
     private static let authorityEnd: Set<Character> = ["/", "?", "#", " ", "\t", "\n", "\"", "'", ";", "&", "|", ")"]
 
-    private static func host(afterScheme text: Substring) -> String {
+    private static let wordEnd: Set<Character> = [" ", "\t", "\n", "\"", "'", ";", "&", "|", ")"]
+
+    /// Every host of the URL (final review: `postgres://a,b/db` names two, and `postgresql:///db?host=h` names `h`
+    /// although its authority is empty).
+    private static func hosts(afterScheme text: Substring) -> [String] {
         let authority = text.prefix { !authorityEnd.contains($0) }
-        let hostAndPort = authority.lastIndex(of: "@").map { authority[authority.index(after: $0)...] } ?? authority
-        let first = hostAndPort.split(separator: ",", omittingEmptySubsequences: false).first ?? hostAndPort
-        if first.hasPrefix("["), let close = first.firstIndex(of: "]") {
-            return String(first[first.index(after: first.startIndex)..<close]).lowercased()
+        let hostsAndPorts = authority.lastIndex(of: "@").map { authority[authority.index(after: $0)...] } ?? authority
+        let hosts = hostsAndPorts.split(separator: ",", omittingEmptySubsequences: false).map(host(of:))
+        guard hosts == [""], let parameter = hostParameter(in: text.prefix { !wordEnd.contains($0) }) else {
+            return hosts
         }
-        return String(first.prefix { $0 != ":" }).lowercased()
+        return [parameter]
+    }
+
+    private static func host(of hostAndPort: Substring) -> String {
+        if hostAndPort.hasPrefix("["), let close = hostAndPort.firstIndex(of: "]") {
+            return String(hostAndPort[hostAndPort.index(after: hostAndPort.startIndex)..<close]).lowercased()
+        }
+        return String(hostAndPort.prefix { $0 != ":" }).lowercased()
+    }
+
+    /// `host=` of the query string, if any.
+    private static func hostParameter(in url: Substring) -> String? {
+        guard let query = url.firstIndex(of: "?") else { return nil }
+        let pairs = url[url.index(after: query)...].split(separator: "&")
+        return pairs.first { $0.hasPrefix("host=") }.map { String($0.dropFirst(5)).lowercased() }
     }
 }
