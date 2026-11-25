@@ -418,3 +418,33 @@
 #### Bloque 4 · Cierre
 - [x] T11 · Verificación, capturas y checklist
 - [x] T12 · Público, release y despliegue (repo público el 2026-11-25; PRs #43–#48; 0.7.6 instalada, la 0.7.5 en `/Applications/Smalti.app.old`; release `v0.7.6` por el pipeline, appcast smalti-web #8 y cask homebrew-tap #3; web smalti-web #6, #7 y #9)
+
+## F7.7 · Primer uso e inglés
+
+### Spec
+- [x] Aprobada (2026-11-25, `docs/specs/F7.7-primer-uso.md`): catálogo Swift puro por área en el dominio + String Catalog en la app (región `en`); spike: con `en`+`es` declarados, app, Sparkle y paneles siguen `AppleLanguages` (hoy todo queda en español); `option_as_meta = "auto"` (libghostty decide por distribución); lazy.nvim con `plugins`; bienvenida por teclado con marca en el estado; Simón aprobó de antemano spec, plan, recomendaciones, merges y release
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F7.7-primer-uso.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · Base del catálogo
+- [ ] T2 · ⌘K, menús, ayuda, integraciones y enlaces
+- [ ] T3 · Observatorio, telemetría, tiempos y barra de estado
+- [ ] T4 · Guardas, cierre, sesiones, layouts, búsqueda y vista previa
+- [ ] T5 · Prompt, Apariencia, plantilla de config, problemas tipados y `option_as_meta`
+- [ ] T6 · Bienvenida en el dominio
+#### Bloque 2 · Adaptadores
+- [ ] T7 · Problemas tipados en adaptadores y `option_as_meta`
+- [ ] T8 · Marca de bienvenida, Neovim con lazy.nvim y CLI
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App, CLI y repositorio
+- [ ] T9 · Base de localización en la app
+- [ ] T10 · Vistas localizadas y recorrido en inglés
+- [ ] T11 · Bienvenida y privacidad en la app
+- [ ] T12 · Release, guarda de red y documentos
+- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+#### Bloque 4 · Cierre
+- [ ] T13 · Verificación, capturas y checklist
+- [ ] T14 · 0.7.7, release, web y actualización real
