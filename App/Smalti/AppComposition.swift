@@ -1,5 +1,7 @@
 import AppKit
+import AntigravityHarnessAdapter
 import ClaudeHarnessAdapter
+import CodexHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
 import DiagnosticsAdapter
@@ -9,6 +11,7 @@ import GhosttyAdapter
 import ImageIOAdapter
 import IPCAdapter
 import OllamaAdapter
+import OpenCodeHarnessAdapter
 import ProjectContextAdapter
 import UserNotificationsAdapter
 import OSLog
@@ -48,7 +51,8 @@ final class AppComposition {
     private var completionMenu: CompletionMenuController?
     private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
-    private let harnesses = HarnessRegistry([ClaudeHarness()])
+    private var harnesses = HarnessRegistry([])
+    private var captures: HarnessCaptures?
     private static let persistTimeout: Duration = .seconds(1)
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
@@ -89,14 +93,29 @@ final class AppComposition {
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     /// Claude Code's `CLAUDE_CONFIG_DIR` rides along in the same map (LaunchSettings keeps three parameters).
     private static func launchArguments() -> [String: String] {
-        let keys = [
-            LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
-            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
-        ]
+        let keys =
+            [
+                LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
+                LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
+            ] + LaunchSettings.harnessArgumentKeys
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
-        arguments[LaunchSettings.claudeConfigDirKey] =
-            ProcessInfo.processInfo.environment[LaunchSettings.claudeConfigDirKey]
+        let environment = ProcessInfo.processInfo.environment
+        for key in [LaunchSettings.claudeConfigDirKey] + LaunchSettings.harnessEnvironmentKeys {
+            arguments[key] = environment[key]
+        }
         return arguments
+    }
+
+    /// F6: the four harnesses, each reading its own home as `LaunchSettings` resolved it.
+    private static func harnessRegistry(_ settings: LaunchSettings) -> HarnessRegistry {
+        HarnessRegistry([
+            ClaudeHarness(projectsRoot: settings.claudeHome.appending(path: "projects")),
+            CodexHarness(home: settings.codexHome),
+            AntigravityHarness(root: settings.antigravityRoot),
+            OpenCodeHarness(
+                database: settings.opencodeDatabase
+                    ?? OpenCodeHarness.defaultDatabase(dataHome: settings.opencodeDataHome)),
+        ])
     }
 
     /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
@@ -133,10 +152,13 @@ final class AppComposition {
             version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
             files: PaneFileLocator(stateDirectory: state),
             ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
+        harnesses = Self.harnessRegistry(startup.settings)
+        let captures = HarnessCaptures(registry: harnesses)
+        self.captures = captures
         let dependencies = TilingController.Dependencies(
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
-            harnesses: harnesses,
+            harnesses: harnesses, captures: captures,
             agents: Self.agentDependencies(notifier: makeNotifier()),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,

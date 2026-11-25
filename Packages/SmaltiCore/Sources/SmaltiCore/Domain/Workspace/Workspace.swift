@@ -118,6 +118,11 @@ public struct Workspace: Sendable, Equatable {
         replacing(pane) { $0.applying(event, at: date) }
     }
 
+    /// F6: the session a pane's harness captured (or the fallback without an id).
+    public func binding(_ binding: HarnessBinding, to pane: PaneID) -> Workspace {
+        replacing(pane) { $0.binding(binding) }
+    }
+
     public func applying(_ event: AgentEvent) -> (Workspace, AttentionReason?) {
         var attention: AttentionReason?
         let updated = replacing(event.pane) { pane in

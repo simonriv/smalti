@@ -263,3 +263,38 @@ struct PaneHarnessTests {
         #expect(pane.foregroundPID == 42)
     }
 }
+
+@Suite("Workspace harness binding")
+struct WorkspaceHarnessBindingTests {
+    @Test func bindingReachesOnlyItsPane() throws {
+        let first = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
+        let second = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
+        let workspace = Workspace.empty(
+            name: "w", rootDirectory: try WorkingDirectory(path: "/w"), layout: DwindleLayout()
+        )
+        .adding(first).adding(second)
+        let binding = HarnessBinding(harness: .codex, sessionID: "x", processStartedAt: .now, pid: 4)
+
+        let bound = workspace.binding(binding, to: first.id)
+
+        #expect(bound.panes.first { $0.id == first.id }?.harnessBinding == binding)
+        #expect(bound.panes.first { $0.id == second.id }?.harnessBinding == nil)
+    }
+}
+
+@Suite("Capture interim binding")
+struct CaptureInterimBindingTests {
+    private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func start(_ decision: CaptureDecision) -> CaptureStart {
+        CaptureStart(pane: PaneID(), harness: .codex, directory: "/w", processStartedAt: t0, pid: 9, decision: decision)
+    }
+
+    @Test func interimBindingHoldsWhatIsKnownAtTheStart() {
+        #expect(start(.known("x")).interimBinding.sessionID == "x")
+        #expect(start(.continuing).interimBinding.sessionID == nil)
+        #expect(
+            start(.search).interimBinding
+                == HarnessBinding(harness: .codex, sessionID: nil, processStartedAt: t0, pid: 9))
+    }
+}

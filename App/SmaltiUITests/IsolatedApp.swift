@@ -31,8 +31,21 @@ extension XCUIApplication {
             "-SmaltiClaudeCommand",
             file.deletingLastPathComponent().appending(path: "no-claude").path(percentEncoded: false),
         ]
+        app.launchArguments += isolatedHarnessArguments(next: file.deletingLastPathComponent())
         if let config { app.writeConfig(config) }
         return app
+    }
+
+    /// F6: empty homes for Codex, Antigravity and OpenCode, an empty Neovim config, `nvim --clean` for the editor
+    /// panes and a short socket folder (`sun_path` holds 104 bytes): never the user's own.
+    private static func isolatedHarnessArguments(next folder: URL) -> [String] {
+        let path = { (name: String) in folder.appending(path: name).path(percentEncoded: false) }
+        let sockets = "/private/tmp/smalti-ui-\(UUID().uuidString.prefix(8))"
+        return [
+            "-SmaltiCodexHome", path("codex"), "-SmaltiAntigravityHome", path("antigravity-cli"),
+            "-SmaltiOpenCodeDB", path("opencode/opencode.db"), "-SmaltiNvimConfigHome", path("nvim-config/nvim"),
+            "-SmaltiNvimCommand", "nvim --clean", "-SmaltiEditorSocketDir", sockets,
+        ]
     }
 
     /// F4: zsh with Ghostty's integration and Smalti's input script, which `zsh -f` would skip. `-d` skips the

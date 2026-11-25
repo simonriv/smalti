@@ -11,8 +11,8 @@ extension TilingController.Dependencies {
     func with(agents: TilingController.AgentDependencies) -> TilingController.Dependencies {
         TilingController.Dependencies(
             engine: engine, configStore: configStore, paneEnvironment: paneEnvironment, transcripts: transcripts,
-            namedLayouts: namedLayouts, harnesses: harnesses, agents: agents, home: home, shellOverride: shellOverride,
-            applyAppearance: applyAppearance)
+            namedLayouts: namedLayouts, harnesses: harnesses, captures: captures, agents: agents, home: home,
+            shellOverride: shellOverride, applyAppearance: applyAppearance)
     }
 }
 
@@ -51,6 +51,8 @@ final class TilingController {
         let transcripts: any PaneTranscripts
         let namedLayouts: any NamedLayouts
         let harnesses: HarnessRegistry
+        /// F6: captures the session of every harness pane, shared by all windows.
+        let captures: HarnessCaptures
         let agents: AgentDependencies
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
@@ -173,7 +175,8 @@ final class TilingController {
     /// What ⌘K lists besides the keymap: the workspaces, the saved layouts and the Claude integration's state.
     func catalogState() -> CatalogState {
         CatalogState(
-            workspaces: set, savedLayouts: savedLayouts(), claudeIntegration: deps.agents.integrationStatus.state)
+            workspaces: set, savedLayouts: savedLayouts(),
+            integrations: [.claudePlugin: deps.agents.integrationStatus.state])
     }
 
     /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
@@ -403,6 +406,7 @@ final class TilingController {
     private func close(_ pane: PaneID) {
         _ = ClosePane(engine: deps.engine).execute(pane, in: &set)
         openedAt[pane] = nil
+        deps.captures.forget(pane)
     }
 
     /// The only workspace cannot close; a shortcut bound in config.toml can still ask, and the refusal leaves
@@ -516,8 +520,29 @@ final class TilingController {
         default:
             guard let owner = set.workspace(containing: pane) else { return }
             set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
+            if case .foregroundProcessChanged(let process) = event { captureHarness(in: pane, running: process) }
         }
         publish()
+    }
+
+    /// F6: a harness that starts in a pane gets its session captured; the binding lands on the pane later.
+    private func captureHarness(in id: PaneID, running process: ForegroundProcess) {
+        guard let current = pane(id) else { return }
+        deps.captures.processChanged(
+            in: current, to: process,
+            isStillRunning: { [weak self] in
+                guard let pane = self?.pane(id) else { return false }
+                return pane.agent == nil && pane.foregroundPID == process.pid
+            },
+            apply: { [weak self] binding in
+                guard let self, let owner = set.workspace(containing: id) else { return }
+                set = set.updating(owner) { $0.binding(binding, to: id) }
+                publish()
+            })
+    }
+
+    private func pane(_ id: PaneID) -> Pane? {
+        set.workspaces.lazy.flatMap(\.panes).first { $0.id == id }
     }
 
     /// The shell integration reports title and directory at every prompt: the first one means the pane is ready.

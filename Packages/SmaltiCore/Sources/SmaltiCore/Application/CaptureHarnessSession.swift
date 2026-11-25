@@ -19,6 +19,25 @@ public struct CaptureStart: Equatable, Sendable {
     public let processStartedAt: Date
     public let pid: Int32?
     public let decision: CaptureDecision
+
+    public init(
+        pane: PaneID, harness: HarnessID, directory: String, processStartedAt: Date, pid: Int32?,
+        decision: CaptureDecision
+    ) {
+        self.pane = pane
+        self.harness = harness
+        self.directory = directory
+        self.processStartedAt = processStartedAt
+        self.pid = pid
+        self.decision = decision
+    }
+
+    /// The pane's binding while the capture runs: the harness is known at once, so a session saved meanwhile
+    /// relaunches it (with its id when named, else as "la última del directorio").
+    public var interimBinding: HarnessBinding {
+        let id: String? = if case .known(let id) = decision { id } else { nil }
+        return HarnessBinding(harness: harness, sessionID: id, processStartedAt: processStartedAt, pid: pid)
+    }
 }
 
 /// Finds the session a harness writes in a pane by looking at its store, retrying while the session is not there
