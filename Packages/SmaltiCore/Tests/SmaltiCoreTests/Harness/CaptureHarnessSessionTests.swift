@@ -310,6 +310,15 @@ struct PaneHarnessTests {
         #expect(saved.agent?.sessionID == "fresh")
     }
 
+    /// A stopped agent still in its own process, with no other harness bound, is saved as itself.
+    @Test func stoppedAgentInItsProcessIsSavedAsTheAgent() throws {
+        let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
+            .attaching(AgentSession(harness: .claude, sessionID: "old", title: nil, state: .stopped, startedAt: t0))
+            .applying(.foregroundProcessChanged(ForegroundProcess(name: "claude", pid: 42)))
+
+        #expect(PaneSnapshot(pane, scrollbackLines: 0).agent?.sessionID == "old")
+    }
+
     @Test func paneRemembersTheForegroundPid() throws {
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/w"))
             .applying(.foregroundProcessChanged(ForegroundProcess(name: "codex", pid: 42)))
