@@ -69,6 +69,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var preview = PreviewSettings.standard
     /// `[extras]` (F7); like `observatory`, outside the initializer.
     public var extras = ExtrasSettings.standard
+    /// `[guards]` (F7.5); like `observatory`, outside the initializer.
+    public var guards = GuardSettings.standard
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

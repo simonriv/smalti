@@ -16,8 +16,16 @@ public struct IPCRequest: Equatable, Sendable {
     public let hook: String
     public let payload: Data
 
+    public static let eventKind = "event"
+    /// F7.5: a `PreToolUse` that waits for Smalti's decision on the same connection.
+    public static let guardKind = "guard"
+
     public init(pane: String, hook: String, payload: Data) {
-        self.init(version: IPCLimits.version, kind: "event", pane: pane, hook: hook, payload: payload)
+        self.init(version: IPCLimits.version, kind: Self.eventKind, pane: pane, hook: hook, payload: payload)
+    }
+
+    public init(guardFor pane: String, hook: String, payload: Data) {
+        self.init(version: IPCLimits.version, kind: Self.guardKind, pane: pane, hook: hook, payload: payload)
     }
 
     init(version: Int, kind: String, pane: String, hook: String, payload: Data) {
@@ -29,13 +37,33 @@ public struct IPCRequest: Equatable, Sendable {
     }
 }
 
+/// F7.5: Smalti's answer to a guard request.
+public enum IPCDecision: String, Codable, Equatable, Sendable {
+    case allow
+    case deny
+}
+
+/// `{"ok":…,"error":…}`; a guard answer adds `decision` and `reason` (absent in an event's answer).
 public struct IPCResponse: Codable, Equatable, Sendable {
     public let ok: Bool
     public let error: String?
+    public let decision: IPCDecision?
+    public let reason: String?
 
-    public init(ok: Bool, error: String?) {
+    public init(ok: Bool, error: String?, decision: IPCDecision? = nil, reason: String? = nil) {
         self.ok = ok
         self.error = error
+        self.decision = decision
+        self.reason = reason
+    }
+
+    /// Encodes `decision` and `reason` only when present, so an event's answer stays as F2 wrote it.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(ok, forKey: .ok)
+        try container.encode(error, forKey: .error)
+        try container.encodeIfPresent(decision, forKey: .decision)
+        try container.encodeIfPresent(reason, forKey: .reason)
     }
 }
 

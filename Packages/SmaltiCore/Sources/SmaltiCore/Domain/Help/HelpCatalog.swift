@@ -83,6 +83,10 @@ private struct Rows {
             entry(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado"),
             entry(.claudeIntegrationInstall, "Instalar integración con Claude Code"),
             entry(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code"),
+            entry(.guardApprove, "Aprobar el comando que espera en el panel"),
+            entry(.guardReject, "Rechazar el comando que espera en el panel"),
+            entry(.secretsProtect, "Proteger los secretos del proyecto"),
+            entry(.secretsUnprotect, "Quitar la protección de secretos del proyecto"),
         ]
     }
 

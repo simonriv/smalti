@@ -77,6 +77,8 @@ public struct Keymap: Sendable, Equatable {
             (chord("l", .shift, .command), .editorOpenLastEdited),
             (chord("f", .shift, .command), .observatoryFilter),
             (chord("p", .command), .observatoryPeriod),
+            (chord("enter", .shift, .command), .guardApprove),
+            (chord("escape", .shift, .command), .guardReject),
         ]
         entries += basicEntries
         for number in NumberedShortcuts.range {

@@ -1,0 +1,110 @@
+import ClaudeHarnessAdapter
+import Foundation
+import SmaltiCore
+import Testing
+
+@Suite("Claude project permissions", .serialized)
+struct ClaudeProjectPermissionsTests {
+    private let project = URL(filePath: NSTemporaryDirectory()).appending(path: "smalti-perm-\(UUID().uuidString)")
+    private var settings: URL { project.appending(path: ".claude/settings.local.json") }
+    private var path: String { project.path(percentEncoded: false) }
+
+    init() throws {
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+    }
+
+    private func write(_ text: String) throws {
+        try FileManager.default.createDirectory(
+            at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: settings)
+    }
+
+    private func json() throws -> [String: Any] {
+        try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as? [String: Any])
+    }
+
+    @Test func missingFileReadsEmpty() throws {
+        #expect(try ClaudeProjectPermissions().deniedRules(in: path) == [])
+    }
+
+    @Test func writesSettingsLocalWithRules() throws {
+        try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: path)
+
+        #expect((try json()["permissions"] as? [String: Any])?["deny"] as? [String] == ["Read(**/.env)"])
+        #expect(try ClaudeProjectPermissions().deniedRules(in: path) == ["Read(**/.env)"])
+    }
+
+    @Test func keepsOtherKeys() throws {
+        try write(#"{"model":"x","permissions":{"allow":["Bash(ls)"],"deny":["Read(./a)"]}}"#)
+
+        try ClaudeProjectPermissions().setDeniedRules(["Read(./a)", "Read(**/.env)"], in: path)
+
+        let object = try json()
+        let permissions = object["permissions"] as? [String: Any]
+        #expect(object["model"] as? String == "x")
+        #expect(permissions?["allow"] as? [String] == ["Bash(ls)"])
+        #expect(permissions?["deny"] as? [String] == ["Read(./a)", "Read(**/.env)"])
+    }
+
+    @Test func unreadableSettingsAreLeftUntouched() throws {
+        let text = "{\n  // comentario\n  \"model\": \"x\",\n}\n"
+        try write(text)
+
+        #expect(throws: ProjectPermissionsError.self) { try ClaudeProjectPermissions().deniedRules(in: path) }
+        #expect(throws: ProjectPermissionsError.self) {
+            try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: path)
+        }
+        #expect(String(decoding: try Data(contentsOf: settings), as: UTF8.self) == text)
+    }
+
+    @Test func nonListDenyIsUnreadable() throws {
+        try write(#"{"permissions":{"deny":"Read(./a)"}}"#)
+
+        #expect(throws: ProjectPermissionsError.self) { try ClaudeProjectPermissions().deniedRules(in: path) }
+    }
+
+    /// Review 1: a symlinked settings file stays a symlink, and its permissions are kept.
+    @Test func keepsSymlinkAndPermissions() throws {
+        let target = project.appending(path: "shared-settings.json")
+        try Data(#"{"model":"x"}"#.utf8).write(to: target)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: target.path(percentEncoded: false))
+        try FileManager.default.createDirectory(
+            at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: settings, withDestinationURL: target)
+
+        try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: path)
+
+        let link = try FileManager.default.destinationOfSymbolicLink(atPath: settings.path(percentEncoded: false))
+        let mode = try FileManager.default.attributesOfItem(atPath: target.path(percentEncoded: false))[
+            .posixPermissions]
+        #expect(link == target.path(percentEncoded: false))
+        #expect((mode as? Int) == 0o600)
+        #expect(String(decoding: try Data(contentsOf: target), as: UTF8.self).contains("Read(**/.env)"))
+    }
+
+    /// T10: ⌘K protects the git root of the focused pane's folder, or the folder itself outside git.
+    @Test func projectRootIsTheNearestGitFolder() throws {
+        let nested = project.appending(path: "apps/web/src")
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: project.appending(path: ".git"), withIntermediateDirectories: true)
+
+        #expect(ClaudeProjectPermissions.projectRoot(containing: nested.path(percentEncoded: false)) == path)
+    }
+
+    @Test func projectRootWithoutGitIsTheFolder() throws {
+        let alone = URL(filePath: "/tmp").appending(path: "smalti-nogit-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: alone, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: alone) }
+
+        #expect(
+            ClaudeProjectPermissions.projectRoot(containing: alone.path(percentEncoded: false))
+                == alone.path(percentEncoded: false))
+    }
+
+    @Test func unwritableProjectSaysSo() {
+        #expect(throws: ProjectPermissionsError.self) {
+            try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: "/nonexistent-smalti/p")
+        }
+    }
+}

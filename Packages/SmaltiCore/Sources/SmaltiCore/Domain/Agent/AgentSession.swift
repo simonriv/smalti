@@ -37,6 +37,8 @@ public struct AgentSession: Equatable, Sendable {
             next.state = .working
             if next.title == nil { next.title = event.prompt.flatMap(Self.title(from:)) }
         case .preToolUse, .postToolUse:
+            // Final review: a subagent's tools in the same pane never hide an approval that still waits.
+            if case .waiting(_, .approval) = state { return AgentTransition(session: self, attention: nil) }
             next.state = .working
         case .permissionRequest:
             let summary = event.toolSummary ?? ""
@@ -55,6 +57,23 @@ public struct AgentSession: Equatable, Sendable {
             next.state = .stopped
         }
         return AgentTransition(session: next, attention: nil)
+    }
+
+    /// F7.5: Smalti holds one of its commands until the user approves it.
+    public func awaitingApproval(_ subject: ApprovalSubject, at date: Date) -> AgentTransition {
+        var next = self
+        next.state = .waiting(since: date, reason: .approval(subject.summary))
+        let attention = AttentionReason.approval(
+            command: subject.shortCommand, environment: subject.environment.label)
+        return AgentTransition(session: next, attention: attention)
+    }
+
+    /// Nothing waits for approval any more: the agent goes on. Any other wait stays.
+    public func approvalSettled() -> AgentSession {
+        guard case .waiting(_, .approval) = state else { return self }
+        var next = self
+        next.state = .working
+        return next
     }
 
     /// A notification while already waiting (Claude's 60 s idle reminder after a stop, or the one that comes with a

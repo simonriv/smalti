@@ -27,7 +27,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`, `LayoutFiles`, `TelemetryReceiver`, `ClaudeTelemetrySettings`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`, `LayoutFiles`, `TelemetryReceiver`, `ClaudeTelemetrySettings`, `GuardRequests`, `ProjectPermissions`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -98,6 +98,8 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `TEST_RUNNER_SMALTI_MEASURE=1 scripts/test-ui.sh PreviewLatencyTests`: C3 de F5.5, a demanda (`-SmaltiPreviewTimings <archivo>` escribe cada carga). `TEST_RUNNER_SMALTI_CAPTURE=1 scripts/test-ui.sh PreviewTests/testCaptureCard` saca la tarjeta para `docs/specs/F5.5-assets/compose-card.py`. `PREVIEW_HOVER=false scripts/measure-gpu-idle.sh` mide con la vista previa apagada.
 - `cd scripts/otlp && python3 -m unittest test_fake_claude`: emisor falso de telemetría de Claude Code (F7, `fake-claude.py`), que usan las UI tests y las mediciones; nunca un Claude real.
 - Telemetría y layouts compartibles (F7): `[extras] otlp` en `config.toml`; en pruebas, `-SmaltiManagedSettings` (nunca los managed settings de la máquina), `-SmaltiTelemetryProbe`, y en Debug `-SmaltiImportFile`, `-SmaltiPickedFolder`, `-SmaltiConfirmImport yes|no` y `-SmaltiExportDirectory`.
+- Guardas para agentes (F7.5): `[guards]` en `config.toml`; el plugin llama a `smalti guard PreToolUse` (`onFailure: "block"`, vuelve a `event` solo si el CLI es anterior y sale con 64). En pruebas: `-SmaltiApprovalTimeoutSeconds` y `-SmaltiProjectPermissionsRoot` (⌘K escribe ahí `.claude/settings.local.json`, nunca en un proyecto real); los hooks se prueban con payloads falsos por `"$SMALTI_CLI" guard PreToolUse`, nunca con un Claude real.
+- `"$KB_ROOT/_system/bin/kb-progress" run bench -- scripts/measure-guard.sh 50`: C12 de F7.5, arranque de `smalti guard PreToolUse` frente a `smalti event PreToolUse` con un servidor falso.
 - `swift test --package-path Packages/OTLPReceiverAdapter`: receptor OTLP/HTTP de F7 (socket TCP solo en `127.0.0.1`, token por arranque, eventos `api_request` y `api_error` de Claude Code).
 - `swift test --package-path Packages/DiagnosticsAdapter`: exportación de los registros de la sesión (F4.5, `OSLogStore` del propio proceso) y la guarda de que ningún `Logger` publica texto escrito.
 - `swift test --package-path Packages/<ClaudeTelemetryAdapter|OllamaAdapter|DarwinMetricsAdapter>`: adaptadores del Observatorio (F3). Las pruebas nunca leen el `~/.claude` real; las de UI pasan `-SmaltiClaudeHome` y `-SmaltiOllamaURL` temporales.

@@ -215,7 +215,7 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
     - `SystemMetrics` → métricas de CPU, GPU y memoria de macOS sin sudo.
     - `ConfigStore` → TOML. `Notifier` → notificaciones de macOS.
 
-**Plugin de Claude Code:** hooks (`SessionStart`, `Stop`, `Notification`, `PostToolUse`) que llaman `smalti event …`; el CLI reenvía al socket de la app. Un solo plugin alimenta estado de paneles, IDs de sesión, observatorio y enlaces a Neovim.
+**Plugin de Claude Code:** hooks (`SessionStart`, `Stop`, `Notification`, `PostToolUse`) que llaman `smalti event …`; el CLI reenvía al socket de la app. Un solo plugin alimenta estado de paneles, IDs de sesión, observatorio y enlaces a Neovim. Desde F7.5, `PreToolUse` llama a `smalti guard`: deniega la lectura de secretos y retiene los comandos destructivos hasta que el usuario los aprueba en Smalti (la conexión del socket espera la respuesta); falla cerrado si Smalti no contesta.
 
 ## Decisiones
 

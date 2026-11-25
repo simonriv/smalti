@@ -36,7 +36,7 @@ let package = Package(
         .testTarget(
             name: "SmaltiCLITests",
             dependencies: [
-                "smalti", "SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore"),
+                "smalti", "IPCAdapter", "SmaltiIPCProtocol", .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
             ]),
     ]

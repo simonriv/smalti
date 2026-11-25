@@ -131,7 +131,8 @@ private struct Builder {
         .historySearch: "Buscar en el historial", .paletteOpen: "Paleta de comandos",
         .observatoryToggle: "Observatorio",
         .panesEqualize: "Igualar paneles", .agentJump: "Ir al agente que espera",
-        .workspaceRename: "Renombrar workspace…",
+        .workspaceRename: "Renombrar workspace…", .guardApprove: "Aprobar comando que espera",
+        .guardReject: "Rechazar comando que espera",
     ]) { first, _ in first }
 
     func item(_ id: CommandID, title: String? = nil) -> MenuItem {
@@ -197,6 +198,7 @@ private struct Builder {
         [
             item(.windowMinimize), system("Zoom", .zoom), .separator,
             .submenu("Panel", numberedPanes(workspaces.active) + [.separator] + paneItems), item(.agentJump),
+            item(.guardApprove), item(.guardReject),
             .separator, .submenu("Workspace", workspaceItems(workspaces)), .separator,
             system("Traer todo al frente", .bringAllToFront),
         ]

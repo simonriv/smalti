@@ -17,6 +17,7 @@ enum TOMLConfigParser {
         static let window = "window"
         static let preview = "preview"
         static let extras = "extras"
+        static let guards = "guards"
     }
 
     static let prompt = "prompt"
@@ -25,7 +26,7 @@ enum TOMLConfigParser {
         let root = try TOMLSection.root(of: TOMLSource(text: text, file: file))
         try root.rejectUnknownKeys(allowed: [
             Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input, Table.window,
-            prompt, Table.preview, Table.extras,
+            prompt, Table.preview, Table.extras, Table.guards,
         ])
         var config = SmaltiConfig.defaults
         try readLook(root, into: &config, scope: .config)
@@ -49,6 +50,9 @@ enum TOMLConfigParser {
         }
         if let section = try root.section(Table.extras) {
             config.extras = try ExtrasReader.read(section)
+        }
+        if let section = try root.section(Table.guards) {
+            config.guards = try GuardsReader.read(section)
         }
         return config
     }

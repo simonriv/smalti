@@ -62,6 +62,9 @@ final class AppComposition {
     /// F7: export and import of saved layouts as portable files.
     private var layoutSharing: LayoutSharing?
     private var reportedTelemetryFailure: String?
+    /// F7.5: the commands the panes' agents wait to have approved, shared by every window.
+    private var approvals: AgentApprovals?
+    private var approvalTimer: Timer?
     private static let persistTimeout: Duration = .seconds(1)
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
@@ -99,6 +102,16 @@ final class AppComposition {
             theme: ThemeCatalog.apply(initial.config.appearance).theme)
     }
 
+    /// F7.5 review 2: the guard's test flags exist only in Debug, so a persisted default never redirects the daily
+    /// build's ⌘K rules or shortens its approvals.
+    private static var debugGuardArgumentKeys: [String] {
+        #if DEBUG
+            LaunchSettings.guardArgumentKeys
+        #else
+            []
+        #endif
+    }
+
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     /// Claude Code's `CLAUDE_CONFIG_DIR` rides along in the same map (LaunchSettings keeps three parameters).
     private static func launchArguments() -> [String: String] {
@@ -107,6 +120,7 @@ final class AppComposition {
                 LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
                 LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
             ] + LaunchSettings.harnessArgumentKeys + LaunchSettings.telemetryArgumentKeys
+            + debugGuardArgumentKeys
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
         let environment = ProcessInfo.processInfo.environment
         for key in [LaunchSettings.claudeConfigDirKey] + LaunchSettings.harnessEnvironmentKeys {
@@ -190,7 +204,8 @@ final class AppComposition {
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
             harnesses: harnesses, captures: captures, editor: editor,
-            agents: Self.agentDependencies(notifier: makeNotifier(), claudecode: claudecode),
+            agents: guardedAgents(
+                Self.agentDependencies(notifier: makeNotifier(), claudecode: claudecode), startup: startup),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
@@ -266,9 +281,10 @@ final class AppComposition {
         -> (TilingController, WindowVisibility)
     {
         let visibility = WindowVisibility()
-        let agents = TilingController.AgentDependencies(
+        var agents = TilingController.AgentDependencies(
             notifier: dependencies.agents.notifier, integrations: dependencies.agents.integrations,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
+        agents.guards = dependencies.agents.guards
         let controller = TilingController(dependencies.with(agents: agents), initial: initial)
         controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
         return (controller, visibility)
@@ -349,6 +365,7 @@ final class AppComposition {
                 appearance?.reload(config)
                 engine?.reportsPointerWords = config.preview.hover
                 claudeTelemetry?.apply(config.extras)
+                approvals?.settings = config.guards
                 input?.sendPromptStyle()
             }
             mainMenu?.refresh()
@@ -424,6 +441,7 @@ final class AppComposition {
         }
         compositions.removeAll { $0 === composition }
         composition.controller.forgetAllPanes()
+        retainApprovals()
         composition.closeOverlays()
         // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
         composition.closeAppearancePanel()
@@ -838,6 +856,15 @@ final class AppComposition {
             let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
             self.telemetry = telemetry
             let events = telemetry.events()
+            let requests = telemetry.requests()
+            Task { [weak self] in
+                for await request in requests { self?.approvals?.receive(request) }
+            }
+            // Final review: a hook Claude cancelled takes its card away.
+            let cancellations = telemetry.cancellations()
+            Task { [weak self] in
+                for await id in cancellations { self?.approvals?.cancel(id) }
+            }
             Task { [weak self] in
                 for await event in events {
                     // The window that holds the pane applies it; the others ignore a pane they do not have.
@@ -942,6 +969,68 @@ final class AppComposition {
         return IPCEndpoints(socket: socket, cli: cli, inheritedPath: path, inputSocket: inputSocket)
     }
 
+    // MARK: - Agent guards (F7.5)
+
+    /// The agents' dependencies plus the approvals: one queue for the app, its timer, and what ⌘K lists.
+    private func guardedAgents(_ base: TilingController.AgentDependencies, startup: Startup)
+        -> TilingController.AgentDependencies
+    {
+        let approvals = AgentApprovals(
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            timeout: startup.settings.approvalTimeout)
+        approvals.settings = startup.initial.config.guards
+        approvals.onChange = { [weak self] change in self?.approvalChanged(change) }
+        self.approvals = approvals
+        var agents = base
+        let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        let fixedRoot = startup.settings.projectPermissionsRoot
+        agents.guards = TilingController.GuardDependencies(
+            approvals: approvals, entries: { [weak self] in self?.approvalEntries() ?? [] },
+            panesChanged: { [weak self] in self?.retainApprovals() },
+            secrets: ProtectProjectSecrets(permissions: ClaudeProjectPermissions(), home: home),
+            projectRoot: { directory in fixedRoot ?? ClaudeProjectPermissions.projectRoot(containing: directory) })
+        return agents
+    }
+
+    private func approvalChanged(_ change: AgentApprovalChange) {
+        compositions.forEach { $0.controller.handleApproval(change) }
+        scheduleApprovalExpiry()
+    }
+
+    /// One timer, for the nearest deadline.
+    private func scheduleApprovalExpiry() {
+        approvalTimer?.invalidate()
+        approvalTimer = nil
+        guard let deadline = approvals?.nextDeadline else { return }
+        // Review 2: in the common modes (an open menu or a live resize does not hold it), and rescheduled after every
+        // firing, even when the clock went back and nothing expired.
+        let timer = Timer(timeInterval: max(0, deadline.timeIntervalSinceNow), repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.approvals?.expire(now: Date())
+                self?.scheduleApprovalExpiry()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        approvalTimer = timer
+    }
+
+    /// The waiting commands of every window, oldest first, with their workspace's name.
+    private func approvalEntries() -> [ApprovalEntry] {
+        (approvals?.allPending ?? []).compactMap { approval in
+            let set = composition(containing: approval.pane)?.controller.set
+            let workspace = set?.workspace(containing: approval.pane).flatMap { id in
+                set?.workspaces.first { $0.id == id }?.name
+            }
+            return workspace.map { ApprovalEntry(approval: approval, workspace: $0) }
+        }
+    }
+
+    /// Requests of panes no window has any more are denied.
+    private func retainApprovals() {
+        let panes = compositions.flatMap { $0.controller.set.workspaces.flatMap(\.panes).map(\.id) }
+        approvals?.retain(Set(panes))
+    }
+
     /// The Claude integration and its state, asked once at launch (F5.6).
     private static func agentDependencies(notifier: any Notifier, claudecode: ClaudecodeNvimInstaller)
         -> TilingController.AgentDependencies
@@ -1023,6 +1112,8 @@ final class AppComposition {
     }
 
     func saveForQuit() async {
+        // F7.5: every waiting command is denied before the socket closes; nobody would approve it.
+        approvals?.stop()
         // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
         appearance?.saveIfPending()
         secureInput.releaseAll()

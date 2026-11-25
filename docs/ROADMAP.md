@@ -21,7 +21,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6 y F7.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7 y F7.5.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -151,6 +151,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - **Entorno detectado** por el host del `DATABASE_URL` y por una lista de hosts de producción en `config.toml`; si no se puede determinar, se asume producción (falla cerrado).
 - **Criterio de cierre:** una prueba reproduce los comandos de los tres incidentes y cada uno queda bloqueado hasta la aprobación; ninguna lectura de los archivos de secretos de una lista de prueba llega al agente; sin respuesta de Smalti (app cerrada o socket caído), el hook bloquea.
 - **Fuera:** el proxy SQL con `libpg_query` y el proxy HTTPS de valores de relleno (ver «Ideas evaluadas»).
+- **Spec:** `docs/specs/F7.5-guardas.md`. PocketOS no usó `railway … delete` sino `curl` contra la API GraphQL de Railway: la guardia también vigila las peticiones HTTP que modifican algo en las APIs de los proveedores.
 - **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
 
 ## F7.6 · Distribución y actualizaciones
@@ -163,7 +164,17 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - **Otras vías de instalación:** DMG en GitHub Releases (`/download` en la web redirige a la última) y compilar desde el código con `scripts/bootstrap` (lo compilado en local no lleva cuarentena).
   - **Pipeline de release** en GitHub Actions: compilar el Release, firmar ad hoc, firmar con EdDSA, crear el DMG, publicar la release con sus notas, y abrir PR con el `appcast.xml` nuevo en el repo de la web y con el cask nuevo en el tap.
   - **Compatibilidad entre versiones:** los formatos de sesión, layouts, índice del Observatorio y `config.toml` llevan versión, se migran hacia delante, y una versión vieja que encuentra datos de una nueva no los rompe.
-  - **Repositorio público:** licencia elegida por Simón, `THIRD_PARTY_NOTICES` (libghostty MIT, Inter y JetBrains Mono OFL, specs de Fig ISC, Sparkle MIT), `README` de instalación, primera apertura y desinstalación, y el canal de feedback de F4.5 apuntando a los issues públicos.
+  - **Sin código de terceros (decidido por Simón, 2026-11-25):** `CONTRIBUTING` que no acepta pull requests, solo issues (bugs, feedback, ideas) que Simón implementa; plantillas de issue; los PR externos se cierran o se restringen si GitHub lo permite (la spec lo verifica). Así la autoría queda única para poder relicenciar o vender.
+  - **Antes de hacerlo público (decidido por Simón, 2026-11-25):** auditoría de secretos de toda la historia (`gitleaks` con brew) y de los fixtures grabados de sesiones reales, y decisión sobre el correo de autor de los commits; Smalti publica sus releases en `simonriv/smalti` (la web de SmaltiWeb redirige `/download` a la última) y añade `.github/FUNDING.yml` (`github: simonriv`); Simón da de alta GitHub Sponsors en la web: la fase le entrega los pasos exactos para activarlo. Claude prepara el cambio de visibilidad y lo ejecuta (`gh repo edit`) cuando Simón lo confirma en ese momento.
+  - **Repositorio público:** licencia **MIT** (`LICENSE`; elegida por Claude con la decisión delegada por Simón, 2026-11-25: la más simple, compatible con todas las dependencias y sin obligaciones para quien la use), `THIRD_PARTY_NOTICES` también dentro del bundle (libghostty MIT, cuyo `LICENSE` hoy se excluye del build; Inter y JetBrains Mono OFL 1.1; Sparkle MIT; TOMLDecoder MIT, verificado en su `LICENSE.md` de `0.4.5`; specs de Fig **MIT**, verificado en `LICENSE-fig.txt`: el «Acerca de» dice ISC por error en `AppComposition.swift` y se corrige aquí), `README` de instalación, primera apertura, desinstalación y compilación (`scripts/bootstrap` y `xcodebuild`), con enlaces a https://smalti.sh y https://smalti.sh/docs, y el canal de feedback de F4.5 apuntando a los issues públicos.
+  - **Contrato con la web (`simonriv/smalti-web`, dominio `smalti.sh`, publicado en prelanzamiento el 2026-11-25 (inglés y `/es`, Vercel, indexado); prompt de smalti-web, 2026-11-25):**
+    - Sparkle: `SUFeedURL = https://smalti.sh/appcast.xml`, `SUPublicEDKey` en el Info.plist, `SUEnableSystemProfiling = NO`; la comprobación de actualizaciones es la única petición de red que sale de la máquina. Claude genera las claves con `generate_keys` (la privada queda en el llavero de Simón, que es la copia) y la sube como secreto de Actions `SPARKLE_ED_PRIVATE_KEY` con `gh secret set`.
+    - Release: tag `vX.Y.Z`, notas en Markdown en el cuerpo (la web las lee para `/changelog`), asset con el nombre exacto **`Smalti.dmg`** en todas las versiones, prereleases marcadas como tales. Build solo arm64 (`ARCHS = arm64` explícito; hoy no está fijado) con `MACOSX_DEPLOYMENT_TARGET = 27.0`, y `CURRENT_PROJECT_VERSION` creciente por versión (hoy es `1` siempre; `sparkle:version` lo necesita).
+    - Appcast: el pipeline abre un PR a `smalti-web` que antepone un `<item>` en `public/appcast.xml` con el formato de su `docs/appcast.md` (`length` y `minimumSystemVersion` exactos; nunca un `<item>` sin `sparkle:edSignature`). Necesita un token fine-grained solo para `smalti-web` (contents y pull requests) como secreto de Actions: GitHub solo permite crearlo desde la web, así que la fase le da a Simón los pasos exactos (o usa una alternativa que Claude pueda montar sola, si la spec la encuentra) y Claude lo guarda como secreto.
+    - Tap: `Casks/smalti.rb` con `url` a `…/releases/download/v#{version}/Smalti.dmg`, `sha256`, `auto_updates true`, `depends_on macos: ">= :<símbolo de macOS 27>"`, `depends_on arch: :arm64` y `zap` de `~/.config/smalti` y `~/Library/Application Support/Smalti`; el pipeline actualiza `version` y `sha256`.
+    - En la app: enlace discreto a donaciones en «Acerca de» y en la ayuda (`https://smalti.sh/#support`, `/es#apoyar` en español) y a la documentación (`https://smalti.sh/docs`, `/es/docs`); el idioma del enlace lo decide F7.7.
+    - Entrega al cerrar la fase: versión del primer release público, `minimumSystemVersion` y tamaño de la DMG; nombre del asset y formato del tag; licencias (Smalti, Fig, TOMLDecoder); si el repo ya es público; cambios en atajos, claves de configuración, rutas o integraciones desde `906a558` (la base de las docs de la web: F7.5 añade ⌘⇧↩, ⌘⇧⎋, `[guards]`, entradas de ⌘K, `smalti guard` y el plugin 0.2.0); notas de versiones anteriores para `content/changelog.json` si Simón las quiere; limitaciones de Sparkle con firma ad hoc y el texto exacto de «Abrir igualmente» y de la sección de Seguridad en macOS 27.
+    - La web promete: gratis, macOS 27+, solo Apple Silicon, nada sale de la máquina salvo la comprobación de actualizaciones, «firmada con la clave de Smalti» (nunca «notarizada»), las tres vías de instalación y la primera apertura con «Abrir igualmente» o `xattr`. Todo debe ser cierto el día del lanzamiento; si no, se avisa a la web.
 - **Notarización, después y condicionada:** si las donaciones cubren el Apple Developer Program, se añade Developer ID y notarización al pipeline y se propone el cask al tap oficial; no cambia nada más de la fase. Gastar ese dinero exige la aprobación explícita de Simón.
 - **Criterio de cierre:** por definir en su spec; como mínimo, en un usuario de macOS sin la app, la instalación por DMG y por el tap abre la app siguiendo los pasos documentados, y una versión instalada se actualiza a la siguiente desde un appcast de prueba (firma EdDSA verificada, sin aviso de Gatekeeper) sin perder sesión, layouts ni configuración; una versión con firma EdDSA inválida se rechaza.
 - **Dependencias:** F4.5 (feedback, «Acerca de» con versión). Cambia la Decisión «Alcance» de `PROJECT.md`; la línea de firma de `CLAUDE.md` (ad hoc) se mantiene.
@@ -220,12 +231,17 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Criterio de cierre:** por definir en su spec; como mínimo, tras migrar un `.env` de prueba no queda ningún valor en disco, y ningún valor del baúl aparece en el scrollback guardado ni en los registros.
 - **Dependencias:** F7.5 (bloqueo de lectura) y F9 (timeline, para enmascararlo).
 
+## Al terminar todas las fases
+
+- **Registro de derechos de autor en Colombia (pedido por Simón, 2026-11-25):** dar a Simón el paso a paso para registrar Smalti como «soporte lógico» (software) en la Dirección Nacional de Derecho de Autor (DNDA): trámite en línea y gratuito; la protección existe sin registro, y el registro sirve como prueba fechada de autoría. Verificar entonces los requisitos vigentes en la web de la DNDA.
+
 ## Ideas evaluadas
 
 Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya construido en F0–F7 y las Decisiones:
 
 | Idea | Veredicto | Dónde |
 | --- | --- | --- |
+| Plan de pago para equipos sobre la guardia de agentes (políticas compartidas, auditoría, aprobación delegada y desde el móvil; open core, la parte de pago fuera del repo público) | Más adelante, con usuarios y demanda; la app se lanza gratis con donaciones (Simón, 2026-11-25; KB: «Monetización de Smalti») | Sin fase |
 | Timeline nativo de la sesión | Entra | F9 |
 | Ciclo de revisión con Neovim | Entra lo que falta: comentarios → prompt al agente (los diffs con `:w`/`:q` ya están en F6) | F10 |
 | Workspaces por proyecto | Entra, sobre el formato de F7 | F8.5 |

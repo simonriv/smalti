@@ -140,7 +140,8 @@ def run(command: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProc
     """Runs `command` in its own process group; on timeout the whole group is killed, so a test helper that a
     mutant hung (a grandchild of `swift test`) never outlives its run and slows the next ones."""
     process = subprocess.Popen(
-        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+        start_new_session=True)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
