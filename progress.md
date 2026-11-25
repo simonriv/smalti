@@ -277,22 +277,22 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · `HighlightLexer`
-- [ ] T2 · `LineHighlighter`, `HighlightSpan` e `isCommand`
-- [ ] T3 · `PathFacts`, `loadedSpec`, `HighlightCodec` y `HighlightLine`
-- [ ] T4 · `HighlightPalette`, `[input] highlighting` y estilo
-- [ ] T5 · `IntegrationState` y catálogo con una sola acción
+- [x] T1 · `HighlightLexer`
+- [x] T2 · `LineHighlighter`, `HighlightSpan` e `isCommand`
+- [x] T3 · `PathFacts`, `loadedSpec`, `HighlightCodec` y `HighlightLine`
+- [x] T4 · `HighlightPalette`, `[input] highlighting` y estilo
+- [x] T5 · `IntegrationState` y catálogo con una sola acción
 #### Bloque 2 · Adaptadores
-- [ ] T6 · `FigSpecs.loadedSpec` e `isCommand`
-- [ ] T7 · `FileSystemPathFacts`
-- [ ] T8 · Lado zsh del resaltado
-- [ ] T9 · Iconos del prompt a la altura de las mayúsculas
-- [ ] T10 · `ClaudePluginInstaller.installState` y binario configurable
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T6 · `FigSpecs.loadedSpec` e `isCommand`
+- [x] T7 · `FileSystemPathFacts`
+- [x] T8 · Lado zsh del resaltado
+- [x] T9 · Iconos del prompt a la altura de las mayúsculas
+- [x] T10 · `ClaudePluginInstaller.installState` y binario configurable
+- [x] Revisión intermedia 1 (6 importantes, 8 menores) + mutación incremental (45 sobrevivientes matados y verificados a mano)
 #### Bloque 3 · App
-- [ ] T11 · Resaltado en la app
-- [ ] T12 · Estado de la integración con Claude en la app
-- [ ] T13 · Lista de ⌘K con `NSTableView`
-- [ ] Revisión intermedia 2 + mutación incremental
+- [x] T11 · Resaltado en la app
+- [x] T12 · Estado de la integración con Claude en la app
+- [x] T13 · Lista de ⌘K con `NSTableView`
+- [x] Revisión intermedia 2 (3 importantes, 6 menores) + mutación incremental (22/22)
 #### Bloque 4 · Cierre
-- [ ] T14 · Mediciones, capturas, checklist, revisión final, mutación completa, PRs y despliegue
+- [ ] T14 · Mediciones (C1 ✅ con enmienda 6 y repetición limpia, B7 17,8–23,9 ms, C12 ⚠️ no atribuible al resaltado), capturas, checklist (`docs/specs/F5.6-checklist.md`), revisión final acotada (2 importantes, 4 menores), mutación de la fase 100 % (328 mutantes), PRs y despliegue
