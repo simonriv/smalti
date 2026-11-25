@@ -7,7 +7,7 @@ import SmaltiCore
 /// `claudeIntegrationChanged` so an open palette rebuilds its list. `IntegrationCheckSchedule` decides when to ask.
 @MainActor
 final class ClaudeIntegrationStatus {
-    private let integration: any HarnessIntegration
+    let integration: any HarnessIntegration
     private(set) var state = IntegrationState.unknown
     private var schedule: IntegrationCheckSchedule
     private let logger = Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "integration")

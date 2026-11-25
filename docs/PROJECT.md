@@ -70,10 +70,11 @@ Smalti tiene nueve pilares; los cuatro primeros forman el núcleo de la v1.
 | Harness | Comando de reanudación | Origen del ID |
 | --- | --- | --- |
 | Claude Code | `claude --resume <id>` | Hook `SessionStart` y transcripts JSONL en `~/.claude/projects` |
-| Codex | `codex resume <id>` | Almacén de sesiones de Codex |
-| Gemini CLI | `gemini --resume <id o índice>` | `~/.gemini/tmp/<hash>/chats/` |
-| Antigravity | `agy --conversation <id>` / `agy -c` | Caché de última conversación por workspace |
-| OpenCode | `opencode -s <id>` / `-c`, `--fork` | Base de datos de OpenCode |
+| Codex | `codex resume <id>` / `--last`, `codex fork <id>` | `$CODEX_HOME/sessions` e índice `state_5.sqlite` |
+| Antigravity | `agy --conversation <id>` / `agy -c` | `~/.gemini/antigravity-cli/conversation_summaries.db` |
+| OpenCode | `opencode -s <id>` / `-c` | `$XDG_DATA_HOME/opencode/opencode.db` (esquema 2.x) |
+
+Gemini CLI quedó fuera: Google retiró su login individual y Antigravity lo cubre (spec F6, 2026-11-24).
 
 - Pantalla "Retomar donde quedaste" al abrir: lista por workspace con casillas, "Restaurar", "Solo layouts" y "Empezar limpio".
 - Buscador de todas las sesiones de agentes del disco, filtrable por harness; Enter la abre en un panel nuevo, ⌘Enter la bifurca si el harness lo permite.
@@ -208,7 +209,7 @@ La app y el canal IPC hablan con el dominio; el dominio llama a cada adaptador a
 - **Puertos:** `TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `CompletionProvider`, `PredictionProvider`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `Notifier`.
 - **Adaptadores:**
     - `TerminalEngine` → libghostty.
-    - `HarnessAdapter` → Claude Code, Codex, Gemini CLI, Antigravity, OpenCode. Cada uno implementa `detect`, `captureSessionId`, `listSessions` y `resumeCommand`.
+    - `HarnessAdapter` → Claude Code, Codex, Antigravity, OpenCode. Cada uno implementa `detect`, `captureSessionId`, `listSessions` y `resumeCommand`.
     - `TelemetrySource` → hooks vía socket; `AgentTranscripts` → lector de transcripts JSONL; `LiveAgents` → `~/.claude/sessions`; `LocalModels` → API de Ollama. Receptor OTLP local en F7.
     - `CompletionProvider` → specs de Fig e historial.
     - `PredictionProvider` → heurístico (por defecto), API del usuario, `claude -p`.
@@ -264,8 +265,8 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
     - Cierre: tema, prompt y layout se cambian sin editar archivos.
     - **F5.5 · Previews.** Miniatura al pasar el cursor sobre nombres de imagen, ⌘Y Quick Look y `smalti img` (kitty) (separada de F5 por Simón, 2026-11-23).
     - **F5.6 · Resaltado del input.** Coloreado nativo de la línea de comando con los colores del tema, sin plugins de zsh, más dos correcciones de ⌘K y los iconos del prompt a la altura del texto (idea de Simón, 2026-11-24; spec F5.6).
-7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Gemini CLI, Antigravity y OpenCode; buscador de sesiones; puente con Neovim e instalador de claudecode.nvim.
-    - Cierre: se retoman sesiones de los 5 harnesses y los diffs de Claude se aprueban en Neovim.
+7. **F6 · Multi-harness y Neovim.** Adaptadores de Codex, Antigravity y OpenCode (sin Gemini CLI); buscador de sesiones; puente con Neovim e instalador de claudecode.nvim (spec F6).
+    - Cierre: se retoman sesiones de los 4 harnesses y los diffs de Claude se aprueban en Neovim.
 8. **F7 · Extras.** Predicción con API propia y `claude -p`; daemon `smaltid` para procesos persistentes; layouts compartibles; receptor OTLP local para la telemetría de Claude Code.
     - Cierre: cada extra se activa sin afectar el rendimiento base.
 9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).

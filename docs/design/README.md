@@ -50,3 +50,8 @@ Niebla, Ámbar nocturno y Bosque se completaron a partir de las muestras de `Apa
 ## Resaltado del input (F5.6)
 
 Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-assets/mockup-highlight.png` (generada por `generate-mockups.py` de esa carpeta con las tablas de temas de F5): comando ANSI 4, desconocido en el color de error, subcomando ANSI 6, opción y variable ANSI 5, cadena ANSI 2, ruta subrayada y operador en texto secundario, con "Proteger legibilidad".
+
+## Multi-harness (F6)
+
+- `Reanudar.dc.html`: sin el chip ni la fila de Gemini (Gemini CLI quedó fuera). La tarjeta «Todas las sesiones de agentes» también se abre sola, centrada, con ⌘⇧O; escribir filtra y el texto sale en el lugar del subtítulo. Una fila de respaldo dice «`agy -c` · la última del directorio».
+- `Observatorio.dc.html`: los filtros también se cambian con ⌘⇧F; el pie añade «base de OpenCode».

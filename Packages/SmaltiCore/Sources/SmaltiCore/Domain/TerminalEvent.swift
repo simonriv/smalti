@@ -1,3 +1,5 @@
+import Foundation
+
 /// Something that happened inside a pane's terminal, in domain terms.
 public enum TerminalEvent: Equatable, Sendable {
     case titleChanged(String)
@@ -36,9 +38,14 @@ public struct CommandOutcome: Equatable, Sendable {
 public struct ForegroundProcess: Equatable, Sendable {
     public let name: String
     public let commandLine: [String]?
+    /// F6: which process, and since when, so a harness's new session can be told from older ones.
+    public let pid: Int32?
+    public let startedAt: Date?
 
-    public init(name: String, commandLine: [String]? = nil) {
+    public init(name: String, commandLine: [String]? = nil, pid: Int32? = nil, startedAt: Date? = nil) {
         self.name = name
         self.commandLine = commandLine
+        self.pid = pid
+        self.startedAt = startedAt
     }
 }

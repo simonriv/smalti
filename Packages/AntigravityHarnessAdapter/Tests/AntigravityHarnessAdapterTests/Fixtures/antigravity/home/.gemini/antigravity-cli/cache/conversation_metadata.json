@@ -1,0 +1,30 @@
+{
+  "conversations": {
+    "333590e6-d93b-4a3e-aec9-9cd094977c8f": {
+      "summary": {
+        "ID": "333590e6-d93b-4a3e-aec9-9cd094977c8f",
+        "Title": "Replying With Hola Fixture",
+        "Preview": "Responde solo: hola fixture",
+        "NumSteps": 2,
+        "Loaded": true,
+        "UpdatedAt": "2026-11-25T02:17:09.941293Z",
+        "WorkspaceURIs": [
+          "file:///private/tmp/claude-501/-Users-sfixture-Projects-smalti/efbd72ca-6935-4b1b-824a-7a968a485876/scratchpad/spike/agy/work"
+        ],
+        "AppDataDir": "antigravity-cli",
+        "ProjectID": "default-cli-project",
+        "AgentName": "",
+        "GroupID": "",
+        "Internal": false,
+        "Cloud": false,
+        "CloudProject": {
+          "ID": "",
+          "Name": ""
+        },
+        "PermissionPreset": 0
+      },
+      "is_internal": false,
+      "last_modified_time": "2026-11-24T21:17:40.195846679-05:00"
+    }
+  }
+}

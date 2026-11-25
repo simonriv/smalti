@@ -49,4 +49,20 @@ enum PointerWordReader {
         let baseline = Point(x: text.tl_px_x, y: text.tl_px_y)
         return PointerWord(text: word, frame: PointerWordGeometry.frame(text: word, baseline: baseline, cell: cell))
     }
+
+    /// The plain text of one viewport row (F6: the `:line` libghostty leaves out of the word).
+    static func rowText(in surface: ghostty_surface_t, row: Int, columns: Int) -> String {
+        guard row >= 0, columns > 0 else { return "" }
+        let point = { (x: Int) in
+            ghostty_point_s(tag: GHOSTTY_POINT_VIEWPORT, coord: GHOSTTY_POINT_COORD_EXACT, x: UInt32(x), y: UInt32(row))
+        }
+        var text = ghostty_text_s()
+        let selection = ghostty_selection_s(top_left: point(0), bottom_right: point(columns - 1), rectangle: false)
+        guard ghostty_surface_read_text(surface, selection, &text) else { return "" }
+        defer { ghostty_surface_free_text(surface, &text) }
+        guard let bytes = text.text else { return "" }
+        // Safe: libghostty owns `text_len` bytes at `text` until `ghostty_surface_free_text`, which runs after this
+        // copy.
+        return String(decoding: UnsafeRawBufferPointer(start: bytes, count: Int(text.text_len)), as: UTF8.self)
+    }
 }

@@ -7,6 +7,8 @@ public enum CommandGroup: String, Sendable {
     case windows = "Ventanas"
     case terminal = "Terminal"
     case help = "Ayuda"
+    /// F6: the files the focused pane's Claude wrote.
+    case editedFiles = "Editados por Claude"
 }
 
 /// One entry of the command palette: what the user can do right now.

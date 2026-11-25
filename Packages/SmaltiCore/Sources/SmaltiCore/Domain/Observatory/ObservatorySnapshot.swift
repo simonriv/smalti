@@ -153,6 +153,8 @@ public struct ObservatorySnapshot: Equatable, Sendable {
     public let home: String
     /// Why the transcripts could not be read this time; the previous sessions are kept.
     public let lastError: String?
+    /// F6: other harnesses' sessions (OpenCode), as their own stores count them.
+    public private(set) var usage: [UsageRow] = []
 
     public init(
         activity: TranscriptActivity, running: [RunningAgent], panes: [PaneAgent], localModels: LocalModelsReport,
@@ -170,5 +172,11 @@ public struct ObservatorySnapshot: Equatable, Sendable {
         self.now = now
         self.home = home
         self.lastError = lastError
+    }
+
+    public func adding(usage rows: [UsageRow]) -> ObservatorySnapshot {
+        var copy = self
+        copy.usage = rows
+        return copy
     }
 }

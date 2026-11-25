@@ -79,12 +79,3 @@ public enum NamedLayoutsContract {
         }
     }
 }
-
-public enum HarnessAdapterContract {
-    public static func verify(_ adapter: some HarnessAdapter) {
-        let agent = AgentSnapshot(harness: adapter.harness, sessionID: "abc123", title: nil, lastState: .working)
-        let command = adapter.resumeCommand(for: agent)
-        #expect(command.contains("abc123"), "the resume command names the session")
-        #expect(!command.contains("\n"), "the resume command is one line; the caller adds the newline")
-    }
-}

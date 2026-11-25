@@ -14,6 +14,26 @@ public struct LaunchSettings: Equatable, Sendable {
     /// F4: the user ZDOTDIR the panes' zsh restores after Ghostty's integration; tests point it at an empty folder.
     public static let userZdotdirKey = "SmaltiUserZdotdir"
     public static let defaultOllamaURL = "http://127.0.0.1:11434"
+    /// F6: the harnesses' and Neovim's homes. The `Smalti…` arguments are for tests; the environment variables are
+    /// the harnesses' own (the composition root copies them into the same map).
+    public static let codexHomeKey = "SmaltiCodexHome"
+    public static let codexHomeEnvironmentKey = "CODEX_HOME"
+    public static let antigravityHomeKey = "SmaltiAntigravityHome"
+    public static let opencodeDatabaseKey = "SmaltiOpenCodeDB"
+    public static let opencodeDatabaseEnvironmentKey = "OPENCODE_DB"
+    public static let dataHomeEnvironmentKey = "XDG_DATA_HOME"
+    public static let configHomeEnvironmentKey = "XDG_CONFIG_HOME"
+    public static let nvimConfigHomeKey = "SmaltiNvimConfigHome"
+    public static let nvimCommandKey = "SmaltiNvimCommand"
+    public static let editorSocketDirectoryKey = "SmaltiEditorSocketDir"
+    /// Every key the composition root reads, arguments and environment alike.
+    public static let harnessArgumentKeys = [
+        codexHomeKey, antigravityHomeKey, opencodeDatabaseKey, nvimConfigHomeKey, nvimCommandKey,
+        editorSocketDirectoryKey,
+    ]
+    public static let harnessEnvironmentKeys = [
+        codexHomeEnvironmentKey, opencodeDatabaseEnvironmentKey, dataHomeEnvironmentKey, configHomeEnvironmentKey,
+    ]
     /// Relative to the home directory.
     public static let userConfigPath = ".config/smalti/config.toml"
 
@@ -30,6 +50,18 @@ public struct LaunchSettings: Equatable, Sendable {
     public let ollamaURL: URL
     /// Overrides the app's own `ZDOTDIR` for the panes (tests only).
     public let userZdotdir: String?
+    /// F6: `$CODEX_HOME`.
+    public let codexHome: URL
+    /// F6: Antigravity's `antigravity-cli` folder.
+    public let antigravityRoot: URL
+    /// F6: where OpenCode keeps its data (`$XDG_DATA_HOME`), and its database when named outright.
+    public let opencodeDataHome: URL
+    public let opencodeDatabase: URL?
+    /// F6: Neovim's config folder (the claudecode.nvim installer writes there), the command its panes run and,
+    /// for tests, where their sockets go.
+    public let nvimConfigHome: URL
+    public let nvimCommand: String
+    public let editorSocketDirectory: String?
 
     public init(arguments: [String: String], home: URL, defaultStateDirectory: URL) {
         let value = { (key: String) in arguments[key].flatMap { $0.isEmpty ? nil : $0 } }
@@ -41,6 +73,21 @@ public struct LaunchSettings: Equatable, Sendable {
             ?? home.appending(path: ".claude")
         ollamaURL = value(Self.ollamaURLKey).flatMap { URL(string: $0) } ?? Self.ollamaFallback
         userZdotdir = value(Self.userZdotdirKey)
+        codexHome =
+            (value(Self.codexHomeKey) ?? value(Self.codexHomeEnvironmentKey)).map { URL(filePath: $0) }
+            ?? home.appending(path: ".codex")
+        antigravityRoot =
+            value(Self.antigravityHomeKey).map { URL(filePath: $0) } ?? home.appending(path: ".gemini/antigravity-cli")
+        opencodeDataHome =
+            value(Self.dataHomeEnvironmentKey).map { URL(filePath: $0) } ?? home.appending(path: ".local/share")
+        opencodeDatabase = (value(Self.opencodeDatabaseKey) ?? value(Self.opencodeDatabaseEnvironmentKey))
+            .flatMap { $0.hasPrefix("/") ? URL(filePath: $0) : nil }
+        nvimConfigHome =
+            value(Self.nvimConfigHomeKey).map { URL(filePath: $0) }
+            ?? (value(Self.configHomeEnvironmentKey).map { URL(filePath: $0) } ?? home.appending(path: ".config"))
+            .appending(path: "nvim")
+        nvimCommand = value(Self.nvimCommandKey) ?? "nvim"
+        editorSocketDirectory = value(Self.editorSocketDirectoryKey)
     }
 
     // A literal that always parses; the fallback only exists to keep the type non-optional.

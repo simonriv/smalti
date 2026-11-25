@@ -11,8 +11,8 @@ extension TilingController.Dependencies {
     func with(agents: TilingController.AgentDependencies) -> TilingController.Dependencies {
         TilingController.Dependencies(
             engine: engine, configStore: configStore, paneEnvironment: paneEnvironment, transcripts: transcripts,
-            namedLayouts: namedLayouts, harnesses: harnesses, agents: agents, home: home, shellOverride: shellOverride,
-            applyAppearance: applyAppearance)
+            namedLayouts: namedLayouts, harnesses: harnesses, captures: captures, editor: editor, agents: agents,
+            home: home, shellOverride: shellOverride, applyAppearance: applyAppearance)
     }
 }
 
@@ -51,6 +51,10 @@ final class TilingController {
         let transcripts: any PaneTranscripts
         let namedLayouts: any NamedLayouts
         let harnesses: HarnessRegistry
+        /// F6: captures the session of every harness pane, shared by all windows.
+        let captures: HarnessCaptures
+        /// F6: Neovim panes: the command they run, where their sockets go, and the edits shared by all windows.
+        let editor: EditorSettings
         let agents: AgentDependencies
         let home: WorkingDirectory
         let shellOverride: TerminalCommand?
@@ -61,9 +65,8 @@ final class TilingController {
     /// What agent events need from outside the tiling.
     struct AgentDependencies {
         let notifier: any Notifier
-        let integration: any HarnessIntegration
-        /// F5.6: the integration's last known state, shared by every window.
-        let integrationStatus: ClaudeIntegrationStatus
+        /// F5.6/F6: each integration's last known state, shared by every window.
+        let integrations: [IntegrationID: ClaudeIntegrationStatus]
         let isAppActive: () -> Bool
     }
 
@@ -106,6 +109,12 @@ final class TilingController {
     private let signposter = OSSignposter(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
     private var pendingRestore: (interval: OSSignpostIntervalState, panes: Set<PaneID>)?
     private var minuteTicker: Task<Void, Never>?
+    /// F6: this window's Neovim panes.
+    private(set) lazy var editors: EditorCoordinator = {
+        let coordinator = EditorCoordinator(settings: deps.editor, home: deps.home.path)
+        coordinator.host = self
+        return coordinator
+    }()
 
     /// `initial` is the startup load, done before the engine exists because the engine needs its appearance.
     init(_ deps: Dependencies, initial reload: ConfigReload) {
@@ -141,6 +150,10 @@ final class TilingController {
 
     /// An agent's hook event, from the IPC socket.
     func handle(_ event: AgentEvent) {
+        if event.edit != nil {
+            let edited = deps.editor.editedFiles
+            Task { await edited.record(event) }
+        }
         _ = HandleAgentEvent(notifier: deps.agents.notifier).execute(
             event, in: &set, isAppActive: deps.agents.isAppActive())
         publish()
@@ -159,12 +172,12 @@ final class TilingController {
         show(.nobodyWaiting)
     }
 
-    private func runIntegration(_ command: IntegrationCommand.Type) {
-        let integration = deps.agents.integration
-        let status = deps.agents.integrationStatus
+    private func runIntegration(_ id: IntegrationID, _ command: IntegrationCommand.Type) {
+        guard let status = deps.agents.integrations[id] else { return }
+        let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration).execute()
+            let line = await command.init(integration: integration, id: id).execute()
             self?.report(.integration(line))
             status.refresh(forced: true)
         }
@@ -173,12 +186,16 @@ final class TilingController {
     /// What ⌘K lists besides the keymap: the workspaces, the saved layouts and the Claude integration's state.
     func catalogState() -> CatalogState {
         CatalogState(
-            workspaces: set, savedLayouts: savedLayouts(), claudeIntegration: deps.agents.integrationStatus.state)
+            workspaces: set, savedLayouts: savedLayouts(),
+            integrations: deps.agents.integrations.mapValues(\.state),
+            editedFiles: set.active.focusedPane.map {
+                deps.editor.editedFiles.recent(in: $0, workspace: set.active.panes.map(\.id))
+            } ?? [])
     }
 
     /// Asks again whether the Claude integration is installed; ⌘K calls it each time it opens.
     func refreshIntegrationState() {
-        deps.agents.integrationStatus.refresh(forced: false)
+        deps.agents.integrations.values.forEach { $0.refresh(forced: false) }
     }
 
     /// The saved layouts as the palette lists them.
@@ -214,10 +231,17 @@ final class TilingController {
     }
 
     private var restoreSession: RestoreSession {
-        RestoreSession(
+        let nvim = deps.editor.nvim
+        let socketDirectory = deps.editor.socketDirectory
+        return RestoreSession(
             .init(
                 engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }))
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now },
+                // F6: Claude reopens with `--ide` while claudecode.nvim is installed.
+                connectsEditor: deps.editor.connectsEditor(),
+                editorCommand: { position, pane in
+                    EditorCommand.reopen(nvim: nvim, socketDirectory: socketDirectory, position: position, pane: pane)
+                }))
     }
 
     /// Rebuilds one saved window's workspaces; if none could open, starts as usual.
@@ -231,10 +255,29 @@ final class TilingController {
             return
         }
         set = restored
+        adoptRestoredEditors(plan)
         pendingRestore = (interval, Set(set.workspaces.flatMap(\.panes).map(\.id)))
         set.workspaces.flatMap(\.panes).forEach { observe($0.id) }
         reportRestoreFailures(result.failures)
         publish()
+    }
+
+    /// F6: the Neovim panes reopened with `--listen` answer "Abrir en Neovim" and are saved at their line again.
+    private func adoptRestoredEditors(_ plan: RestorePlan) {
+        for planned in plan.workspaces.flatMap(\.panes) {
+            guard let socket = restoredSocket(planned) else { continue }
+            editors.adopt(PaneID(rawValue: planned.id), socket: socket)
+        }
+    }
+
+    /// An editor pane's socket, or the one a Neovim saved as its process listened on (final review).
+    private func restoredSocket(_ planned: PlannedPane) -> String? {
+        let directory = deps.editor.socketDirectory
+        switch planned.launch {
+        case .editor: return try? EditorSocketPath.make(directory: directory, pane: PaneID(rawValue: planned.id))
+        case .relaunch(let command): return EditorCommand.listenSocket(in: command.arguments, directory: directory)
+        case .shell, .resume: return nil
+        }
     }
 
     func perform(_ command: CommandID) {
@@ -277,11 +320,16 @@ final class TilingController {
 
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
-        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook,
+        .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch, .observatoryFilter,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {
         if let action = fixedActions[command] { return action }
+        if let target = command.editorTarget {
+            return { [unowned self] in
+                if let pane = set.active.focusedPane { editors.open(target, from: pane) }
+            }
+        }
         if let named = command.namedLayout { return { [unowned self] in perform(named) } }
         if let action = layoutActions[command] { return action }
         return workspaceGoAction(command)
@@ -292,12 +340,26 @@ final class TilingController {
     private lazy var fixedActions: [CommandID: () -> Void] = {
         var actions: [CommandID: () -> Void] = [
             .paneNew: { [unowned self] in openPane() },
+            .editorOpenBeside: { [unowned self] in
+                if let pane = set.active.focusedPane { editors.openBeside(pane) }
+            },
+            .editorOpenLastEdited: { [unowned self] in
+                if let pane = set.active.focusedPane { editors.openLastEdited(from: pane) }
+            },
             .paneClose: { [unowned self] in closeFocusedPane() },
             .panesEqualize: { [unowned self] in EqualizePanes().execute(in: &set) },
             .workspaceNew: { [unowned self] in createWorkspace() },
             .workspaceClose: { [unowned self] in closeActiveWorkspace() },
-            .claudeIntegrationInstall: { [unowned self] in runIntegration(InstallClaudeIntegration.self) },
-            .claudeIntegrationUninstall: { [unowned self] in runIntegration(UninstallClaudeIntegration.self) },
+            .claudeIntegrationInstall: { [unowned self] in runIntegration(.claudePlugin, InstallClaudeIntegration.self)
+            },
+            .claudeIntegrationUninstall: { [unowned self] in
+                runIntegration(.claudePlugin, UninstallClaudeIntegration.self)
+            },
+            .claudecodeNvimInstall: { [unowned self] in runIntegration(.claudecodeNvim, InstallClaudeIntegration.self)
+            },
+            .claudecodeNvimUninstall: { [unowned self] in
+                runIntegration(.claudecodeNvim, UninstallClaudeIntegration.self)
+            },
             .terminalCopy: { [unowned self] in performInFocusedPane(.copy) },
             .terminalPaste: { [unowned self] in performInFocusedPane(.paste) },
             .terminalSelectAll: { [unowned self] in performInFocusedPane(.selectAll) },
@@ -366,6 +428,30 @@ final class TilingController {
         }
     }
 
+    /// F6: a saved session opened from the search, in a new pane of the active workspace.
+    func openHarnessSession(_ plan: OpenPlan, directory: String?) {
+        switch plan {
+        case .open(let command, let path, let folderMissing, let binding):
+            let request = OpenPaneRequest(
+                shell: config.shell, geometry: geometry, home: deps.home,
+                directory: path.flatMap { try? WorkingDirectory(path: $0) } ?? deps.home,
+                initialInput: command + "\n", binding: binding)
+            do {
+                let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(
+                    request, in: &set)
+                observe(pane)
+                if folderMissing { show(.harnessSession(OpenHarnessSession.folderMissingMessage(directory ?? ""))) }
+            } catch {
+                show(Self.message(for: error))
+            }
+            publish()
+        case .cannotFork(let harness):
+            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness)))
+        case .unavailable(let harness):
+            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness)))
+        }
+    }
+
     private func createWorkspace() {
         let layout = layouts.strategyOrDefault(for: config.defaultLayout)
         let request = CreateWorkspaceRequest(
@@ -402,7 +488,22 @@ final class TilingController {
 
     private func close(_ pane: PaneID) {
         _ = ClosePane(engine: deps.engine).execute(pane, in: &set)
-        openedAt[pane] = nil
+        forget([pane])
+    }
+
+    /// Every way a pane goes (⌘W, its shell exiting, its workspace or window closing) drops what was kept for it:
+    /// its claim on a harness session, its Neovim socket and Claude's edits.
+    private func forget(_ panes: [PaneID]) {
+        for pane in panes {
+            openedAt[pane] = nil
+            deps.captures.forget(pane)
+            editors.forget(pane)
+        }
+    }
+
+    /// F6: the window is closing; its panes are gone with it.
+    func forgetAllPanes() {
+        forget(set.workspaces.flatMap(\.panes).map(\.id))
     }
 
     /// The only workspace cannot close; a shortcut bound in config.toml can still ask, and the refusal leaves
@@ -420,8 +521,7 @@ final class TilingController {
 
     private func closeWorkspace(_ id: WorkspaceID) {
         do {
-            let closed = try CloseWorkspace(engine: deps.engine).execute(id, in: &set)
-            closed.forEach { openedAt[$0] = nil }
+            forget(try CloseWorkspace(engine: deps.engine).execute(id, in: &set))
         } catch {
             switch error {
             case .cannotCloseLastWorkspace: logger.debug("refused to close the last workspace")
@@ -516,8 +616,26 @@ final class TilingController {
         default:
             guard let owner = set.workspace(containing: pane) else { return }
             set = set.updating(owner) { $0.applying(event, to: pane, at: .now) }
+            if case .foregroundProcessChanged(let process) = event { captureHarness(in: pane, running: process) }
         }
         publish()
+    }
+
+    /// F6: a harness that starts in a pane gets its session captured; the binding lands on the pane later.
+    private func captureHarness(in id: PaneID, running process: ForegroundProcess) {
+        guard let current = pane(id) else { return }
+        deps.captures.processChanged(
+            in: current, to: process,
+            currentPane: { [weak self] in self?.pane(id) },
+            apply: { [weak self] binding in
+                guard let self, let owner = set.workspace(containing: id) else { return }
+                set = set.updating(owner) { $0.binding(binding, to: id) }
+                publish()
+            })
+    }
+
+    private func pane(_ id: PaneID) -> Pane? {
+        set.workspaces.lazy.flatMap(\.panes).first { $0.id == id }
     }
 
     /// The shell integration reports title and directory at every prompt: the first one means the pane is ready.
@@ -551,6 +669,7 @@ final class TilingController {
         let outcome = HandlePaneExit(engine: deps.engine).execute(
             PaneExit(pane: pane, exitCode: code, lifetime: lifetime), in: &set)
         if case .closedAfterFailedStart(let exitCode) = outcome { show(.failedStart(exitCode: exitCode)) }
+        if self.pane(pane) == nil { forget([pane]) }
     }
 
     // MARK: - Publishing
@@ -572,6 +691,7 @@ final class TilingController {
     }
 
     private func publish() {
+        editors.noteFocus(set.active.focusedPane)
         onChange?(state)
         keepMinutesFresh()
     }
@@ -640,9 +760,46 @@ final class TilingController {
 /// Install and uninstall share one shape, so the palette runs either the same way.
 @MainActor
 protocol IntegrationCommand {
-    init(integration: any HarnessIntegration)
+    init(integration: any HarnessIntegration, id: IntegrationID)
     func execute() async -> String
 }
 
 extension InstallClaudeIntegration: IntegrationCommand {}
 extension UninstallClaudeIntegration: IntegrationCommand {}
+
+/// F6: the editor coordinator works on this window's panes.
+extension TilingController: EditorHost {
+    func panes(nearEditorOf pane: PaneID) -> [Pane] {
+        set.workspaces.first { workspace in workspace.panes.contains { $0.id == pane } }?.panes ?? []
+    }
+
+    func pane(byID id: PaneID) -> Pane? { pane(id) }
+
+    func report(_ text: String) { show(.editor(text)) }
+
+    func openEditorPane(command: String, directory: WorkingDirectory, beside: PaneID) -> PaneID? {
+        let request = OpenPaneRequest(
+            shell: config.shell, geometry: geometry, home: deps.home, directory: directory, initialInput: command + "\n"
+        )
+        do {
+            let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(request, in: &set)
+            observe(pane)
+            publish()
+            return pane
+        } catch {
+            show(Self.message(for: error))
+            return nil
+        }
+    }
+}
+
+/// F6: what every window's Neovim panes share.
+struct EditorSettings {
+    let editedFiles: TrackEditedFiles
+    let nvim: String
+    let socketDirectory: String
+    /// The composition root's Neovim adapter.
+    let bridge: any EditorBridge
+    /// claudecode.nvim is installed right now: Claude relaunched by Smalti (restore, search) adds `--ide`.
+    let connectsEditor: () -> Bool
+}

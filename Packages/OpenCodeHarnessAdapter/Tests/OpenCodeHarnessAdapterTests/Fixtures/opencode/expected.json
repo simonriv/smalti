@@ -1,0 +1,17 @@
+{
+  "harness": "opencode",
+  "sessions": [
+    {
+      "id": "ses_def613483ffeRCPhDxLids6Tph",
+      "directory": "/private/tmp/smalti-fx/opencode/work-b",
+      "title": "Fixture B",
+      "createdAt": "2026-11-25T02:52:52Z"
+    },
+    {
+      "id": "ses_def659802ffe5TJeS9RosigTk8",
+      "directory": "/private/tmp/smalti-fx/opencode/work-a",
+      "title": "Hello fixture A",
+      "createdAt": "2026-11-25T02:48:04Z"
+    }
+  ]
+}

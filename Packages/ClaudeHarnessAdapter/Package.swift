@@ -20,6 +20,7 @@ let package = Package(
                 "ClaudeHarnessAdapter",
                 .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SmaltiCoreTestSupport", package: "SmaltiCore"),
-            ]),
+            ],
+            resources: [.copy("Fixtures")]),
     ]
 )

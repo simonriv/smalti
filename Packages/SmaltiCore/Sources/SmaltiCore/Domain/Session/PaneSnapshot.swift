@@ -3,11 +3,13 @@ import Foundation
 /// The agent of a pane as saved, enough to resume it with its harness.
 public struct AgentSnapshot: Codable, Equatable, Sendable {
     public let harness: HarnessID
-    public let sessionID: String
+    /// Nil when no session was captured: the pane continues the directory's last one (spec F6).
+    public let sessionID: String?
     public let title: String?
-    public let lastState: AgentStateKind
+    /// Nil for a harness without hooks (no state is known).
+    public let lastState: AgentStateKind?
 
-    public init(harness: HarnessID, sessionID: String, title: String?, lastState: AgentStateKind) {
+    public init(harness: HarnessID, sessionID: String?, title: String?, lastState: AgentStateKind?) {
         self.harness = harness
         self.sessionID = sessionID
         self.title = title
@@ -52,10 +54,12 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
     public let commandCount: Int
     public let relaunch: RelaunchCommand?
     public let agent: AgentSnapshot?
+    /// F6: what a Smalti Neovim pane showed.
+    public let editor: EditorPosition?
 
     public init(
         id: UUID, workingDirectory: String, title: String?, processName: String?, scrollbackLines: Int,
-        commandCount: Int, relaunch: RelaunchCommand?, agent: AgentSnapshot?
+        commandCount: Int, relaunch: RelaunchCommand?, agent: AgentSnapshot?, editor: EditorPosition? = nil
     ) {
         self.id = id
         self.workingDirectory = workingDirectory
@@ -65,9 +69,10 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         self.commandCount = commandCount
         self.relaunch = relaunch
         self.agent = agent
+        self.editor = editor
     }
 
-    init(_ pane: Pane, scrollbackLines: Int) {
+    public init(_ pane: Pane, scrollbackLines: Int, editor: EditorPosition? = nil) {
         id = pane.id.rawValue
         workingDirectory = pane.workingDirectory.path
         title = pane.title
@@ -75,9 +80,18 @@ public struct PaneSnapshot: Codable, Equatable, Sendable {
         self.scrollbackLines = scrollbackLines
         commandCount = pane.commandCount
         // A finished agent whose pane is back at its shell is a shell again: it restores with its scrollback.
-        let agent = pane.agent.flatMap { $0.state.isActive || !pane.isAtShell ? $0 : nil }
-        self.agent = agent?.snapshot
-        let canRelaunch = !pane.isAtShell && agent == nil
+        // A harness without hooks counts while its own process is in the foreground (F6); a finished agent of another
+        // harness that ran here before gives way to it (final review I1).
+        let harness = pane.liveHarnessBinding
+        let agent = pane.agent.flatMap { agent in
+            let isReplaced = harness.map { $0.harness != agent.harness } == true && !agent.state.isActive
+            return (agent.state.isActive || !pane.isAtShell) && !isReplaced ? agent : nil
+        }
+        self.agent =
+            agent?.snapshot
+            ?? harness.map { AgentSnapshot(harness: $0.harness, sessionID: $0.sessionID, title: nil, lastState: nil) }
+        self.editor = editor
+        let canRelaunch = !pane.isAtShell && self.agent == nil && editor == nil
         let commandLine = pane.foregroundCommandLine.flatMap { RelaunchCommand.isTypeable($0) ? $0 : nil }
         relaunch = canRelaunch ? commandLine.map(RelaunchCommand.init(arguments:)) : nil
     }

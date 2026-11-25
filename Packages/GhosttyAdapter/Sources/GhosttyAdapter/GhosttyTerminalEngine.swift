@@ -45,6 +45,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         do {
             let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))
             view.contextMenuProvider = { [weak self] in self?.contextMenu?(pane) }
+            view.commandClick = { [weak self] word in self?.commandClick?(pane, word) ?? false }
             view.exposesCellSize = exposesCellSize
             view.reportsPointerWords = reportsPointerWords
             view.gridPadding = gridPadding
@@ -166,6 +167,9 @@ public final class GhosttyTerminalEngine: TerminalEngine {
 
     /// The terminal's menu for a right click or ⌃click on `pane`; nil shows none. The app builds it.
     public var contextMenu: ((PaneID) -> NSMenu?)?
+    /// F6: ⌘-click on a word of a pane; true when the app took it (a file opened in Neovim), so the terminal does
+    /// not also open it as a link.
+    public var commandClick: ((PaneID, String) -> Bool)?
 
     /// UI tests only: each terminal states its cell size as its accessibility title ("celda 8 × 21").
     public var exposesCellSize = false

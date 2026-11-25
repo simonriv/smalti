@@ -12,6 +12,10 @@ enum SessionState {
         var process: String?
         var lines = 0
         var commands = 0
+        /// F6: a harness without hooks (no state); a nil id continues the directory's last session.
+        var harness: (name: String, sessionID: String?)?
+        /// F6: a Smalti Neovim pane at a file and line.
+        var editor: (file: String, line: Int)?
     }
 
     struct Workspace {
@@ -88,6 +92,12 @@ enum SessionState {
             json["agent"] = agent
         }
         if let relaunch = pane.relaunch { json["relaunch"] = ["arguments": relaunch] }
+        if let harness = pane.harness {
+            var agent: [String: Any] = ["harness": harness.name]
+            if let session = harness.sessionID { agent["sessionID"] = session }
+            json["agent"] = agent
+        }
+        if let editor = pane.editor { json["editor"] = ["file": editor.file, "line": editor.line] }
         return json
     }
 }

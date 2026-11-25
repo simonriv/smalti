@@ -33,6 +33,40 @@ struct FileSessionArchiveV2Tests {
         #expect(snapshot.workspaces[1].panes[0].relaunch?.arguments == ["nvim", "+42"])
     }
 
+    /// F6: what 0.5.6 saved (non-optional session id and state, no editor) still opens.
+    @Test func decodesSnapshotSavedBy056() throws {
+        try writeFixture("session-v2-0.5.6")
+
+        guard case .saved(let snapshot) = FileSessionArchive(directory: directory).lastSession() else {
+            Issue.record("the 0.5.6 session was not read")
+            return
+        }
+
+        let panes = snapshot.workspaces[0].panes
+        #expect(
+            panes[0].agent
+                == AgentSnapshot(
+                    harness: .claude, sessionID: "7f3a9c2e-1111", title: "Agendar",
+                    lastState: .waiting))
+        #expect(panes.allSatisfy { $0.editor == nil })
+        #expect(panes[2].relaunch?.arguments == ["pnpm", "dev"])
+    }
+
+    @Test func encodesWithoutEditorAsBefore() throws {
+        try writeFixture("session-v2-0.5.6")
+        let archive = FileSessionArchive(directory: directory)
+        guard case .saved(let snapshot) = archive.lastSession() else {
+            Issue.record("the 0.5.6 session was not read")
+            return
+        }
+
+        try archive.save(snapshot)
+
+        let saved = try String(contentsOf: file("session.json"), encoding: .utf8)
+        #expect(!saved.contains("\"editor\""))
+        #expect(saved.contains("\"lastState\" : \"waiting\""))
+    }
+
     @Test func v1IsSavedBackAsV2() throws {
         try writeFixture("session-v1")
         let archive = FileSessionArchive(directory: directory)

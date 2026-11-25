@@ -9,10 +9,28 @@ public struct Pane: Equatable, Sendable {
     public private(set) var isRunning: Bool
     public private(set) var processName: String?
     public private(set) var foregroundCommandLine: [String]?
+    /// F6: the foreground process's id, when the engine knows it.
+    public private(set) var foregroundPID: Int32?
     /// Shell commands finished in this pane (OSC 133), shown when offering to restore it.
     public private(set) var commandCount = 0
     /// The coding agent running in this pane, if any.
     public private(set) var agent: AgentSession?
+    /// F6: the harness that ran here last and its session, when known. Only the process it belongs to (or, pending,
+    /// the next harness process) uses it; the snapshot saves it while that process is in the foreground.
+    public private(set) var harnessBinding: HarnessBinding?
+
+    /// The binding while its process runs here; a pending one while some program other than the shell runs.
+    public var liveHarnessBinding: HarnessBinding? {
+        guard let binding = harnessBinding, !isAtShell else { return nil }
+        return binding.isPending || binding.pid == foregroundPID ? binding : nil
+    }
+
+    /// The capture of `harness` still applies: its process (`pid`) is in front, and no agent of that same harness
+    /// names its session through hooks. An agent of another harness that ran here before does not count (final
+    /// review I1).
+    public func runsHarness(_ harness: HarnessID, pid: Int32?) -> Bool {
+        agent?.harness != harness && foregroundPID == pid
+    }
 
     public init(id: PaneID, workingDirectory: WorkingDirectory) {
         self.id = id
@@ -64,6 +82,12 @@ public struct Pane: Equatable, Sendable {
             startedAt: previous.startedAt)
     }
 
+    public func binding(_ binding: HarnessBinding) -> Pane {
+        var updated = self
+        updated.harnessBinding = binding
+        return updated
+    }
+
     public func attaching(_ session: AgentSession?) -> Pane {
         var updated = self
         updated.agent = session
@@ -82,6 +106,7 @@ public struct Pane: Equatable, Sendable {
         case .foregroundProcessChanged(let process):
             updated.processName = process.name
             updated.foregroundCommandLine = process.commandLine
+            updated.foregroundPID = process.pid
         case .bell, .closeRequested, .searchTotal, .searchSelected, .linkHovered, .secureInputRequested,
             .pointerWordChanged:
             break

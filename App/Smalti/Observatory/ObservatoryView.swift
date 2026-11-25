@@ -12,11 +12,18 @@ final class ObservatoryView: NSView {
     private let localModels: LocalModelsView
     private let system: SystemView
     private let period: PeriodPill
+    /// F6: "Todas · Claude Code · OpenCode · Locales".
+    private let filters: FilterChips
     private var tableHeight: NSLayoutConstraint?
     var onSelect: ((String) -> Void)? {
         get { table.onSelect }
         set { table.onSelect = newValue }
     }
+    var onSelectFilter: ((ObservatoryFilter) -> Void)? {
+        get { filters.onSelect }
+        set { filters.onSelect = newValue }
+    }
+
     var onCyclePeriod: (() -> Void)? {
         get { period.onClick }
         set { period.onClick = newValue }
@@ -62,6 +69,7 @@ final class ObservatoryView: NSView {
         localModels = LocalModelsView(theme: theme)
         system = SystemView(theme: theme)
         period = PeriodPill(theme: theme)
+        filters = FilterChips(theme: theme)
         super.init(frame: .zero)
         layoutStrip(layoutBody())
         setAccessibilityElement(true)
@@ -127,7 +135,18 @@ final class ObservatoryView: NSView {
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let strip = NSStackView(views: [title, subtitle, spacer, period, KbdView("esc", theme: theme)])
+        let separator = NSBox()
+        separator.boxType = .custom
+        separator.borderWidth = 0
+        separator.fillColor = theme.observatory.pillBorder.nsColor
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            separator.widthAnchor.constraint(equalToConstant: theme.chrome.hairlineWidth),
+            separator.heightAnchor.constraint(equalToConstant: theme.observatoryFilter.separatorHeight),
+        ])
+        let strip = NSStackView(views: [
+            title, subtitle, spacer, filters, separator, period, KbdView("esc", theme: theme),
+        ])
         strip.spacing = tokens.stripGap
         strip.edgeInsets = NSEdgeInsets(
             top: 0, left: tokens.stripPaddingLeading, bottom: 0, right: tokens.stripPaddingTrailing)
@@ -155,6 +174,10 @@ final class ObservatoryView: NSView {
     }
 
     /// Before the first snapshot: the cards say they are reading, everything else stays empty.
+    func show(filter: ObservatoryFilter) {
+        filters.show(filter)
+    }
+
     func showReading(period current: ObservatoryPeriod) {
         period.show(current.title)
         cards.showReading()
@@ -216,5 +239,64 @@ private final class PeriodPill: NSView {
     override func mouseUp(with event: NSEvent) {
         guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
         onClick?()
+    }
+}
+
+/// F6: the observatory's harness chips (Observatorio.dc.html): the chosen one with the accent's ring and glow.
+@MainActor
+private final class FilterChips: NSStackView {
+    var onSelect: ((ObservatoryFilter) -> Void)?
+    private let theme: Theme
+    private var buttons: [ObservatoryFilter: NSButton] = [:]
+
+    init(theme: Theme) {
+        self.theme = theme
+        super.init(frame: .zero)
+        let tokens = theme.observatoryFilter
+        spacing = tokens.chipGap
+        for filter in ObservatoryFilter.allCases {
+            let button = NSButton(title: filter.title, target: self, action: #selector(clicked(_:)))
+            button.isBordered = false
+            button.wantsLayer = true
+            button.layer?.cornerRadius = tokens.chipRadius
+            button.layer?.borderWidth = theme.chrome.hairlineWidth
+            button.tag = ObservatoryFilter.allCases.firstIndex(of: filter) ?? 0
+            button.setAccessibilityIdentifier("smalti.observatory.filter.\(button.tag)")
+            button.heightAnchor.constraint(equalToConstant: tokens.chipHeight).isActive = true
+            buttons[filter] = button
+            addArrangedSubview(button)
+        }
+        show(.all)
+        for button in buttons.values {
+            button.widthAnchor.constraint(
+                equalToConstant: ceil(button.attributedTitle.size().width) + 2 * tokens.chipPadding
+            ).isActive = true
+        }
+    }
+
+    @available(*, unavailable, message: "Built in code only")
+    required init?(coder: NSCoder) { nil }
+
+    func show(_ chosen: ObservatoryFilter) {
+        let tokens = theme.observatory
+        let chips = theme.observatoryFilter
+        for (filter, button) in buttons {
+            let isChosen = filter == chosen
+            button.attributedTitle = NSAttributedString(
+                string: filter.title,
+                attributes: [
+                    .font: theme.interfaceFont(size: tokens.pillFontSize, weight: tokens.pillWeight),
+                    .foregroundColor: (isChosen ? chips.chosenText : chips.inactiveText).nsColor,
+                ])
+            button.layer?.borderColor = (isChosen ? chips.chosenBorder : .clear).nsColor.cgColor
+            button.layer?.backgroundColor = (isChosen ? chips.chosenBackground : .clear).nsColor.cgColor
+            button.setAccessibilityValue(isChosen ? "selected" : "")
+        }
+    }
+
+    @objc private func clicked(_ sender: NSButton) {
+        let all = ObservatoryFilter.allCases
+        guard all.indices.contains(sender.tag) else { return }
+        onSelect?(all[sender.tag])
     }
 }

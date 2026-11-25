@@ -1,5 +1,7 @@
 import AppKit
+import AntigravityHarnessAdapter
 import ClaudeHarnessAdapter
+import CodexHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
 import DiagnosticsAdapter
@@ -7,8 +9,10 @@ import FigCompletionAdapter
 import FileSessionAdapter
 import GhosttyAdapter
 import ImageIOAdapter
+import NeovimAdapter
 import IPCAdapter
 import OllamaAdapter
+import OpenCodeHarnessAdapter
 import ProjectContextAdapter
 import UserNotificationsAdapter
 import OSLog
@@ -48,7 +52,10 @@ final class AppComposition {
     private var completionMenu: CompletionMenuController?
     private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
-    private let harnesses = HarnessRegistry([ClaudeHarness()])
+    private var harnesses = HarnessRegistry([])
+    /// F6: claudecode.nvim is installed right now (`--ide` for the Claude sessions Smalti relaunches).
+    private var connectsEditor: () -> Bool = { false }
+    private var captures: HarnessCaptures?
     private static let persistTimeout: Duration = .seconds(1)
 
     /// What startup reads before any infrastructure exists: launch arguments, the store and its first load.
@@ -89,14 +96,41 @@ final class AppComposition {
     /// `-Key value` launch arguments land in the argument domain of the user defaults.
     /// Claude Code's `CLAUDE_CONFIG_DIR` rides along in the same map (LaunchSettings keeps three parameters).
     private static func launchArguments() -> [String: String] {
-        let keys = [
-            LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
-            LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
-        ]
+        let keys =
+            [
+                LaunchSettings.configPathKey, LaunchSettings.shellCommandKey, LaunchSettings.statePathKey,
+                LaunchSettings.claudeHomeKey, LaunchSettings.ollamaURLKey, LaunchSettings.userZdotdirKey,
+            ] + LaunchSettings.harnessArgumentKeys
         var arguments = keys.reduce(into: [String: String]()) { $0[$1] = UserDefaults.standard.string(forKey: $1) }
-        arguments[LaunchSettings.claudeConfigDirKey] =
-            ProcessInfo.processInfo.environment[LaunchSettings.claudeConfigDirKey]
+        let environment = ProcessInfo.processInfo.environment
+        for key in [LaunchSettings.claudeConfigDirKey] + LaunchSettings.harnessEnvironmentKeys {
+            arguments[key] = environment[key]
+        }
         return arguments
+    }
+
+    /// F6: the first 2 MB of an edited file, to find the line of the change ("Editados por Claude").
+    nonisolated private static func fileHead(_ path: String) -> String? {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? handle.close() }
+        return (try? handle.read(upToCount: 2 * 1024 * 1024)).map { String(decoding: $0, as: UTF8.self) }
+    }
+
+    /// F6: Neovim sockets under a short owner-only folder (`sun_path` holds 104 bytes).
+    private static func editorSocketDirectory(_ settings: LaunchSettings) -> String {
+        EditorSocketDirectory.prepare(settings.editorSocketDirectory ?? "/private/tmp/smalti-\(getuid())")
+    }
+
+    /// F6: the four harnesses, each reading its own home as `LaunchSettings` resolved it.
+    private static func harnessRegistry(_ settings: LaunchSettings) -> HarnessRegistry {
+        HarnessRegistry([
+            ClaudeHarness(projectsRoot: settings.claudeHome.appending(path: "projects")),
+            CodexHarness(home: settings.codexHome),
+            AntigravityHarness(root: settings.antigravityRoot),
+            OpenCodeHarness(
+                database: settings.opencodeDatabase
+                    ?? OpenCodeHarness.defaultDatabase(dataHome: settings.opencodeDataHome)),
+        ])
     }
 
     /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
@@ -133,11 +167,21 @@ final class AppComposition {
             version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
             files: PaneFileLocator(stateDirectory: state),
             ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket))
+        harnesses = Self.harnessRegistry(startup.settings)
+        let captures = HarnessCaptures(registry: harnesses)
+        self.captures = captures
+        // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
+        let claudecode = ClaudecodeNvimInstaller(configHome: startup.settings.nvimConfigHome)
+        let editor = EditorSettings(
+            editedFiles: TrackEditedFiles(readFile: Self.fileHead), nvim: startup.settings.nvimCommand,
+            socketDirectory: Self.editorSocketDirectory(startup.settings), bridge: NeovimBridge(),
+            connectsEditor: { claudecode.isInstalled })
+        connectsEditor = editor.connectsEditor
         let dependencies = TilingController.Dependencies(
             engine: engine, configStore: startup.store, paneEnvironment: environment, transcripts: archive,
             namedLayouts: archive,
-            harnesses: harnesses,
-            agents: Self.agentDependencies(notifier: makeNotifier()),
+            harnesses: harnesses, captures: captures, editor: editor,
+            agents: Self.agentDependencies(notifier: makeNotifier(), claudecode: claudecode),
             home: try homeDirectory(),
             shellOverride: startup.settings.shellOverride,
             // A reload keeps the steps taken with ⌘+ and ⌘− on top of the new `font_size`.
@@ -162,6 +206,7 @@ final class AppComposition {
         let keeper = SessionKeeper(save: SaveSession(archive: archive, transcripts: archive, scrollback: engine))
         // The window in front at the time reports it: the first one may be closed by then.
         keeper.onFailure = { [weak self] reason in self?.controller?.report(.sessionSaveFailed(reason)) }
+        keeper.editorPositions = { [weak self] in await self?.editorPositions() ?? [:] }
         self.runtime = runtime
         self.engine = engine
         sessionKeeper = keeper
@@ -211,8 +256,7 @@ final class AppComposition {
     {
         let visibility = WindowVisibility()
         let agents = TilingController.AgentDependencies(
-            notifier: dependencies.agents.notifier, integration: dependencies.agents.integration,
-            integrationStatus: dependencies.agents.integrationStatus,
+            notifier: dependencies.agents.notifier, integrations: dependencies.agents.integrations,
             isAppActive: { [weak visibility] in visibility?.isSeen ?? false })
         let controller = TilingController(dependencies.with(agents: agents), initial: initial)
         controller.promptHeader = { [weak self] pane in self?.promptHeader?(pane) }
@@ -358,6 +402,7 @@ final class AppComposition {
             return
         }
         compositions.removeAll { $0 === composition }
+        composition.controller.forgetAllPanes()
         composition.closeOverlays()
         // Block 4 review (I2): its Esc monitor and the color panel's target go with the window.
         composition.closeAppearancePanel()
@@ -414,6 +459,21 @@ final class AppComposition {
             asking.controller.start()
             beginSaving(keepingPreviousSession: true)
             return
+        case .restoreAndOpen(let selection, let plan, let directory):
+            // Nothing checked: the opened session is the first pane, with no empty shell next to it.
+            if selection.checkedCount(in: snapshot) == 0 {
+                if case .open = plan {
+                    asking.controller.openHarnessSession(plan, directory: directory)
+                    beginSaving(keepingPreviousSession: false)
+                    return
+                }
+                asking.controller.start()
+            } else {
+                restoreWindows(
+                    snapshot, plans: WindowRestorePlan.make(from: snapshot, mode: .full, selection: selection),
+                    into: asking)
+            }
+            asking.controller.openHarnessSession(plan, directory: directory)
         }
         beginSaving(keepingPreviousSession: false)
     }
@@ -427,6 +487,13 @@ final class AppComposition {
         menu.install()
         mainMenu = menu
         engine.contextMenu = { [weak self] pane in self?.contextMenu(for: pane) }
+        // F6: ⌘-click on a text file opens it in the window's Neovim.
+        engine.commandClick = { [weak self] pane, word in
+            guard let owner = self?.compositions.first(where: { $0.controller.pane(byID: pane) != nil }) else {
+                return false
+            }
+            return owner.controller.editors.commandClick(on: word, in: pane)
+        }
         // UI tests read the cell size to see ⌘+ and ⌘− take effect (F4.5 C9).
         engine.exposesCellSize = UserDefaults.standard.bool(forKey: "SmaltiExposeCellSize")
     }
@@ -605,6 +672,9 @@ final class AppComposition {
     private func windowServices(_ engine: GhosttyTerminalEngine) -> WindowServices {
         WindowServices(
             engine: engine, harnesses: harnesses,
+            makeSessionSearch: { [harnesses, connectsEditor] in
+                SessionSearchModel(registry: harnesses, connectsEditor: connectsEditor)
+            },
             changed: { [weak self] in self?.windowsChanged() },
             restoreChosen: { [weak self] choice, snapshot, asking in
                 self?.restoreChosen(choice, snapshot: snapshot, in: asking)
@@ -663,7 +733,12 @@ final class AppComposition {
             live: ClaudeSessionRegistry(claudeHome: settings.claudeHome),
             localModels: OllamaLocalModels(baseURL: settings.ollamaURL), system: DarwinSystemMetrics(),
             catalog: startup.initial.config.observatory.catalog,
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            usage: [
+                OpenCodeUsage(
+                    database: settings.opencodeDatabase
+                        ?? OpenCodeHarness.defaultDatabase(dataHome: settings.opencodeDataHome))
+            ])
         let refresher = ObservatoryRefresher(
             observe: ObserveAgents(sources),
             callbacks: .init(
@@ -786,12 +861,16 @@ final class AppComposition {
     }
 
     /// The Claude integration and its state, asked once at launch (F5.6).
-    private static func agentDependencies(notifier: any Notifier) -> TilingController.AgentDependencies {
-        let integration = claudeIntegration()
-        let status = ClaudeIntegrationStatus(integration: integration)
-        status.refresh(forced: true)
+    private static func agentDependencies(notifier: any Notifier, claudecode: ClaudecodeNvimInstaller)
+        -> TilingController.AgentDependencies
+    {
+        let integrations: [IntegrationID: ClaudeIntegrationStatus] = [
+            .claudePlugin: ClaudeIntegrationStatus(integration: claudeIntegration()),
+            .claudecodeNvim: ClaudeIntegrationStatus(integration: claudecode),
+        ]
+        integrations.values.forEach { $0.refresh(forced: true) }
         return TilingController.AgentDependencies(
-            notifier: notifier, integration: integration, integrationStatus: status,
+            notifier: notifier, integrations: integrations,
             // Replaced per window in `makeController`: "visible" is that window's, not the app's.
             isAppActive: { NSApp.isActive })
     }
@@ -852,12 +931,21 @@ final class AppComposition {
     }
 
     /// `applicationShouldTerminate`: saves everything, scrollback included, before the app quits.
-    func saveForQuit() {
+    /// F6: every window's Smalti Neovims, for the session.
+    private func editorPositions() async -> [PaneID: EditorPosition] {
+        var all: [PaneID: EditorPosition] = [:]
+        for composition in compositions {
+            all.merge(await composition.controller.editors.positions()) { first, _ in first }
+        }
+        return all
+    }
+
+    func saveForQuit() async {
         // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
         appearance?.saveIfPending()
         secureInput.releaseAll()
         windowsChanged()
-        sessionKeeper?.saveForQuit()
+        await sessionKeeper?.saveForQuit()
         telemetry?.stop()
         observatory?.stop()
         input?.stop()

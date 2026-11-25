@@ -33,3 +33,9 @@ public protocol SystemMetrics: AnyObject {
     /// `agentProcesses` are the live agents' PIDs, whose memory is reported apart.
     func sample(agentProcesses: [Int32]) -> SystemSample
 }
+
+/// Port (F6): token use of a harness other than Claude, read from its own store (OpenCode's database).
+public protocol HarnessUsage: Sendable {
+    /// Sessions with activity since `since`.
+    func sessions(since: Date) async throws(HarnessError) -> [UsageRow]
+}
