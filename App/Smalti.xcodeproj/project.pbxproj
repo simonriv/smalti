@@ -19,6 +19,7 @@
 		DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */; };
 		F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */; };
 		F61EF1D1A9F45B7E00C0FFEE /* NeovimAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F61EF1D2A9F45B7E00C0FFEE /* NeovimAdapter */; };
+		F70719D1A9F45B7E00C0FFEE /* OTLPReceiverAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */; };
 		F60C0DD1A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F60C0DD2A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter */; };
 		F6A61AD1A9F45B7E00C0FFEE /* AntigravityHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F6A61AD2A9F45B7E00C0FFEE /* AntigravityHarnessAdapter */; };
 		F6C0DED1A9F45B7E00C0FFEE /* CodexHarnessAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F6C0DED2A9F45B7E00C0FFEE /* CodexHarnessAdapter */; };
@@ -67,6 +68,7 @@
 				DA6F00D1A9F45B7E00C0FFEE /* DiagnosticsAdapter in Frameworks */,
 				F55A00D1A9F45B7E00C0FFEE /* ImageIOAdapter in Frameworks */,
 				F61EF1D1A9F45B7E00C0FFEE /* NeovimAdapter in Frameworks */,
+				F70719D1A9F45B7E00C0FFEE /* OTLPReceiverAdapter in Frameworks */,
 				F60C0DD1A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter in Frameworks */,
 				F6A61AD1A9F45B7E00C0FFEE /* AntigravityHarnessAdapter in Frameworks */,
 				F6C0DED1A9F45B7E00C0FFEE /* CodexHarnessAdapter in Frameworks */,
@@ -140,6 +142,7 @@
 				DA6F00D2A9F45B7E00C0FFEE /* DiagnosticsAdapter */,
 				F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */,
 				F61EF1D2A9F45B7E00C0FFEE /* NeovimAdapter */,
+				F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */,
 				F60C0DD2A9F45B7E00C0FFEE /* OpenCodeHarnessAdapter */,
 				F6A61AD2A9F45B7E00C0FFEE /* AntigravityHarnessAdapter */,
 				F6C0DED2A9F45B7E00C0FFEE /* CodexHarnessAdapter */,
@@ -213,6 +216,7 @@
 				DA6F00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/DiagnosticsAdapter" */,
 				F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */,
 				F61EF1D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/NeovimAdapter" */,
+				F70719D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OTLPReceiverAdapter" */,
 				F60C0DD3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OpenCodeHarnessAdapter" */,
 				F6A61AD3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/AntigravityHarnessAdapter" */,
 				F6C0DED3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/CodexHarnessAdapter" */,
@@ -524,6 +528,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/NeovimAdapter;
 		};
+		F70719D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OTLPReceiverAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/OTLPReceiverAdapter;
+		};
 		F55A00D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/ImageIOAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/ImageIOAdapter;
@@ -603,6 +611,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F61EF1D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/NeovimAdapter" */;
 			productName = NeovimAdapter;
+		};
+		F70719D2A9F45B7E00C0FFEE /* OTLPReceiverAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F70719D3A9F45B7E00C0FFEE /* XCLocalSwiftPackageReference "../Packages/OTLPReceiverAdapter" */;
+			productName = OTLPReceiverAdapter;
 		};
 		F55A00D2A9F45B7E00C0FFEE /* ImageIOAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

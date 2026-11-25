@@ -91,6 +91,8 @@ final class SystemView: NSView {
     private let cpuCurve = Sparkline()
     private let gpuCurve = Sparkline()
     private let memoryBar = MemoryBar()
+    /// F7: names Claude Code's telemetry once some arrived.
+    private let footnote: NSTextField
 
     /// CPU and GPU curves are percentages: their scale tops at 100, not at the highest sample.
     private static let percentScale = 100.0
@@ -109,10 +111,11 @@ final class SystemView: NSView {
         memoryValue = ObservatoryText.number(
             "", .init(size: tokens.systemRowSize, color: theme.text.primary), theme: theme)
         split = ObservatoryText.label("", .init(size: tokens.footnoteSize, color: theme.text.secondary), theme: theme)
+        footnote = ObservatoryText.label(
+            Self.footnote, .init(size: tokens.footnoteSize, color: theme.text.secondary), theme: theme)
         super.init(frame: .zero)
         card.fill(self)
-        let footnote = ObservatoryText.label(
-            Self.footnote, .init(size: tokens.footnoteSize, color: theme.text.secondary), theme: theme)
+        footnote.setAccessibilityIdentifier("smalti.observatory.footnote")
         footnote.lineBreakMode = .byWordWrapping
         footnote.maximumNumberOfLines = 0
         footnote.preferredMaxLayoutWidth = tokens.sideColumnWidth - tokens.cardPaddingHorizontal * 2
@@ -157,8 +160,9 @@ final class SystemView: NSView {
         return stack
     }
 
-    func show(_ figures: SystemFigures, cpuHistory: [Double], gpuHistory: [Double]) {
+    func show(_ figures: SystemFigures, cpuHistory: [Double], gpuHistory: [Double], footnote text: String) {
         let tokens = theme.observatory
+        ObservatoryText.setText(footnote, text)
         title.attributedStringValue = ObservatoryText.caption(figures.title, theme: theme).attributedStringValue
         ObservatoryText.setText(cpuValue, figures.cpu)
         ObservatoryText.setText(gpuValue, figures.gpu)

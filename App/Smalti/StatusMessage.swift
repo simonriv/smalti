@@ -85,6 +85,28 @@ struct StatusMessage: Equatable {
         StatusMessage(text: "Layout “\(name)” guardado", isTransient: true)
     }
 
+    /// F7: the OTLP receiver could not listen; panes then get no telemetry variables.
+    static func telemetryReceiverFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo arrancar el receptor de telemetría: \(reason)", isTransient: true)
+    }
+
+    /// F7: shared layouts.
+    static func layoutExported(_ name: String) -> StatusMessage {
+        StatusMessage(text: "Layout “\(name)” exportado", isTransient: true)
+    }
+
+    static func layoutExportFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo exportar el layout: \(reason)", isTransient: true)
+    }
+
+    static func layoutImported(_ name: String) -> StatusMessage {
+        StatusMessage(text: "Layout “\(name)” importado", isTransient: true)
+    }
+
+    static func layoutImportFailed(_ reason: String) -> StatusMessage {
+        StatusMessage(text: "No se pudo importar el layout: \(reason)", isTransient: true)
+    }
+
     /// A saved layout's agent session already runs in another pane, so that pane opened a plain shell.
     static func sessionAlreadyOpen(_ session: String) -> StatusMessage {
         StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)

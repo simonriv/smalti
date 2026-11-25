@@ -30,6 +30,9 @@ extension XCUIApplication {
             // F5.6: the app asks `claude plugin list` at launch; tests never run the real `claude`.
             "-SmaltiClaudeCommand",
             file.deletingLastPathComponent().appending(path: "no-claude").path(percentEncoded: false),
+            // F7: never the machine's managed Claude settings; tests that need them write this file.
+            "-SmaltiManagedSettings",
+            file.deletingLastPathComponent().appending(path: "managed-settings.json").path(percentEncoded: false),
         ]
         app.launchArguments += isolatedHarnessArguments(next: file.deletingLastPathComponent())
         if let config { app.writeConfig(config) }
