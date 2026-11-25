@@ -16,7 +16,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5 y F5.6.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6 y F7.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -131,6 +131,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Objetivo:** capacidades opcionales que no tocan el rendimiento base.
 - **Entregables:** layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
 - **Fuera (Simón, 2026-11-25):** la predicción con API propia o `claude -p` (cuesta dinero y saca contexto de la máquina) y el daemon `smaltid` dueño de los PTY (choca con que libghostty sea dueño del PTY). Al reabrir, los procesos se siguen relanzando.
+- **Spec:** `docs/specs/F7-extras.md` (aprobada 2026-11-25).
 - **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Nada sale de la máquina: el receptor OTLP escucha solo en `127.0.0.1`, y una prueba lo cubre.
 - **Dependencias:** F2 (persistencia y layouts con nombre) y F3 (Observatorio, que recibe la telemetría OTLP).
 
