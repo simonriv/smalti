@@ -24,6 +24,36 @@ public enum HookPayloadTranslator {
             edit: hook == .postToolUse ? edit(fields) : nil)
     }
 
+    /// F7.5: the tool call a `guard` request holds, with the CLI's own verdict and how to answer it.
+    public static func guardRequest(
+        _ request: IPCRequest, at date: Date, reply: @escaping @Sendable (GuardDecision) -> Void
+    ) throws(IPCError) -> GuardRequest {
+        guard let uuid = UUID(uuidString: request.pane) else { throw .invalidRequest(reason: "pane \(request.pane)") }
+        let fields = (try? JSONSerialization.jsonObject(with: request.payload)) as? [String: Any] ?? [:]
+        guard let tool = fields["tool_name"] as? String else {
+            throw .invalidRequest(reason: "guard without tool_name")
+        }
+        let input = fields["tool_input"] as? [String: Any] ?? [:]
+        let use = ToolUse(
+            tool: tool, command: input["command"] as? String,
+            filePath: input["file_path"] as? String ?? input["notebook_path"] as? String,
+            searchPath: input["path"] as? String, glob: input["glob"] as? String, cwd: fields["cwd"] as? String)
+        return GuardRequest(
+            id: UUID(), pane: PaneID(rawValue: uuid), use: use,
+            environmentHosts: fields["env_database_hosts"] as? [String] ?? [],
+            localVerdict: localVerdict(fields), receivedAt: date, reply: reply)
+    }
+
+    /// The CLI's verdict as it travels: only a denial carries what the app needs (its reason).
+    private static func localVerdict(_ fields: [String: Any]) -> GuardVerdict {
+        switch fields["local_verdict"] as? String {
+        case "allow": .allow
+        case "deny":
+            .deny(GuardDenial(kind: .secret(path: ""), reason: fields["local_reason"] as? String ?? ""))
+        default: .ask(ApprovalSubject(command: "", findings: []))
+        }
+    }
+
     private static let fileTools: Set<String> = ["Edit", "MultiEdit", "Write", "NotebookEdit"]
 
     /// F6: which file a file tool wrote and the text it wrote, for "Editados por Claude".

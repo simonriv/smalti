@@ -27,8 +27,8 @@ public enum AgentApprovalChange: Equatable, Sendable {
 /// ones that ask, and answers each exactly once: approved, rejected, expired, pane closed or app stopping.
 @MainActor
 public final class AgentApprovals {
-    public static let standardTimeout: TimeInterval = 600
-    public static let maximumPending = 32
+    public nonisolated static let standardTimeout: TimeInterval = 600
+    public nonisolated static let maximumPending = 32
 
     public var settings = GuardSettings.standard
     public var onChange: ((AgentApprovalChange) -> Void)?

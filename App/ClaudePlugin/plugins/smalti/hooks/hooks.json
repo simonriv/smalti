@@ -28,8 +28,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${SMALTI_CLI:-true}\" event PreToolUse",
-            "timeout": 5
+            "command": "\"${SMALTI_CLI:-true}\" guard PreToolUse",
+            "timeout": 660,
+            "onFailure": "block"
           }
         ]
       }
