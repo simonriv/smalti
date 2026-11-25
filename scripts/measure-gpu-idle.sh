@@ -75,6 +75,8 @@ for run in $(seq 1 "$runs"); do
     read -r mean app_cpu ws_cpu <<< "$(sample_gpu)"
   else
     work="$(mktemp -d)"
+    # F7 C2: OTLP=off measures with the telemetry receiver off (on by default).
+    [[ "${OTLP:-on}" == off ]] && printf '[extras]\notlp = false\n' > "$work/config.toml"
     env -i HOME="$HOME" PATH="/usr/bin:/bin" TMUX=smalti-measure "$binary" \
       -SmaltiStatePath "$work/state" -SmaltiConfigPath "$work/config.toml" \
       -SmaltiShellCommand "/bin/zsh -f" -SmaltiGlassProbe "$probe" \

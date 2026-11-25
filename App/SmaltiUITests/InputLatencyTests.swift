@@ -18,6 +18,10 @@ final class InputLatencyTests: SmaltiUITestCase {
     func testTypingNeverBlocksTheMainThread() throws {
         let app = XCUIApplication.isolatedSmaltiWithIntegration()
         // F5.6: `SMALTI_MEASURE_NO_HIGHLIGHT=1` measures the same typing with highlighting off, to compare.
+        // F7 C2: `SMALTI_MEASURE_NO_OTLP=1` measures with the telemetry receiver off (on by default).
+        if ProcessInfo.processInfo.environment["SMALTI_MEASURE_NO_OTLP"] == "1" {
+            app.writeConfig("[extras]\notlp = false\n")
+        }
         if ProcessInfo.processInfo.environment["SMALTI_MEASURE_NO_HIGHLIGHT"] == "1" {
             app.writeConfig("[input]\nhighlighting = false\n")
         }
