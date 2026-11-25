@@ -87,7 +87,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - app: "Acerca de Smalti" con la versión, abrir la configuración (⌘,), registros para diagnosticar y accesibilidad básica (VoiceOver y tamaño de texto).
 - **Entregables:** el informe de la auditoría (`docs/specs/F4.5-auditoria.md`) aprobado por Simón; después, la vista de ayuda, la pantalla completa, las varias ventanas con workspaces propios, el canal de feedback y los huecos de la auditoría marcados como "entra en F4.5".
 - **Spec:** `docs/specs/F4.5-ayuda-ventanas.md` (aprobada 2026-11-23), sobre la auditoría `docs/specs/F4.5-auditoria.md` (aprobada).
-- **Límites:** no adelanta trabajo de F5 (temas, vidrio, botones de ventana, tipografía, estudio de prompt; la ventana de configuración visual es de F5, en F4.5 ⌘, solo abre el TOML), de F6 (multi-harness, Neovim) ni de F7 (daemon `smaltid`, layouts compartibles). Nada de producto de venta: ni licencias, ni actualizaciones automáticas, ni telemetría de uso.
+- **Límites:** no adelanta trabajo de F5 (temas, vidrio, botones de ventana, tipografía, estudio de prompt; la ventana de configuración visual es de F5, en F4.5 ⌘, solo abre el TOML), de F6 (multi-harness, Neovim) ni de F7 (layouts compartibles, OTLP). Nada de producto de venta: ni licencias, ni actualizaciones automáticas, ni telemetría de uso.
 - **Criterio de cierre:** se define en su spec, a partir de la auditoría. Como mínimo: cada acción de ⌘K aparece en la ayuda y en el menú con el mismo atajo (prueba automática), y dos ventanas con workspaces distintos se restauran cada una con los suyos (XCUITest).
 - **Dependencias:** F4 (sus atajos aparecen en la ayuda) y F2 (la persistencia pasa de una ventana a varias). Añadida por Simón en el brainstorming de F4 (2026-11-23) y ampliada el mismo día con la auditoría de funciones básicas.
 
@@ -129,9 +129,10 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## F7 · Extras
 
 - **Objetivo:** capacidades opcionales que no tocan el rendimiento base.
-- **Entregables:** predicción con API propia (Anthropic, OpenAI, OpenRouter o compatible) y con `claude -p`; daemon `smaltid` dueño de los PTY (se decide en Swift o Rust al llegar); layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
-- **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Ningún secreto sale a una API; las pruebas del filtro lo cubren.
-- **Dependencias:** F4 (`PredictionProvider`) y F2 (persistencia). El daemon choca con que libghostty sea dueño del PTY (ver riesgos de F0) y necesita su propio spike.
+- **Entregables:** layouts compartibles; receptor OTLP local inyectado a los procesos hijos (telemetría de Claude Code, movido desde F3).
+- **Fuera (Simón, 2026-11-25):** la predicción con API propia o `claude -p` (cuesta dinero y saca contexto de la máquina) y el daemon `smaltid` dueño de los PTY (choca con que libghostty sea dueño del PTY). Al reabrir, los procesos se siguen relanzando.
+- **Criterio de cierre:** con cada extra apagado y encendido, las mediciones de F0 y F4 no empeoran más de 5 %. Nada sale de la máquina: el receptor OTLP escucha solo en `127.0.0.1`, y una prueba lo cubre.
+- **Dependencias:** F2 (persistencia y layouts con nombre) y F3 (Observatorio, que recibe la telemetría OTLP).
 
 ## F8 · Puertos y procesos
 
