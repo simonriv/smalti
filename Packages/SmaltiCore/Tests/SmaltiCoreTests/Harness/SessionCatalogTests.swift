@@ -104,5 +104,9 @@ struct ShellWordTests {
         #expect(ShellWord.quoted("01a210a3-2dac_x") == "01a210a3-2dac_x")
         #expect(ShellWord.quoted("") == "''")
         #expect(ShellWord.quoted("a b$c") == "'a b$c'")
+        #expect(ShellWord.quoted("/w/src/a.ts") == "/w/src/a.ts")
+        #expect(ShellWord.quoted("~/a") == "'~/a'")
+        #expect(ShellWord.quoted("=cmd") == "'=cmd'")
+        #expect(ShellWord.quoted("a;b") == "'a;b'")
     }
 }
