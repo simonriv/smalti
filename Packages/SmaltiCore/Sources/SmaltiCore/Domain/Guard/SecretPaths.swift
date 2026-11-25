@@ -71,19 +71,19 @@ public struct SecretPaths: Sendable {
     private static let interpreters: Set<String> = ["node", "ruby", "perl", "awk", "gawk", "mawk", "deno", "bun"]
 
     /// The secret path a command reads, as written (or `keychain`), or nil.
-    public func secretRead(in command: SimpleCommand) -> String? {
+    public func secretRead(in command: SimpleCommand, cwd: String? = nil) -> String? {
         guard let program = command.program, !Self.metadataPrograms.contains(program) else {
-            return command.program == nil ? firstSecret(command.redirections) : nil
+            return command.program == nil ? firstSecret(command.redirections, cwd: cwd) : nil
         }
         if KeychainRead.matches(program: program, arguments: command.arguments) { return Self.keychain }
-        if let found = firstSecret(command.arguments + command.redirections) { return found }
+        if let found = firstSecret(command.arguments + command.redirections, cwd: cwd) { return found }
         guard Self.isInterpreter(program) else { return nil }
-        return firstSecret(command.arguments.flatMap(pathFragmentsExpanded))
+        return firstSecret(command.arguments.flatMap(pathFragmentsExpanded), cwd: cwd)
     }
 
-    private func firstSecret(_ candidates: [String]) -> String? {
+    private func firstSecret(_ candidates: [String], cwd: String?) -> String? {
         for candidate in candidates.flatMap(Self.pathCandidates) {
-            if GlobPattern.hasWildcard(candidate) ? mayMatchSecret(glob: candidate) : isSecret(candidate, cwd: nil) {
+            if GlobPattern.hasWildcard(candidate) ? mayMatchSecret(glob: candidate) : isSecret(candidate, cwd: cwd) {
                 return candidate
             }
         }
