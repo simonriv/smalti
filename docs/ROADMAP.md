@@ -11,10 +11,10 @@ F0 Spike ──▶ F1 Tiling ──▶ F2 Persistencia ──▶ F3 Observatorio
 F4 Input ──▶ F4.5 Ayuda ──▶ F5 Apariencia ──▶ F5.5 Previews ──▶ F5.6 Resaltado ──▶ F6 Multi-harness ──▶ F7 Extras
    ┌──────────────────────────────────────────────────────────────────────────────────────────────────┘
    ▼
-F7.5 Guardas para agentes ──▶ F8 Puertos y procesos ──▶ F8.5 Proyectos ──▶ F9 Timeline ──▶ F10 Revisión con Neovim ──▶ F11 Baúl de secretos
+F7.5 Guardas para agentes ──▶ F7.6 Distribución y actualizaciones ──▶ F7.7 Primer uso e inglés ──▶ F8 Puertos y procesos ──▶ F8.5 Proyectos ──▶ F9 Timeline ──▶ F10 Revisión con Neovim ──▶ F11 Baúl de secretos
 ```
 
-F7.5 y F8.5–F11 salen de la evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25): ver «Ideas evaluadas» al final.
+F7.5 y F8.5–F11 salen de la evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25): ver «Ideas evaluadas» al final. F7.6 y F7.7 salen de la decisión de publicar Smalti para otros usuarios, gratis, con web en Vercel y dominio propio (Simón, 2026-11-25): van antes de las fases de producto para que esas lleguen ya por actualización automática.
 
 El orden es el del documento. Las dependencias técnicas reales son menos estrictas (ver cada fase): F3 y F4 podrían invertirse, y F6 solo necesita F2.
 
@@ -151,6 +151,30 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 - **Fuera:** el proxy SQL con `libpg_query` y el proxy HTTPS de valores de relleno (ver «Ideas evaluadas»).
 - **Dependencias:** F2 (plugin de hooks, IPC, notificaciones) y F6 (catálogo de integraciones para instalar y desinstalar las reglas).
 
+## F7.6 · Distribución y actualizaciones
+
+- **Objetivo:** que cualquiera instale Smalti en un minuto, que macOS lo abra sin avisos de seguridad y que cada versión nueva llegue sola.
+- **Entregables:**
+  - **Firma Developer ID y notarización** de Apple, con «stapling» del ticket. Sustituye la firma ad hoc de `CLAUDE.md`: sin ella, Gatekeeper bloquea una app descargada y Homebrew deja de aceptar casks sin notarizar. **Cuesta dinero** (Apple Developer Program, 99 USD al año): la spec no avanza sin la aprobación explícita de Simón.
+  - **Actualización automática con Sparkle 2:** firma EdDSA de cada versión, `appcast.xml` servido desde el dominio de la web (Vercel), notas de versión en la ventana de actualización, comprobación al arrancar y a demanda («Buscar actualizaciones…» en el menú Smalti y en ⌘K), opción de desactivarla. La comprobación solo pide el appcast: no envía datos de uso.
+  - **Entrega:** DMG firmado en GitHub Releases; cask de Homebrew en un tap propio (`brew install --cask simonriv/tap/smalti`) con `auto_updates true`, y propuesta al tap oficial cuando cumpla sus criterios de notoriedad. Comprobar antes que el nombre `smalti` está libre en Homebrew (pregunta abierta de `PROJECT.md`).
+  - **Pipeline de release** en GitHub Actions: compilar el Release, firmar, notarizar, crear el DMG, publicar la release con sus notas, actualizar el appcast y el cask. Los secretos de firma viven en los secretos del repo, nunca en el código.
+  - **Compatibilidad entre versiones:** los formatos de sesión, layouts, índice del Observatorio y `config.toml` llevan versión, se migran hacia delante, y una versión vieja que encuentra datos de una nueva no los rompe.
+  - **Repositorio público:** licencia elegida por Simón, `THIRD_PARTY_NOTICES` (libghostty MIT, Inter y JetBrains Mono OFL, specs de Fig ISC, Sparkle MIT), `README` de instalación y desinstalación, y el canal de feedback de F4.5 apuntando a los issues públicos.
+- **Criterio de cierre:** por definir en su spec; como mínimo, un Mac limpio instala por DMG y por Homebrew sin avisos de Gatekeeper (`spctl --assess` acepta la app), y una versión instalada se actualiza a la siguiente desde un appcast de prueba sin perder sesión, layouts ni configuración.
+- **Dependencias:** F4.5 (feedback, «Acerca de» con versión). Cambia la Decisión «Alcance» de `PROJECT.md` y la línea de firma de `CLAUDE.md`.
+
+## F7.7 · Primer uso e inglés
+
+- **Objetivo:** que alguien que no es Simón entienda y use Smalti desde el primer arranque.
+- **Entregables:**
+  - **Interfaz en inglés y español**, según el idioma del sistema: todos los textos de la app pasan a un catálogo de cadenas; los tableros de `docs/design/` siguen en español como referencia.
+  - **Primer arranque:** pantalla breve que explica ⌘K y los atajos clave, ofrece instalar la integración con Claude Code y la de Neovim, y elige tema; se puede saltar y volver a abrir desde la ayuda.
+  - **Valores por defecto neutrales:** revisar lo que asume el flujo de Simón (instalador solo para NvChad, ⌥ reservado al teclado latinoamericano, ejemplos con sus proyectos) y dejarlo configurable o documentado.
+  - **Privacidad explícita:** una página en la ayuda y en la web: nada sale de la máquina salvo la comprobación de actualizaciones; la telemetría de Claude Code se queda en `127.0.0.1`.
+- **Criterio de cierre:** por definir en su spec; como mínimo, con el sistema en inglés no queda ningún texto de interfaz en español (prueba que recorre ⌘K, menús, ayuda y Observatorio), y el primer arranque se completa y se salta por teclado.
+- **Dependencias:** F7.6 (la app ya es pública).
+
 ## F8 · Puertos y procesos
 
 - **Objetivo:** ver qué está escuchando y qué está consumiendo, y detenerlo, sin salir de Smalti ni abrir otra herramienta (idea de Simón, 2026-11-23).
@@ -211,5 +235,16 @@ Evaluación de `smalti-diferenciacion.md` (Simón, 2026-11-25), contra lo ya con
 | Proxy HTTPS de valores de relleno (etapa 2 del baúl) | Fuera: intercepta TLS con un certificado de confianza propio y depende de un proceso largo como `smaltid`, ya descartado | — |
 | Proxy SQL con `libpg_query` (etapa 2) | Fuera por ahora: alto esfuerzo, no cubre PostgREST ni el MCP de Supabase, y la guardia de comandos cubre los incidentes reales | — |
 | Predicción por API y `smaltid` | Ya descartados (Simón, 2026-11-25) | — |
+| Publicar Smalti para otros (web en Vercel, Homebrew, actualización automática) | Entra: decisión de Simón (2026-11-25) | F7.6, F7.7 |
+| Espacio de donaciones | Entra en la web, no en la app; en la app, un enlace discreto en «Acerca de» y en la ayuda | Web, F7.6 |
+| Smalti para Windows y Linux | Fuera por ahora (análisis en «Multiplataforma») | — |
 | Navegador, app móvil, VMs, checkpoints | Fuera (como dice el documento) | — |
+
+### Multiplataforma (análisis, sin fase)
+
+- **Lo que se puede reutilizar:** el dominio y los casos de uso (`SmaltiCore`, Swift puro) compilan en Linux y Windows, y varios adaptadores son portables (IPC por socket Unix, receptor OTLP, TOML, archivos de sesión, SQLite). La arquitectura hexagonal es justo lo que lo hace posible.
+- **Lo que no:** la app entera (AppKit, vidrio de macOS, Metal, ventanas), las notificaciones, el Keychain, las métricas de Darwin, ImageIO, Quick Look y JavaScriptCore de las specs de Fig. Es una app nueva por plataforma sobre el mismo núcleo.
+- **Linux:** viable con mucho esfuerzo. Ghostty tiene su app de GTK sobre el mismo núcleo, pero la API embebida de libghostty que usa Smalti está pensada para macOS; la interfaz habría que escribirla en GTK desde Swift, con bindings aún inmaduros. Estimación: del orden de F1–F5 otra vez.
+- **Windows:** muy difícil hoy. Ghostty no soporta Windows, así que haría falta otro motor de terminal (ConPTY con otro renderer), además de reescribir la interfaz. Sería otro producto.
+- **Recomendación:** quedarse en macOS. Si hubiera demanda, Linux antes que Windows, como fase propia con spec y cambio de la Decisión «Alcance».
 
