@@ -5,7 +5,7 @@ set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 rel="$root/scripts/release"
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-total=28; n=0; failures=0
+total=29; n=0; failures=0
 report() { n=$((n + 1)); if [[ "$2" == 0 ]]; then echo "[$n/$total] ok $1"; else echo "[$n/$total] FAIL $1"; failures=$((failures + 1)); fi; }
 
 # shellcheck source=/dev/null
@@ -146,10 +146,15 @@ exec sh -c "$last"
 SSH
 chmod +x "$work/sshbin/ssh"
 sed 's/version "0.7.6"/version "0.7.8"/' "$work/smalti.rb" > "$work/smalti-078.rb"; mkdir -p "$work/tmp"
-SSH_LOG="$work/ssh.log" PATH="$work/sshbin:$PATH" DEPLOY_KEY="fake-key" TMPDIR="$work/tmp" \
-  "$rel/push-cask.sh" "github.local:$work/web.git" v0.7.8 "$work/smalti-078.rb" > /dev/null 2>&1
+# Called by a relative path from the repo root, as the workflow does.
+(cd "$root" && SSH_LOG="$work/ssh.log" PATH="$work/sshbin:$PATH" DEPLOY_KEY="fake-key" TMPDIR="$work/tmp" \
+  scripts/release/push-cask.sh "github.local:$work/web.git" v0.7.8 "$work/smalti-078.rb" > /dev/null 2>&1)
 [[ "$(grep -c -- '-i ' "$work/ssh.log" 2>/dev/null)" -ge 2 ]] && git --git-dir="$work/web.git" rev-parse -q --verify release/v0.7.8 > /dev/null
 report deploy_key_is_used_for_clone_and_push $?
+# Release run 2: the known_hosts file must be found from wherever git runs ssh (the push runs inside the clone).
+hosts_files="$(sed -nE 's/.*UserKnownHostsFile=([^ ]+).*/\1/p' "$work/ssh.log" | sort -u)"
+all_found() { local f; [[ -n "$1" ]] || return 1; while read -r f; do [[ "$f" == /* && -s "$f" ]] || return 1; done <<< "$1"; }
+all_found "$hosts_files"; report known_hosts_path_is_absolute_and_exists $?
 [[ -d "$work/tmp" && -z "$(find "$work/tmp" -mindepth 1 2>/dev/null)" ]]; report deploy_key_leaves_no_file $?
 
 git init -q --bare -b main "$work/tap.git" && git init -q "$work/tap" && printf '# tap\n' > "$work/tap/README.md"

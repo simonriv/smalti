@@ -38,7 +38,9 @@ clone_satellite() {
   local url="$1" dir="$2" ssh=()
   if [[ -n "${DEPLOY_KEY:-}" ]]; then
     (umask 077; printf '%s\n' "$DEPLOY_KEY" > "$dir/key")
-    ssh=(-c "core.sshCommand=ssh -i $dir/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$(dirname "${BASH_SOURCE[0]}")/github-known-hosts")
+    # Absolute: the push runs from inside the clone (release run 2 failed with a relative path here).
+    local hosts; hosts="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/github-known-hosts"
+    ssh=(-c "core.sshCommand=ssh -i $dir/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$hosts")
   fi
   git ${ssh[@]+"${ssh[@]}"} clone -q --depth 1 --no-local "$url" "$dir/repo" || die "could not clone $url"
   if [[ -n "${DEPLOY_KEY:-}" ]]; then git -C "$dir/repo" config core.sshCommand "${ssh[1]#core.sshCommand=}"; fi
