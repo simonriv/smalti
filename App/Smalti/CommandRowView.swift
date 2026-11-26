@@ -5,7 +5,9 @@ import SmaltiCore
 @MainActor
 final class CommandGroupLabel: NSView {
     convenience init(_ group: CommandGroup, theme: Theme) {
-        self.init(text: group.rawValue, theme: theme, identifier: "smalti.paletteGroup")
+        self.init(
+            text: CommandTexts.spanish.groups[group] ?? "",  // T9
+            theme: theme, identifier: "smalti.paletteGroup")
     }
 
     /// Also titles the windows of "Retomar donde quedaste" (F4.5), with the palette's group style.

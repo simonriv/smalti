@@ -23,7 +23,7 @@ struct GuardCommandsTests {
     }
 
     private func commands(_ state: CatalogState) -> [Command] {
-        CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     @Test func approvalShortcutsAreBound() throws {
@@ -106,7 +106,7 @@ struct GuardCommandsTests {
     }
 
     @Test func helpCoversTheNewCommands() {
-        let covered = Set(HelpCatalog.sections(keymap: .standard).flatMap(\.entries).flatMap(\.covers))
+        let covered = Set(HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries).flatMap(\.covers))
 
         #expect(
             [CommandID.guardApprove, .guardReject, .secretsProtect, .secretsUnprotect].allSatisfy(covered.contains))

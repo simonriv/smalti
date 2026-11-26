@@ -258,7 +258,7 @@ final class TilingController {
         let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration, id: id).execute()
+            let line = await command.init(integration: integration, id: id, texts: .spanish).execute()  // T9
             self?.report(.integration(line))
             status.refresh(forced: true)
         }
@@ -854,7 +854,7 @@ final class TilingController {
 /// Install and uninstall share one shape, so the palette runs either the same way.
 @MainActor
 protocol IntegrationCommand {
-    init(integration: any HarnessIntegration, id: IntegrationID)
+    init(integration: any HarnessIntegration, id: IntegrationID, texts: IntegrationTexts)
     func execute() async -> String
 }
 

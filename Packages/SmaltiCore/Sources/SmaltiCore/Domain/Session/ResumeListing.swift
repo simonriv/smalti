@@ -67,7 +67,9 @@ public enum ResumeListing {
             let layout = LayoutCatalog.standard.strategyOrDefault(for: LayoutID(rawValue: workspace.layout))
             let count = workspace.panes.count
             return ResumeWorkspace(
-                name: workspace.name, summary: "\(layout.displayName) · \(count) \(count == 1 ? "panel" : "paneles")",
+                name: workspace.name,
+                summary:
+                    "\(CommandTexts.spanish.layoutNames[layout.id] ?? layout.id.rawValue) · \(count) \(count == 1 ? "panel" : "paneles")",
                 status: AgentStateKind.mostUrgent(workspace.panes.compactMap(\.agent?.lastState)),
                 rows: workspace.panes.map { row(for: $0, home: home, harnesses: harnesses) })
         }

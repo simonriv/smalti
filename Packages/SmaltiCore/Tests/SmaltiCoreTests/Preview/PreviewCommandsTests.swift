@@ -17,7 +17,8 @@ struct PreviewCommandsTests {
     }
 
     private var commands: [Command] {
-        CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     @Test func quickLookIdIsStandard() {
@@ -41,14 +42,14 @@ struct PreviewCommandsTests {
     @Test func viewMenuHasQuickLook() throws {
         let bar = MenuModel.bar(
             keymap: .standard, commands: commands,
-            state: MenuState(workspaces: set, checked: [], context: .unrestricted))
+            state: MenuState(workspaces: set, checked: [], context: .unrestricted), texts: .spanish)
         let view = try #require(bar.menus.first { $0.title == "Ver" })
 
         #expect(view.items.contains { $0.title == "Abrir en Quick Look" })
     }
 
     @Test func helpListsQuickLookWithItsShortcut() throws {
-        let entries = HelpCatalog.sections(keymap: .standard).flatMap(\.entries)
+        let entries = HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries)
         let entry = try #require(entries.first { $0.command == .previewQuickLook })
 
         #expect(entry.title == "Abrir en Quick Look")

@@ -1,16 +1,17 @@
 /// Section of the command palette a command is listed under.
+/// Its title is in `CommandTexts.groups`.
 public enum CommandGroup: String, Sendable {
     /// F7.5: commands Smalti holds until the user decides.
-    case approvals = "Esperan tu aprobación"
-    case tiling = "Tiling"
-    case panes = "Paneles"
-    case workspaces = "Workspaces y sesiones"
-    case configuration = "Configuración"
-    case windows = "Ventanas"
-    case terminal = "Terminal"
-    case help = "Ayuda"
+    case approvals
+    case tiling
+    case panes
+    case workspaces
+    case configuration
+    case windows
+    case terminal
+    case help
     /// F6: the files the focused pane's Claude wrote.
-    case editedFiles = "Editados por Claude"
+    case editedFiles
 }
 
 /// One entry of the command palette: what the user can do right now.

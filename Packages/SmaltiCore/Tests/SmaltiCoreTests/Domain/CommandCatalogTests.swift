@@ -18,7 +18,8 @@ struct CommandCatalogTests {
     }
 
     private func commands(for set: WorkspaceSet) -> [Command] {
-        CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     private func commands(paneCount: Int) -> [Command] {
@@ -37,14 +38,17 @@ struct CommandCatalogTests {
         #expect(dwindle.subtitle == "cada panel nuevo divide el último")
     }
 
-    @Test func layoutCommandSubtitleComesFromTheStrategy() throws {
+    /// F7.7: a layout the catalog does not name shows its id and no subtitle.
+    @Test func layoutWithoutCatalogEntryShowsItsID() throws {
         let layouts = LayoutCatalog([SubtitledLayout()])
 
         let commands = CommandCatalog.commands(
-            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: layouts)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: layouts,
+            texts: .spanish)
 
         let command = try #require(commands.first { $0.id == .layout(SubtitledLayout().id) })
-        #expect(command.subtitle == "de prueba")
+        #expect(command.title == "Layout: subtitled")
+        #expect(command.subtitle == nil)
     }
 
     @Test func layoutCommandsCarryTheirLayoutIcon() throws {
@@ -213,7 +217,7 @@ struct CommandCatalogTests {
     @Test func paletteListsTheF6Commands() {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 1))), keymap: .standard,
-            layouts: .standard)
+            layouts: .standard, texts: .spanish)
         let entry = { (id: CommandID) in commands.first { $0.id == id } }
 
         #expect(entry(.harnessSearch)?.title == "Buscar sesiones de agentes")
@@ -229,7 +233,7 @@ struct CommandCatalogTests {
     @Test func editorCommandsNeedAPane() {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace(paneCount: 0))), keymap: .standard,
-            layouts: .standard)
+            layouts: .standard, texts: .spanish)
 
         #expect(!commands.contains { $0.id == .editorOpenBeside || $0.id == .editorOpenLastEdited })
         #expect(commands.contains { $0.id == .harnessSearch })
@@ -237,7 +241,8 @@ struct CommandCatalogTests {
 
     @Test func paletteListsOpenObservatory() {
         let commands = CommandCatalog.commands(
-            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard,
+            texts: .spanish)
 
         let open = commands.first { $0.id == .observatoryToggle }
         #expect(open?.title == "Abrir observatorio")
@@ -248,7 +253,8 @@ struct CommandCatalogTests {
 
     @Test func jumpCommandIsInPalette() {
         let commands = CommandCatalog.commands(
-            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace())), keymap: .standard, layouts: .standard,
+            texts: .spanish)
 
         let jump = commands.first { $0.id == .agentJump }
         #expect(jump?.title == "Saltar al agente que espera")
@@ -260,7 +266,7 @@ struct CommandCatalogTests {
         let ids = IntegrationID.allCases.flatMap { [$0.installCommand, $0.uninstallCommand] }
         return CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: makeWorkspace()), integrations: states),
-            keymap: .standard, layouts: .standard
+            keymap: .standard, layouts: .standard, texts: .spanish
         ).filter { ids.contains($0.id) }
     }
 
@@ -301,9 +307,7 @@ struct CommandCatalogTests {
 /// A layout that only exists to show the catalog reads each strategy's own subtitle.
 private struct SubtitledLayout: LayoutStrategy {
     let id = LayoutID(rawValue: "subtitled")
-    let displayName = "Con subtítulo"
     let statusName = "subtitulado"
-    let subtitle: String? = "de prueba"
     let icon = DwindleLayout().icon
 
     func tree(for panes: [PaneID]) -> LayoutTree? { DwindleLayout().tree(for: panes) }

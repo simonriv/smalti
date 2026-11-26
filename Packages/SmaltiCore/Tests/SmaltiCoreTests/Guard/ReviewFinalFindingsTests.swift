@@ -154,7 +154,7 @@ struct ReviewFinalFindingsTests {
             id: UUID(), pane: pane, subject: subject(command, rule: "terraform destroy"), since: t0, deadline: t0)
         let state = CatalogState(workspaces: set, pendingApprovals: [ApprovalEntry(approval: approval, workspace: "w")])
 
-        let entry = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard).first
+        let entry = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard, texts: .spanish).first
 
         #expect(entry?.subtitle?.contains("&& terraform destroy") == true)
     }

@@ -143,7 +143,8 @@ struct GuardMutantKillerTests {
             workspaces: set, pendingApprovals: [ApprovalEntry(approval: approval, workspace: "w")],
             secretsProject: SecretsProjectState(name: "p", isProtected: false))
 
-        let entries = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard).filter {
+        let entries = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard, texts: .spanish).filter
+        {
             $0.group == .approvals || $0.id == .secretsProtect
         }
 

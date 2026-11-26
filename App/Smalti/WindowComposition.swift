@@ -318,7 +318,7 @@ final class WindowComposition {
             actions: .init(
                 search: { [weak controller] query in
                     guard let controller else { return [] }
-                    return SearchCommands(layouts: .standard).execute(
+                    return SearchCommands(layouts: .standard, texts: .spanish) /* T9 */.execute(
                         query, state: controller.catalogState(), keymap: controller.config.keys)
                 },
                 perform: { [weak controller] command in controller?.perform(command) },

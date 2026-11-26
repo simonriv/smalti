@@ -1,21 +1,9 @@
 /// Every shortcut and action, grouped for the help view (⌘?). Built from the keymap in effect, so a chord changed in
 /// the TOML shows as changed.
 public enum HelpCatalog {
-    static let inPalette = "en ⌘K"
-
-    public static func sections(keymap: Keymap) -> [HelpSection] {
-        let rows = Rows(keymap: keymap)
-        return [
-            HelpSection(title: "Ventanas y workspaces", entries: rows.windows),
-            HelpSection(title: "Paneles", entries: rows.panes),
-            HelpSection(title: "Terminal", entries: rows.terminal),
-            HelpSection(title: "Buscar", entries: rows.search),
-            HelpSection(title: "Tiling", entries: rows.tiling),
-            HelpSection(title: "Agentes y observatorio", entries: rows.agents),
-            HelpSection(title: "En el prompt", entries: rows.prompt),
-            HelpSection(title: "Ratón", entries: rows.mouse),
-            HelpSection(title: "Configuración y ayuda", entries: rows.configuration),
-        ]
+    public static func sections(keymap: Keymap, texts: HelpTexts) -> [HelpSection] {
+        let rows = Rows(keymap: keymap, texts: texts)
+        return HelpSectionID.allCases.map { HelpSection(title: texts.sections[$0] ?? "", entries: rows.entries($0)) }
     }
 
     /// Entries whose title fuzzy-matches `query`, or whose command id contains it; sections left empty are dropped. A
@@ -35,23 +23,35 @@ public enum HelpCatalog {
 /// The rows of each section, with their chords read from one keymap.
 private struct Rows {
     let keymap: Keymap
+    let texts: HelpTexts
+
+    func entries(_ section: HelpSectionID) -> [HelpEntry] {
+        switch section {
+        case .windows: windows
+        case .panes: panes
+        case .terminal: terminal
+        case .search: search
+        case .tiling: tiling
+        case .agents: agents
+        case .prompt: prompt
+        case .mouse: mouse
+        case .configuration: configuration
+        case .privacy: privacy
+        }
+    }
 
     var windows: [HelpEntry] {
-        [.windowNew, .windowClose, .windowFullscreen, .windowMinimize].map(titled)
-            + [
-                entry(.workspaceNew, "Nuevo workspace"),
-                family("Ir al workspace 1–9", NumberedShortcuts.range.map(CommandID.workspace)),
-                entry(.workspaceRename, "Renombrar workspace…"), entry(.workspaceClose, "Cerrar workspace"),
-                entry(.layoutImport, "Importar layout…"),
-            ]
+        [CommandID.windowNew, .windowClose, .windowFullscreen, .windowMinimize, .workspaceNew].map(titled)
+            + [family(texts.goToWorkspaces, NumberedShortcuts.range.map(CommandID.workspace))]
+            + [CommandID.workspaceRename, .workspaceClose, .layoutImport].map(titled)
     }
 
     var panes: [HelpEntry] {
-        [
-            entry(.paneNew, "Nuevo panel"), entry(.paneClose, "Cerrar panel"),
-            family("Ir al panel 1–9", NumberedShortcuts.range.map(CommandID.paneFocus)),
-            family("Enfocar panel hacia…", Direction.allCases.map(CommandID.paneFocus)),
-        ]
+        [CommandID.paneNew, .paneClose].map(titled)
+            + [
+                family(texts.goToPanes, NumberedShortcuts.range.map(CommandID.paneFocus)),
+                family(texts.focusPanes, Direction.allCases.map(CommandID.paneFocus)),
+            ]
     }
 
     var terminal: [HelpEntry] {
@@ -65,71 +65,63 @@ private struct Rows {
     var search: [HelpEntry] { [.searchOpen, .searchNext, .searchPrevious].map(titled) }
 
     var tiling: [HelpEntry] {
-        LayoutCatalog.standard.all.map { entry(.layout($0.id), "Layout: \($0.displayName)") }
+        let commands = texts.commands
+        return LayoutCatalog.standard.all.map {
+            entry(.layout($0.id), commands.layoutTitle(["name": commands.layoutNames[$0.id] ?? $0.id.rawValue]))
+        }
             + [
-                entry(.panesEqualize, "Igualar paneles"),
-                family("Intercambiar panel hacia…", Direction.allCases.map(CommandID.paneSwap)),
-                family("Agrandar panel hacia…", Direction.allCases.map(CommandID.paneResize)),
+                titled(.panesEqualize),
+                family(texts.swapPanes, Direction.allCases.map(CommandID.paneSwap)),
+                family(texts.resizePanes, Direction.allCases.map(CommandID.paneResize)),
             ]
     }
 
     var agents: [HelpEntry] {
         [
-            entry(.agentJump, "Saltar al agente que espera"), entry(.observatoryToggle, "Abrir observatorio"),
-            entry(.observatoryPeriod, "Cambiar el periodo del observatorio"),
-            entry(.observatoryFilter, "Filtrar el Observatorio"),
-            entry(.harnessSearch, "Buscar sesiones de agentes"),
-            entry(.editorOpenBeside, "Abrir Neovim junto al agente"),
-            entry(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado"),
-            entry(.claudeIntegrationInstall, "Instalar integración con Claude Code"),
-            entry(.claudeIntegrationUninstall, "Desinstalar integración con Claude Code"),
-            entry(.guardApprove, "Aprobar el comando que espera en el panel"),
-            entry(.guardReject, "Rechazar el comando que espera en el panel"),
-            entry(.secretsProtect, "Proteger los secretos del proyecto"),
-            entry(.secretsUnprotect, "Quitar la protección de secretos del proyecto"),
-        ]
+            CommandID.agentJump, .observatoryToggle, .observatoryPeriod, .observatoryFilter, .harnessSearch,
+            .editorOpenBeside, .editorOpenLastEdited, .claudeIntegrationInstall, .claudeIntegrationUninstall,
+            .guardApprove, .guardReject, .secretsProtect, .secretsUnprotect,
+        ].map(titled)
     }
 
     /// zsh's keys in Smalti's panes (F4): not Smalti chords, so they are fixed text.
     var prompt: [HelpEntry] {
         [
-            HelpEntry(title: "Completar", keys: "Tab", command: nil, covers: []),
-            HelpEntry(title: "Aceptar sugerencia", keys: "→", command: nil, covers: []),
-            HelpEntry(title: "Buscar en el historial", keys: "⌃R", command: .historySearch, covers: [.historySearch]),
+            HelpEntry(title: texts.complete, keys: "Tab", command: nil, covers: []),
+            HelpEntry(title: texts.acceptSuggestion, keys: "→", command: nil, covers: []),
+            HelpEntry(title: texts.searchHistory, keys: "⌃R", command: .historySearch, covers: [.historySearch]),
         ]
     }
 
     var mouse: [HelpEntry] {
         [
-            HelpEntry(title: "Abrir un enlace", keys: "⌘clic", command: nil, covers: []),
-            HelpEntry(title: "Pegar la ruta de un archivo", keys: "arrastrar", command: nil, covers: []),
-            HelpEntry(title: "Menú del terminal", keys: "clic derecho", command: nil, covers: []),
+            HelpEntry(title: texts.openLink, keys: texts.openLinkKeys, command: nil, covers: []),
+            HelpEntry(title: texts.pastePath, keys: texts.pastePathKeys, command: nil, covers: []),
+            HelpEntry(title: texts.terminalMenu, keys: texts.terminalMenuKeys, command: nil, covers: []),
         ]
     }
 
     var configuration: [HelpEntry] {
-        [entry(.paletteOpen, "Paleta de comandos")]
-            + [CommandID.helpShow, .helpDocs].map(titled)
+        [CommandID.paletteOpen, .helpShow, .helpWelcome, .helpDocs].map(titled)
             + CommandID.appearance.map(titled)
-            + [CommandID.configOpen].map(titled)
-            + [entry(.configReload, "Recargar configuración")]
-            + [CommandID.feedbackReport, .logsShow, .updatesCheck].map(titled)
-            + [entry(.updatesAutomatic, "Activar o desactivar actualizaciones automáticas")]
-            + [CommandID.appSupport, .appAbout].map(titled)
             + [
-                HelpEntry(
-                    title: "No preguntar al cerrar con procesos", keys: "confirm_close = false", command: nil,
-                    covers: [])
-            ]
+                CommandID.configOpen, .configReload, .feedbackReport, .logsShow, .updatesCheck, .updatesAutomatic,
+                .appSupport, .appAbout,
+            ].map(titled)
+            + [HelpEntry(title: texts.confirmClose, keys: "confirm_close = false", command: nil, covers: [])]
+    }
+
+    /// F7.7: what leaves the Mac, as text rows, then the full policy on the web.
+    var privacy: [HelpEntry] {
+        texts.privacyLines.map { HelpEntry(title: $0, keys: "", command: nil, covers: []) } + [titled(.helpPrivacy)]
     }
 
     private func titled(_ id: CommandID) -> HelpEntry {
-        entry(id, CommandCatalog.titles[id] ?? id.rawValue)
+        entry(id, texts.titles[id] ?? texts.commands.titles[id] ?? texts.commands.paletteTitles[id] ?? id.rawValue)
     }
 
     private func entry(_ id: CommandID, _ title: String) -> HelpEntry {
-        HelpEntry(
-            title: title, keys: keymap.chord(for: id)?.display ?? HelpCatalog.inPalette, command: id, covers: [id])
+        HelpEntry(title: title, keys: keymap.chord(for: id)?.display ?? texts.inPalette, command: id, covers: [id])
     }
 
     /// One row for related commands: "⌘1…⌘9" for a numbered run, "⌥⌘←→↑↓" when every chord shares its modifiers,
@@ -141,7 +133,7 @@ private struct Rows {
     private func keys(for ids: [CommandID]) -> String {
         let chords = ids.map(keymap.chord(for:))
         let bound = chords.compactMap { $0 }
-        guard let first = bound.first else { return HelpCatalog.inPalette }
+        guard let first = bound.first else { return texts.inPalette }
         guard bound.count == chords.count, bound.allSatisfy({ $0.modifiers == first.modifiers }) else {
             return bound.map(\.display).joined(separator: " ")
         }

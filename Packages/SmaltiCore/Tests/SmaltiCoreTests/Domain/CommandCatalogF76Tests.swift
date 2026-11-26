@@ -18,7 +18,7 @@ struct CommandCatalogF76Tests {
     }
 
     private func commands(_ updates: UpdatesAvailability) -> [Command] {
-        CommandCatalog.commands(for: state(updates), keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(for: state(updates), keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     private func title(_ id: CommandID, _ updates: UpdatesAvailability) -> String? {
@@ -28,7 +28,7 @@ struct CommandCatalogF76Tests {
     private func bar(_ updates: UpdatesAvailability) -> MenuBar {
         MenuModel.bar(
             keymap: .standard, commands: commands(updates),
-            state: MenuState(workspaces: state(updates).workspaces, checked: []))
+            state: MenuState(workspaces: state(updates).workspaces, checked: []), texts: .spanish)
     }
 
     private func items(_ menu: MenuID, _ updates: UpdatesAvailability) -> [CommandID?] {
@@ -91,7 +91,9 @@ struct CommandCatalogF76Tests {
     @Test func helpMenuListsDocumentationAndSupport() {
         #expect(
             items(.help, .unavailable)
-                == [.helpShow, .helpDocs, nil, .feedbackReport, .logsShow, nil, .appSupport])
+                == [
+                    .helpShow, .helpWelcome, .helpDocs, .helpPrivacy, nil, .feedbackReport, .logsShow, nil, .appSupport,
+                ])
     }
 
     @Test(arguments: [
@@ -99,13 +101,15 @@ struct CommandCatalogF76Tests {
         ("Apoyar Smalti…", .appSupport),
     ])
     func helpListsTheNewCommands(_ title: String, _ id: CommandID) {
-        let entry = HelpCatalog.sections(keymap: .standard).flatMap(\.entries).first { $0.title == title }
+        let entry = HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries).first {
+            $0.title == title
+        }
 
         #expect(entry?.command == id)
     }
 
     @Test func helpNamesTheAutomaticToggle() {
-        let titles = HelpCatalog.sections(keymap: .standard).flatMap(\.entries).map(\.title)
+        let titles = HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries).map(\.title)
 
         #expect(titles.contains("Activar o desactivar actualizaciones automáticas"))
     }

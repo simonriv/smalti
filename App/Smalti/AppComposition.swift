@@ -382,8 +382,8 @@ final class AppComposition {
             composition.controller.report(
                 StatusMessage(text: SetAutomaticUpdates(updates: updates).toggle(), isTransient: true))
             mainMenu?.refresh()
-        case .helpDocs: URLOpener.open(SmaltiLinks.documentation)
-        case .appSupport: URLOpener.open(SmaltiLinks.support)
+        case .helpDocs: URLOpener.open(SmaltiLinks.documentation(for: .spanish))  // T9
+        case .appSupport: URLOpener.open(SmaltiLinks.support(for: .spanish))  // T9
         case .feedbackReport:
             composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
                 self?.report(kind, includingLogs: includesLogs)
@@ -555,13 +555,15 @@ final class AppComposition {
         guard let controller else { return .empty }
         var state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
         state.updates = UpdatesAvailability(updates)
-        let commands = CommandCatalog.commands(for: state, keymap: controller.config.keys, layouts: .standard)
+        let commands = CommandCatalog.commands(
+            for: state, keymap: controller.config.keys, layouts: .standard, texts: .spanish)  // T9
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
             keymap: controller.config.keys, commands: commands,
             state: MenuState(
-                workspaces: controller.set, checked: checked, context: front?.menuContext ?? .unrestricted))
+                workspaces: controller.set, checked: checked, context: front?.menuContext ?? .unrestricted),
+            texts: .spanish)  // T9
     }
 
     /// A menu item acts on the window in front; with none (all closed while quitting), only ⌘N makes sense.
@@ -589,7 +591,7 @@ final class AppComposition {
         guard let owner = composition(containing: pane) else { return nil }
         let menu = NSMenu()
         let keymap = owner.controller.config.keys
-        for item in MenuModel.contextMenu(keymap: keymap) {
+        for item in MenuModel.contextMenu(keymap: keymap, texts: .spanish) /* T9 */ {
             guard !item.isSeparator, let command = item.command else {
                 menu.addItem(.separator())
                 continue
@@ -740,7 +742,7 @@ final class AppComposition {
     /// The Dock's menu: "Nueva ventana".
     func dockMenu() -> NSMenu {
         let menu = NSMenu()
-        for item in MenuModel.dockMenu() {
+        for item in MenuModel.dockMenu(texts: .spanish) /* T9 */ {
             menu.addItem(
                 ClosureMenuItem(title: item.title) { [weak self] in self?.openWindow(from: self?.front) })
         }

@@ -12,7 +12,8 @@ enum AboutCredits {
                 + "JetBrains Mono (OFL) · specs de Fig (MIT)\n",
             attributes: [.font: font])
         let links: [(String, URL?)] = [
-            ("Documentación", SmaltiLinks.documentation), ("Apoyar Smalti", SmaltiLinks.support),
+            ("Documentación", SmaltiLinks.documentation(for: .spanish))  // T9
+            , ("Apoyar Smalti", SmaltiLinks.support(for: .spanish)),
             ("Avisos de terceros", notices),
         ]
         for (index, (title, url)) in links.enumerated() {

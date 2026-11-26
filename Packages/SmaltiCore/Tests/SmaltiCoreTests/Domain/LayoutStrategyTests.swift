@@ -19,7 +19,7 @@ struct LayoutStrategyTests {
         let panes = makePanes(count)
 
         for strategy in LayoutCatalog.standard.all {
-            #expect(strategy.tree(for: panes)?.panes == panes, "\(strategy.displayName)")
+            #expect(strategy.tree(for: panes)?.panes == panes, "\(strategy.id.rawValue)")
         }
     }
 
@@ -29,24 +29,25 @@ struct LayoutStrategyTests {
 
         for strategy in LayoutCatalog.standard.all {
             let placed = frames(of: strategy, panes)
-            #expect(placed.count == count, "\(strategy.displayName)")
+            #expect(placed.count == count, "\(strategy.id.rawValue)")
             for frame in placed.values {
                 #expect(frame.minX >= area.minX - frameTolerance)
                 #expect(frame.maxX <= area.maxX + frameTolerance)
                 #expect(frame.minY >= area.minY - frameTolerance)
                 #expect(frame.maxY <= area.maxY + frameTolerance)
             }
-            expectNoOverlap(Array(placed.values), "\(strategy.displayName)")
+            expectNoOverlap(Array(placed.values), "\(strategy.id.rawValue)")
         }
     }
 
     @Test func dwindleExplainsHowItSplits() {
-        #expect(DwindleLayout().subtitle == "cada panel nuevo divide el último")
+        #expect(CommandTexts.spanish.layoutSubtitles[.dwindle] == "cada panel nuevo divide el último")
+        #expect(CommandTexts.english.layoutSubtitles[.dwindle] == "each new pane splits the last one")
     }
 
     @Test func columnsAndMasterHaveNoSubtitle() {
-        #expect(ColumnsLayout().subtitle == nil)
-        #expect(MasterStackLayout().subtitle == nil)
+        #expect(CommandTexts.spanish.layoutSubtitles[.columns] == nil)
+        #expect(CommandTexts.spanish.layoutSubtitles[.master] == nil)
     }
 
     private func expectNoOverlap(
@@ -77,7 +78,7 @@ struct LayoutStrategyTests {
 
     @Test func everyStrategyProducesNilForNoPanes() {
         for strategy in LayoutCatalog.standard.all {
-            #expect(strategy.tree(for: []) == nil, "\(strategy.displayName)")
+            #expect(strategy.tree(for: []) == nil, "\(strategy.id.rawValue)")
         }
     }
 
@@ -148,7 +149,9 @@ struct LayoutStrategyTests {
     }
 
     @Test func strategiesHaveSpanishNamesForTheInterface() {
-        let names = LayoutCatalog.standard.all.map { [$0.displayName, $0.statusName] }
+        let names = LayoutCatalog.standard.all.map {
+            [CommandTexts.spanish.layoutNames[$0.id] ?? "", $0.statusName]
+        }
 
         #expect(names == [["Dwindle", "dwindle"], ["Columnas", "columnas"], ["Maestro + pila", "maestro"]])
     }

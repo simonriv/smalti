@@ -77,18 +77,20 @@ public struct ActivatePane {
 public struct InstallClaudeIntegration {
     private let integration: any HarnessIntegration
     private let id: IntegrationID
+    private let texts: IntegrationTexts
 
-    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin, texts: IntegrationTexts) {
         self.integration = integration
         self.id = id
+        self.texts = texts
     }
 
     public func execute() async -> String {
         do {
             try await integration.install()
-            return id.installedText
+            return texts.installed[id] ?? ""
         } catch {
-            return IntegrationErrorText.describe(error)
+            return IntegrationErrorText.describe(error, texts: texts)
         }
     }
 }
@@ -97,29 +99,33 @@ public struct InstallClaudeIntegration {
 public struct UninstallClaudeIntegration {
     private let integration: any HarnessIntegration
     private let id: IntegrationID
+    private let texts: IntegrationTexts
 
-    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin, texts: IntegrationTexts) {
         self.integration = integration
         self.id = id
+        self.texts = texts
     }
 
     public func execute() async -> String {
         do {
             try await integration.uninstall()
-            return id.uninstalledText
+            return texts.uninstalled[id] ?? ""
         } catch {
-            return IntegrationErrorText.describe(error)
+            return IntegrationErrorText.describe(error, texts: texts)
         }
     }
 }
 
 enum IntegrationErrorText {
-    static func describe(_ error: IntegrationError) -> String {
+    static func describe(_ error: IntegrationError, texts: IntegrationTexts) -> String {
         switch error {
-        case .harnessMissing(let binary): "No se encontró `\(binary)` en el PATH del shell de inicio"
+        case .harnessMissing(let binary): texts.harnessMissing(["binary": binary])
         // The last line: a login shell's own output (rc files) comes first, the command's error last.
         case .commandFailed(let command, let output):
-            "Falló `\(command)`: \(output.split(separator: "\n").last.map(String.init) ?? "")"
+            texts.commandFailed([
+                "command": command, "output": output.split(separator: "\n").last.map(String.init) ?? "",
+            ])
         }
     }
 }

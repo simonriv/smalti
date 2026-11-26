@@ -22,7 +22,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let agentJump = CommandID(rawValue: "agent.jump")
     public static let claudeIntegrationInstall = CommandID(rawValue: "claude.integration.install")
     public static let claudeIntegrationUninstall = CommandID(rawValue: "claude.integration.uninstall")
-    /// F6: claudecode.nvim in the user's NvChad config.
+    /// F6: claudecode.nvim in the user's lazy.nvim config.
     public static let claudecodeNvimInstall = CommandID(rawValue: "claudecodeNvim.install")
     public static let claudecodeNvimUninstall = CommandID(rawValue: "claudecodeNvim.uninstall")
     public static let observatoryToggle = CommandID(rawValue: "observatory.toggle")
@@ -54,6 +54,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let updatesAutomatic = CommandID(rawValue: "updates.automatic")
     public static let helpDocs = CommandID(rawValue: "help.docs")
     public static let appSupport = CommandID(rawValue: "app.support")
+    // F7.7: the welcome card and the privacy policy.
+    public static let helpWelcome = CommandID(rawValue: "help.welcome")
+    public static let helpPrivacy = CommandID(rawValue: "help.privacy")
     public static let terminalCopy = CommandID(rawValue: "terminal.copy")
     public static let terminalPaste = CommandID(rawValue: "terminal.paste")
     public static let terminalSelectAll = CommandID(rawValue: "terminal.selectAll")
@@ -202,7 +205,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         ]
         + basics
         + appearance
-        + [previewQuickLook, updatesCheck, updatesAutomatic, helpDocs, appSupport]
+        + [previewQuickLook, updatesCheck, updatesAutomatic, helpDocs, appSupport, helpWelcome, helpPrivacy]
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }

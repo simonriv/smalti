@@ -136,7 +136,7 @@ struct AgentUseCaseTests {
         let integration = FakeHarnessIntegration()
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Integración con Claude Code instalada")
         #expect(await integration.installState == .installed)
     }
@@ -146,7 +146,7 @@ struct AgentUseCaseTests {
         integration.failure = .harnessMissing(binary: "claude")
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "No se encontró `claude` en el PATH del shell de inicio")
     }
 
@@ -155,7 +155,7 @@ struct AgentUseCaseTests {
         integration.failure = .commandFailed(command: "claude plugin install smalti@smalti", output: "boom\nmore")
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Falló `claude plugin install smalti@smalti`: more")
     }
 
@@ -163,19 +163,19 @@ struct AgentUseCaseTests {
         let integration = FakeHarnessIntegration()
 
         #expect(
-            await InstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+            await InstallClaudeIntegration(integration: integration, id: .claudecodeNvim, texts: .spanish).execute()
                 == "claudecode.nvim instalado: se activa al abrir Neovim")
         #expect(
-            await UninstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+            await UninstallClaudeIntegration(integration: integration, id: .claudecodeNvim, texts: .spanish).execute()
                 == "claudecode.nvim desinstalado")
     }
 
     @Test func uninstallReportsSuccess() async {
         let integration = FakeHarnessIntegration()
-        _ = await InstallClaudeIntegration(integration: integration).execute()
+        _ = await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
 
         #expect(
-            await UninstallClaudeIntegration(integration: integration).execute()
+            await UninstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Integración con Claude Code desinstalada")
         #expect(await integration.installState == .notInstalled)
     }

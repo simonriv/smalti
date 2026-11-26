@@ -3,7 +3,7 @@ import Testing
 
 @Suite("HelpCatalog")
 struct HelpCatalogTests {
-    private let sections = HelpCatalog.sections(keymap: .standard)
+    private let sections = HelpCatalog.sections(keymap: .standard, texts: .spanish)
 
     private func entry(_ title: String) -> HelpEntry? {
         sections.flatMap(\.entries).first { $0.title == title }
@@ -22,7 +22,7 @@ struct HelpCatalogTests {
         #expect(
             sections.map(\.title) == [
                 "Ventanas y workspaces", "Paneles", "Terminal", "Buscar", "Tiling", "Agentes y observatorio",
-                "En el prompt", "Ratón", "Configuración y ayuda",
+                "En el prompt", "Ratón", "Configuración y ayuda", "Privacidad",
             ])
     }
 
@@ -48,8 +48,10 @@ struct HelpCatalogTests {
     @Test func familyWithAReboundMemberListsEachChord() throws {
         let keymap = try Keymap.standard.overriding([try KeyChord.parse("cmd+opt+left"): nil])
 
-        let keys = HelpCatalog.sections(keymap: keymap).flatMap(\.entries).first { $0.title == "Enfocar panel hacia…" }?
-            .keys
+        let keys = HelpCatalog.sections(keymap: keymap, texts: .spanish).flatMap(\.entries).first {
+            $0.title == "Enfocar panel hacia…"
+        }?
+        .keys
 
         #expect(keys == "⌥⌘→ ⌥⌘↑ ⌥⌘↓")
     }

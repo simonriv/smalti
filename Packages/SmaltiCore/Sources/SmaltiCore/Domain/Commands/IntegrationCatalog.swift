@@ -18,49 +18,12 @@ public enum IntegrationID: CaseIterable, Hashable, Sendable {
         }
     }
 
-    public var installTitle: String {
-        switch self {
-        case .claudePlugin: "Instalar integración con Claude Code"
-        case .claudecodeNvim: "Instalar claudecode.nvim en Neovim"
-        }
-    }
-
-    public var uninstallTitle: String {
-        switch self {
-        case .claudePlugin: "Desinstalar integración con Claude Code"
-        case .claudecodeNvim: "Desinstalar claudecode.nvim"
-        }
-    }
-
-    /// F7.5: reinstalls an integration older than this Smalti's.
-    public var updateTitle: String {
-        switch self {
-        case .claudePlugin: "Actualizar integración con Claude Code"
-        case .claudecodeNvim: "Actualizar claudecode.nvim"
-        }
-    }
-
-    /// The status bar line after a successful install.
-    public var installedText: String {
-        switch self {
-        case .claudePlugin: "Integración con Claude Code instalada"
-        case .claudecodeNvim: "claudecode.nvim instalado: se activa al abrir Neovim"
-        }
-    }
-
-    public var uninstalledText: String {
-        switch self {
-        case .claudePlugin: "Integración con Claude Code desinstalada"
-        case .claudecodeNvim: "claudecode.nvim desinstalado"
-        }
-    }
-
     /// Only the action that applies to the state; none while it is unknown (spec F5.6).
-    func commandID(for state: IntegrationState) -> (id: CommandID, title: String)? {
+    func command(for state: IntegrationState, texts: IntegrationTexts) -> (id: CommandID, title: String)? {
         switch state {
-        case .notInstalled: (installCommand, installTitle)
-        case .installed: (uninstallCommand, uninstallTitle)
-        case .outdated: (installCommand, updateTitle)
+        case .notInstalled: (installCommand, texts.install[self] ?? "")
+        case .installed: (uninstallCommand, texts.uninstall[self] ?? "")
+        case .outdated: (installCommand, texts.update[self] ?? "")
         case .unknown: nil
         }
     }
