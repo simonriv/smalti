@@ -516,14 +516,14 @@
 
 ### Tareas
 #### Bloque 1 · Base y dominio
-- [ ] T1 · Paquete `JSONLReader`
-- [ ] T2 · Oráculo y fixture de imagen
-- [ ] T3 · Entradas y pliegue en turnos
-- [ ] T4 · Filas, selección, panel ↔ sesión, búsqueda y política de texto
-- [ ] T5 · Puertos, fakes, casos de uso y comandos
+- [x] T1 · Paquete `JSONLReader`
+- [x] T2 · Oráculo y fixture de imagen
+- [x] T3 · Entradas y pliegue en turnos
+- [x] T4 · Filas, selección, panel ↔ sesión, búsqueda y política de texto
+- [x] T5 · Puertos, fakes, casos de uso y comandos
 #### Bloque 2 · Adaptadores
-- [ ] T6 · `ClaudeTimeline`
-- [ ] T7 · `CodexTimeline`
+- [x] T6 · `ClaudeTimeline`
+- [x] T7 · `CodexTimeline`
 - [ ] Revisión intermedia 1 + mutación
 #### Bloque 3 · App
 - [ ] T8 · Panel lateral, composición y teclado
