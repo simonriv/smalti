@@ -8,18 +8,21 @@ public struct TextLocation: Hashable, Sendable {
     public let length: Int
     public let block: Int
     public let field: TextField
+    /// A piece inside the block: the n-th image of a tool result (review 1, I3).
+    public let item: Int
 
-    public init(file: String, inode: UInt64, offset: UInt64, length: Int, block: Int, field: TextField) {
+    public init(file: String, inode: UInt64, offset: UInt64, length: Int, block: Int, field: TextField, item: Int = 0) {
         self.file = file
         self.inode = inode
         self.offset = offset
         self.length = length
         self.block = block
         self.field = field
+        self.item = item
     }
 
-    /// A key for the item that starts at this place ("<file>#<offset>.<block>").
-    var key: String { "\(file)#\(offset).\(block)" }
+    /// A key for the item that starts at this place ("<file>#<offset>.<block>.<item>").
+    var key: String { "\(file)#\(offset).\(block).\(item)" }
 }
 
 /// Which part of a line's block holds the text.

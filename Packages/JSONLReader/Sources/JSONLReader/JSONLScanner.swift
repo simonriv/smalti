@@ -59,12 +59,21 @@ public enum JSONLScanner {
     }
 }
 
-/// A block lowercased, with Latin accented letters (UTF-8 `0xC3 xx`) folded to their base letter, as the domain folds
-/// the query (`TextFolding`). Newlines stay, so a hit's line is found by counting them.
+/// A block folded as the domain folds the query (`TextFolding`: lowercase, then decomposed and without combining
+/// marks): ASCII lowercased; Latin-1 (`0xC3 xx`) and Latin Extended-A (`0xC4`/`0xC5 xx`) letters to their base
+/// letter; letters without a decomposition (`Ø`, `Æ`, `Þ`, `Ð`) to their lowercase; combining marks (U+0300–U+036F,
+/// `0xCC`/`0xCD xx`) left out. Newlines stay, so a hit's line is found by counting them.
 struct FoldedBlock {
-    /// `À`…`ÿ` (`0xC3 0x80`…`0xC3 0xBF`) to their lowercase base letter; 0 keeps both bytes (`×`, `ß`, `ø`, `æ`…).
-    private static let latin: [UInt8] = Array(
+    /// `À`…`ÿ` (`0xC3 0x80`…`0xC3 0xBF`) to their base letter; 0 keeps the letter (lowercased below).
+    private static let latin1: [UInt8] = Array(
         "aaaaaa\0ceeeeiiii\0nooooo\0\0uuuuy\0\0aaaaaa\0ceeeeiiii\0nooooo\0\0uuuuy\0y".utf8)
+    /// U+0100…U+017F to their base letter; 0 keeps the two bytes.
+    private static let extendedA: [UInt8] = Array(
+        "aaaaaaccccccccdd\0\0eeeeeeeeeegggggggghh\0\0iiiiiiiii\0\0\0jjkk\0llllll\0\0\0\0nnnnnn\0\0\0oooooo\0\0rrrrrrsssssssstttt\0\0uuuuuuuuuuuuwwyyyzzzzzz\0"
+            .utf8)
+    /// `Æ Ð Ø Þ` and the other uppercase Latin-1 letters without a base: the lowercase is 0x20 further.
+    private static let latin1Upper: ClosedRange<UInt8> = 0x80...0x9E
+    private static let combiningMarks: ClosedRange<UInt16> = 0xCC80...0xCDAF
 
     let bytes: [UInt8]
     /// Where each line starts in the folded bytes and in the original ones.
@@ -79,8 +88,8 @@ struct FoldedBlock {
         var index = 0
         while index < original.count {
             let byte = original[index]
-            if byte == 0xC3, index + 1 < original.count, let base = Self.base(of: original[index + 1]) {
-                bytes.append(base)
+            if index + 1 < original.count, let folded = Self.fold(byte, original[index + 1]) {
+                bytes += folded
                 index += 2
                 continue
             }
@@ -96,10 +105,20 @@ struct FoldedBlock {
         self.originalStarts = originalStarts
     }
 
-    private static func base(of second: UInt8) -> UInt8? {
+    /// What a two-byte sequence folds to; nil when it is not one of the folded ranges.
+    private static func fold(_ first: UInt8, _ second: UInt8) -> [UInt8]? {
         guard second >= 0x80, second <= 0xBF else { return nil }
-        let letter = latin[Int(second - 0x80)]
-        return letter == 0 ? nil : letter
+        if combiningMarks.contains(UInt16(first) << 8 | UInt16(second)) { return [] }
+        switch first {
+        case 0xC3:
+            let base = latin1[Int(second - 0x80)]
+            if base != 0 { return [base] }
+            return latin1Upper.contains(second) && second != 0x97 ? [first, second + 0x20] : [first, second]
+        case 0xC4, 0xC5:
+            let base = extendedA[Int(first - 0xC4) * 64 + Int(second - 0x80)]
+            return base != 0 ? [base] : [first, second]
+        default: return nil
+        }
     }
 
     /// The original line holding folded position `at` (start, end without the newline) and where the next search

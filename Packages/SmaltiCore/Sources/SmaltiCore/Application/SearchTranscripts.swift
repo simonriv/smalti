@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 public final class SearchTranscripts {
     private let sources: TranscriptSources
+    private let policy: any TranscriptTextPolicy
     private let debounce: Duration
     public private(set) var results = SearchResults()
     public private(set) var query = TimelineQuery("")
@@ -12,8 +13,9 @@ public final class SearchTranscripts {
     public var onChange: (() -> Void)?
     private var task: Task<Void, Never>?
 
-    public init(sources: TranscriptSources, debounce: Duration = .milliseconds(150)) {
+    public init(sources: TranscriptSources, policy: any TranscriptTextPolicy, debounce: Duration = .milliseconds(150)) {
         self.sources = sources
+        self.policy = policy
         self.debounce = debounce
     }
 
@@ -25,23 +27,37 @@ public final class SearchTranscripts {
         onChange?()
         guard isSearching else { return }
         let query = query
-        task = Task { [weak self, sources, debounce] in
+        task = Task { [weak self, sources, policy, debounce] in
             guard (try? await Task.sleep(for: debounce)) != nil else { return }
-            for project in sources.projects {
-                // A harness that fails ends its own results; what it found stays and the next one is searched.
-                var hits = project.search(query, under: root).makeAsyncIterator()
-                while let hit = try? await hits.next() {
-                    guard let self, !Task.isCancelled else { return }
-                    self.results = self.results.adding(hit, query: query)
-                    self.onChange?()
-                    if self.results.isCapped { break }
+            // Every harness at once; each match is confirmed off the main actor (it reads whole outputs, review 1)
+            // and the results keep the newest session first.
+            await withTaskGroup(of: Void.self) { group in
+                for project in sources.projects {
+                    group.addTask {
+                        var hits = project.search(query, under: root).makeAsyncIterator()
+                        while let hit = try? await hits.next(), !Task.isCancelled {
+                            guard let match = SearchResults.confirm(hit, query: query, policy: policy) else { continue }
+                            guard await self?.add(match) == true else { return }
+                        }
+                    }
                 }
-                if self?.results.isCapped ?? true { break }
             }
-            guard let self, !Task.isCancelled else { return }
-            self.isSearching = false
-            self.onChange?()
+            guard !Task.isCancelled else { return }
+            self?.finish()
         }
+    }
+
+    /// Adds a match; false once the search is cancelled or capped.
+    private func add(_ match: SearchMatch) -> Bool {
+        guard isSearching, !results.isCapped else { return false }
+        results = results.adding(match)
+        onChange?()
+        return !results.isCapped
+    }
+
+    private func finish() {
+        isSearching = false
+        onChange?()
     }
 
     public func cancel() {

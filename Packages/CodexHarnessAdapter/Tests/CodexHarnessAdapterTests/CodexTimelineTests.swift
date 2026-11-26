@@ -137,6 +137,23 @@ struct CodexTimelineTests {
         #expect(oracle.map(\.kind) == ["prompt", "call", "output", "compaction", "reply"])
     }
 
+    @Test func searchMeetsTheContract() async throws {
+        let oracle = try TimelineOracle.items(harness: .codex, transcript: try F.rollout(F.toolsHome, F.toolsSession))
+
+        try await TranscriptsContract.verifySearch(CodexTimeline(home: F.toolsHome), root: F.toolsRoot, oracle: oracle)
+    }
+
+    @Test func anUnreadableRolloutFails() async throws {
+        let home = try home(with: "{}\n")
+        defer { try? FileManager.default.removeItem(at: home) }
+        let adapter = CodexTimeline(home: home)
+        let ref = try await adapter.locate(sessionID: F.toolsSession)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: ref.file)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: ref.file) }
+
+        await #expect(throws: TranscriptReadError.self) { try await adapter.read(ref, from: .start) }
+    }
+
     @Test func anUnknownSessionIsMissing() async {
         await #expect(throws: TranscriptReadError.self) {
             try await CodexTimeline(home: F.toolsHome).locate(sessionID: "nope")

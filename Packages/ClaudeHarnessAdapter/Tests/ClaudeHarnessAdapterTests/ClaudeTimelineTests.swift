@@ -213,6 +213,90 @@ struct ClaudeTimelineTests {
         #expect(await counter.value > afterBirth)
     }
 
+    /// Review 1 (M9): the first subagent of a session, whose folder did not exist when the timeline opened.
+    @Test func aSubagentFolderBornWhileWatchingIsWatchedToo() async throws {
+        let projects = try ScratchProjects()
+        let folder = try projects.folder("-w")
+        let main = folder.appending(path: "s1.jsonl")
+        try Data("{}\n".utf8).write(to: main)
+        let adapter = ClaudeTimeline(projectsRoot: projects.root)
+        let ref = try await adapter.locate(sessionID: "s1")
+        let counter = Counter()
+        let listening = Task { for await _ in adapter.changes(of: ref) { await counter.add() } }
+        try await Task.sleep(for: .milliseconds(50))
+
+        let subagents = folder.appending(path: "s1/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        let agent = subagents.appending(path: "agent-a1.jsonl")
+        try Data("{}\n".utf8).write(to: agent)
+        let mainHandle = try FileHandle(forWritingTo: main)
+        try mainHandle.seekToEnd()
+        try mainHandle.write(contentsOf: Data("{}\n".utf8))
+        try mainHandle.close()
+        try await Task.sleep(for: .milliseconds(400))
+        let before = await counter.value
+        let handle = try FileHandle(forWritingTo: agent)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("{}\n".utf8))
+        try handle.close()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while await counter.value == before, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        listening.cancel()
+
+        #expect(await counter.value > before)
+    }
+
+    /// C6: when the timeline stops listening, no descriptor stays open on the session's files.
+    @Test func stoppingToListenClosesEveryDescriptor() async throws {
+        let projects = try ScratchProjects()
+        let folder = try projects.folder("-w")
+        let main = folder.appending(path: "s1.jsonl")
+        try Data("{}\n".utf8).write(to: main)
+        let subagents = folder.appending(path: "s1/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        try Data("{}\n".utf8).write(to: subagents.appending(path: "agent-a1.jsonl"))
+        let adapter = ClaudeTimeline(projectsRoot: projects.root)
+        let ref = try await adapter.locate(sessionID: "s1")
+
+        let listening = Task { for await _ in adapter.changes(of: ref) {} }
+        try await Task.sleep(for: .milliseconds(100))
+        let whileOpen = Descriptors.on(projects.root)
+        listening.cancel()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while Descriptors.on(projects.root) > 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        #expect(whileOpen == 3)
+        #expect(Descriptors.on(projects.root) == 0)
+    }
+
+    /// Review 1 (M8): a transcript that cannot be read is an error, not an empty timeline.
+    @Test func anUnreadableTranscriptFails() async throws {
+        let projects = try ScratchProjects()
+        let file = try projects.folder("-w").appending(path: "s1.jsonl")
+        try Data("{}\n".utf8).write(to: file)
+        let adapter = ClaudeTimeline(projectsRoot: projects.root)
+        let ref = try await adapter.locate(sessionID: "s1")
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: file.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path) }
+
+        await #expect(throws: TranscriptReadError.self) { try await adapter.read(ref, from: .start) }
+    }
+
+    @Test func searchMeetsTheContract() async throws {
+        for (id, root) in [
+            ("7b1f7b2a-0c81-4aa0-8229-85de52add2e8", "/private/tmp/smalti-fx/claude/work-b"),
+            ("401a63e1-c076-45fe-9f09-432da1c8cfa6", "/private/tmp/smalti-fx/claude/work-a"),
+        ] {
+            let oracle = try TimelineOracle.items(harness: .claude, transcript: try P.transcript(P.f6Projects, id))
+            try await TranscriptsContract.verifySearch(
+                ClaudeTimeline(projectsRoot: P.f6Projects), root: root, oracle: oracle)
+        }
+    }
+
     @Test func projectSessionsIncludeSubfoldersButNotSiblings() async throws {
         let projects = try ScratchProjects()
         let source = try String(
@@ -268,4 +352,17 @@ actor Counter {
     private(set) var value = 0
 
     func add() { value += 1 }
+}
+
+/// Descriptors of this process open on anything under a folder.
+enum Descriptors {
+    static func on(_ folder: URL) -> Int {
+        let prefix = folder.resolvingSymlinksInPath().path(percentEncoded: false)
+        return (0..<Int32(getdtablesize())).filter { descriptor in
+            var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+            guard fcntl(descriptor, F_GETPATH, &path) != -1 else { return false }
+            return URL(filePath: String(cString: path)).resolvingSymlinksInPath().path(percentEncoded: false)
+                .hasPrefix(prefix)
+        }.count
+    }
 }

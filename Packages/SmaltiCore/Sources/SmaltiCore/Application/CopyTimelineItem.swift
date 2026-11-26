@@ -7,6 +7,11 @@ public enum CopyPart: Sendable {
 public struct CopiedText: Equatable, Sendable {
     public let text: String
     public let byteCount: Int
+
+    init(_ text: String) {
+        self.text = text
+        byteCount = text.utf8.count
+    }
 }
 
 /// Copies a timeline item whole, read again from the transcript (never from the painted excerpt), through the
@@ -14,35 +19,37 @@ public struct CopiedText: Equatable, Sendable {
 public struct CopyTimelineItem: Sendable {
     private let sources: TranscriptSources
     private let policy: any TranscriptTextPolicy
+    private let texts: TimelineTexts
 
-    public init(sources: TranscriptSources, policy: any TranscriptTextPolicy) {
+    public init(sources: TranscriptSources, policy: any TranscriptTextPolicy, texts: TimelineTexts) {
         self.sources = sources
         self.policy = policy
+        self.texts = texts
     }
 
+    /// nil when there is nothing to copy (⇧⌘C on something without a call).
     public func copy(_ id: TimelineItemID, in timeline: Timeline, harness: HarnessID, part: CopyPart)
-        async throws(TranscriptReadError) -> CopiedText
+        async throws(TranscriptReadError) -> CopiedText?
     {
-        guard let item = timeline.item(id), let location = Self.location(of: item, part: part) else {
-            throw .missing(path: id.rawValue)
+        guard let item = timeline.item(id) else { throw .missing(path: id.rawValue) }
+        switch item {
+        // Described, not read: the same for every harness (review 1, I2 and M13).
+        case .image(let image):
+            return part == .content ? CopiedText(texts.imageDescription(image.image)) : nil
+        case .compaction(let note):
+            return part == .content ? CopiedText(texts.compaction(note)) : nil
+        case .prompt(let text), .reply(let text):
+            return part == .content ? try await copy(at: text.text.location, harness: harness) : nil
+        case .tool(let tool):
+            let source = part == .call ? tool.call : tool.result?.output ?? tool.call
+            guard let source else { return nil }
+            return try await copy(at: source.location, harness: harness)
         }
-        return try await copy(at: location, harness: harness)
     }
 
     /// A search result's text, by its place.
     public func copy(at location: TextLocation, harness: HarnessID) async throws(TranscriptReadError) -> CopiedText {
         guard let transcripts = sources.session(harness) else { throw .missing(path: location.file) }
-        let text = policy.shown(try await transcripts.fullText(at: location), as: .copy)
-        return CopiedText(text: text, byteCount: text.utf8.count)
-    }
-
-    static func location(of item: TimelineItem, part: CopyPart) -> TextLocation? {
-        switch item {
-        case .prompt(let text), .reply(let text): text.text.location
-        case .tool(let tool) where part == .call: (tool.call ?? tool.result?.output)?.location
-        case .tool(let tool): (tool.result?.output ?? tool.call)?.location
-        case .image(let image): image.image.location
-        case .compaction(let note): note.location
-        }
+        return CopiedText(policy.shown(try await transcripts.fullText(at: location), as: .copy))
     }
 }

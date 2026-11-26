@@ -86,6 +86,18 @@ struct TimelineTests {
         #expect(child.status == .done)
     }
 
+    /// Review 1 (M14): "agentId: …" in some other tool's output links nothing.
+    @Test func onlyAgentCallsTakeSubagents() {
+        let timeline = Timeline().appending([
+            F.prompt("p", at: 1), F.call("g", "Grep", ["pattern": "agentId"], at: 2),
+            F.reply("sub", at: 3, scope: .subagent("a8")), F.entry(.subagentLink(agentID: "a8", toolID: "g")),
+        ])
+
+        guard case .tool(let grep) = timeline.item(.tool("g")) else { Issue.record("no grep"); return }
+        #expect(grep.children.isEmpty)
+        #expect(timeline.item(.agent("a8")) != nil)
+    }
+
     @Test func aLinkArrivingAfterTheSubagentStillNests() throws {
         let agent = EntryScope.subagent("a8")
         let early = Timeline().appending([

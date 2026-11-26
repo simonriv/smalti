@@ -58,7 +58,7 @@ public enum TimelineRows {
             case .reply(let text): [plain(item.id, .reply, agent, text.text, text.at, depth, parent)]
             case .image(let image):
                 [note(item.id, .image, texts.image(["kind": image.image.mediaType]), image.at, depth, parent)]
-            case .compaction(let note): [self.note(item.id, .compaction, compaction(note), nil, depth, parent)]
+            case .compaction(let note): [self.note(item.id, .compaction, texts.compaction(note), nil, depth, parent)]
             case .tool(let tool): toolRows(tool, depth: depth, parent: parent)
             }
         }
@@ -82,15 +82,6 @@ public enum TimelineRows {
                 id: id, depth: depth, kind: kind, who: "", time: at.map(time), text: text, isTruncated: false,
                 summary: nil, status: nil, statusText: nil, childCount: 0, isExpanded: false, expandedLabel: nil,
                 expandedText: nil, moreLines: 0, parent: parent)
-        }
-
-        private func compaction(_ note: CompactionNote) -> String {
-            guard let before = note.preTokens, let after = note.postTokens else { return texts.compacted }
-            return texts.compactedTokens(["before": Self.thousands(before), "after": Self.thousands(after)])
-        }
-
-        private static func thousands(_ tokens: Int) -> String {
-            tokens >= 1_000 ? "\(tokens / 1_000)k" : "\(tokens)"
         }
 
         private func toolRows(_ tool: ToolItem, depth: Int, parent: TimelineItemID?) -> [TimelineRow] {

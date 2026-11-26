@@ -8,22 +8,25 @@ import Testing
 struct SearchTranscriptsTests {
     private typealias F = TimelineFixtures
 
-    private func hit(_ session: String, _ text: String, _ harness: HarnessID = .claude) -> TranscriptHit {
+    private func hit(_ session: String, _ text: String, _ harness: HarnessID = .claude, updated: Double = 0)
+        -> TranscriptHit
+    {
         TranscriptHit(
             session: HarnessSession(
                 harness: harness, id: session, directory: "/w", title: session, createdAt: F.start,
-                updatedAt: F.start, detail: nil),
+                updatedAt: F.start.addingTimeInterval(updated), detail: nil),
             entry: F.prompt(text, at: 1), text: text)
     }
 
     private func make(_ projects: [FakeProjectTranscripts]) -> SearchTranscripts {
         SearchTranscripts(
-            sources: TranscriptSources(sessions: [], projects: projects), debounce: .milliseconds(30))
+            sources: TranscriptSources(sessions: [], projects: projects), policy: VerbatimText(),
+            debounce: .milliseconds(30))
     }
 
     @Test func findsAcrossHarnessesInOrder() async {
-        let claude = FakeProjectTranscripts(harness: .claude, hits: [hit("s1", "reembolso parcial")])
-        let codex = FakeProjectTranscripts(harness: .codex, hits: [hit("x1", "el reembolso", .codex)])
+        let claude = FakeProjectTranscripts(harness: .claude, hits: [hit("s1", "reembolso parcial", updated: 5)])
+        let codex = FakeProjectTranscripts(harness: .codex, hits: [hit("x1", "el reembolso", .codex, updated: 1)])
         let search = make([claude, codex])
 
         search.update(query: "reembolso", root: "/w")

@@ -69,11 +69,7 @@ struct ClaudeTimelineTranslator {
 
     /// A call as compact JSON with sorted keys: Foundation cannot keep the file's key order (the oracle does the same).
     static func canonical(_ value: Any) -> String {
-        guard JSONSerialization.isValidJSONObject(value),
-            let data = try? JSONSerialization.data(
-                withJSONObject: value, options: [.sortedKeys, .withoutEscapingSlashes])
-        else { return "" }
-        return String(decoding: data, as: UTF8.self)
+        CanonicalJSON.string(value)
     }
 
     // MARK: - Lines
@@ -84,8 +80,9 @@ struct ClaudeTimelineTranslator {
         let offset: UInt64
         let length: Int
 
-        func location(_ block: Int, _ field: TextField) -> TextLocation {
-            TextLocation(file: file, inode: inode, offset: offset, length: length, block: block, field: field)
+        func location(_ block: Int, _ field: TextField, item: Int = 0) -> TextLocation {
+            TextLocation(
+                file: file, inode: inode, offset: offset, length: length, block: block, field: field, item: item)
         }
     }
 
@@ -136,7 +133,7 @@ struct ClaudeTimelineTranslator {
         return translated
     }
 
-    private func image(_ block: [String: Any], _ place: Place, _ index: Int, _ at: Date?) -> Translated {
+    private func image(_ block: [String: Any], _ place: Place, _ index: Int, _ at: Date?, item: Int = 0) -> Translated {
         let source = block["source"] as? [String: Any] ?? [:]
         let data = source["data"] as? String ?? ""
         let padding = data.suffix(2).filter { $0 == "=" }.count
@@ -144,7 +141,7 @@ struct ClaudeTimelineTranslator {
             .image(
                 ImageNote(
                     mediaType: source["media_type"] as? String ?? "", byteCount: max(0, data.count * 3 / 4 - padding),
-                    location: place.location(index, .image))), at)
+                    location: place.location(index, .image, item: item))), at)
     }
 
     private func result(_ block: [String: Any], _ extra: Any?, _ place: Place, _ index: Int, _ at: Date?)
@@ -161,7 +158,7 @@ struct ClaudeTimelineTranslator {
                         diff: Self.diff(extra), output: excerpt(output, place, index, .toolOutput))), at, text: output)
         ]
         let images = (block["content"] as? [[String: Any]] ?? []).filter { $0["type"] as? String == "image" }
-        translated += images.map { image($0, place, index, at) }
+        translated += images.enumerated().map { image($1, place, index, at, item: $0 + 1) }
         if let agent = Self.agentID(output, extra) {
             translated.append(entry(.subagentLink(agentID: agent, toolID: id), at))
         }

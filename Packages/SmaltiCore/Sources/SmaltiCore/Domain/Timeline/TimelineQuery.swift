@@ -40,18 +40,11 @@ enum TextFolding {
 
 /// Finds a query in a visible text and cuts a snippet around it.
 public enum TimelineMatch {
+    /// Without case or accents, by Foundation's comparison (fast on long outputs; no locale).
     public static func find(_ query: TimelineQuery, in text: String) -> Range<String.Index>? {
-        let needle = Array(query.folded)
+        let needle = query.raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return nil }
-        let characters = Array(text)
-        let folded = characters.map(TextFolding.fold)
-        guard folded.count >= needle.count else { return nil }
-        for start in 0...(folded.count - needle.count)
-        where folded[start..<(start + needle.count)].elementsEqual(needle) {
-            let lower = text.index(text.startIndex, offsetBy: start)
-            return lower..<text.index(lower, offsetBy: needle.count)
-        }
-        return nil
+        return text.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive])
     }
 
     /// About `width` characters of one line around the match, with "…" where it was cut; the range is in the snippet.

@@ -36,6 +36,7 @@ public struct TimelineTexts: Sendable, Equatable {
     public let missing: TextTemplate
     public let unreadable: TextTemplate
     public let loading: String
+    public let decimalSeparator: String
 
     public static let spanish = TimelineTexts(
         you: "Tú", done: "listo", working: "trabajando", error: "error", errorExit: "error · exit {code}",
@@ -63,7 +64,8 @@ public struct TimelineTexts: Sendable, Equatable {
         unidentified:
             "Smalti no sabe qué sesión de {harness} escribe este panel. Mostrando la más reciente de {directory}: puede no ser esta.",
         unidentifiedTag: "sin identificar", compressed: "comprimida por Codex",
-        missing: "La sesión ya no está en {path}", unreadable: "No se pudo leer {path}: {reason}", loading: "Leyendo…")
+        missing: "La sesión ya no está en {path}", unreadable: "No se pudo leer {path}: {reason}", loading: "Leyendo…",
+        decimalSeparator: ",")
 
     public static let english = TimelineTexts(
         you: "You", done: "done", working: "working", error: "error", errorExit: "error · exit {code}",
@@ -90,5 +92,30 @@ public struct TimelineTexts: Sendable, Equatable {
             "Smalti doesn’t know which {harness} session this pane writes. Showing the latest one in {directory}: it may not be this one.",
         unidentifiedTag: "unidentified", compressed: "compressed by Codex",
         missing: "The session is no longer at {path}",
-        unreadable: "Couldn’t read {path}: {reason}", loading: "Reading…")
+        unreadable: "Couldn’t read {path}: {reason}", loading: "Reading…", decimalSeparator: ".")
+}
+
+extension TimelineTexts {
+    /// "Conversación compactada · 168k → 22k tokens", or without tokens (Codex).
+    public func compaction(_ note: CompactionNote) -> String {
+        guard let before = note.preTokens, let after = note.postTokens else { return compacted }
+        return compactedTokens(["before": Self.thousands(before), "after": Self.thousands(after)])
+    }
+
+    /// "Imagen adjunta · image/png · 186 KB".
+    public func imageDescription(_ image: ImageNote) -> String {
+        "\(self.image(["kind": image.mediaType])) · \(size(image.byteCount))"
+    }
+
+    /// Bytes in the decimal units of Finder: "186 KB", "1,2 MB".
+    public func size(_ bytes: Int) -> String {
+        if bytes < 1_000 { return "\(bytes) B" }
+        if bytes < 1_000_000 { return "\((bytes + 500) / 1_000) KB" }
+        let tenths = (bytes + 50_000) / 100_000
+        return "\(tenths / 10)\(decimalSeparator)\(tenths % 10) MB"
+    }
+
+    private static func thousands(_ tokens: Int) -> String {
+        tokens >= 1_000 ? "\(tokens / 1_000)k" : "\(tokens)"
+    }
 }

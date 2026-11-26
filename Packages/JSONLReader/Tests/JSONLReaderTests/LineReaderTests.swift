@@ -54,6 +54,26 @@ import Testing
         #expect(outcome.failure != nil)
     }
 
+    /// Review 1 (M10): a closed timeline stops reading a big transcript between blocks.
+    @Test func stopsBetweenBlocksWhenCancelled() throws {
+        let line = String(repeating: "x", count: 600_000)
+        let file = try TemporaryFile((0..<6).map { _ in line }.joined(separator: "\n") + "\n")
+        var read = 0
+        var checks = 0
+
+        let outcome = JSONLLineReader.read(
+            file.url, from: 0,
+            isCancelled: {
+                checks += 1; return checks > 1
+            }
+        ) { _, _ in
+            read += 1
+        }
+
+        #expect(read < 6)
+        #expect(outcome.offset < UInt64(6 * 600_001))
+    }
+
     @Test func skipsEmptyLines() throws {
         let file = try TemporaryFile("a\n\nb\n")
 

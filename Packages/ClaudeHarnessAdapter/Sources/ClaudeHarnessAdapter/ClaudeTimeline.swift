@@ -36,7 +36,7 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         var next = restarted ? TranscriptCursor.start : cursor
         var entries: [TranscriptEntry] = []
         for (file, scope) in files {
-            entries += read(file, scope: scope, cursor: &next)
+            entries += try read(file, scope: scope, cursor: &next)
         }
         return TranscriptRead(entries: entries, cursor: next, restarted: restarted)
     }
@@ -131,7 +131,9 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         return identity.inode != known || identity.size < (cursor.offsets[path] ?? 0)
     }
 
-    private func read(_ file: URL, scope: EntryScope, cursor: inout TranscriptCursor) -> [TranscriptEntry] {
+    private func read(_ file: URL, scope: EntryScope, cursor: inout TranscriptCursor) throws(TranscriptReadError)
+        -> [TranscriptEntry]
+    {
         let path = file.path(percentEncoded: false)
         guard let identity = JSONLFileIdentity.of(file) else { return [] }
         let offset = cursor.offsets[path] ?? 0
@@ -140,9 +142,10 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         if offset == 0, case .subagent(let agent) = scope, let link = Self.link(agent, next: file) {
             entries.append(TranscriptEntry(kind: link, scope: scope, at: nil))
         }
-        let outcome = JSONLLineReader.read(file, from: offset) { line, at in
+        let outcome = JSONLLineReader.read(file, from: offset, isCancelled: { Task.isCancelled }) { line, at in
             autoreleasepool { entries += translator.translate(line, at: at).map(\.entry) }
         }
+        if let failure = outcome.failure { throw .unreadable(path: path, reason: String(describing: failure)) }
         cursor.offsets[path] = outcome.offset
         cursor.inodes[path] = identity.inode
         return entries
@@ -202,17 +205,24 @@ private final class SessionWatch: @unchecked Sendable {
         self.coalescing = coalescing
         self.subagents = subagents
         self.onChange = onChange
-        watch(URL(filePath: session.file), then: onChange)
-        if let folder = session.subagentFolder {
-            watch(URL(filePath: folder)) { [weak self] in
-                self?.watchNewSubagents()
-                onChange()
-            }
+        folder = session.subagentFolder.map { URL(filePath: $0) }
+        watch(URL(filePath: session.file)) { [weak self] in
+            // The subagents' folder may be born after the timeline opened (review 1, M9).
+            self?.watchSubagents()
+            onChange()
         }
-        watchNewSubagents()
+        watchSubagents()
     }
 
-    private func watchNewSubagents() {
+    private let folder: URL?
+
+    private func watchSubagents() {
+        if let folder {
+            watch(folder) { [weak self] in
+                self?.watchSubagents()
+                self?.onChange()
+            }
+        }
         for file in subagents() { watch(file, then: onChange) }
     }
 

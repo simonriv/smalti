@@ -64,6 +64,26 @@ import Testing
         #expect(Self.descriptors(on: file.url) == 0)
     }
 
+    /// Review 1 (I1): Claude rewrites a transcript by renaming a new file over it; the watch follows the path.
+    @Test func keepsWatchingAPathRewrittenByRename() async throws {
+        let file = try TemporaryFile("a\n")
+        let changes = Mutex(0)
+        let watch = try FileWatch(file: file.url, coalescing: .milliseconds(30)) { changes.withLock { $0 += 1 } }
+        let replacement = file.folder.appending(path: "new.jsonl")
+        try Data("b\n".utf8).write(to: replacement)
+
+        _ = try FileManager.default.replaceItemAt(file.url, withItemAt: replacement)
+        await Self.waitUntil { changes.withLock { $0 } >= 1 }
+        try await Task.sleep(for: .milliseconds(100))
+        let afterRename = changes.withLock { $0 }
+        try file.append("c\n")
+        await Self.waitUntil { changes.withLock { $0 } > afterRename }
+
+        #expect(changes.withLock { $0 } > afterRename)
+        #expect(Self.descriptors(on: file.url) == 1)
+        watch.cancel()
+    }
+
     @Test func aMissingFileThrows() {
         #expect(throws: JSONLReadError.self) {
             _ = try FileWatch(file: URL(filePath: "/nonexistent/\(UUID().uuidString)"), coalescing: .zero) {}

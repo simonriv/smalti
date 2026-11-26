@@ -57,13 +57,19 @@ public enum TranscriptsContract {
             entries.map { signature($0, names: names) } == oracle.map { "\($0.kind) \(kindWho($0)) \($0.scope)" },
             sourceLocation: sourceLocation)
         for (entry, item) in zip(entries, oracle) {
-            guard let location = location(of: entry) else { continue }
-            let text = try await transcripts.fullText(at: location)
+            guard let excerpt = excerpt(of: entry) else { continue }
+            let text = try await transcripts.fullText(at: excerpt.location)
             #expect(
                 Array(text.utf8) == Array(item.text.utf8), "\(item.kind) of \(item.who)", sourceLocation: sourceLocation
             )
+            #expect(
+                text.hasPrefix(excerpt.excerpt), "\(item.kind): the excerpt is not the text's start",
+                sourceLocation: sourceLocation)
+            #expect(excerpt.byteCount == text.utf8.count, sourceLocation: sourceLocation)
         }
         let timeline = Timeline().appending(read.entries)
+        let ids = entries.compactMap(itemID(of:)).filter { !$0.rawValue.hasPrefix("tool:") }
+        #expect(Set(ids).count == ids.count, "two items share an id", sourceLocation: sourceLocation)
         for entry in entries {
             guard let id = itemID(of: entry) else { continue }
             #expect(timeline.item(id) != nil, "\(id.rawValue) is not in the timeline", sourceLocation: sourceLocation)
@@ -91,12 +97,32 @@ public enum TranscriptsContract {
         return "\(kindAndWho) \(scope)"
     }
 
-    private static func location(of entry: TranscriptEntry) -> TextLocation? {
+    private static func excerpt(of entry: TranscriptEntry) -> ExcerptText? {
         switch entry.kind {
-        case .prompt(let text), .reply(let text): text.location
-        case .toolCall(let call): call.call.location
-        case .toolResult(let result): result.output.location
+        case .prompt(let text), .reply(let text): text
+        case .toolCall(let call): call.call
+        case .toolResult(let result): result.output
         case .image, .compaction, .subagentLink: nil
+        }
+    }
+
+    /// Search contract (C4): every word-ish piece of the oracle's first prompt and first output is found under
+    /// `root`, with the hit's text whole and the entry where it lives.
+    public static func verifySearch(
+        _ project: any ProjectTranscripts, root: String, oracle: [OracleItem],
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async throws {
+        let samples = ["prompt", "output"].compactMap { kind in
+            oracle.first { $0.kind == kind }?.text.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+                .map(String.init).first { $0.count >= 4 }
+        }
+        #expect(!samples.isEmpty, "the oracle has nothing to search", sourceLocation: sourceLocation)
+        for word in samples {
+            var hits: [TranscriptHit] = []
+            for try await hit in project.search(TimelineQuery(word.uppercased()), under: root) { hits.append(hit) }
+            let confirmed = hits.filter { TimelineMatch.find(TimelineQuery(word), in: $0.text) != nil }
+            #expect(!confirmed.isEmpty, "«\(word)» not found under \(root)", sourceLocation: sourceLocation)
+            #expect(confirmed.allSatisfy { excerpt(of: $0.entry) != nil }, sourceLocation: sourceLocation)
         }
     }
 

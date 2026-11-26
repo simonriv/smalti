@@ -9,9 +9,14 @@ public actor FakeSessionTranscripts: SessionTranscripts {
     private var restarts: [TranscriptSessionRef: Int] = [:]
     private var delays: [TranscriptSessionRef: Duration] = [:]
     private var failures: [String: TranscriptReadError] = [:]
+    private var readFailures: [TranscriptSessionRef: TranscriptReadError] = [:]
+    /// Reads cut short because their task was cancelled.
+    public private(set) var cancelledReads = 0
     private var texts: [TextLocation: String] = [:]
     private var cursors: [TranscriptSessionRef: [UInt64]] = [:]
     private var streams: [TranscriptSessionRef: [UUID: AsyncStream<Void>.Continuation]] = [:]
+    /// Streams that ended before their registration ran (both hop onto this actor in no fixed order).
+    private var ended: Set<UUID> = []
 
     public init(harness: HarnessID) {
         self.harness = harness
@@ -26,6 +31,8 @@ public actor FakeSessionTranscripts: SessionTranscripts {
 
     public func slowDown(_ ref: TranscriptSessionRef, _ delay: Duration) { delays[ref] = delay }
     public func fail(_ sessionID: String, with error: TranscriptReadError) { failures[sessionID] = error }
+    /// The next reads of `ref` throw `error`.
+    public func failReads(_ ref: TranscriptSessionRef, with error: TranscriptReadError) { readFailures[ref] = error }
     public func setFullText(_ text: String, at location: TextLocation) { texts[location] = text }
     /// The cursor offsets each read started from, in order.
     public func cursorsRead(_ ref: TranscriptSessionRef) -> [UInt64] { cursors[ref] ?? [] }
@@ -44,7 +51,8 @@ public actor FakeSessionTranscripts: SessionTranscripts {
     public func read(_ session: TranscriptSessionRef, from cursor: TranscriptCursor) async throws(TranscriptReadError)
         -> TranscriptRead
     {
-        if let delay = delays[session] { try? await Task.sleep(for: delay) }
+        if let delay = delays[session], (try? await Task.sleep(for: delay)) == nil { cancelledReads += 1 }
+        if let failure = readFailures[session] { throw failure }
         let index = Int(cursor.offsets[session.file] ?? 0)
         cursors[session, default: []].append(UInt64(index))
         let queued = reads[session] ?? []
@@ -68,10 +76,15 @@ public actor FakeSessionTranscripts: SessionTranscripts {
     }
 
     private func register(_ continuation: AsyncStream<Void>.Continuation, id: UUID, for session: TranscriptSessionRef) {
+        guard ended.remove(id) == nil else { return }
         streams[session, default: [:]][id] = continuation
     }
 
     private func unregister(_ id: UUID, for session: TranscriptSessionRef) {
+        guard streams[session]?[id] != nil else {
+            ended.insert(id)
+            return
+        }
         streams[session]?[id] = nil
         if streams[session]?.isEmpty == true { streams[session] = nil }
     }

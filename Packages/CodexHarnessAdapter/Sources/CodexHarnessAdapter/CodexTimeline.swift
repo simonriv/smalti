@@ -42,9 +42,13 @@ public struct CodexTimeline: SessionTranscripts, ProjectTranscripts {
         var next = rewritten ? TranscriptCursor.start : cursor
         let translator = CodexTimelineTranslator(file: session.file, inode: identity.inode)
         var entries: [TranscriptEntry] = []
-        let outcome = JSONLLineReader.read(file, from: next.offsets[session.file] ?? 0) { line, at in
+        let outcome = JSONLLineReader.read(
+            file, from: next.offsets[session.file] ?? 0, isCancelled: { Task.isCancelled }
+        ) {
+            line, at in
             autoreleasepool { entries += translator.translate(line, at: at).map(\.entry) }
         }
+        if let failure = outcome.failure { throw .unreadable(path: session.file, reason: String(describing: failure)) }
         next.offsets[session.file] = outcome.offset
         next.inodes[session.file] = identity.inode
         return TranscriptRead(entries: entries, cursor: next, restarted: rewritten)

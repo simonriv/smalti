@@ -27,6 +27,8 @@ public final class ShowTimeline {
     public private(set) var state = State.closed
     public var onChange: (() -> Void)?
     private var watch: Task<Void, Never>?
+    /// The read of the session being opened: switching or closing cancels it (review 1, M10).
+    private var loading: Task<Void, Never>?
     private var generation = 0
 
     public init(sources: TranscriptSources) {
@@ -37,6 +39,12 @@ public final class ShowTimeline {
 
     public func show(_ resolution: TimelineTarget.Resolution, root: String) async {
         let current = restart()
+        let task = Task { await resolve(resolution, root: root, current) }
+        loading = task
+        await task.value
+    }
+
+    private func resolve(_ resolution: TimelineTarget.Resolution, root: String, _ current: Int) async {
         switch resolution {
         case .session(let harness, let id): await open(harness, id, unidentified: false, current)
         case .unidentified(let harness, let directory):
@@ -55,7 +63,10 @@ public final class ShowTimeline {
 
     /// A session chosen from the recent list or a search result.
     public func open(_ session: HarnessSession) async {
-        await open(session.harness, session.id, unidentified: false, restart())
+        let current = restart()
+        let task = Task { await open(session.harness, session.id, unidentified: false, current) }
+        loading = task
+        await task.value
     }
 
     public func close() {
@@ -68,6 +79,8 @@ public final class ShowTimeline {
         generation += 1
         watch?.cancel()
         watch = nil
+        loading?.cancel()
+        loading = nil
         state = .loading
         return generation
     }
@@ -108,9 +121,15 @@ public final class ShowTimeline {
             var cursor = cursor
             var timeline = session.timeline
             for await _ in transcripts.changes(of: session.ref) {
-                guard let read = try? await transcripts.read(session.ref, from: cursor), !Task.isCancelled else {
-                    continue
+                let read: TranscriptRead
+                do throws(TranscriptReadError) {
+                    read = try await transcripts.read(session.ref, from: cursor)
+                } catch {
+                    // The session went away or became unreadable: say so instead of painting it stale (review 1).
+                    self?.set(.failed(error), current)
+                    return
                 }
+                guard !Task.isCancelled else { return }
                 cursor = read.cursor
                 timeline = (read.restarted ? Timeline() : timeline).appending(read.entries)
                 self?.set(

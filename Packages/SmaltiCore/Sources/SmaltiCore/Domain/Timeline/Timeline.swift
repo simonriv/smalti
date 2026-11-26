@@ -51,6 +51,8 @@ private struct TimelineFold {
     private let results: [String: (ToolResultEntry, Date?)]
     private let calls: Set<String>
     private let links: [String: String]
+    /// The calls that launch subagents: a link from any other call (an "agentId:" in a grep's output) is ignored.
+    private static let agentTools: Set<String> = ["Agent", "Task"]
 
     init(_ entries: [TranscriptEntry]) {
         var main: [TranscriptEntry] = []
@@ -58,11 +60,14 @@ private struct TimelineFold {
         var order: [String] = []
         var results: [String: (ToolResultEntry, Date?)] = [:]
         var calls: Set<String> = []
+        var agentCalls: Set<String> = []
         var links: [String: String] = [:]
         for entry in entries {
             switch entry.kind {
             case .toolResult(let result): results[result.id] = (result, entry.at)
-            case .toolCall(let call): calls.insert(call.id)
+            case .toolCall(let call):
+                calls.insert(call.id)
+                if Self.agentTools.contains(call.name) { agentCalls.insert(call.id) }
             case .subagentLink(let agent, let tool): links[tool] = agent
             default: break
             }
@@ -78,7 +83,7 @@ private struct TimelineFold {
         subagentOrder = order
         self.results = results
         self.calls = calls
-        self.links = links
+        self.links = links.filter { agentCalls.contains($0.key) }
     }
 
     func turns() -> [TimelineTurn] {

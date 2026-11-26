@@ -65,6 +65,16 @@ import Testing
         #expect(try scan(file.url, "nandu").map(\.1) == [26])
     }
 
+    /// Review 1 (M7): decomposed accents, letters without decomposition and Latin Extended-A fold like the domain.
+    @Test func foldsDecomposedAndExtendedLatinLetters() throws {
+        let file = try TemporaryFile("migraci\u{6F}\u{301}n\nØRESUND\nčapek łódź İzmir\n")
+
+        #expect(try scan(file.url, "migracion").map(\.0) == ["migraci\u{6F}\u{301}n"])
+        #expect(try scan(file.url, "øresund").map(\.0) == ["ØRESUND"])
+        #expect(try scan(file.url, "capek").map(\.0) == ["čapek łódź İzmir"])
+        #expect(try scan(file.url, "izmir").map(\.0) == ["čapek łódź İzmir"])
+    }
+
     @Test func otherMultibyteCharactersStayAsTheyAre() throws {
         let file = try TemporaryFile("precio 5 €\n€ 7\n")
 

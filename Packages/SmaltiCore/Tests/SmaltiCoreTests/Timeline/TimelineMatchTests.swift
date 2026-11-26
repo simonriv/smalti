@@ -49,28 +49,72 @@ struct TimelineMatchTests {
             entry: F.prompt(text, at: 1), text: text)
     }
 
-    @Test func resultsKeepOnlyConfirmedHitsGroupedBySession() {
-        let query = TimelineQuery("parcial")
+    private func hit(_ session: String, _ text: String, updated: Double = 0) -> TranscriptHit {
+        TranscriptHit(
+            session: HarnessSession(
+                harness: .claude, id: session, directory: "/w", title: session, createdAt: F.start,
+                updatedAt: F.start.addingTimeInterval(updated), detail: nil),
+            entry: F.prompt(text, at: 1), text: text)
+    }
 
-        let results = SearchResults()
-            .adding(hit("s1", "reembolso parcial"), query: query)
-            .adding(hit("s1", "{\"type\":\"parcial\"} sin texto"), query: TimelineQuery("zzz"))
-            .adding(hit("s2", "Parcial otra vez"), query: query)
-            .adding(hit("s1", "más parcial"), query: query)
+    private func adding(_ hits: [TranscriptHit], _ query: String, policy: any TranscriptTextPolicy = VerbatimText())
+        -> SearchResults
+    {
+        hits.reduce(SearchResults()) { results, hit in
+            SearchResults.confirm(hit, query: TimelineQuery(query), policy: policy).map { results.adding($0) }
+                ?? results
+        }
+    }
+
+    @Test func resultsKeepOnlyConfirmedHitsGroupedBySession() {
+        let results = adding(
+            [
+                hit("s1", "reembolso parcial"), hit("s1", "{\"type\":\"zzz\"} sin texto"),
+                hit("s2", "Parcial otra vez"),
+                hit("s1", "más parcial"),
+            ], "parcial")
 
         #expect(results.matchCount == 3)
         #expect(results.groups.map(\.session.id) == ["s1", "s2"])
         #expect(results.groups[0].matches.count == 2)
     }
 
-    @Test func resultsStopAtTheCap() {
-        let query = TimelineQuery("x")
+    /// Review 1 (M11): groups go newest session first, whichever harness found them first.
+    @Test func groupsAreOrderedNewestFirst() {
+        let results = adding(
+            [hit("old", "x", updated: 1), hit("new", "x", updated: 9), hit("mid", "x", updated: 5)], "x")
 
-        let results = (0..<(SearchResults.cap + 5)).reduce(SearchResults()) {
-            $0.adding(hit("s", "x \($1)"), query: query)
-        }
+        #expect(results.groups.map(\.session.id) == ["new", "mid", "old"])
+    }
+
+    @Test func resultsStopAtTheCap() {
+        let results = adding((0..<(SearchResults.cap + 5)).map { hit("s", "x \($0)") }, "x")
 
         #expect(results.matchCount == SearchResults.cap)
         #expect(results.isCapped)
+    }
+
+    /// Review 1 (I4): what a match shows and what it is confirmed on is the policy's search snippet.
+    @Test func matchesGoThroughThePolicyAndKeepOnlyASnippet() throws {
+        let spy = SpyPolicy()
+        let long = String(repeating: "a ", count: 5_000) + "aguja" + String(repeating: " b", count: 5_000)
+
+        let match = try #require(SearchResults.confirm(hit("s", long), query: TimelineQuery("aguja"), policy: spy))
+
+        #expect(spy.seen.map(\.1) == [.searchSnippet])
+        #expect(match.snippet.contains("aguja"))
+        #expect(match.snippet.count < 200)
+        #expect(match.snippet[match.range] == "aguja")
+    }
+
+    @Test func aPolicyThatHidesTheTextHidesTheMatch() {
+        struct Masking: TranscriptTextPolicy {
+            func shown(_ text: String, as context: TranscriptTextContext) -> String {
+                text.replacingOccurrences(of: "sk-123", with: "•••")
+            }
+        }
+
+        #expect(
+            SearchResults.confirm(hit("s", "token sk-123"), query: TimelineQuery("sk-123"), policy: Masking()) == nil)
     }
 }

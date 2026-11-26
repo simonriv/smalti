@@ -48,14 +48,14 @@ class ClaudeTests(unittest.TestCase):
         items = oracle.claude(SYNTHETIC)
         self.assertEqual(kinds(items), [
             ("prompt", "user"), ("image", "user"), ("call", "Read"), ("output", "Read"), ("image", "Read"),
-            ("reply", "agent"), ("compaction", "system"), ("prompt", "user"), ("call", "Bash"), ("output", "Bash")])
+            ("image", "Read"), ("reply", "agent"), ("compaction", "system"), ("prompt", "user"), ("call", "Bash"), ("output", "Bash")])
         self.assertEqual(items[0]["text"], '¿Qué ves en la captura?\nLínea dos con "comillas" y \\barra\nSegundo bloque')
         self.assertEqual(items[1]["text"], "image/png")
-        self.assertEqual(items[2]["text"], '{"file_path":"/fixture/work/s/shot.png","limit":5}')
+        self.assertEqual(items[2]["text"], '{"B":1,"Z":[1,{"X":true,"y":"ü"}],"_c":3,"a":2,"file_path":"/fixture/work/s/shot.png","limit":5}')
         self.assertEqual(items[3]["text"], "Imagen leída")
-        self.assertEqual(items[5]["text"], "Un píxel rojo. 🙂")
-        self.assertTrue(items[7]["text"].startswith("<command-name>/clear</command-name>"))
-        self.assertEqual(items[8]["text"], '{"command":"exit 3","description":"Falla"}')
+        self.assertEqual(items[6]["text"], "Un píxel rojo. 🙂")
+        self.assertTrue(items[8]["text"].startswith("<command-name>/clear</command-name>"))
+        self.assertEqual(items[9]["text"], '{"command":"exit 3","description":"Falla"}')
 
 
 class CodexTests(unittest.TestCase):

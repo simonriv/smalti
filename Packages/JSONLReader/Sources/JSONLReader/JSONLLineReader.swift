@@ -13,7 +13,9 @@ public enum JSONLLineReader {
     static let blockSize = 1_048_576
     static let newline = UInt8(ascii: "\n")
 
-    public static func read(_ file: URL, from offset: UInt64, line: (Data, UInt64) -> Void) -> JSONLReadOutcome {
+    public static func read(
+        _ file: URL, from offset: UInt64, isCancelled: () -> Bool = { false }, line: (Data, UInt64) -> Void
+    ) -> JSONLReadOutcome {
         var consumed = offset
         do {
             let handle = try FileHandle(forReadingFrom: file)
@@ -21,7 +23,7 @@ public enum JSONLLineReader {
             try handle.seek(toOffset: offset)
             var pending = Data()
             var reachedEnd = false
-            while !reachedEnd {
+            while !reachedEnd, !isCancelled() {
                 // Each block's buffers are autoreleased: drained here, not when the whole file is done.
                 try autoreleasepool {
                     guard let block = try handle.read(upToCount: blockSize), !block.isEmpty else {

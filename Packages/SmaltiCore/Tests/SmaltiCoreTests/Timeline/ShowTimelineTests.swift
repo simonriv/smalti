@@ -96,6 +96,38 @@ struct ShowTimelineTests {
         #expect(await transcripts.watchers == 1)
     }
 
+    /// Review 1 (M8): a session that cannot be read any more says so instead of staying painted.
+    @Test func aFailedReadWhileFollowingFails() async throws {
+        let transcripts = FakeSessionTranscripts(harness: .claude)
+        await transcripts.add(ref, reads: [F.workB])
+        let show = make(transcripts)
+        await show.show(.session(.claude, "c1"), root: "/w")
+        await waitUntil { await transcripts.watchers == 1 }
+
+        await transcripts.failReads(ref, with: .missing(path: F.file))
+        await transcripts.change(ref)
+        await waitUntil { if case .failed = show.state { true } else { false } }
+
+        #expect(show.state == .failed(.missing(path: F.file)))
+    }
+
+    /// Review 1 (M10): switching sessions cancels the read on its way.
+    @Test func switchingCancelsTheReadOnItsWay() async throws {
+        let other = TranscriptSessionRef(harness: .claude, sessionID: "c2", file: "/fx/o.jsonl", subagentFolder: nil)
+        let transcripts = FakeSessionTranscripts(harness: .claude)
+        await transcripts.add(ref, reads: [F.workB])
+        await transcripts.add(other, reads: [[F.prompt("otra", at: 1)]])
+        await transcripts.slowDown(ref, .seconds(1))
+        let show = make(transcripts)
+
+        async let first: Void = show.show(.session(.claude, "c1"), root: "/w")
+        try await Task.sleep(for: .milliseconds(30))
+        await show.show(.session(.claude, "c2"), root: "/w")
+        await first
+
+        #expect(await transcripts.cancelledReads == 1)
+    }
+
     @Test func anUnidentifiedPaneShowsTheLatestSessionMarked() async throws {
         let codexRef = TranscriptSessionRef(harness: .codex, sessionID: "x2", file: "/fx/x2.jsonl", subagentFolder: nil)
         let transcripts = FakeSessionTranscripts(harness: .codex)
