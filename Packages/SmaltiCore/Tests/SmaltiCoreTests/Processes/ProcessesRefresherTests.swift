@@ -4,7 +4,7 @@ import Testing
 
 /// C4 of F8: nothing samples while the view is closed; the refresher reads only between start and stop.
 @MainActor
-@Suite("ProcessesRefresher")
+@Suite("ProcessesRefresher", .timeLimit(.minutes(1)))
 struct ProcessesRefresherTests {
     private typealias F = ProcessFixtures
     private let fast = ProcessesRefresher.Timing(first: .milliseconds(5), every: .milliseconds(5))
@@ -50,7 +50,7 @@ struct ProcessesRefresherTests {
         let refresher = ProcessesRefresher(
             observe: observe(running, FakeListeningPorts()), timing: .init(first: .seconds(60), every: .seconds(60)))
         refresher.start(foregroundGroups: { [:] }) { _ in }
-        while await running.reads == 0 { try await Task.sleep(for: .milliseconds(5)) }
+        for _ in 0..<400 where await running.reads == 0 { try await Task.sleep(for: .milliseconds(5)) }
         refresher.stop()
         var delivered = 0
 

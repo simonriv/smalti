@@ -34,7 +34,7 @@ public final class ProcessesRefresher {
     public func start(
         foregroundGroups: @escaping () -> [PaneID: Int32], onSnapshot: @escaping (ProcessesSnapshot) -> Void
     ) {
-        stop()
+        if loop != nil { stop() }
         self.foregroundGroups = foregroundGroups
         deliver = onSnapshot
         let timing = timing

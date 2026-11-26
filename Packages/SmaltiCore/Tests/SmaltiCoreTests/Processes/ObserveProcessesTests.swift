@@ -3,7 +3,7 @@ import SmaltiCoreTestSupport
 import Testing
 
 @MainActor
-@Suite("ObserveProcesses")
+@Suite("ObserveProcesses", .timeLimit(.minutes(1)))
 struct ObserveProcessesTests {
     private typealias F = ProcessFixtures
     private let pane = PaneID()
@@ -43,7 +43,7 @@ struct ObserveProcessesTests {
         let observe = ObserveProcesses(processes: running, ports: FakeListeningPorts())
 
         let landing = Task { await observe.refresh(foregroundGroups: [:]) }
-        while await running.reads == 0 { await Task.yield() }
+        for _ in 0..<400 where await running.reads == 0 { try await Task.sleep(for: .milliseconds(5)) }
         observe.reset()
         _ = await landing.value
 

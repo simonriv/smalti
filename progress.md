@@ -475,5 +475,5 @@
 - [x] T10 · Documentos y web
 - [x] Revisión intermedia 2 (0 críticos, 2 importantes, 9 menores; corregidos salvo los valores de accesibilidad en inglés, enmienda 8; el menor 5 no se reproducía y quedó fijado con prueba) + regresión de UI (68/68 de 9 clases) + mutación incremental (21 mutantes, 88,9 %; 2 sobrevivientes muertos y verificados a mano)
 #### Bloque 4 · Cierre
-- [ ] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
+- [x] T11 · Mediciones, capturas, checklist, revisión final (0 críticos, 2 importantes, 4 menores; corregidos) y mutación de la fase (132 mutantes, 99,0 %; el sobreviviente muerto y verificado)
 - [ ] T12 · 0.8.0, PRs, release y despliegue
