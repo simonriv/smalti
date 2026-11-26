@@ -84,7 +84,6 @@ final class TimelineView: NSView, NSTextFieldDelegate {
         ]
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
-        stack.distribution = .fill
         stack.spacing = 0
         stack.alignment = .leading
         stack.translatesAutoresizingMaskIntoConstraints = false

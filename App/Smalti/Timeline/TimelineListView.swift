@@ -32,6 +32,7 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
         table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
         table.headerView = nil
         table.backgroundColor = .clear
+        table.usesAutomaticRowHeights = true
         table.intercellSpacing = .zero
         table.selectionHighlightStyle = .none
         table.dataSource = self
@@ -136,51 +137,4 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
     }
 
     func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool { false }
-
-    /// Heights from each row's content, without building its view: automatic heights made the table build every
-    /// row's view to size the list (1.4 GB with a 60 MB session; spec C8). Only the visible rows exist.
-    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        let tokens = theme.timeline
-        let line = tokens.textFontSize * 1.45
-        let mono = tokens.monoFontSize * 1.55
-        let perLine = max(
-            20,
-            Int(
-                (tokens.width - tokens.itemPaddingLeading - tokens.padding - tokens.textWidthInset)
-                    / (tokens.textFontSize * 0.55)))
-        func lines(_ text: String, clamp: Int) -> Int {
-            let explicit = text.split(separator: "\n", omittingEmptySubsequences: false)
-            let wrapped = explicit.reduce(0) { $0 + max(1, ($1.count + perLine - 1) / perLine) }
-            return min(clamp, max(1, wrapped))
-        }
-        switch entries[row] {
-        case .row(let item, _):
-            switch item.kind {
-            case .prompt, .reply:
-                let clamp = item.kind == .prompt ? tokens.promptLines : tokens.replyLines
-                return 2 * tokens.itemPaddingVertical + tokens.whoFontSize * 1.5 + tokens.textGap
-                    + Double(lines(item.text, clamp: clamp)) * line
-            case .tool:
-                guard item.isExpanded, let output = item.expandedText else { return tokens.toolRowHeight }
-                let shown = output.split(separator: "\n", omittingEmptySubsequences: false).count
-                let more = item.moreLines > 0 ? tokens.smallFontSize * 1.5 : 0
-                return tokens.toolRowHeight + 2 * tokens.outputPaddingVertical + tokens.outputBottom + tokens.outputGap
-                    * 2
-                    + tokens.whoFontSize * 1.5 + Double(shown) * mono + more + tokens.outputGap
-            case .image, .compaction: return 2 * tokens.notePaddingVertical + tokens.smallFontSize * 1.5
-            }
-        case .group:
-            return tokens.groupPaddingTop + tokens.groupPaddingBottom + tokens.groupGap + 2 * tokens.groupTitleSize
-                * 1.4
-        case .hit(_, _, let snippet, _, _):
-            return 2 * tokens.hitPaddingVertical + tokens.whoFontSize * 1.5 + tokens.hitGap
-                + Double(lines(snippet, clamp: tokens.hitLines)) * tokens.hitFontSize * 1.45
-        case .message(let title, let body):
-            return tokens.emptyPaddingTop + tokens.emptyPaddingBottom + tokens.emptyDotSize + 2 * tokens.emptyGap
-                + Double(lines(title, clamp: tokens.emptyTitleLines)) * tokens.emptyTitleSize * 1.4
-                + Double(lines(body, clamp: tokens.emptyBodyLines)) * tokens.emptyBodySize * 1.5
-        case .caption: return tokens.captionPaddingTop + tokens.captionPaddingBottom + tokens.whoFontSize * 1.5
-        case .recent: return tokens.recentRowHeight
-        }
-    }
 }

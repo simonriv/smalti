@@ -199,8 +199,8 @@ final class TimelineTests: SmaltiUITestCase {
         try Data(text.utf8).write(to: folder.appending(path: "\(id).jsonl"))
     }
 
-    /// C7: a 60 MB session never freezes the app: ⇧⌘T closes the timeline while it reads. (C8 is measured by
-    /// TimelineBench: XCUITest's accessibility snapshots make the table build every row and would measure that.)
+    /// C7: a 60 MB session never freezes the app: ⇧⌘T closes the timeline while it reads. (C8 is not asserted here:
+    /// XCUITest's accessibility snapshots make the table build every row, so it would measure the runner.)
     func testALargeSessionNeverFreezesTheApp() throws {
         let app = XCUIApplication.isolatedSmalti()
         let root = try TimelineFixture.root(for: app)
