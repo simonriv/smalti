@@ -1,28 +1,29 @@
 # Smalti
 
-Terminal nativa para macOS pensada para trabajar con varios agentes de IA a la vez: tiling automático, estado de cada agente a la vista, reanudación de sesiones de Claude Code, Codex, Antigravity y OpenCode, observatorio de consumo y guardas para comandos destructivos. Swift + AppKit sobre [libghostty](https://github.com/ghostty-org/ghostty).
+A native macOS terminal built for working with several AI agents at once: automatic tiling, each agent's state in view, resuming Claude Code, Codex, Antigravity and OpenCode sessions, a usage observatory and guards for destructive commands. Swift + AppKit on [libghostty](https://github.com/ghostty-org/ghostty).
 
-- Web: https://smalti.sh
-- Documentación: https://smalti.sh/docs
-- Gratis y de código abierto (MIT). Solo macOS 27 o posterior, en Apple Silicon.
+- Website: https://smalti.sh
+- Documentation: https://smalti.sh/docs (en español: https://smalti.sh/es/docs)
+- Free and open source (MIT). macOS 27 or later, on Apple silicon only.
+- The interface is in English or Spanish, following your Mac's language (System Settings → General → Language & Region, also per app).
 
-## Instalar
+## Install
 
-### Con la DMG
+### With the DMG
 
-1. Descarga [`Smalti.dmg`](https://github.com/simonriv/smalti/releases/latest/download/Smalti.dmg) de la [última versión](https://github.com/simonriv/smalti/releases/latest).
-2. Ábrela y **arrastra Smalti a Aplicaciones**. No la abras desde la DMG: macOS la ejecutaría desde una copia temporal y no podría actualizarse.
-3. Ábrela desde Aplicaciones y sigue «Primera apertura».
+1. Download [`Smalti.dmg`](https://github.com/simonriv/smalti/releases/latest/download/Smalti.dmg) from the [latest release](https://github.com/simonriv/smalti/releases/latest).
+2. Open it and **drag Smalti to Applications**. Don't open it from the DMG: macOS would run it from a temporary copy and it couldn't update itself.
+3. Open it from Applications and follow "First open".
 
-### Con Homebrew
+### With Homebrew
 
 ```sh
 brew install --cask simonriv/tap/smalti
 ```
 
-Homebrew la instala en Aplicaciones con la marca de descarga de internet, así que también pide «Primera apertura».
+Homebrew installs it in Applications with the downloaded-from-the-internet mark, so it also asks for "First open".
 
-### Desde el código
+### From source
 
 ```sh
 git clone --recurse-submodules https://github.com/simonriv/smalti.git
@@ -31,51 +32,59 @@ scripts/bootstrap
 xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -configuration Release -derivedDataPath build build
 ```
 
-La app queda en `build/Build/Products/Release/Smalti.app`. Lo que compilas en tu Mac no lleva la marca de descarga, así que no hay aviso de primera apertura. Es la misma app que la DMG: buscará actualizaciones en smalti.sh y te ofrecerá la versión oficial cuando salga una nueva (puedes apagarlo con ⌘K → «Desactivar actualizaciones automáticas»). Necesitas Xcode 27 y Homebrew (`scripts/bootstrap` instala Zig y el Metal Toolchain y compila libghostty).
+The app ends up in `build/Build/Products/Release/Smalti.app`. What you build on your Mac carries no download mark, so there is no first-open warning. It's the same app as the DMG: it checks for updates on smalti.sh and offers the official version when a new one comes out (turn it off with ⌘K → "Turn Off Automatic Updates"). You need Xcode 27 and Homebrew (`scripts/bootstrap` installs Zig and the Metal Toolchain and builds libghostty).
 
-## Primera apertura
+## First open
 
-Smalti no lleva firma de desarrollador de Apple (está firmada *ad hoc*) ni está **notarizada** (eso cuesta 99 USD al año y Smalti es gratis); sus actualizaciones sí van firmadas con la clave EdDSA de Smalti. La primera vez que la abras, macOS dirá que no pudo verificarla. Tienes dos formas de abrirla; las dos son de una sola vez.
+Smalti has no Apple developer signature (it's signed *ad hoc*) and isn't **notarized** (that costs USD 99 a year and Smalti is free); its updates are signed with Smalti's EdDSA key. The first time you open it, macOS says it couldn't verify it. There are two ways to open it; both are one-time.
 
-**Desde los ajustes de macOS**
+**From macOS's settings**
 
-1. Abre Smalti. macOS dice «No se abrió “Smalti.app”» porque no pudo verificarla; pulsa **«Listo»** (en español de España, «Aceptar»).
+1. Open Smalti. macOS says "“Smalti.app” Not Opened" because it couldn't verify it; click **Done**.
+2. Open **System Settings → Privacy & Security**, scroll down to "Security" and, next to "“Smalti” was blocked to protect your Mac.", click **Open Anyway**.
+3. macOS may ask once more: click **Open Anyway** again and authenticate with your password or Touch ID.
 
-   ![Aviso de macOS 27 al abrir Smalti por primera vez](docs/specs/F7.6-assets/first-open-warning.png)
-
-2. Abre **Configuración del Sistema → Privacidad y seguridad** (en España, **Ajustes del Sistema**), baja hasta «Seguridad» y, junto a «Se bloqueó Smalti para proteger tu Mac.», pulsa **«Abrir de todos modos»** (en España, **«Abrir igualmente»**).
-3. macOS puede pedir una confirmación más: vuelve a pulsar «Abrir de todos modos» («Abrir igualmente») y autentícate con tu contraseña o Touch ID.
-
-**Desde la terminal**
+**From the terminal**
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Smalti.app
 ```
 
-## Actualizaciones
+## First launch
 
-Smalti busca una versión nueva una vez al día (y cuando eliges «Buscar actualizaciones…» en el menú Smalti o en ⌘K) y te pregunta antes de instalarla. Cada versión va firmada con la clave EdDSA de Smalti: una descarga que no lleve esa firma se rechaza. Las actualizaciones no vuelven a mostrar el aviso de primera apertura.
+On a fresh install Smalti opens a short welcome card: ⌘K and the key shortcuts, the Claude Code and Neovim integrations (space installs each one) and the theme (←→). ↩ starts, esc skips; reopen it any time from ⌘K → "Welcome to Smalti" or the help (⌘?).
 
-Esa comprobación es **lo único que sale de tu Mac**: Smalti no envía datos de uso ni del sistema. Puedes apagarla con ⌘K → «Desactivar actualizaciones automáticas».
+- **Claude Code:** the integration is a Claude Code plugin with hooks that tell Smalti what each agent does.
+- **Neovim:** claudecode.nvim is installed as one file, `lua/plugins/smalti-claudecode.lua`, in configs that use lazy.nvim and import `plugins` (NvChad, the LazyVim starter, or your own). Other setups: see https://smalti.sh/docs/integrations.
+- **Keyboard:** ⌥ acts as Meta only on the U.S. layouts by default (`[keyboard] option_as_meta = "auto"`); set `"always"`, `"left"`, `"right"` or `"never"` in `~/.config/smalti/config.toml`. Shortcuts never use ⌥ without ⌘ or ⌃.
+- **Shell:** prompt integration, suggestions and history are for zsh.
 
-Limitaciones de no estar notarizada:
+## Updates
 
-- La primera apertura necesita «Abrir de todos modos» («Abrir igualmente» en España) o `xattr`.
-- Si concedes a Smalti permisos de privacidad (Accesibilidad, Automatización, carpetas protegidas), macOS puede volver a pedirlos tras una actualización, porque cada versión tiene una firma distinta.
-- Si abres Smalti sin moverla a Aplicaciones, no podrá actualizarse (te lo dirá).
+Smalti checks for a new version once a day (and when you choose "Check for Updates…" in the Smalti menu or ⌘K) and asks before installing it. Every version is signed with Smalti's EdDSA key: a download without that signature is rejected. Updates don't show the first-open warning again.
 
-## Desinstalar
+## Privacy
 
-Arrastra `Smalti.app` a la papelera. Su configuración y su estado viven en `~/.config/smalti` y `~/Library/Application Support/Smalti`; bórralos si quieres empezar de cero. Con Homebrew: `brew uninstall --cask smalti` (añade `--zap` para borrar también esas carpetas).
+That update check is **the only thing that leaves your Mac**: Smalti sends no usage or system data (`SUEnableSystemProfiling = NO`). Claude Code's telemetry is received on `127.0.0.1` and never leaves your Mac; Ollama is asked on `127.0.0.1`. Turn the update check off with ⌘K → "Turn Off Automatic Updates". Details: the "Privacy" section of the help (⌘?) and https://smalti.sh/privacy.
 
-## Contribuir
+Limitations of not being notarized:
 
-Smalti acepta issues, no pull requests: ver [CONTRIBUTING.md](CONTRIBUTING.md). Para reportar un fallo o una idea desde la app: ⌘K → «Reportar un problema o una idea…».
+- The first open needs "Open Anyway" or `xattr`.
+- If you grant Smalti privacy permissions (Accessibility, Automation, protected folders), macOS may ask again after an update, because each version has a different signature.
+- If you open Smalti without moving it to Applications, it can't update itself (it will tell you).
 
-## Apoyar
+## Uninstall
 
-Smalti es gratis. Si te ahorra tiempo, puedes apoyarlo en https://smalti.sh/es#apoyar.
+Drag `Smalti.app` to the Trash. Its configuration and state live in `~/.config/smalti` and `~/Library/Application Support/Smalti`; delete them to start from scratch. With Homebrew: `brew uninstall --cask smalti` (add `--zap` to delete those folders too).
 
-## Licencia
+## Contributing
 
-[MIT](LICENSE). Los componentes de terceros y sus licencias están en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), que también va dentro de la app.
+Smalti takes issues, not pull requests: see [CONTRIBUTING.md](CONTRIBUTING.md). To report a bug or an idea from the app: ⌘K → "Report a Problem or Idea…".
+
+## Support
+
+Smalti is free. If it saves you time, you can support it at https://smalti.sh/#support.
+
+## License
+
+[MIT](LICENSE). Third-party components and their licenses are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which also ships inside the app.

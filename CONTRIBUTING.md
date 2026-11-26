@@ -1,11 +1,11 @@
-# Contribuir a Smalti
+# Contributing to Smalti
 
-Gracias por querer ayudar. Smalti acepta **issues**, no pull requests.
+Thanks for wanting to help. Smalti takes **issues**, not pull requests.
 
-- **Fallos:** abre un issue con el formulario «Fallo», o desde la app con ⌘K → «Reportar un problema o una idea…», que rellena la versión por ti.
-- **Ideas y feedback:** formulario «Idea».
-- **Pull requests:** GitHub solo deja abrirlos a colaboradores. Si tienes un cambio en mente, descríbelo en un issue: Simón lo implementa.
+- **Bugs:** open an issue with the "Bug" form, or from the app with ⌘K → "Report a Problem or Idea…", which fills in the version for you.
+- **Ideas and feedback:** the "Idea" form.
+- **Pull requests:** GitHub only lets collaborators open them. If you have a change in mind, describe it in an issue: Simón implements it.
 
-¿Por qué? Smalti tiene un único autor para poder cambiar su licencia o su modelo en el futuro sin pedir permiso a nadie. Tu issue cuenta igual: es lo que decide qué se construye.
+Why? Smalti has a single author so its license or model can change in the future without asking anyone's permission. Your issue counts just as much: it's what decides what gets built.
 
-Antes de abrir un issue, mira la documentación en https://smalti.sh/docs y los issues existentes.
+Before opening an issue, check the documentation at https://smalti.sh/docs and the existing issues. Issues in English or Spanish are both welcome.

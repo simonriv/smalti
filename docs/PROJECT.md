@@ -267,7 +267,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
     - Cierre: cada extra se activa sin afectar el rendimiento base.
     - **F7.5 · Guardas para agentes.** Bloqueo de lectura de secretos y guardia de comandos destructivos con aprobación nativa (evaluación de `smalti-diferenciacion.md`, Simón, 2026-11-25).
     - **F7.6 · Distribución y actualizaciones.** Sin pagar el Apple Developer Program: firma ad hoc con primera apertura guiada, tap propio de Homebrew, Sparkle con firma EdDSA y appcast en el dominio de la web, DMG, pipeline de release. Notarización solo si las donaciones la cubren.
-    - **F7.7 · Primer uso e inglés.** Interfaz en inglés y español, primer arranque guiado, valores por defecto neutrales, privacidad explícita.
+    - **F7.7 · Primer uso e inglés.** Interfaz en inglés y español según el sistema (catálogo propio en el dominio y String Catalog en la app), bienvenida por teclado, valores por defecto neutrales (`option_as_meta`, cualquier config de lazy.nvim), privacidad explícita (spec F7.7).
 9. **F8 · Puertos y procesos.** Panel de puertos en uso con la opción de detenerlos y vista de procesos nativa (un htop más bonito), con atajo y en ⌘K (idea de Simón, 2026-11-23).
     - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
     - **F8.5 · Proyectos.** Layout del repo (`.smalti/layout.json`) que se abre con un atajo.

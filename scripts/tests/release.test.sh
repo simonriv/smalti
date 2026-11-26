@@ -44,7 +44,8 @@ cat > "$work/expected-item.xml" <<'X'
       <sparkle:version>706</sparkle:version>
       <sparkle:shortVersionString>0.7.6</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>https://smalti.sh/es/changelog#v0.7.6</sparkle:releaseNotesLink>
+      <sparkle:releaseNotesLink xml:lang="en">https://smalti.sh/changelog#v0.7.6</sparkle:releaseNotesLink>
+      <sparkle:releaseNotesLink xml:lang="es">https://smalti.sh/es/changelog#v0.7.6</sparkle:releaseNotesLink>
       <enclosure url="https://github.com/simonriv/smalti/releases/download/v0.7.6/Smalti.dmg" length="18432000" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJl" />
     </item>
 X

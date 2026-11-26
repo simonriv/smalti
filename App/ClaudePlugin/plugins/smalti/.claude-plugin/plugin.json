@@ -1,7 +1,7 @@
 {
   "name": "smalti",
   "version": "0.2.0",
-  "description": "Avisa a Smalti de lo que hace Claude Code en cada panel. Fuera de Smalti no hace nada.",
+  "description": "Tells Smalti what Claude Code does in each pane. Outside Smalti it does nothing.",
   "author": {
     "name": "Smalti"
   }
