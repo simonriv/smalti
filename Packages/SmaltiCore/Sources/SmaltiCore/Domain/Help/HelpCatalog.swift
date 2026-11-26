@@ -80,7 +80,8 @@ private struct Rows {
     var agents: [HelpEntry] {
         [
             CommandID.agentJump, .observatoryToggle, .observatoryPeriod, .observatoryFilter, .harnessSearch,
-            .editorOpenBeside, .editorOpenLastEdited, .claudeIntegrationInstall, .claudeIntegrationUninstall,
+            .timelineToggle, .timelineSearch, .timelineCopy, .timelineCopyCall, .editorOpenBeside,
+            .editorOpenLastEdited, .claudeIntegrationInstall, .claudeIntegrationUninstall,
             .guardApprove, .guardReject, .secretsProtect, .secretsUnprotect,
         ].map(titled)
     }

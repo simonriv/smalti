@@ -48,4 +48,23 @@ struct ToolSummaryTests {
     @Test func leadingBlankLinesAreSkipped() {
         #expect(ToolSummary.text(name: "Bash", input: ["command": "\n  \n  make test\nmore"], diff: nil) == "make test")
     }
+
+    // F9: Codex's tools and the subagent call.
+    @Test func codexShellToolsShowTheirCommand() {
+        #expect(ToolSummary.text(name: "exec_command", input: ["cmd": "ls -la", "a_flag": "1"], diff: nil) == "ls -la")
+        #expect(ToolSummary.text(name: "shell", input: ["command": "make", "a": "b"], diff: nil) == "make")
+    }
+
+    @Test func applyPatchShowsTheFirstFile() {
+        let patch = "*** Begin Patch\n*** Add File: test/webhooks/refund.test.ts\n+x\n*** Update File: b.ts\n"
+
+        #expect(ToolSummary.text(name: "apply_patch", input: ["input": patch], diff: nil) == "refund.test.ts")
+    }
+
+    @Test func agentShowsItsDescription() {
+        let input = ["description": "Contar archivos", "a_model": "haiku", "subagent_type": "general"]
+
+        #expect(ToolSummary.text(name: "Agent", input: input, diff: nil) == "Contar archivos")
+        #expect(ToolSummary.text(name: "Task", input: input, diff: nil) == "Contar archivos")
+    }
 }

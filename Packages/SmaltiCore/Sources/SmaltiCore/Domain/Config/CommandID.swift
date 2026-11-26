@@ -71,6 +71,14 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let processes: [CommandID] = [
         processesToggle, portsToggle, processesStop, processesLowerPriority, processesTree, processesSort,
     ]
+    // F9: the timeline. ⇧⌘C copies the call only inside it; ⌘F and ⌘C reach it through the terminal's own keys.
+    public static let timelineToggle = CommandID(rawValue: "timeline.toggle")
+    public static let timelineSearch = CommandID(rawValue: "timeline.search")
+    public static let timelineCopy = CommandID(rawValue: "timeline.copy")
+    public static let timelineCopyCall = CommandID(rawValue: "timeline.copyCall")
+    /// F9: what acts only while the timeline is open.
+    public static let timelineContextual: Set<CommandID> = [timelineCopyCall]
+    public static let timeline: [CommandID] = [timelineToggle, timelineSearch, timelineCopy, timelineCopyCall]
     /// F8.5: ⌘O, the recent projects; and writing the repo's `.smalti/layout.json`.
     public static let projectRecent = CommandID(rawValue: "project.recent")
     public static let projectSave = CommandID(rawValue: "project.save")
@@ -233,6 +241,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         + appearance
         + [previewQuickLook, updatesCheck, updatesAutomatic, helpDocs, appSupport, helpWelcome, helpPrivacy]
         + processes
+        + timeline
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }

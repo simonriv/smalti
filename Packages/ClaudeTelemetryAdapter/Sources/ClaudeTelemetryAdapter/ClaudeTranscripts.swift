@@ -1,4 +1,5 @@
 import Foundation
+import JSONLReader
 import SmaltiCore
 
 /// `AgentTranscripts` over Claude Code's `projects/` directory, read incrementally. Each call reads only the bytes
@@ -184,7 +185,7 @@ public actor ClaudeTranscripts: AgentTranscripts {
     private func read(_ file: DiskFile, from offset: UInt64) -> ReadFile {
         var records: [TranscriptRecord] = []
         var derivedFrom: [String] = []
-        let outcome = TranscriptLineReader.read(file.url, from: offset) { line in
+        let outcome = JSONLLineReader.read(file.url, from: offset) { line, _ in
             // JSONSerialization autoreleases what it builds, and an actor's executor drains no pool between lines:
             // without one per line, a first read of 30 days keeps every parsed line alive until it ends.
             autoreleasepool {

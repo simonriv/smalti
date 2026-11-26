@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Records real sessions of one harness for F6's fixtures (spec F6, "Fixtures reales").
 #
-#   scripts/harnesses/record-fixtures.sh <claude|codex|antigravity|opencode>
+#   scripts/harnesses/record-fixtures.sh <claude|codex|antigravity|opencode|codex-timeline>
 #
 # Everything runs under the fixed paths the tests use, /private/tmp/smalti-fx/<harness>/{home,work-a,work-b}:
 # harnesses keep paths inside protobuf blobs, so the fixture keeps them instead of rewriting them. Two sessions are
@@ -12,9 +12,10 @@
 #   started on 127.0.0.1:11435 and stopped at the end.
 # - antigravity needs a login: put a logged-in home in recording.local/antigravity/login-home first (see the spec).
 # - claude reuses F3's real transcripts (paid recordings are not repeated), moved to the fixed paths.
+# - codex-timeline (F9) records one Codex session of two turns that runs shell tools, one of them failing, in work-a.
 set -euo pipefail
 
-harness=${1:?usage: record-fixtures.sh <claude|codex|antigravity|opencode>}
+harness=${1:?usage: record-fixtures.sh <claude|codex|antigravity|opencode|codex-timeline>}
 here=${0:A:h}
 repo=${here:h:h}
 root=/private/tmp/smalti-fx/$harness
@@ -25,6 +26,7 @@ ollama_pid=""
 
 case $harness in
   codex) fixture=$repo/Packages/CodexHarnessAdapter/Tests/CodexHarnessAdapterTests/Fixtures/codex ;;
+  codex-timeline) fixture=$repo/Packages/CodexHarnessAdapter/Tests/CodexHarnessAdapterTests/Fixtures/codex-timeline ;;
   antigravity) fixture=$repo/Packages/AntigravityHarnessAdapter/Tests/AntigravityHarnessAdapterTests/Fixtures/antigravity ;;
   opencode) fixture=$repo/Packages/OpenCodeHarnessAdapter/Tests/OpenCodeHarnessAdapterTests/Fixtures/opencode ;;
   claude) fixture=$repo/Packages/ClaudeHarnessAdapter/Tests/ClaudeHarnessAdapterTests/Fixtures/claude ;;
@@ -60,6 +62,16 @@ clean_env() {
 }
 
 record_codex() {
+  codex_config
+  local i=1
+  for work in $root/work-a $root/work-b; do
+    (cd $work && clean_env CODEX_HOME=$root/home/codex perl -e 'alarm 300; exec @ARGV' \
+      codex exec -m qwen3:4b --skip-git-repo-check "${prompts[$i]}" >/dev/null)
+    i=$((i + 1))
+  done
+}
+
+codex_config() {
   local url=$(ollama_url)
   mkdir -p $root/home/codex
   # `ollama` is built in (127.0.0.1:11434) and cannot be redefined; another port needs a provider of its own.
@@ -73,12 +85,17 @@ record_codex() {
     [[ -f $root/home/codex/providers.toml ]] && cat $root/home/codex/providers.toml || true
   } >$root/home/codex/config.toml
   rm -f $root/home/codex/providers.toml
-  local i=1
-  for work in $root/work-a $root/work-b; do
-    (cd $work && clean_env CODEX_HOME=$root/home/codex perl -e 'alarm 300; exec @ARGV' \
-      codex exec -m qwen3:4b --skip-git-repo-check "${prompts[$i]}" >/dev/null)
-    i=$((i + 1))
-  done
+}
+
+# F9: two turns of one session (exec, then exec resume) with tool calls, one of which fails.
+record_codex-timeline() {
+  codex_config
+  printf 'uno\n' >$root/work-a/uno.txt
+  printf 'dos\n' >$root/work-a/dos.txt
+  (cd $root/work-a && clean_env CODEX_HOME=$root/home/codex perl -e 'alarm 300; exec @ARGV' \
+    codex exec -m qwen3:4b --skip-git-repo-check "Run the shell command: ls" >/dev/null)
+  (cd $root/work-a && clean_env CODEX_HOME=$root/home/codex perl -e 'alarm 300; exec @ARGV' \
+    codex exec resume --last -m qwen3:4b --skip-git-repo-check "Run the shell command: cat missing.txt" >/dev/null)
 }
 
 record_opencode() {
@@ -135,7 +152,7 @@ ditto $root/home $local_dir/home
 python3 -I $here/sanitize_fixture.py $root/home $fixture/home --markers $markers
 python3 -I $here/fixture_expectations.py $harness $root/home >$fixture/expected.json
 case $harness in
-  codex) codex --version ;;
+  codex | codex-timeline) codex --version ;;
   antigravity) agy --version ;;
   opencode) opencode --version ;;
   claude) echo "transcripts 2.1.330 (F3)" ;;

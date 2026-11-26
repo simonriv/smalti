@@ -272,6 +272,7 @@ F4 Input ──▶ F5 Apariencia ──▶ F6 Multi-harness ──▶ F7 Extras 
     - Cierre: la lista de puertos coincide con `lsof` y detener nunca toca procesos ajenos.
     - **F8.5 · Proyectos.** Layout del repo (`.smalti/layout.json`) que se abre con un atajo.
 10. **F9 · Timeline de la sesión.** Turnos y herramientas de cada agente, con búsqueda y copia de salidas antiguas.
+    - Cierre: cada turno y salida de herramienta de los fixtures reales se copia íntegra (byte a byte contra un oráculo), la búsqueda salta a sesiones cerradas del proyecto y nada lee ni vigila con el panel cerrado (spec F9).
 11. **F10 · Revisión con Neovim.** Comentarios en el diff que vuelven al agente como prompt.
 12. **F11 · Baúl de secretos.** Secretos en el Keychain, inyectados al lanzar y enmascarados en lo que Smalti guarda.
 

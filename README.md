@@ -1,11 +1,56 @@
-# Smalti
+<p align="center">
+  <a href="https://smalti.sh"><img src="https://smalti.sh/brand/smalti-app-icon-512.png" alt="Smalti" width="96"></a>
+</p>
 
-A native macOS terminal built for working with several AI agents at once: automatic tiling, each agent's state in view, resuming Claude Code, Codex, Antigravity and OpenCode sessions, a usage observatory, a ports and processes view you can stop things from safely, and guards for destructive commands. Swift + AppKit on [libghostty](https://github.com/ghostty-org/ghostty).
+<h1 align="center">Smalti</h1>
 
-- Website: https://smalti.sh
-- Documentation: https://smalti.sh/docs (en español: https://smalti.sh/es/docs)
+<p align="center">
+  <strong>A native macOS terminal for working with several AI agents at once.</strong><br>
+  Tiling, each agent's state at a glance, sessions you can resume and a timeline of everything they did.
+</p>
+
+<p align="center">
+  <a href="https://github.com/simonriv/smalti/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/simonriv/smalti?label=release&color=7aa2f7"></a>
+  <img alt="macOS 27+ on Apple silicon" src="https://img.shields.io/badge/macOS-27%2B%20·%20Apple%20silicon-1f2335">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-9ece6a"></a>
+  <a href="https://smalti.sh/es"><img alt="English and Spanish" src="https://img.shields.io/badge/interface-English%20·%20Español-bb9af7"></a>
+</p>
+
+<p align="center">
+  <a href="https://smalti.sh">Website</a> · <a href="https://smalti.sh/docs">Docs</a> · <a href="https://smalti.sh/es/docs">Documentación en español</a> · <a href="#install">Install</a>
+</p>
+
+![Smalti with the session timeline open beside two panes](docs/assets/readme/timeline-session-en.png)
+
+## Why Smalti
+
+Coding agents are great at working in parallel and terrible at telling you what they did. Smalti is a terminal built around that: you see which agent works, which one waits for you and which one failed, and you can get back every turn even after it scrolled away. It is native (Swift + AppKit on [libghostty](https://github.com/ghostty-org/ghostty)), keyboard-first (every action has a shortcut and lives in ⌘K, no fixed buttons) and quiet: nothing runs or watches the disk unless you open it.
+
+## What it does
+
+| | |
+| --- | --- |
+| **Tiling and agent state.** Dwindle, columns or master + stack; every pane shows its agent working (green), waiting for you (amber) or failed (red). ⌘J jumps to the one waiting. | **Session timeline (⇧⌘T).** Every turn of Claude Code and Codex, tools folded with their status, searchable across the project and copyable whole. |
+| **Resume sessions.** Claude Code, Codex, Antigravity and OpenCode come back where they were when you reopen Smalti, with ⇧⌘O to search them all. | **Observatory (⇧⌘A).** Tokens, cost estimate, context and activity per session, local models and your Mac's CPU, GPU and memory. |
+| **Ports and processes (⇧⌘U, ⇧⌘M).** What listens and what runs, which pane started it, and stopping it safely (SIGTERM first, confirmation before SIGKILL). | **Guards for agents.** Destructive commands against production and reads of secrets pause for your approval in a native card. |
+| **Projects (⌘O).** A repo's layout lives in `.smalti/layout.json` and opens with its panes and commands, after you approve them. | **Yours to tweak.** Themes, a prompt studio, Neovim beside the agent, shareable layouts, English and Spanish. |
+
+<table>
+  <tr>
+    <td><img src="docs/assets/readme/timeline-search-en.png" alt="Searching every session of the project"></td>
+    <td><img src="docs/assets/readme/processes-en.png" alt="The processes view"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/readme/projects-palette-en.png" alt="Opening a project from ⌘K"></td>
+    <td><img src="docs/assets/readme/welcome-en.png" alt="The welcome card"></td>
+  </tr>
+</table>
+
+## At a glance
+
 - Free and open source (MIT). macOS 27 or later, on Apple silicon only.
 - The interface is in English or Spanish, following your Mac's language (System Settings → General → Language & Region, also per app).
+- It only goes online to check for updates on smalti.sh and download them from GitHub: no accounts, no telemetry sent anywhere.
 
 ## Install
 

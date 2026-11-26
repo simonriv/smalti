@@ -58,6 +58,8 @@ final class AppComposition {
     private var historyPalette: HistoryPaletteController?
     private var transcripts: ClaudeTranscripts?
     private var harnesses = HarnessRegistry([])
+    /// F9: the transcripts the timeline reads (Claude Code and Codex), from the homes `LaunchSettings` resolved.
+    private var timelineSources = TranscriptSources(sessions: [], projects: [])
     /// F6: claudecode.nvim is installed right now (`--ide` for the Claude sessions Smalti relaunches).
     private var connectsEditor: () -> Bool = { false }
     private var captures: HarnessCaptures?
@@ -161,6 +163,13 @@ final class AppComposition {
         ])
     }
 
+    /// F9: only Claude Code and Codex leave transcripts the timeline reads (spec F9: Antigravity and OpenCode wait).
+    private static func transcriptSources(_ settings: LaunchSettings) -> TranscriptSources {
+        let claude = ClaudeTimeline(projectsRoot: settings.claudeHome.appending(path: "projects"))
+        let codex = CodexTimeline(home: settings.codexHome)
+        return TranscriptSources(sessions: [claude, codex], projects: [claude, codex])
+    }
+
     /// Owner-only (0700), also when it already existed: it holds scrollback and the IPC socket. A failure is logged;
     /// saving reports it later.
     private static func createStateDirectory(_ directory: URL) {
@@ -204,6 +213,7 @@ final class AppComposition {
             files: PaneFileLocator(stateDirectory: state),
             ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket), telemetry: startTelemetry(startup))
         harnesses = Self.harnessRegistry(startup.settings)
+        timelineSources = Self.transcriptSources(startup.settings)
         layoutSharing = LayoutSharing(
             layouts: archive, files: SharedLayoutFiles(), harnesses: harnesses,
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
@@ -859,7 +869,42 @@ final class AppComposition {
             secureInputRequested: { [weak self] isOn, pane in self?.secureInputRequested(isOn, in: pane) },
             imageFiles: ImageIOImageFiles(),
             lastCommand: { [weak self] pane in await self?.input?.lastCommand(in: pane) },
-            processes: processesServices(engine))
+            processes: processesServices(engine),
+            timeline: timelineServices())
+    }
+
+    /// F9: each window gets its own timeline use cases; they read only while its timeline is open.
+    private func timelineServices() -> TimelineServices {
+        let sources = timelineSources
+        let policy = VerbatimText()
+        return TimelineServices(
+            make: {
+                TimelineController.Dependencies(
+                    show: ShowTimeline(sources: sources),
+                    copy: CopyTimelineItem(sources: sources, policy: policy, texts: .current),
+                    search: SearchTranscripts(sources: sources, policy: policy), policy: policy)
+            },
+            readable: sources.readable,
+            projectRoot: { [weak self] workspace, directory in
+                self?.projects?.root(of: workspace, focusedDirectory: directory) ?? directory
+            },
+            livePanes: { [weak self] in
+                guard let set = self?.windowSet() else { return [:] }
+                let names = PaneNames.of(set, texts: .current)
+                return Dictionary(
+                    set.allPanes.compactMap { pane in
+                        (pane.agent?.sessionID ?? pane.harnessBinding?.sessionID).flatMap { id in
+                            names[pane.id].map { (id, $0) }
+                        }
+                    }, uniquingKeysWith: { first, _ in first })
+            },
+            liveStates: { [weak self] in
+                guard let panes = self?.windowSet()?.allPanes else { return [:] }
+                return Dictionary(
+                    panes.compactMap { pane in pane.agent.map { ($0.sessionID, $0.state.kind) } },
+                    uniquingKeysWith: { first, _ in first })
+            },
+            paneNames: { [weak self] in self?.windowSet().map { PaneNames.of($0, texts: .current) } ?? [:] })
     }
 
     /// F8: the processes and ports views read and act through these adapters only while a view is open; each window
