@@ -442,6 +442,26 @@ final class DesignCaptureTests: SmaltiUITestCase {
         try save(app.windows.firstMatch.screenshot(), as: "f6-edited-files.png")
     }
 
+    /// F7.7: the welcome card in both languages, over the window (for the web) and alone (next to Paleta.dc.html).
+    func testCaptureF77Welcome() throws {
+        for language in ["en", "es"] {
+            let fresh = XCUIApplication.isolatedSmalti(language: language, welcome: true)
+            fresh.useFakeClaude(installed: false)
+            self.app = fresh
+            fresh.launch()
+            let card = fresh.element("smalti.welcome")
+            XCTAssertTrue(card.waitForExistence(timeout: 10))
+            let ready = XCTNSPredicateExpectation(
+                predicate: NSPredicate { _, _ in
+                    (fresh.element("smalti.welcome.claude").value as? String ?? "").contains(":")
+                }, object: nil)
+            _ = XCTWaiter().wait(for: [ready], timeout: 10)
+            try save(fresh.windows.firstMatch.screenshot(), as: "f77-welcome-window-\(language).png")
+            try save(card.screenshot(), as: "f77-welcome-\(language).png")
+            fresh.terminate()
+        }
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

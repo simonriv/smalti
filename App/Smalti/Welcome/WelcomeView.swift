@@ -103,16 +103,22 @@ final class WelcomeView: NSView {
         return stack
     }
 
-    /// Two columns of `⌘K  Paleta de comandos`, in the order of `WelcomeContent`.
+    /// Two columns of `⌘K  Paleta de comandos`, in the order of `WelcomeContent`. The keys of a column share the
+    /// widest one's width, so every name in it starts at the same place.
     private func shortcuts(keymap: Keymap) -> NSView {
         let tokens = theme.welcome
-        let cells = WelcomeContent.shortcuts(keymap: keymap, texts: texts).map { shortcut -> NSView in
-            let name = label(shortcut.label, (tokens.rowFontSize, 400, theme.text.primary))
-            let pair = NSStackView(views: [KbdView(shortcut.keys, theme: theme), name])
+        let shortcuts = WelcomeContent.shortcuts(keymap: keymap, texts: texts)
+        let half = (shortcuts.count + 1) / 2
+        let keys = shortcuts.map { KbdView($0.keys, theme: theme) }
+        let cells = zip(shortcuts, keys).map { shortcut, key -> NSView in
+            let pair = NSStackView(views: [key, label(shortcut.label, (tokens.rowFontSize, 400, theme.text.primary))])
             pair.spacing = tokens.shortcutGap
             return pair
         }
-        let half = (cells.count + 1) / 2
+        for column in [keys[..<half], keys[half...]] {
+            let widest = column.map(\.fittingSize.width).max() ?? 0
+            column.forEach { $0.widthAnchor.constraint(equalToConstant: widest).isActive = true }
+        }
         let rows = (0..<half).map { index in
             [cells[index], cells.indices.contains(index + half) ? cells[index + half] : NSView()]
         }
