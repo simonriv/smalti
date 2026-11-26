@@ -7,9 +7,9 @@ public struct TimelineItemID: Hashable, Sendable, RawRepresentable {
         self.rawValue = rawValue
     }
 
-    static func tool(_ id: String) -> TimelineItemID { TimelineItemID(rawValue: "tool:\(id)") }
-    static func agent(_ id: String) -> TimelineItemID { TimelineItemID(rawValue: "agent:\(id)") }
-    static func at(_ location: TextLocation) -> TimelineItemID { TimelineItemID(rawValue: location.key) }
+    public static func tool(_ id: String) -> TimelineItemID { TimelineItemID(rawValue: "tool:\(id)") }
+    public static func agent(_ id: String) -> TimelineItemID { TimelineItemID(rawValue: "agent:\(id)") }
+    public static func at(_ location: TextLocation) -> TimelineItemID { TimelineItemID(rawValue: location.key) }
 }
 
 /// A prompt or a reply with its time.

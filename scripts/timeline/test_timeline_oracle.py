@@ -49,7 +49,7 @@ class ClaudeTests(unittest.TestCase):
         self.assertEqual(kinds(items), [
             ("prompt", "user"), ("image", "user"), ("call", "Read"), ("output", "Read"), ("image", "Read"),
             ("reply", "agent"), ("compaction", "system"), ("prompt", "user"), ("call", "Bash"), ("output", "Bash")])
-        self.assertEqual(items[0]["text"], '¿Qué ves en la captura?\nLínea dos con "comillas" y \\barra')
+        self.assertEqual(items[0]["text"], '¿Qué ves en la captura?\nLínea dos con "comillas" y \\barra\nSegundo bloque')
         self.assertEqual(items[1]["text"], "image/png")
         self.assertEqual(items[2]["text"], '{"file_path":"/fixture/work/s/shot.png","limit":5}')
         self.assertEqual(items[3]["text"], "Imagen leída")
