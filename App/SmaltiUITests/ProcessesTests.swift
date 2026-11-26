@@ -51,16 +51,22 @@ final class ProcessesTests: SmaltiUITestCase {
         XCTAssertEqual(app.element("smalti.processes.filter").value as? String, "zsh")
     }
 
-    /// Review 2 (minor 5): opening the processes view from the menu closes the Observatory instead of stacking.
-    func testMenuOpensProcessesOverTheObservatoryWithoutStacking() {
+    /// Review 2 (minor 5): the menu follows the open overlay's keys, so with the Observatory open "Procesos" is
+    /// disabled and the two never stack; once it closes, the menu opens the processes view.
+    func testMenuNeverStacksProcessesOverTheObservatory() {
         app.typeKey("a", modifierFlags: [.command, .shift])
         XCTAssertTrue(app.element("smalti.observatory").waitForExistence(timeout: 5))
+        app.menuBars.menuBarItems["Ver"].click()
+        XCTAssertFalse(app.menuBars.menuItems["Procesos"].isEnabled)
+        app.typeKey(.escape, modifierFlags: [])
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.observatory").waitForNonExistence(timeout: 5))
 
         app.menuBars.menuBarItems["Ver"].click()
         app.menuBars.menuItems["Procesos"].click()
 
         XCTAssertTrue(app.element("smalti.processes").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.element("smalti.observatory").waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.element("smalti.observatory").exists)
     }
 
     func testFilterWithoutMatchSaysSo() {

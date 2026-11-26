@@ -182,6 +182,13 @@ Según `.claude/rules/`:
 
 ## Enmiendas
 
-Durante la ejecución, con su porqué:
+Durante la ejecución (2026-11-25/26), con su porqué:
 
-(ninguna todavía)
+1. **El refresco vive en el dominio.** `ProcessesRefresher` (SmaltiCore, `Application/`) arranca y para el muestreo; la app solo lo llama al abrir y cerrar. Así C4 («sin muestreo con la vista cerrada») tiene prueba de dominio (`ProcessesRefresherTests`) en lugar de depender de la app (revisión 2).
+2. **La confirmación la sabe el dominio.** `StopProcess.confirming` dice qué proceso espera que se confirme «Forzar» y `cancelConfirmations()` la desarma al cerrar la vista; `confirm` suelta el pedido antes de mandar SIGKILL, así que un segundo ↵ no manda otro (revisión 2).
+3. **El shell del panel es hijo de `login` en el mismo terminal.** Lo que `launchd` adoptó o lo que lanzó un `sudo` dentro del panel no cuenta como shell aunque comparta el terminal (revisión 1).
+4. **El tiempo de CPU ilegible es desconocido, no 0** (`ProcessRecord.cpuTime: UInt64?`), para que la muestra siguiente no parezca un pico (revisión 1).
+5. **La fila muestra el comando corto.** Nombre del programa y sus argumentos («Python server.py»), sin la ruta de `argv[0]`; el bloque del detalle conserva el comando completo. La nota de memoria escribe MB o GB.
+6. **Columna «Protocolo» de 104 pt** (la maqueta usaba 84): «PROTOCOLO» no cabía en español.
+7. **La lupa del filtro** es el símbolo `magnifyingglass` de la búsqueda de sesiones (F6), no un dibujo propio.
+8. **Valores de accesibilidad «selected», «on» y «off» en inglés.** Es la convención de toda la app (las UI tests la leen); localizarlos es un cambio transversal fuera de F8.
