@@ -47,6 +47,7 @@ struct ProjectPaletteCommandsTests {
             ])
         #expect(rows[0].id == .projectOpen(root: root))
         #expect(rows[0].icon == .projectFolder)
+        #expect(rows.allSatisfy { !$0.isCurrent }, "a project row never says «actual»")
         #expect(rows[4].shortcut?.display == "⌘O")
     }
 
