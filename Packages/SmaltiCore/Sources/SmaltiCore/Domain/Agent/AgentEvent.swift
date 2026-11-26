@@ -69,7 +69,7 @@ public enum AttentionReason: Equatable, Sendable {
     case turnFinished
     case failure(String)
     /// F7.5: a guarded command waits for the user's approval.
-    case approval(command: String, environment: String)
+    case approval(command: String, environment: EnvironmentKind)
 }
 
 public struct AgentTransition: Equatable, Sendable {

@@ -20,7 +20,7 @@ struct UnixSocketTelemetryTests {
 
     private func server() throws -> UnixSocketTelemetry {
         let now = self.now
-        return try UnixSocketTelemetry(socketFile: socketFile, clock: { now })
+        return try UnixSocketTelemetry(socketFile: socketFile, clock: { now }, texts: .spanish)
     }
 
     private func response(_ line: Data) async -> IPCResponse? {
@@ -127,7 +127,9 @@ struct UnixSocketTelemetryTests {
     @Test func pathLongerThanASocketAddressIsRefused() {
         let long = URL(filePath: "/tmp/" + String(repeating: "x", count: 120) + ".sock")
 
-        #expect(throws: IPCError.self) { _ = try UnixSocketTelemetry(socketFile: long, clock: { .now }) }
+        #expect(throws: IPCError.self) {
+            _ = try UnixSocketTelemetry(socketFile: long, clock: { .now }, texts: .spanish)
+        }
     }
 
     @Test func socketFileIs0600() throws {

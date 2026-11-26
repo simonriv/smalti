@@ -87,12 +87,12 @@ enum EventCommand {
     /// approval: secrets are denied, and what would need approval is denied asking to update the integration.
     static func preToolUseOutput(_ input: Data, environment: [String: String]) -> String {
         guard let screened = ScreenedToolUse(input: input, environment: environment) else {
-            return HookOutput.denial(GuardReasons.unreadableInput)
+            return HookOutput.denial(GuardTexts.spanish.unreadableInput /* T8 */)
         }
         switch screened.verdict {
         case .allow: return ""
         case .deny(let denial): return HookOutput.denial(denial.reason)
-        case .ask: return HookOutput.denial(GuardReasons.outdatedIntegration)
+        case .ask: return HookOutput.denial(GuardTexts.spanish.outdatedIntegration /* T8 */)
         }
     }
 

@@ -6,13 +6,13 @@ public enum LayoutShareError: Error, Equatable, Sendable {
     case archive(SessionArchiveError)
 
     /// The reason after "No se pudo exportar/importar el layout: ".
-    public var message: String {
+    public func message(_ texts: SessionTexts) -> String {
         switch self {
-        case .file(let error): error.message
-        case .archive(.notFound(let name)): "no hay ningún layout guardado como «\(name)»"
-        case .archive(.writeFailed(let file, let reason)): "no se pudo guardar \(file) (\(reason))"
+        case .file(let error): error.message(texts)
+        case .archive(.notFound(let name)): texts.notFound(["name": name])
+        case .archive(.writeFailed(let file, let reason)): texts.saveFailed(["file": file, "reason": reason])
         case .archive(.newerFormat(let file, let version)):
-            "\(file) lo guardó una versión más nueva de Smalti (formato \(version))"
+            texts.savedByNewer(["file": file, "version": String(version)])
         }
     }
 }
@@ -132,24 +132,25 @@ public struct ImportLayout {
 
 /// The import's words, as the spec writes them.
 public enum ImportTexts {
-    public static func confirmationTitle(_ name: LayoutName) -> String { "¿Importar el layout “\(name.rawValue)”?" }
+    public static func confirmationTitle(_ name: LayoutName, texts: SessionTexts) -> String {
+        texts.importTitle(["name": name.rawValue])
+    }
 
-    public static func confirmationBody(_ preview: ImportPreview) -> String {
+    public static func confirmationBody(_ preview: ImportPreview, texts: SessionTexts) -> String {
         let commands =
             preview.commands.isEmpty
-            ? "Al abrirlo solo abrirá shells." : "Al abrirlo ejecutará: " + preview.commands.joined(separator: " · ")
-        return ([commands] + preview.warnings.map(warning)).joined(separator: "\n")
+            ? texts.opensOnlyShells : texts.willRun(["commands": preview.commands.joined(separator: " · ")])
+        return ([commands] + preview.warnings.map { warning($0, texts: texts) }).joined(separator: "\n")
     }
 
-    public static func folderPrompt(_ name: LayoutName) -> String {
-        "Elige la carpeta de “\(name.rawValue)” en este Mac"
+    public static func folderPrompt(_ name: LayoutName, texts: SessionTexts) -> String {
+        texts.folderPrompt(["name": name.rawValue])
     }
 
-    private static func warning(_ warning: SharedLayoutWarning) -> String {
+    private static func warning(_ warning: SharedLayoutWarning, texts: SessionTexts) -> String {
         switch warning {
-        case .unknownHarness(let pane, let name):
-            "El panel \(pane) usa un harness desconocido (\(name)): se abrirá como shell."
-        case .unknownLayout(let layout): "Layout desconocido (\(layout)): se usará Dwindle."
+        case .unknownHarness(let pane, let name): texts.unknownHarness(["pane": String(pane), "name": name])
+        case .unknownLayout(let layout): texts.unknownLayout(["layout": layout])
         }
     }
 }

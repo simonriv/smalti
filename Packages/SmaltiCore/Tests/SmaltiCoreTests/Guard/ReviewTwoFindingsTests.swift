@@ -23,7 +23,8 @@ struct ReviewTwoFindingsTests {
         return GuardRequest(
             id: UUID(), pane: pane, use: use, environmentHosts: [],
             localVerdict: ScreenToolUse.verdict(
-                for: use, context: GuardContext(settings: .standard, environmentHosts: []), home: "/Users/u"),
+                for: use, context: GuardContext(settings: .standard, environmentHosts: [], texts: .spanish),
+                home: "/Users/u"),
             receivedAt: t0, reply: { log.record($0) })
     }
 
@@ -53,18 +54,22 @@ struct ReviewTwoFindingsTests {
 
     @Test func sameApprovalAtAnotherMinuteKeepsTheCommand() {
         let approval = pending()
-        let before = ApprovalCardContent(approval: approval, count: 1, workspace: "w", keys: .standard, now: t0)
+        let before = ApprovalCardContent(
+            approval: approval, count: 1, workspace: "w", keys: .standard, now: t0, texts: .spanish)
         let after = ApprovalCardContent(
-            approval: approval, count: 2, workspace: "w", keys: .standard, now: t0.addingTimeInterval(61))
+            approval: approval, count: 2, workspace: "w", keys: .standard, now: t0.addingTimeInterval(61),
+            texts: .spanish)
 
         #expect(after.showsSameCommand(as: before))
         #expect(
             !after.showsSameCommand(
-                as: ApprovalCardContent(approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0)))
+                as: ApprovalCardContent(
+                    approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0, texts: .spanish)))
     }
 
     @Test func footerNamesTheKeys() {
-        let content = ApprovalCardContent(approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0)
+        let content = ApprovalCardContent(
+            approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0, texts: .spanish)
 
         #expect(content.footer == "⇧⌘↩ aprobar   ⇧⌘⎋ rechazar   vence en 10 min")
         #expect(content.counter == "1 de 1")
@@ -74,14 +79,16 @@ struct ReviewTwoFindingsTests {
         let keys = try Keymap.standard.overriding([
             try KeyChord.parse("cmd+shift+enter"): nil, try KeyChord.parse("cmd+shift+escape"): nil,
         ])
-        let content = ApprovalCardContent(approval: pending(), count: 1, workspace: "w", keys: keys, now: t0)
+        let content = ApprovalCardContent(
+            approval: pending(), count: 1, workspace: "w", keys: keys, now: t0, texts: .spanish)
 
         #expect(content.footer == "⌘K aprobar   ⌘K rechazar   vence en 10 min")
     }
 
     @Test func expiryNeverSaysZero() {
         let content = ApprovalCardContent(
-            approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0.addingTimeInterval(599))
+            approval: pending(), count: 1, workspace: "w", keys: .standard, now: t0.addingTimeInterval(599),
+            texts: .spanish)
 
         #expect(content.footer.hasSuffix("vence en 1 min"))
     }
@@ -89,7 +96,7 @@ struct ReviewTwoFindingsTests {
     // MARK: - M1 and M2: the queue's answers
 
     @Test func expireReportsTheNextDeadlineEvenWhenNothingExpired() {
-        let approvals = AgentApprovals(home: "/Users/u")
+        let approvals = AgentApprovals(home: "/Users/u", texts: .spanish)
         approvals.receive(request("terraform destroy", log: ReplyLog()))
 
         let next = approvals.expire(now: t0.addingTimeInterval(-3_600))
@@ -98,7 +105,7 @@ struct ReviewTwoFindingsTests {
     }
 
     @Test func decidingAGoneApprovalSaysSo() {
-        let approvals = AgentApprovals(home: "/Users/u")
+        let approvals = AgentApprovals(home: "/Users/u", texts: .spanish)
         approvals.receive(request("terraform destroy", log: ReplyLog()))
         let id = approvals.allPending[0].id
 

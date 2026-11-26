@@ -64,9 +64,9 @@ struct ProtectProjectSecretsTests {
     @Test func errorsSayWhatFailed() {
         let error = ProjectPermissionsError.unreadable(path: "/p/.claude/settings.local.json", reason: "JSON inválido")
 
-        #expect(error.message == "No se pudo leer /p/.claude/settings.local.json: JSON inválido")
+        #expect(error.message(.spanish) == "No se pudo leer /p/.claude/settings.local.json: JSON inválido")
         #expect(
-            ProjectPermissionsError.unwritable(path: "/p/x", reason: "permiso denegado").message
+            ProjectPermissionsError.unwritable(path: "/p/x", reason: "permiso denegado").message(.spanish)
                 == "No se pudo escribir /p/x: permiso denegado")
     }
 }

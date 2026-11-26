@@ -48,51 +48,63 @@ public enum ResumeListing {
     /// Characters of a session id shown before "…".
     static let shortIDLength = 4
 
-    public static func windows(in snapshot: SessionSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry)
-        -> [ResumeWindow]
-    {
-        let isGrouped = snapshot.windows.count >= 2
-        return snapshot.windows.enumerated().map { index, window in
-            let count = window.workspaces.count
-            return ResumeWindow(
-                title: isGrouped ? "Ventana \(index + 1) · \(count) \(count == 1 ? "workspace" : "workspaces")" : nil,
-                workspaces: workspaces(window.workspaces, home: home, harnesses: harnesses))
+    /// What a listing needs besides the snapshot.
+    public struct Context: Sendable {
+        public let home: WorkingDirectory
+        public let harnesses: HarnessRegistry
+        public let texts: SessionTexts
+
+        public init(home: WorkingDirectory, harnesses: HarnessRegistry, texts: SessionTexts) {
+            self.home = home
+            self.harnesses = harnesses
+            self.texts = texts
         }
     }
 
-    private static func workspaces(
-        _ saved: [WorkspaceSnapshot], home: WorkingDirectory, harnesses: HarnessRegistry
-    ) -> [ResumeWorkspace] {
+    public static func windows(in snapshot: SessionSnapshot, context: Context) -> [ResumeWindow] {
+        let isGrouped = snapshot.windows.count >= 2
+        let texts = context.texts
+        return snapshot.windows.enumerated().map { index, window in
+            let title = texts.window([
+                "number": String(index + 1), "workspaces": texts.workspaces(window.workspaces.count),
+            ])
+            return ResumeWindow(
+                title: isGrouped ? title : nil, workspaces: workspaces(window.workspaces, context: context))
+        }
+    }
+
+    private static func workspaces(_ saved: [WorkspaceSnapshot], context: Context) -> [ResumeWorkspace] {
         saved.map { workspace in
             let layout = LayoutCatalog.standard.strategyOrDefault(for: LayoutID(rawValue: workspace.layout))
-            let count = workspace.panes.count
+            let name = context.texts.layoutNames[layout.id] ?? layout.id.rawValue
             return ResumeWorkspace(
-                name: workspace.name,
-                summary:
-                    "\(CommandTexts.spanish.layoutNames[layout.id] ?? layout.id.rawValue) · \(count) \(count == 1 ? "panel" : "paneles")",
+                name: workspace.name, summary: "\(name) · \(context.texts.panes(workspace.panes.count))",
                 status: AgentStateKind.mostUrgent(workspace.panes.compactMap(\.agent?.lastState)),
-                rows: workspace.panes.map { row(for: $0, home: home, harnesses: harnesses) })
+                rows: workspace.panes.map { row(for: $0, context: context) })
         }
     }
 
-    /// `1.240`: thousands grouped with a dot, as written in Spanish.
-    public static func grouped(_ value: Int) -> String {
+    /// `1.240` in Spanish, `1,240` in English: thousands grouped with the language's separator.
+    public static func grouped(_ value: Int, separator: String) -> String {
         let digits = Array(String(value))
         return digits.enumerated().reduce(into: "") { text, item in
-            if item.offset > 0, (digits.count - item.offset) % 3 == 0 { text.append(".") }
+            if item.offset > 0, (digits.count - item.offset) % 3 == 0 { text.append(separator) }
             text.append(item.element)
         }
     }
 
-    private static func row(for pane: PaneSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry) -> ResumeRow {
+    private static func row(for pane: PaneSnapshot, context: Context) -> ResumeRow {
         let directory =
-            (try? WorkingDirectory(path: pane.workingDirectory))?.abbreviated(home: home)
+            (try? WorkingDirectory(path: pane.workingDirectory))?.abbreviated(home: context.home)
             ?? pane.workingDirectory
-        if let agent = pane.agent { return row(for: agent, pane: pane, directory: directory, harnesses: harnesses) }
+        if let agent = pane.agent {
+            return row(for: agent, pane: pane, directory: directory, context: context)
+        }
         let tag = ResumeTag(text: pane.processName ?? "shell", kind: .program)
         if let editor = pane.editor {
             return ResumeRow(
-                id: pane.id, tag: tag, title: editor.fileName, detail: "línea \(editor.line)",
+                id: pane.id, tag: tag, title: editor.fileName,
+                detail: context.texts.editorLine(["line": String(editor.line)]),
                 code: "nvim +\(editor.line)", isFinished: false)
         }
         if let relaunch = pane.relaunch {
@@ -100,28 +112,25 @@ public enum ResumeListing {
                 id: pane.id, tag: tag, title: directory, detail: nil, code: relaunch.displayText, isFinished: false)
         }
         return ResumeRow(
-            id: pane.id, tag: tag, title: directory, detail: shellDetail(pane),
+            id: pane.id, tag: tag, title: directory, detail: shellDetail(pane, texts: context.texts),
             code: pane.scrollbackLines > 0 ? "scrollback" : nil, isFinished: false)
     }
 
     private static func row(
-        for agent: AgentSnapshot, pane: PaneSnapshot, directory: String, harnesses: HarnessRegistry
+        for agent: AgentSnapshot, pane: PaneSnapshot, directory: String, context: Context
     ) -> ResumeRow {
-        let adapter = harnesses.adapter(for: agent.harness)
+        let adapter = context.harnesses.adapter(for: agent.harness)
         let tag = ResumeTag(text: adapter?.displayName ?? agent.harness.rawValue, kind: .agent)
         let isFinished = agent.lastState == .stopped
         guard let sessionID = agent.sessionID else {
             return ResumeRow(
-                id: pane.id, tag: tag, title: agent.title ?? directory, detail: continueDetail,
+                id: pane.id, tag: tag, title: agent.title ?? directory, detail: context.texts.continueDetail,
                 code: adapter?.continueCommand(), isFinished: false)
         }
         return ResumeRow(
-            id: pane.id, tag: tag, title: agent.title ?? directory, detail: isFinished ? "terminada" : nil,
+            id: pane.id, tag: tag, title: agent.title ?? directory, detail: isFinished ? context.texts.finished : nil,
             code: adapter.map { shortResumeCommand(for: agent, id: sessionID, with: $0) }, isFinished: isFinished)
     }
-
-    /// F6: a harness pane without a captured id continues the directory's last session, which may be another one.
-    static let continueDetail = "la última del directorio"
 
     private static func shortResumeCommand(for agent: AgentSnapshot, id: String, with adapter: any HarnessAdapter)
         -> String
@@ -130,14 +139,12 @@ public enum ResumeListing {
         return id.count > shortIDLength ? command + "…" : command
     }
 
-    private static func shellDetail(_ pane: PaneSnapshot) -> String? {
+    /// F6: a harness pane without a captured id continues the directory's last session, which may be another one.
+    private static func shellDetail(_ pane: PaneSnapshot, texts: SessionTexts) -> String? {
+        let grouped = { (value: Int) in ["n": Self.grouped(value, separator: texts.thousandsSeparator)] }
         var parts: [String] = []
-        if pane.scrollbackLines > 0 {
-            parts.append("\(grouped(pane.scrollbackLines)) \(pane.scrollbackLines == 1 ? "línea" : "líneas")")
-        }
-        if pane.commandCount > 0 {
-            parts.append("\(grouped(pane.commandCount)) \(pane.commandCount == 1 ? "comando" : "comandos")")
-        }
+        if pane.scrollbackLines > 0 { parts.append(texts.lines(pane.scrollbackLines, grouped(pane.scrollbackLines))) }
+        if pane.commandCount > 0 { parts.append(texts.commands(pane.commandCount, grouped(pane.commandCount))) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }

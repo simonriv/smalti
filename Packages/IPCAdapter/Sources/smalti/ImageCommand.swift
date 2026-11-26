@@ -93,7 +93,8 @@ enum ImageArguments {
         }
         var seen = Set<String>()
         let unique = images.filter { seen.insert($0).inserted }
-        return ImageListing(source: given.joined(separator: " "), images: unique, skipped: skipped)
+        return ImageListing(
+            source: given.joined(separator: " "), images: unique, skipped: skipped, texts: .spanish /* T8 */)
     }
 
     /// The argument's files: a folder's visible entries that are not folders (a broken link included, so it counts

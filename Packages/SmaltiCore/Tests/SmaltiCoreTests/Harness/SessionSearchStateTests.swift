@@ -21,7 +21,10 @@ struct SessionSearchStateTests {
     }
 
     @Test func chipsHaveNoGemini() {
-        #expect(SessionSearchState.chips.map(\.title) == ["Todas", "Claude Code", "Codex", "Antigravity", "OpenCode"])
+        #expect(
+            SessionSearchState.chips(.spanish).map(\.title) == [
+                "Todas", "Claude Code", "Codex", "Antigravity", "OpenCode",
+            ])
     }
 
     @Test func chipAndTextMakeTheQuery() {
@@ -45,7 +48,7 @@ struct SessionSearchStateTests {
         state.listing = SessionListing(
             sessions: [session("a", .claude, detail: "212k tokens"), session("b", .antigravity)], failures: [:])
 
-        let rows = state.rows(now: now, calendar: utc)
+        let rows = state.rows(now: now, calendar: utc, texts: .spanish)
 
         #expect(rows.map(\.detail) == ["Claude Code · solen · 212k tokens", "Antigravity · solen"])
         #expect(rows.map(\.title) == ["T a", "T b"])
@@ -66,11 +69,11 @@ struct SessionSearchStateTests {
     @Test func emptyTexts() {
         var state = SessionSearchState()
         state.listing = SessionListing(sessions: [], failures: [:])
-        #expect(state.emptyText == "No hay sesiones de agentes en este Mac")
+        #expect(state.emptyText(.spanish) == "No hay sesiones de agentes en este Mac")
         state.text = "x"
-        #expect(state.emptyText == "Sin sesiones que coincidan")
+        #expect(state.emptyText(.spanish) == "Sin sesiones que coincidan")
         state.listing = SessionListing(sessions: [session("a", .codex)], failures: [:])
-        #expect(state.emptyText == nil)
+        #expect(state.emptyText(.spanish) == nil)
     }
 
     @Test func failuresAreListedAsMessages() {
@@ -78,7 +81,7 @@ struct SessionSearchStateTests {
         state.listing = SessionListing(
             sessions: [], failures: [.codex: .unknownSchema(harness: .codex, path: "/c", missing: "cwd")])
 
-        #expect(state.failureMessages == ["No se pudo leer Codex: esquema desconocido (falta cwd)"])
+        #expect(state.failureMessages(.spanish) == ["No se pudo leer Codex: esquema desconocido (falta cwd)"])
     }
     @Test func changingChipSelectsTheTop() {
         var state = SessionSearchState()
@@ -107,7 +110,7 @@ struct SessionSearchStateTests {
 
         state.listing = SessionListing(sessions: [], failures: [.codex: codex, .antigravity: agy])
 
-        #expect(state.failureMessages == [agy.message, codex.message])
+        #expect(state.failureMessages(.spanish) == [agy.message(.spanish), codex.message(.spanish)])
     }
 
     @Test func lateListingKeepsTheSelectedSession() {
@@ -154,12 +157,14 @@ struct RelativeDayTests {
 
     @Test func labelsByDistance() {
         let day = 86_400.0
-        #expect(RelativeDay.label(now.addingTimeInterval(-3600), now: now, calendar: utc) == "hoy")
-        #expect(RelativeDay.label(now.addingTimeInterval(-day), now: now, calendar: utc) == "ayer")
-        #expect(RelativeDay.label(now.addingTimeInterval(-6 * day), now: now, calendar: utc) == "jue")
-        #expect(RelativeDay.label(now.addingTimeInterval(-2 * day), now: now, calendar: utc) == "lun")
-        #expect(RelativeDay.label(now.addingTimeInterval(-7 * day), now: now, calendar: utc) == "18 nov")
-        #expect(RelativeDay.label(now.addingTimeInterval(-60 * day), now: now, calendar: utc) == "26 sep")
+        #expect(RelativeDay.label(now.addingTimeInterval(-3600), now: now, calendar: utc, texts: .spanish) == "hoy")
+        #expect(RelativeDay.label(now.addingTimeInterval(-day), now: now, calendar: utc, texts: .spanish) == "ayer")
+        #expect(RelativeDay.label(now.addingTimeInterval(-6 * day), now: now, calendar: utc, texts: .spanish) == "jue")
+        #expect(RelativeDay.label(now.addingTimeInterval(-2 * day), now: now, calendar: utc, texts: .spanish) == "lun")
+        #expect(
+            RelativeDay.label(now.addingTimeInterval(-7 * day), now: now, calendar: utc, texts: .spanish) == "18 nov")
+        #expect(
+            RelativeDay.label(now.addingTimeInterval(-60 * day), now: now, calendar: utc, texts: .spanish) == "26 sep")
     }
 }
 

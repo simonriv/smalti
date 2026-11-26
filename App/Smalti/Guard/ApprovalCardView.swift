@@ -115,7 +115,7 @@ final class ApprovalCardView: NSView {
         subject.attributedStringValue = subjectText(subjectOfCard)
         command.string = subjectOfCard.command
         command.setAccessibilityValue(subjectOfCard.command)
-        setAccessibilityLabel("\(subjectOfCard.summary): \(subjectOfCard.command)")
+        setAccessibilityLabel("\(subjectOfCard.summary(.spanish /* T9 */)): \(subjectOfCard.command)")
         needsLayout = true
     }
 
@@ -129,8 +129,9 @@ final class ApprovalCardView: NSView {
         bold[.foregroundColor] = tokens.emphasis.nsColor
         let text = NSMutableAttributedString(
             string: "\(subject.headline?.rule ?? "comando") contra ", attributes: regular)
-        text.append(NSAttributedString(string: subject.environment.label, attributes: bold))
-        let detail = [subject.environment.host, subject.environment.detail].compactMap { $0 }.joined(separator: " · ")
+        text.append(NSAttributedString(string: subject.environment.label(.spanish /* T9 */), attributes: bold))
+        let detail = [subject.environment.host, subject.environment.detail(.spanish /* T9 */)].compactMap { $0 }.joined(
+            separator: " · ")
         if !detail.isEmpty { text.append(NSAttributedString(string: " · \(detail)", attributes: regular)) }
         return text
     }

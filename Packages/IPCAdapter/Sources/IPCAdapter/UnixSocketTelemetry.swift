@@ -24,12 +24,15 @@ public final class UnixSocketTelemetry: TelemetrySource, GuardRequests {
     private let guards = AsyncStream<GuardRequest>.makeStream()
     private let cancelled = AsyncStream<UUID>.makeStream()
     private let waiters = GuardWaiters()
+    private let texts: GuardTexts
 
-    public init(socketFile: URL, clock: @escaping @Sendable () -> Date) throws(IPCError) {
+    /// `texts` words the denials the server answers itself (app closing, too many waiting, cancelled).
+    public init(socketFile: URL, clock: @escaping @Sendable () -> Date, texts: GuardTexts) throws(IPCError) {
         path = socketFile.path(percentEncoded: false)
+        self.texts = texts
         let delivery = Delivery(
             events: stream.continuation, guards: guards.continuation, cancelled: cancelled.continuation,
-            waiters: waiters, clock: clock)
+            waiters: waiters, clock: clock, texts: texts)
         listener = try SocketListener(path: path) { line, client in delivery.answer(line, client: client) }
     }
 
@@ -42,7 +45,7 @@ public final class UnixSocketTelemetry: TelemetrySource, GuardRequests {
     /// Stops listening, denies the guard connections still waiting and removes the socket file.
     public func stop() {
         listener.stop()
-        waiters.close(GuardReasons.unreachable)
+        waiters.close(texts.unreachable)
         stream.continuation.finish()
         guards.continuation.finish()
         cancelled.continuation.finish()
@@ -56,6 +59,7 @@ private struct Delivery: Sendable {
     let cancelled: AsyncStream<UUID>.Continuation
     let waiters: GuardWaiters
     let clock: @Sendable () -> Date
+    let texts: GuardTexts
 
     func answer(_ line: Data, client: Int32) -> IPCResponse {
         do {
@@ -84,19 +88,19 @@ private struct Delivery: Sendable {
         let now = clock()
         events.yield(try HookPayloadTranslator.guardEvent(request, at: now))
         guard let waiter = waiters.add() else {
-            return response(.deny(waiters.isClosed ? GuardReasons.unreachable : GuardReasons.tooManyPending))
+            return response(.deny(waiters.isClosed ? texts.unreachable : texts.tooManyPending))
         }
         defer { waiters.remove(waiter) }
         let guarded = try HookPayloadTranslator.guardRequest(request, at: now) { waiter.resolve($0) }
         // Review 1: a server stopping right now finished the stream; nobody would ever answer.
-        if case .terminated = guards.yield(guarded) { waiter.resolve(.deny(GuardReasons.unreachable)) }
+        if case .terminated = guards.yield(guarded) { waiter.resolve(.deny(texts.unreachable)) }
         let decision = waiter.wait(seconds: UnixSocketTelemetry.guardWaitSeconds) { Self.hasHungUp(client) }
         if decision == nil, Self.hasHungUp(client) {
             // Final review (I2): the hook was cancelled; the app withdraws the request and its card.
             cancelled.yield(guarded.id)
-            return response(.deny(GuardReasons.cancelled))
+            return response(.deny(texts.cancelled))
         }
-        return response(decision ?? .deny(GuardReasons.unreachable))
+        return response(decision ?? .deny(texts.unreachable))
     }
 
     /// The CLI never half-closes: end of stream on its connection means it is gone (Claude cancelled the hook).

@@ -1,5 +1,5 @@
 /// F7.7: the status bar, pane headers, the workspace strip, notifications and the resume screen's "when".
-public struct StatusTexts: Sendable {
+public struct StatusTexts: Sendable, Equatable {
     public let panes: PluralText
     /// The layout's short name at the end of the status line.
     public let layoutNames: [LayoutID: String]
@@ -19,6 +19,7 @@ public struct StatusTexts: Sendable {
     public let closedOn: TextTemplate
     /// Sunday first, as `Calendar` numbers weekdays.
     public let weekdays: [String]
+    public let guards: GuardTexts
 
     public static let spanish = StatusTexts(
         panes: PluralText(one: "{count} panel", other: "{count} paneles"),
@@ -29,7 +30,8 @@ public struct StatusTexts: Sendable {
         turnFinished: "terminó y te espera", failure: "error: {message}",
         approval: "Aprobación: `{command}` contra {environment}", closedToday: "hoy a las {time}",
         closedLastNight: "anoche a las {time}", closedYesterday: "ayer a las {time}",
-        closedOn: "el {weekday} {day} a las {time}", weekdays: ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"])
+        closedOn: "el {weekday} {day} a las {time}", weekdays: ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
+        guards: .spanish)
 
     public static let english = StatusTexts(
         panes: PluralText(one: "{count} pane", other: "{count} panes"),
@@ -40,5 +42,6 @@ public struct StatusTexts: Sendable {
         turnFinished: "finished and is waiting for you", failure: "error: {message}",
         approval: "Approval: `{command}` against {environment}", closedToday: "today at {time}",
         closedLastNight: "last night at {time}", closedYesterday: "yesterday at {time}",
-        closedOn: "on {weekday} {day} at {time}", weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
+        closedOn: "on {weekday} {day} at {time}", weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        guards: .english)
 }

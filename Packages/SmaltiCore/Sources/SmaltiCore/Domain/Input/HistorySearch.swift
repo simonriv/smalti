@@ -34,14 +34,14 @@ public enum HistorySearch {
     }
 
     /// "hace N min" under an hour (at least 1), "hace N h" under a day, then "ayer" or "hace N días" by calendar day.
-    public static func ago(_ date: Date, now: Date, calendar: Calendar) -> String {
+    public static func ago(_ date: Date, now: Date, calendar: Calendar, texts: SessionTexts) -> String {
         let elapsed = now.timeIntervalSince(date)
-        if elapsed < 3_600 { return "hace \(max(Int(elapsed / 60), 1)) min" }
-        if elapsed < 86_400 { return "hace \(Int(elapsed / 3_600)) h" }
+        if elapsed < 3_600 { return texts.historyMinutes(["n": String(max(Int(elapsed / 60), 1))]) }
+        if elapsed < 86_400 { return texts.historyHours(["n": String(Int(elapsed / 3_600))]) }
         let days =
             calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now))
             .day ?? 0
-        return days <= 1 ? "ayer" : "hace \(days) días"
+        return days <= 1 ? texts.yesterday : texts.historyDays(["n": String(days)])
     }
 
     private static func directory(of scope: HistoryScope) -> String? {

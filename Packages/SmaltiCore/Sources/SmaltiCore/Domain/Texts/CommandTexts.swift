@@ -1,6 +1,6 @@
 /// F7.7: the palette's words. `titles` are shared with the menus and the help (F4.5); `paletteTitles` are the
 /// palette's own wording for commands the menus name differently.
-public struct CommandTexts: Sendable {
+public struct CommandTexts: Sendable, Equatable {
     public let titles: [CommandID: String]
     public let paletteTitles: [CommandID: String]
     public let groups: [CommandGroup: String]
@@ -30,6 +30,7 @@ public struct CommandTexts: Sendable {
     public let editedFileSubtitle: TextTemplate
     public let integrations: IntegrationTexts
     public let time: TimeTexts
+    public let guards: GuardTexts
 
     public static let spanish = CommandTexts(
         titles: [
@@ -82,7 +83,7 @@ public struct CommandTexts: Sendable {
         exportLayout: "Exportar layout “{name}”…", approve: "Aprobar “{quote}” en {workspace}",
         reject: "Rechazar “{quote}” en {workspace}", protectSecrets: "Proteger secretos en “{name}”",
         unprotectSecrets: "Quitar protección de secretos en “{name}”", editedFileSubtitle: "línea {line} · {elapsed}",
-        integrations: .spanish, time: .spanish)
+        integrations: .spanish, time: .spanish, guards: .spanish)
 
     public static let english = CommandTexts(
         titles: [
@@ -131,5 +132,5 @@ public struct CommandTexts: Sendable {
         exportLayout: "Export Layout “{name}”…", approve: "Approve “{quote}” in {workspace}",
         reject: "Reject “{quote}” in {workspace}", protectSecrets: "Protect Secrets in “{name}”",
         unprotectSecrets: "Remove Secret Protection in “{name}”", editedFileSubtitle: "line {line} · {elapsed}",
-        integrations: .english, time: .english)
+        integrations: .english, time: .english, guards: .english)
 }

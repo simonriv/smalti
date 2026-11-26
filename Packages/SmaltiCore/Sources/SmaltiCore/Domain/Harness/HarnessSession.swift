@@ -8,8 +8,10 @@ public struct HarnessSession: Equatable, Sendable {
     public let title: String
     public let createdAt: Date
     public let updatedAt: Date
-    /// What the row adds after the project: tokens, model or provider, when the harness keeps them.
+    /// What the row adds after the project: model or provider, when the harness keeps them.
     public let detail: String?
+    /// F7.7: the tokens the harness counted, written by the search in the interface's language.
+    public var tokens: Int?
 
     public init(
         harness: HarnessID, id: String, directory: String, title: String, createdAt: Date, updatedAt: Date,
@@ -44,16 +46,16 @@ public enum HarnessError: Error, Equatable, Sendable {
     }
 
     /// Secondary text in the search ("No se pudo leer Codex: esquema desconocido (falta cwd)").
-    public var message: String {
-        "No se pudo leer \(harness.displayName): \(reason)"
+    public func message(_ texts: SessionTexts) -> String {
+        texts.readFailed(["harness": harness.displayName, "reason": reason(texts)])
     }
 
-    private var reason: String {
+    private func reason(_ texts: SessionTexts) -> String {
         switch self {
-        case .storeMissing(_, let path): "no existe \(path)"
+        case .storeMissing(_, let path): texts.storeMissing(["path": path])
         case .unreadable(_, _, let reason): reason
-        case .unknownSchema(_, _, let missing): "esquema desconocido (falta \(missing))"
-        case .timedOut: "tardó demasiado"
+        case .unknownSchema(_, _, let missing): texts.unknownSchema(["missing": missing])
+        case .timedOut: texts.timedOut
         }
     }
 }

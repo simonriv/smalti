@@ -47,9 +47,12 @@ public final class AgentApprovals {
     private var queue: [(approval: PendingApproval, reply: @Sendable (GuardDecision) -> Void)] = []
     private var lastKeyDecision: [PaneID: Date] = [:]
 
-    public init(home: String, timeout: TimeInterval = standardTimeout) {
+    private let texts: GuardTexts
+
+    public init(home: String, timeout: TimeInterval = standardTimeout, texts: GuardTexts) {
         self.home = home
         self.timeout = timeout
+        self.texts = texts
     }
 
     public var allPending: [PendingApproval] { queue.map(\.approval) }
@@ -63,8 +66,10 @@ public final class AgentApprovals {
 
     public func receive(_ request: GuardRequest) {
         if case .deny(let denial) = request.localVerdict { return blockedLocally(request, denial) }
-        if request.isTruncated { return enqueue(request, ScreenToolUse.truncatedSubject(request.use.command)) }
-        let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts)
+        if request.isTruncated {
+            return enqueue(request, ScreenToolUse.truncatedSubject(request.use.command, texts: texts))
+        }
+        let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts, texts: texts)
         switch ScreenToolUse.verdict(for: request.use, context: context, home: home) {
         case .allow: request.reply(.allow)
         case .deny(let denial): request.reply(.deny(denial.reason))
@@ -74,7 +79,7 @@ public final class AgentApprovals {
 
     private func blockedLocally(_ request: GuardRequest, _ denial: GuardDenial) {
         request.reply(.deny(denial.reason))
-        let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts)
+        let context = GuardContext(settings: settings, environmentHosts: request.environmentHosts, texts: texts)
         guard case .deny(let local) = ScreenToolUse.verdict(for: request.use, context: context, home: home),
             case .secret(let path) = local.kind
         else { return }
@@ -82,7 +87,7 @@ public final class AgentApprovals {
     }
 
     private func enqueue(_ request: GuardRequest, _ subject: ApprovalSubject) {
-        guard queue.count < Self.maximumPending else { return request.reply(.deny(GuardReasons.tooManyPending)) }
+        guard queue.count < Self.maximumPending else { return request.reply(.deny(texts.tooManyPending)) }
         let approval = PendingApproval(
             id: request.id, pane: request.pane, subject: subject, since: request.receivedAt,
             deadline: request.receivedAt.addingTimeInterval(timeout))
@@ -92,7 +97,7 @@ public final class AgentApprovals {
 
     /// Final review: the hook was cancelled (Claude stopped waiting): its card goes away, nobody is answered.
     public func cancel(_ id: UUID) {
-        settle(id, with: .deny(GuardReasons.cancelled), approved: false)
+        settle(id, with: .deny(texts.cancelled), approved: false)
     }
 
     /// How long after a key decided one command the next key press is ignored: the card has just changed to another
@@ -140,33 +145,34 @@ public final class AgentApprovals {
     @discardableResult
     public func reject(_ id: UUID) -> Bool {
         guard let subject = queue.first(where: { $0.approval.id == id })?.approval.subject else { return false }
-        return settle(id, with: .deny(GuardReasons.rejected(subject)), approved: false)
+        return settle(id, with: .deny(GuardReasons.rejected(subject, texts: texts)), approved: false)
     }
 
     @discardableResult
     public func expire(now: Date) -> Date? {
         let minutes = max(1, Int((timeout / 60).rounded(.up)))
         for entry in queue where entry.approval.deadline <= now {
-            settle(entry.approval.id, with: .deny(GuardReasons.expired(minutes: minutes)), approved: false)
+            settle(
+                entry.approval.id, with: .deny(GuardReasons.expired(minutes: minutes, texts: texts)), approved: false)
         }
         // Review 2: the caller reschedules from this, even when nothing expired (a clock set back).
         return nextDeadline
     }
 
     public func paneClosed(_ pane: PaneID) {
-        for approval in pending(in: pane) { settle(approval.id, with: .deny(GuardReasons.paneClosed), approved: false) }
+        for approval in pending(in: pane) { settle(approval.id, with: .deny(texts.paneClosed), approved: false) }
     }
 
     /// The panes every window still has: requests of any other pane are denied (closed pane or window).
     public func retain(_ panes: Set<PaneID>) {
         for approval in allPending where !panes.contains(approval.pane) {
-            settle(approval.id, with: .deny(GuardReasons.paneClosed), approved: false)
+            settle(approval.id, with: .deny(texts.paneClosed), approved: false)
         }
     }
 
     /// The app is quitting: nobody will answer.
     public func stop() {
-        for approval in allPending { settle(approval.id, with: .deny(GuardReasons.unreachable), approved: false) }
+        for approval in allPending { settle(approval.id, with: .deny(texts.unreachable), approved: false) }
     }
 
     @discardableResult
@@ -210,7 +216,7 @@ public struct HandleApprovalChange {
             let pane = workspace.panes.first(where: { $0.id == approval.pane })
         else { return }
         let reason = AttentionReason.approval(
-            command: approval.subject.shortCommand, environment: approval.subject.environment.label)
+            command: approval.subject.shortCommand, environment: approval.subject.environment.kind)
         notifier.notify(.make(reason, at: (workspace.name, pane.workingDirectory, pane.id), texts: texts))
     }
 

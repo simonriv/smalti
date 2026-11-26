@@ -8,11 +8,11 @@ public struct SearchProgress: Equatable, Sendable {
     public init() {}
 
     /// "2 de 3", "– de 3" until a match is selected, "Sin resultados", or nothing before the first count.
-    public var text: String {
+    public func text(_ texts: TerminalTexts) -> String {
         guard let totalMatches else { return "" }
-        guard totalMatches > 0 else { return "Sin resultados" }
-        guard let selectedMatch else { return "– de \(totalMatches)" }
-        return "\(selectedMatch + 1) de \(totalMatches)"
+        guard totalMatches > 0 else { return texts.noResults }
+        guard let selectedMatch else { return texts.unselectedMatch(["total": String(totalMatches)]) }
+        return texts.selectedMatch(["index": String(selectedMatch + 1), "total": String(totalMatches)])
     }
 
     /// A new total; `selectsFirstMatch` says whether to go to the first match now.

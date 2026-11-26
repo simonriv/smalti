@@ -35,7 +35,9 @@ struct ScreenedToolUse {
         environmentHosts = Self.databaseVariables.compactMap { environment[$0].flatMap(DatabaseURL.host(of:)) }
         let home = environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
         verdict = ScreenToolUse.verdict(
-            for: use, context: GuardContext(settings: .standard, environmentHosts: environmentHosts), home: home)
+            for: use,
+            context: GuardContext(settings: .standard, environmentHosts: environmentHosts, texts: .spanish /* T8 */),
+            home: home)
     }
 
     var verdictName: String {
@@ -80,7 +82,7 @@ enum GuardCommand {
     static func run(_ invocation: Invocation, transport: any GuardTransport, deadline: Duration) -> String {
         // Review 1: a PreToolUse input Smalti cannot read is refused, not let through.
         guard let screened = ScreenedToolUse(input: invocation.input(), environment: invocation.environment) else {
-            return HookOutput.denial(GuardReasons.unreadableInput)
+            return HookOutput.denial(GuardTexts.spanish.unreadableInput /* T8 */)
         }
         let answer = ask(screened, invocation.environment, transport: transport, deadline: deadline)
         return output(local: screened.verdict, app: answer)
@@ -109,10 +111,10 @@ enum GuardCommand {
     private static func output(local: GuardVerdict, app: IPCDecisionAnswer?) -> String {
         switch (local, app?.decision) {
         case (.deny(let denial), _): HookOutput.denial(denial.reason)
-        case (_, .deny?): HookOutput.denial(app?.reason ?? GuardReasons.unreachable)
+        case (_, .deny?): HookOutput.denial(app?.reason ?? GuardTexts.spanish.unreachable /* T8 */)
         case (_, .allow?): ""
         case (.allow, nil): ""
-        case (.ask, nil): HookOutput.denial(GuardReasons.unreachable)
+        case (.ask, nil): HookOutput.denial(GuardTexts.spanish.unreachable /* T8 */)
         }
     }
 

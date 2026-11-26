@@ -1,5 +1,5 @@
 /// F7.7: the words of Smalti's integrations in ⌘K, the help and the status bar.
-public struct IntegrationTexts: Sendable {
+public struct IntegrationTexts: Sendable, Equatable {
     public let install: [IntegrationID: String]
     public let uninstall: [IntegrationID: String]
     /// F7.5: reinstalls an integration older than this Smalti's.

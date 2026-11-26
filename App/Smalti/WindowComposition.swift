@@ -237,7 +237,10 @@ final class WindowComposition {
         }
         let listing = RestoreController.Content(
             snapshot: snapshot,
-            windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
+            windows: ResumeListing.windows(
+                in: snapshot,
+                context: ResumeListing.Context(
+                    home: controller.home, harnesses: services.harnesses, texts: .spanish /* T9 */)),
             closedAt: ClosedAtPhrase.text(
                 closedAt: snapshot.savedAt, now: .now, calendar: .current, texts: .spanish /* T9 */))
         let screen = RestoreController(

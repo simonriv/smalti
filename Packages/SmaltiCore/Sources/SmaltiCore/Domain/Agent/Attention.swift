@@ -68,7 +68,7 @@ public struct AttentionNotice: Equatable, Sendable {
         case .turnFinished: texts.turnFinished
         case .failure(let message): texts.failure(["message": message])
         case .approval(let command, let environment):
-            texts.approval(["command": command, "environment": environment])
+            texts.approval(["command": command, "environment": texts.guards.environments[environment] ?? ""])
         }
     }
 }

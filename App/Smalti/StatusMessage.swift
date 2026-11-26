@@ -152,7 +152,8 @@ struct StatusMessage: Equatable {
 
     /// F7.6: the session on disk is from a newer Smalti; this one leaves it alone (shown once, at launch).
     static func newerSession(_ version: Int) -> StatusMessage {
-        StatusMessage(text: SaveOutcome.keptNewer(version: version).message ?? "", isTransient: false)
+        StatusMessage(
+            text: SaveOutcome.keptNewer(version: version).message(.spanish /* T9 */) ?? "", isTransient: false)
     }
 
     static func restoreFailures(first: String, count: Int) -> StatusMessage {

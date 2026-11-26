@@ -46,7 +46,7 @@ struct ObserveAgentsTests {
         _ = await observe.snapshot(panes: [], now: now)
         _ = await observe.snapshot(panes: [], now: now)
 
-        #expect(observe.usageFailures == [HarnessError.storeMissing(harness: .opencode, path: "/x").message])
+        #expect(observe.usageFailures == [HarnessError.storeMissing(harness: .opencode, path: "/x").message(.english)])
     }
 
     @Test func snapshotAsksForThirtyDays() async {

@@ -88,22 +88,25 @@ struct ImageGridTests {
 
     @Test func summaryCountsSkipped() {
         #expect(
-            ImageGrid.layout(images(12), skipped: 3, in: wide).summary == "12 imágenes · 3 omitidas (no son imagen)")
+            ImageGrid.layout(images(12), skipped: 3, in: wide).summary(.spanish)
+                == "12 imágenes · 3 omitidas (no son imagen)")
     }
 
     @Test func summaryOmitsSkippedWhenZero() {
-        #expect(ImageGrid.layout(images(4), skipped: 0, in: wide).summary == "4 imágenes")
+        #expect(ImageGrid.layout(images(4), skipped: 0, in: wide).summary(.spanish) == "4 imágenes")
     }
 
     @Test func summaryIsSingular() {
-        #expect(ImageGrid.layout(images(1), skipped: 1, in: wide).summary == "1 imagen · 1 omitida (no es imagen)")
+        #expect(
+            ImageGrid.layout(images(1), skipped: 1, in: wide).summary(.spanish) == "1 imagen · 1 omitida (no es imagen)"
+        )
     }
 
     @Test func overLimitAddsMore() {
         let grid = ImageGrid.layout(images(123), skipped: 0, in: wide)
 
         #expect(grid.rows.flatMap(\.cells).count == 100)
-        #expect(grid.summary == "100 imágenes · … y 23 más (máximo 100)")
+        #expect(grid.summary(.spanish) == "100 imágenes · … y 23 más (máximo 100)")
     }
 
     @Test func limitKeepsTheFirstInNaturalOrder() {

@@ -19,8 +19,8 @@ struct ApprovalStateTests {
     @Test func awaitingApprovalWaitsAndAsksForAttention() {
         let transition = session().awaitingApproval(subject, at: t0)
 
-        #expect(transition.session.state == .waiting(since: t0, reason: .approval("supabase db push contra PROD")))
-        #expect(transition.attention == .approval(command: "supabase db push", environment: "PROD"))
+        #expect(transition.session.state == .waiting(since: t0, reason: .approval(subject)))
+        #expect(transition.attention == .approval(command: "supabase db push", environment: .production))
     }
 
     @Test func settledApprovalWorksAgain() {
@@ -37,7 +37,7 @@ struct ApprovalStateTests {
 
     @Test func noticeNamesCommandAndEnvironment() {
         let notice = AttentionNotice.make(
-            .approval(command: "supabase db push", environment: "PROD"),
+            .approval(command: "supabase db push", environment: .production),
             at: ("rizaria", SessionFixtures.directory("/p/web"), PaneID()), texts: .spanish)
 
         #expect(notice.title == "rizaria/web")
@@ -45,7 +45,7 @@ struct ApprovalStateTests {
     }
 
     @Test func approvalAlwaysNotifies() {
-        #expect(AttentionPolicy.shouldNotify(.approval(command: "x", environment: "PROD"), paneIsVisible: true))
+        #expect(AttentionPolicy.shouldNotify(.approval(command: "x", environment: .production), paneIsVisible: true))
     }
 
     @Test func headerSaysItWaitsForApproval() throws {

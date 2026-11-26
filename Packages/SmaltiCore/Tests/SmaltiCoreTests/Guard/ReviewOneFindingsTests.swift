@@ -8,7 +8,7 @@ struct ReviewOneFindingsTests {
     private func verdict(_ command: String, cwd: String = "/p", settings: GuardSettings = .standard) -> GuardVerdict {
         ScreenToolUse.verdict(
             for: ToolUse(tool: "Bash", command: command, cwd: cwd),
-            context: GuardContext(settings: settings, environmentHosts: []), home: "/Users/u")
+            context: GuardContext(settings: settings, environmentHosts: [], texts: .spanish), home: "/Users/u")
     }
 
     // MARK: - I2 heredocs
@@ -119,7 +119,7 @@ struct ReviewOneFindingsTests {
         var text = "ls"
         for _ in 0..<6 { text = "bash -c '\(text.replacing("'", with: #"'\''"#))'" }
 
-        #expect(verdict(text).subject?.findings.map(\.rule) == [ScreenToolUse.nestedRule])
+        #expect(verdict(text).subject?.findings.map(\.rule) == [GuardTexts.spanish.nested])
     }
 
     @Test func deepSubstitutionAsks() {

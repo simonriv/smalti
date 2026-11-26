@@ -1,5 +1,5 @@
 /// F7.7: the help view's words (⌘?). Rows without their own title here take the palette's shared one.
-public struct HelpTexts: Sendable {
+public struct HelpTexts: Sendable, Equatable {
     /// The keys of a command without a chord.
     public let inPalette: String
     public let sections: [HelpSectionID: String]

@@ -21,24 +21,26 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     case invalidTree
     case invalidRoot(String)
 
-    public var message: String {
+    public func message(_ texts: SharedLayoutErrorTexts) -> String {
         switch self {
-        case .unsupportedFormat(let format): "formato \(format) no compatible con esta versión de Smalti"
-        case .newerFormat(let format):
-            "lo exportó una versión más nueva de Smalti (formato \(format)); actualiza Smalti para importarlo"
-        case .invalidName(let name, let reason): "el nombre «\(name)» no es válido (\(reason))"
-        case .paneCount(0): "no tiene paneles"
-        case .paneCount(let count): "tiene \(count) paneles; el máximo es \(SharedLayout.maximumPanes)"
-        case .treeMismatch(let leaves, let panes): "su árbol tiene \(leaves) paneles y la lista \(panes)"
-        case .untypeableCommand(let pane): "el comando del panel \(pane) tiene caracteres de control"
-        case .emptyCommand(let pane): "el comando del panel \(pane) está vacío"
-        case .escapingDirectory(let pane, let path): "la ruta «\(path)» del panel \(pane) sale de la carpeta del layout"
-        case .tooLarge(let bytes): "pesa \(bytes) bytes; el máximo es \(SharedLayout.maximumBytes)"
-        case .notJSON(let reason): "no es un layout de Smalti (\(reason))"
-        case .ambiguousPane(let pane): "el panel \(pane) indica más de un programa que abrir"
-        case .invalidEditor(let pane): "el archivo o la línea del editor del panel \(pane) no son válidos"
-        case .invalidTree: "su árbol no coloca cada panel una sola vez"
-        case .invalidRoot(let root): "la carpeta «\(root)» no es una ruta absoluta ni empieza por ~"
+        case .unsupportedFormat(let format): texts.unsupportedFormat(["format": String(format)])
+        case .newerFormat(let format): texts.newerFormat(["format": String(format)])
+        case .invalidName(let name, let reason): texts.invalidName(["name": name, "reason": reason])
+        case .paneCount(0): texts.noPanes
+        case .paneCount(let count):
+            texts.tooManyPanes(["count": String(count), "maximum": String(SharedLayout.maximumPanes)])
+        case .treeMismatch(let leaves, let panes):
+            texts.treeMismatch(["leaves": String(leaves), "panes": String(panes)])
+        case .untypeableCommand(let pane): texts.untypeableCommand(["pane": String(pane)])
+        case .emptyCommand(let pane): texts.emptyCommand(["pane": String(pane)])
+        case .escapingDirectory(let pane, let path): texts.escapingDirectory(["pane": String(pane), "path": path])
+        case .tooLarge(let bytes):
+            texts.tooLarge(["bytes": String(bytes), "maximum": String(SharedLayout.maximumBytes)])
+        case .notJSON(let reason): texts.notJSON(["reason": reason])
+        case .ambiguousPane(let pane): texts.ambiguousPane(["pane": String(pane)])
+        case .invalidEditor(let pane): texts.invalidEditor(["pane": String(pane)])
+        case .invalidTree: texts.invalidTree
+        case .invalidRoot(let root): texts.invalidRoot(["root": root])
         }
     }
 }

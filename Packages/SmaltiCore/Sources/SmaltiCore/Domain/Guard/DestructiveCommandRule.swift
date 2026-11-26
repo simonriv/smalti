@@ -3,10 +3,13 @@
 public struct GuardContext: Sendable {
     public let settings: GuardSettings
     public let environmentHosts: [String]
+    /// F7.7: the language the rules name themselves in.
+    public let texts: GuardTexts
 
-    public init(settings: GuardSettings, environmentHosts: [String]) {
+    public init(settings: GuardSettings, environmentHosts: [String], texts: GuardTexts) {
         self.settings = settings
         self.environmentHosts = environmentHosts
+        self.texts = texts
     }
 }
 

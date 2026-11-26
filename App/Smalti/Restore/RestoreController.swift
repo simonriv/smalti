@@ -110,7 +110,7 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
     private func openSession(forking: Bool) {
         guard let plan = sessions.plan(forking: forking) else { return }
         if case .cannotFork(let harness) = plan {
-            notice = OpenHarnessSession.cannotForkMessage(harness)
+            notice = OpenHarnessSession.cannotForkMessage(harness, texts: .spanish /* T9 */)
             renderSessions()
             return
         }
@@ -160,7 +160,7 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
             } catch {
                 // The checkbox keeps showing the stored value, so the screen stays truthful.
                 Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "restore")
-                    .error("could not save the restore preference: \(error.summary, privacy: .public)")
+                    .error("could not save the restore preference: \(error.summary(.english), privacy: .public)")
             }
             render()
         }

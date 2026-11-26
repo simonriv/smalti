@@ -130,7 +130,9 @@ struct SaveSessionTests {
     @Test func archiveFailureIsReported() {
         archive.writeFailure = .writeFailed(file: "session.json", reason: "disk full")
 
-        #expect(save.saveStructure(of: set, at: SessionFixtures.savedAt) == .failed("session.json: disk full"))
+        #expect(
+            save.saveStructure(of: set, at: SessionFixtures.savedAt)
+                == .failed(.writeFailed(file: "session.json", reason: "disk full")))
     }
 
     @Test func loadStartsFreshWithoutSession() {
@@ -190,7 +192,7 @@ struct SaveSessionTests {
 
     @Test func newerSessionMessageNamesItsVersion() {
         #expect(
-            SaveOutcome.keptNewer(version: 3).message
+            SaveOutcome.keptNewer(version: 3).message(.spanish)
                 == "La sesión la guardó una versión más nueva de Smalti (formato 3): esta no la abre ni la sobrescribe")
     }
 }

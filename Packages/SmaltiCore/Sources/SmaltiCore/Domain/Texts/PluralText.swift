@@ -10,7 +10,11 @@ public struct PluralText: Sendable, Equatable {
 
     /// `{count}` is always filled; `values` fills the rest.
     public func callAsFunction(_ count: Int, _ values: KeyValuePairs<String, String> = [:]) -> String {
-        var lookup = Dictionary(values.map { ($0.key, $0.value) }, uniquingKeysWith: { first, _ in first })
+        self(count, Dictionary(values.map { ($0.key, $0.value) }, uniquingKeysWith: { first, _ in first }))
+    }
+
+    public func callAsFunction(_ count: Int, _ values: [String: String]) -> String {
+        var lookup = values
         lookup["count"] = String(count)
         return (count == 1 ? one : other).filled(lookup)
     }

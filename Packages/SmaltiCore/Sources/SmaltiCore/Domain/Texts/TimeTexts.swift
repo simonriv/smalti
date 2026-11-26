@@ -1,5 +1,5 @@
 /// F7.7: how long ago something happened, in the words of each language. The numbers are Smalti's own.
-public struct TimeTexts: Sendable {
+public struct TimeTexts: Sendable, Equatable {
     /// `ElapsedPhrase`: under a minute.
     public let now: String
     public let minutesAgo: TextTemplate

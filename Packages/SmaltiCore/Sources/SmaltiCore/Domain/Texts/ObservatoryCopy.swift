@@ -1,5 +1,5 @@
 /// F7.7: the observatory's words, as the board writes them in Spanish, and their English.
-public struct ObservatoryCopy: Sendable {
+public struct ObservatoryCopy: Sendable, Equatable {
     public let footnote: String
     public let footnoteWithTelemetry: String
     public let footnoteTelemetryElsewhere: String
@@ -79,7 +79,7 @@ public struct ObservatoryCopy: Sendable {
 }
 
 /// F7.7: the telemetry line of the session detail (spec F7).
-public struct TelemetryCopy: Sendable {
+public struct TelemetryCopy: Sendable, Equatable {
     public let title: String
     public let since: TextTemplate
     public let requests: PluralText

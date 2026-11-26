@@ -19,12 +19,13 @@ struct SQLClientRule: DestructiveCommandRule {
         else { return nil }
         let text = ([command.rawText] + command.heredocs).joined(separator: "\n")
         if let keyword = Self.keywords.first(where: { Self.containsWord($0, in: text) }) {
-            return finding("\(program) con \(keyword)", command, context)
+            return finding(context.texts.withKeyword(["program": program, "keyword": keyword]), command, context)
         }
         let inline = Self.inlineSQLOptions[program] ?? []
         let showsSQL = command.arguments.contains { Self.isOption($0, in: inline) }
         let readsFile = command.arguments.contains { Self.isOption($0, in: Self.fileOptions) }
-        return showsSQL && !readsFile ? nil : finding("\(program) sin SQL visible", command, context)
+        return showsSQL && !readsFile
+            ? nil : finding(context.texts.noVisibleSQL(["program": program]), command, context)
     }
 
     /// `-c`, `-cSQL`, `--command`, `--command=SQL`.
@@ -73,6 +74,6 @@ struct DatabaseURLRule: DestructiveCommandRule {
             HostEnvironment.classify(host: $0, settings: context.settings)
         }
         guard let worst = DetectedEnvironment.mostSevere(environments), worst.kind == .production else { return nil }
-        return GuardFinding(rule: "URL de base de datos", environment: worst)
+        return GuardFinding(rule: context.texts.databaseURL, environment: worst)
     }
 }

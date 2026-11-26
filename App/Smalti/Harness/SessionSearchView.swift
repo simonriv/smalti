@@ -77,18 +77,19 @@ final class SessionSearchView: NSView {
     static func chipIndex(forCommandDigit event: NSEvent) -> Int? {
         guard event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
             let digit = event.charactersIgnoringModifiers.flatMap(Int.init),
-            (1...SessionSearchState.chips.count) ~= digit
+            (1...SessionSearchState.chips(.spanish /* T9 */).count) ~= digit
         else { return nil }
         return digit - 1
     }
 
     func render(_ state: SessionSearchState, rows: [SessionSearchRow], notice: String? = nil) {
         chips.setViews(
-            SessionSearchState.chips.enumerated().map { index, chip in
+            SessionSearchState.chips(.spanish /* T9 */).enumerated().map { index, chip in
                 chipView(chip.title, index: index, isSelected: index == state.chipIndex)
             }, in: .leading)
         notes.setViews(
-            ([notice].compactMap { $0 } + state.failureMessages + [state.emptyText].compactMap { $0 }).map { note($0) },
+            ([notice].compactMap { $0 } + state.failureMessages(.spanish /* T9 */)
+                + [state.emptyText(.spanish /* T9 */)].compactMap { $0 }).map { note($0) },
             in: .leading)
         source.rows = rows
         source.selectedID = state.selected?.id

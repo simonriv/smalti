@@ -73,7 +73,7 @@ struct SessionCatalogTests {
     @Test func errorMessageNamesHarnessAndReason() {
         let error = HarnessError.unknownSchema(harness: .codex, path: "/c/state_5.sqlite", missing: "cwd")
 
-        #expect(error.message == "No se pudo leer Codex: esquema desconocido (falta cwd)")
+        #expect(error.message(.spanish) == "No se pudo leer Codex: esquema desconocido (falta cwd)")
     }
 }
 

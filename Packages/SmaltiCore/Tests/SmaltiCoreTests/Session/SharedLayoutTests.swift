@@ -174,7 +174,7 @@ struct SharedLayoutTests {
 
     @Test func newerFormatMessageSaysToUpdate() {
         #expect(
-            SharedLayoutError.newerFormat(2).message
+            SharedLayoutError.newerFormat(2).message(SessionTexts.spanish.layoutErrors)
                 == "lo exportó una versión más nueva de Smalti (formato 2); actualiza Smalti para importarlo")
     }
 
@@ -279,11 +279,13 @@ struct SharedLayoutTests {
             .escapingDirectory(pane: 1, path: "../x"), .tooLarge(bytes: 300_000), .notJSON(reason: "y"),
         ]
 
-        let messages = errors.map(\.message)
+        let messages = errors.map { $0.message(SessionTexts.spanish.layoutErrors) }
 
         #expect(Set(messages).count == errors.count)
-        #expect(SharedLayoutError.paneCount(10).message == "tiene 10 paneles; el máximo es 9")
-        #expect(SharedLayoutError.paneCount(0).message == "no tiene paneles")
+        #expect(
+            SharedLayoutError.paneCount(10).message(SessionTexts.spanish.layoutErrors)
+                == "tiene 10 paneles; el máximo es 9")
+        #expect(SharedLayoutError.paneCount(0).message(SessionTexts.spanish.layoutErrors) == "no tiene paneles")
     }
 
     @Test func decodingKeepsAnUnknownHarnessName() throws {

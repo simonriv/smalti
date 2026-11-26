@@ -107,7 +107,9 @@ struct ClaudeHarnessTests {
         let work = "/private/tmp/smalti-fx/claude/work-b"
         let decoy = projects.appending(path: "-elsewhere")
         try FileManager.default.createDirectory(at: decoy, withIntermediateDirectories: true)
-        let line = #"{"type":"user","cwd":"\#(work)","timestamp":"2026-11-26T00:00:00Z","message":{"content":"x"}}"#
+        // Written after the process started (a fixed date here expired on 2026-11-26).
+        let stamp = ISO8601DateFormatter().string(from: Date().addingTimeInterval(1))
+        let line = #"{"type":"user","cwd":"\#(work)","timestamp":"\#(stamp)","message":{"content":"x"}}"#
         try line.write(to: decoy.appending(path: "decoy-1.jsonl"), atomically: true, encoding: .utf8)
         let real = projects.appending(path: "-private-tmp-smalti-fx-claude-work-b/fresh-1.jsonl")
         try line.write(to: real, atomically: true, encoding: .utf8)

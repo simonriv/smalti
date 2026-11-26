@@ -1,5 +1,5 @@
 /// F7.7: the menu bar's words (F4.5). Items take `titles` first, then the palette's shared titles.
-public struct MenuTexts: Sendable {
+public struct MenuTexts: Sendable, Equatable {
     public let menus: [MenuID: String]
     public let titles: [CommandID: String]
     public let system: [SystemMenuAction: String]

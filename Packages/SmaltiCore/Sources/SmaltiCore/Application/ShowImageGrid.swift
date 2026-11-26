@@ -6,11 +6,14 @@ public struct ImageListing: Equatable, Sendable {
     public let source: String
     public let images: [String]
     public let skipped: Int
+    /// F7.7: the CLI's language.
+    public let texts: TerminalTexts
 
-    public init(source: String, images: [String], skipped: Int) {
+    public init(source: String, images: [String], skipped: Int, texts: TerminalTexts) {
         self.source = source
         self.images = images
         self.skipped = skipped
+        self.texts = texts
     }
 }
 
@@ -34,12 +37,12 @@ public enum ShowImageGrid {
             if let image = try? await files.describe(path) { images.append(image) }
         }
         guard !images.isEmpty else {
-            sink.write("Sin imágenes en \(TerminalText.sanitized(listing.source))\n")
+            sink.write(listing.texts.noImages(["source": TerminalText.sanitized(listing.source)]) + "\n")
             return
         }
         let skipped = listing.skipped + listing.images.count - images.count
         guard let metrics = sink.metrics else {
-            sink.write(GridText.list(ImageGrid.layout(images, skipped: skipped, in: listMetrics)))
+            sink.write(GridText.list(ImageGrid.layout(images, skipped: skipped, in: listMetrics), texts: listing.texts))
             return
         }
         let grid = ImageGrid.layout(images, skipped: skipped, in: metrics)
@@ -51,7 +54,8 @@ public enum ShowImageGrid {
         }
         let shown = grid.rows.flatMap(\.cells).count
         let hidden = images.count - shown
-        sink.write(Summary.text(shown: drawn, skipped: skipped + shown - drawn, hidden: hidden) + "\n")
+        sink.write(
+            Summary.text(shown: drawn, skipped: skipped + shown - drawn, hidden: hidden, texts: listing.texts) + "\n")
     }
 
     /// The row's cells whose thumbnail could be made, each with its PNG; the others are left out (and counted as
@@ -86,9 +90,9 @@ enum GridText {
         return text + secondary(cells, \.label) + secondary(cells, \.dimensions)
     }
 
-    static func list(_ grid: ImageGrid) -> String {
+    static func list(_ grid: ImageGrid, texts: TerminalTexts) -> String {
         let lines = grid.rows.flatMap(\.cells).map { "\(TerminalText.sanitized($0.image.name))  \($0.dimensions)" }
-        return (lines + [grid.summary]).joined(separator: "\n") + "\n"
+        return (lines + [grid.summary(texts)]).joined(separator: "\n") + "\n"
     }
 
     private static func secondary(_ cells: [GridCell], _ text: KeyPath<GridCell, String>) -> String {

@@ -73,7 +73,9 @@ public final class ObserveAgents {
             do {
                 rows += try await source.sessions(since: since)
             } catch {
-                if !usageFailures.contains(error.message) { usageFailures.append(error.message) }
+                // Only the log reads these; logs are in English whatever the interface's language.
+                let message = error.message(.english)
+                if !usageFailures.contains(message) { usageFailures.append(message) }
             }
         }
         return rows

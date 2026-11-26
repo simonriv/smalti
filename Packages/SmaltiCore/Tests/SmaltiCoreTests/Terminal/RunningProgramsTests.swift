@@ -19,14 +19,14 @@ struct RunningProgramsTests {
         let stale = pane(running: "sleep")
         engine.foregroundProcesses[stale.id] = ForegroundProcess(name: "zsh")
 
-        #expect(RunningPrograms(engine: engine).busy(in: [stale]).isEmpty)
+        #expect(RunningPrograms(engine: engine, texts: .spanish).busy(in: [stale]).isEmpty)
     }
 
     @Test func aProgramThatStartedWhileHiddenIsBusyWithItsCommandLine() {
         let stale = pane(running: nil)
         engine.foregroundProcesses[stale.id] = ForegroundProcess(name: "sleep", commandLine: ["sleep", "60"])
 
-        let busy = RunningPrograms(engine: engine).busy(in: [stale])
+        let busy = RunningPrograms(engine: engine, texts: .spanish).busy(in: [stale])
 
         #expect(busy == [BusyPane(pane: stale.id, command: "sleep 60")])
     }
@@ -34,7 +34,7 @@ struct RunningProgramsTests {
     @Test func aPaneTheEngineCannotReadKeepsWhatWasLastReported() {
         let known = pane(running: "vim")
 
-        #expect(RunningPrograms(engine: engine).busy(in: [known]).map(\.pane) == [known.id])
+        #expect(RunningPrograms(engine: engine, texts: .spanish).busy(in: [known]).map(\.pane) == [known.id])
     }
 
     @Test func everyWindowIsAskedAgain() throws {
@@ -43,7 +43,7 @@ struct RunningProgramsTests {
         engine.foregroundProcesses[hidden.id] = ForegroundProcess(name: "htop")
         let windows = WindowSet(first: try window(front)).opening(try window(hidden))
 
-        #expect(RunningPrograms(engine: engine).busy(in: windows).map(\.pane) == [hidden.id])
+        #expect(RunningPrograms(engine: engine, texts: .spanish).busy(in: windows).map(\.pane) == [hidden.id])
     }
 
     private func window(_ pane: Pane) throws -> WindowState {

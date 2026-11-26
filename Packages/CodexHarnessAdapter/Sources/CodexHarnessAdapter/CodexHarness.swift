@@ -52,17 +52,13 @@ public struct CodexHarness: HarnessAdapter {
         guard let id = row[text: 0], let directory = row[text: 1], let created = row[integer: 3],
             let updated = row[integer: 4]
         else { return nil }
-        return HarnessSession(
+        var session = HarnessSession(
             harness: harness, id: id, directory: directory, title: row[text: 2] ?? "",
             createdAt: Date(timeIntervalSince1970: TimeInterval(created)),
-            updatedAt: Date(timeIntervalSince1970: TimeInterval(updated)),
-            detail: Self.detail(provider: row[text: 5], tokens: row[integer: 6]))
-    }
-
-    /// "ollama · 4.439 tokens".
-    static func detail(provider: String?, tokens: Int64?) -> String? {
-        let parts = [provider, tokens.map { "\(ResumeListing.grouped(Int($0))) tokens" }].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+            updatedAt: Date(timeIntervalSince1970: TimeInterval(updated)), detail: row[text: 5])
+        // The search writes the count ("4.439 tokens") in the interface's language.
+        session.tokens = row[integer: 6].map { Int($0) }
+        return session
     }
 
     public func resumeCommand(sessionID: String) -> String {

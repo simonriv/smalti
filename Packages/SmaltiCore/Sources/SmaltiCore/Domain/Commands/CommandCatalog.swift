@@ -34,7 +34,9 @@ public enum CommandCatalog {
             command.count > approvalQuoteLength ? String(command.prefix(approvalQuoteLength)) + "…" : command
         // Final review: a quoted command is cut, so the subtitle carries it whole (redacted).
         let whole = command.count > approvalQuoteLength ? command : nil
-        let subtitle = [subject.summary, subject.environment.detail, whole].compactMap { $0 }.joined(separator: " · ")
+        let subtitle = [subject.summary(texts.guards), subject.environment.detail(texts.guards), whole].compactMap {
+            $0
+        }.joined(separator: " · ")
         return [
             (CommandID.guardApprove(id: entry.approval.id), texts.approve),
             (CommandID.guardReject(id: entry.approval.id), texts.reject),

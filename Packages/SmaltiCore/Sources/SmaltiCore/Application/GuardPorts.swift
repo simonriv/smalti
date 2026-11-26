@@ -47,10 +47,10 @@ public enum ProjectPermissionsError: Error, Equatable, Sendable {
     case unreadable(path: String, reason: String)
     case unwritable(path: String, reason: String)
 
-    public var message: String {
+    public func message(_ texts: GuardTexts) -> String {
         switch self {
-        case .unreadable(let path, let reason): "No se pudo leer \(path): \(reason)"
-        case .unwritable(let path, let reason): "No se pudo escribir \(path): \(reason)"
+        case .unreadable(let path, let reason): texts.unreadableFile(["path": path, "reason": reason])
+        case .unwritable(let path, let reason): texts.unwritableFile(["path": path, "reason": reason])
         }
     }
 }

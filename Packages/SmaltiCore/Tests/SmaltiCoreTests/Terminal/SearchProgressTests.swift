@@ -5,11 +5,11 @@ import Testing
 @Suite("SearchProgress")
 struct SearchProgressTests {
     @Test func nothingBeforeTheFirstCount() {
-        #expect(SearchProgress().text == "")
+        #expect(SearchProgress().text(.spanish) == "")
     }
 
     @Test func noMatchesSaySinResultados() {
-        #expect(SearchProgress().total(0).progress.text == "Sin resultados")
+        #expect(SearchProgress().total(0).progress.text(.spanish) == "Sin resultados")
     }
 
     @Test func theFirstTotalAsksForTheFirstMatchOnce() {
@@ -34,10 +34,10 @@ struct SearchProgressTests {
 
     /// Final review: between the total and the first selection, never "0 de N".
     @Test func noSelectionYetShowsADash() {
-        #expect(SearchProgress().total(6).progress.text == "– de 6")
+        #expect(SearchProgress().total(6).progress.text(.spanish) == "– de 6")
     }
 
     @Test func countIsOneBased() {
-        #expect(SearchProgress().total(6).progress.selected(0).text == "1 de 6")
+        #expect(SearchProgress().total(6).progress.selected(0).text(.spanish) == "1 de 6")
     }
 }

@@ -380,7 +380,8 @@ final class AppComposition {
         case .updatesAutomatic:
             guard let updates else { return }
             composition.controller.report(
-                StatusMessage(text: SetAutomaticUpdates(updates: updates).toggle(), isTransient: true))
+                StatusMessage(
+                    text: SetAutomaticUpdates(updates: updates, texts: .spanish /* T9 */).toggle(), isTransient: true))
             mainMenu?.refresh()
         case .helpDocs: URLOpener.open(SmaltiLinks.documentation(for: .spanish))  // T9
         case .appSupport: URLOpener.open(SmaltiLinks.support(for: .spanish))  // T9
@@ -434,9 +435,11 @@ final class AppComposition {
             return
         }
         guard let engine else { return }
-        let busy = RunningPrograms(engine: engine).busy(in: composition.controller.set.workspaces.flatMap(\.panes))
+        let busy = RunningPrograms(engine: engine, texts: .spanish /* T9 */).busy(
+            in: composition.controller.set.workspaces.flatMap(\.panes))
         guard
-            let question = CloseGuard.question(for: .window, busy: busy, settings: composition.controller.config.window)
+            let question = CloseGuard.question(
+                for: .window, busy: busy, settings: composition.controller.config.window, texts: .spanish /* T9 */)
         else {
             close(composition)
             return
@@ -894,7 +897,7 @@ final class AppComposition {
     /// without agent states and says so.
     private func listenForAgents(on socket: URL, controller: TilingController) {
         do {
-            let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
+            let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now }, texts: .spanish /* T9 */)
             self.telemetry = telemetry
             let events = telemetry.events()
             let requests = telemetry.requests()
@@ -1018,7 +1021,7 @@ final class AppComposition {
     {
         let approvals = AgentApprovals(
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
-            timeout: startup.settings.approvalTimeout)
+            timeout: startup.settings.approvalTimeout, texts: .spanish /* T9 */)
         approvals.settings = startup.initial.config.guards
         approvals.onChange = { [weak self] change in self?.approvalChanged(change) }
         self.approvals = approvals
@@ -1125,9 +1128,14 @@ final class AppComposition {
             answer(false)
             return
         }
-        let busy = engine.map { RunningPrograms(engine: $0).busy(in: windows) } ?? CloseGuard.busyPanes(in: windows)
+        let busy =
+            engine.map { RunningPrograms(engine: $0, texts: .spanish /* T9 */).busy(in: windows) }
+            ?? CloseGuard.busyPanes(in: windows, texts: .spanish /* T9 */)
         let count = CloseGuard.windowsWithBusyPanes(busy, in: windows)
-        guard let question = CloseGuard.question(for: .quit(windowCount: count), busy: busy, settings: settings) else {
+        guard
+            let question = CloseGuard.question(
+                for: .quit(windowCount: count), busy: busy, settings: settings, texts: .spanish /* T9 */)
+        else {
             answer(true)
             return
         }

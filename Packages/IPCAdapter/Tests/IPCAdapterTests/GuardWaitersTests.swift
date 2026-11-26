@@ -10,7 +10,7 @@ struct GuardWaitersTests {
     @Test func closedWaitersRefuseNewGuards() {
         let waiters = GuardWaiters()
 
-        waiters.close(GuardReasons.unreachable)
+        waiters.close(GuardTexts.spanish.unreachable)
 
         #expect(waiters.add() == nil)
     }
@@ -19,9 +19,9 @@ struct GuardWaitersTests {
         let waiters = GuardWaiters()
         let waiter = waiters.add()
 
-        waiters.close(GuardReasons.unreachable)
+        waiters.close(GuardTexts.spanish.unreachable)
 
-        #expect(waiter?.wait(seconds: 1) == .deny(GuardReasons.unreachable))
+        #expect(waiter?.wait(seconds: 1) == .deny(GuardTexts.spanish.unreachable))
     }
 
     @Test func boundedNumberOfWaiters() {

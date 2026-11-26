@@ -16,7 +16,7 @@ struct RestoreSessionTests {
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([FakeHarnessAdapter()]),
                 environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
-                clock: { SessionFixtures.now }))
+                clock: { SessionFixtures.now }, texts: .spanish))
     }
 
     private func run(_ workspaces: [PlannedWorkspace], activeIndex: Int = 0) -> RestoreResult {

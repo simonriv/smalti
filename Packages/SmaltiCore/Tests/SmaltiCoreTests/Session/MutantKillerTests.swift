@@ -45,7 +45,7 @@ struct MutantKillerTests {
         RestoreSession(
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([FakeHarnessAdapter()]),
-                environment: PaneEnvironment(version: "1"), shell: .loginShell, clock: { .now }))
+                environment: PaneEnvironment(version: "1"), shell: .loginShell, clock: { .now }, texts: .spanish))
     }
 
     private func plan(_ pane: PlannedPane) -> RestorePlan {

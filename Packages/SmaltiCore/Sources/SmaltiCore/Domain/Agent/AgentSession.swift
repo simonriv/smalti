@@ -62,9 +62,8 @@ public struct AgentSession: Equatable, Sendable {
     /// F7.5: Smalti holds one of its commands until the user approves it.
     public func awaitingApproval(_ subject: ApprovalSubject, at date: Date) -> AgentTransition {
         var next = self
-        next.state = .waiting(since: date, reason: .approval(subject.summary))
-        let attention = AttentionReason.approval(
-            command: subject.shortCommand, environment: subject.environment.label)
+        next.state = .waiting(since: date, reason: .approval(subject))
+        let attention = AttentionReason.approval(command: subject.shortCommand, environment: subject.environment.kind)
         return AgentTransition(session: next, attention: attention)
     }
 

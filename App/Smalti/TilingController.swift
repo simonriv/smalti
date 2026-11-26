@@ -234,7 +234,7 @@ final class TilingController {
             if protect { try guards.secrets.protect(project) } else { try guards.secrets.unprotect(project) }
             show(protect ? .secretsProtected(name) : .secretsUnprotected(name))
         } catch {
-            show(.secretsFailed(error.message))
+            show(.secretsFailed(error.message(.spanish /* T9 */)))
         }
     }
 
@@ -295,7 +295,7 @@ final class TilingController {
                 try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
                 show(.layoutSaved(name.rawValue))
             } catch {
-                show(.layoutSaveFailed(name.rawValue, reason: error.summary))
+                show(.layoutSaveFailed(name.rawValue, reason: error.summary(.spanish /* T9 */)))
             }
         case .restore(let name): restoreLayout(name)
         // F7: the save panel belongs to the window, so the app runs it.
@@ -311,7 +311,7 @@ final class TilingController {
             if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
             reportRestoreFailures(outcome.failures)
         } catch {
-            show(.layoutRestoreFailed(name.rawValue, reason: error.summary))
+            show(.layoutRestoreFailed(name.rawValue, reason: error.summary(.spanish /* T9 */)))
         }
     }
 
@@ -321,7 +321,7 @@ final class TilingController {
         return RestoreSession(
             .init(
                 engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now },
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }, texts: .spanish /* T9 */,
                 // F6: Claude reopens with `--ide` while claudecode.nvim is installed.
                 connectsEditor: deps.editor.connectsEditor(),
                 editorCommand: { position, pane in
@@ -530,15 +530,19 @@ final class TilingController {
                 let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(
                     request, in: &set)
                 observe(pane)
-                if folderMissing { show(.harnessSession(OpenHarnessSession.folderMissingMessage(directory ?? ""))) }
+                if folderMissing {
+                    show(
+                        .harnessSession(
+                            OpenHarnessSession.folderMissingMessage(directory ?? "", texts: .spanish /* T9 */)))
+                }
             } catch {
                 show(Self.message(for: error))
             }
             publish()
         case .cannotFork(let harness):
-            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness)))
+            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness, texts: .spanish /* T9 */)))
         case .unavailable(let harness):
-            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness)))
+            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness, texts: .spanish /* T9 */)))
         }
     }
 
@@ -563,8 +567,10 @@ final class TilingController {
     /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
     /// then publishes itself, since the question returns after `perform` did.
     private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
-        let busy = RunningPrograms(engine: deps.engine).busy(in: panes)
-        guard let question = CloseGuard.question(for: scope, busy: busy, settings: config.window),
+        let busy = RunningPrograms(engine: deps.engine, texts: .spanish /* T9 */).busy(in: panes)
+        guard
+            let question = CloseGuard.question(
+                for: scope, busy: busy, settings: config.window, texts: .spanish /* T9 */),
             let onConfirmClose
         else {
             close()

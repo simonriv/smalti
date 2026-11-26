@@ -54,7 +54,7 @@ struct GuardEndToEndTests {
 
     @Test(arguments: [0, 1, 2])
     func incidentsBlockUntilApproval(index: Int) async throws {
-        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now })
+        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now }, texts: .spanish)
         defer { server.stop() }
         var requests = server.requests().makeAsyncIterator()
 
@@ -68,7 +68,7 @@ struct GuardEndToEndTests {
 
     @Test(arguments: [0, 1, 2])
     func rejectedIncidentsAreDenied(index: Int) async throws {
-        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now })
+        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now }, texts: .spanish)
         defer { server.stop() }
         var requests = server.requests().makeAsyncIterator()
 
@@ -81,28 +81,28 @@ struct GuardEndToEndTests {
     @Test func missingSocketFailsClosed() async {
         let run = start(Self.incidents[1])
 
-        #expect(await finished(run, within: 3) == GuardCommandTests.denial(GuardReasons.unreachable))
+        #expect(await finished(run, within: 3) == GuardCommandTests.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func silentServerFailsClosedAtTheDeadline() async throws {
-        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now })
+        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now }, texts: .spanish)
         defer { server.stop() }
         var requests = server.requests().makeAsyncIterator()
 
         let run = start(Self.incidents[1], deadline: .seconds(1))
         _ = await requests.next()
 
-        #expect(await finished(run, within: 5) == GuardCommandTests.denial(GuardReasons.unreachable))
+        #expect(await finished(run, within: 5) == GuardCommandTests.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func appQuittingFailsClosed() async throws {
-        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now })
+        let server = try UnixSocketTelemetry(socketFile: URL(filePath: socket), clock: { .now }, texts: .spanish)
         var requests = server.requests().makeAsyncIterator()
 
         let run = start(Self.incidents[0])
         _ = await requests.next()
         server.stop()
 
-        #expect(await finished(run, within: 5) == GuardCommandTests.denial(GuardReasons.unreachable))
+        #expect(await finished(run, within: 5) == GuardCommandTests.denial(GuardTexts.spanish.unreachable))
     }
 }
