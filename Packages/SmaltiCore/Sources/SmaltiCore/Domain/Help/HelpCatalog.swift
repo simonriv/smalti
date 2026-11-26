@@ -44,7 +44,7 @@ private struct Rows {
     var windows: [HelpEntry] {
         [CommandID.windowNew, .windowClose, .windowFullscreen, .windowMinimize, .workspaceNew].map(titled)
             + [family(texts.goToWorkspaces, NumberedShortcuts.range.map(CommandID.workspace))]
-            + [CommandID.workspaceRename, .workspaceClose, .layoutImport].map(titled)
+            + [CommandID.workspaceRename, .workspaceClose, .layoutImport, .projectRecent, .projectSave].map(titled)
     }
 
     var panes: [HelpEntry] {

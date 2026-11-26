@@ -11,10 +11,12 @@ public enum CommandCatalog {
             workspaces: state.workspaces, keymap: keymap, integrations: state.integrations, updates: state.updates,
             texts: texts)
         return state.pendingApprovals.flatMap { approvalCommands($0, texts) }
+            + projectCommands(state.projects, context)
             + tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
             + workspaceCommands(context)
+            + (state.projects.flatMap { saveProjectCommand($0, context) }.map { [$0] } ?? [])
             + state.savedLayouts.flatMap { [restoreCommand($0, texts), exportCommand($0, texts)] }
             + windowCommands(context)
             + configurationCommands(context)
@@ -96,6 +98,43 @@ public enum CommandCatalog {
         guard case .available(let isAutomatic) = context.updates else { return [] }
         let toggle = isAutomatic ? context.texts.turnOffAutomaticUpdates : context.texts.turnOnAutomaticUpdates
         return [context.titled(.updatesCheck, group: .help), context.command(.updatesAutomatic, toggle, group: .help)]
+    }
+
+    /// F8.5: «Abrir proyecto “rizaria” — ~/dev/rizaria · en este panel» for each project, then «Proyectos
+    /// recientes…» (⌘O), which is always there.
+    private static func projectCommands(_ projects: CatalogProjects?, _ context: Context) -> [Command] {
+        let texts = context.texts
+        let rows = (projects?.listings ?? []).map { listing in
+            Command(
+                id: .projectOpen(root: listing.root), title: texts.openProject(["name": listing.name]),
+                subtitle: projectSubtitle(listing, home: projects?.home ?? "", texts: texts.projects),
+                group: .projects, shortcut: nil, isCurrent: false, icon: .projectFolder)
+        }
+        let recent = context.command(.projectRecent, texts.titles[.projectRecent] ?? "", group: .projects)
+        return rows + [recent]
+    }
+
+    private static func projectSubtitle(_ listing: ProjectListing, home: String, texts: ProjectTexts) -> String {
+        let place: String? =
+            if let open = listing.openIn {
+                open.isInThisWindow
+                    ? texts.openInWorkspace(["number": String(open.number)]) : texts.openInAnotherWindow
+            } else if listing.isInFocusedPane {
+                texts.inThisPane
+            } else {
+                nil
+            }
+        return ([ProjectPath.display(listing.root, home: home)] + [place].compactMap { $0 }).joined(separator: " · ")
+    }
+
+    /// F8.5: «Guardar layout del proyecto — escribe .smalti/layout.json en ~/dev/rizaria», with a pane to save.
+    private static func saveProjectCommand(_ projects: CatalogProjects, _ context: Context) -> Command? {
+        guard let root = projects.saveRoot else { return nil }
+        let texts = context.texts
+        return context.command(
+            .projectSave, texts.titles[.projectSave] ?? "",
+            subtitle: texts.saveProjectSubtitle(["root": ProjectPath.display(root, home: projects.home)]),
+            group: .workspaces)
     }
 
     /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
@@ -266,6 +305,8 @@ public struct CatalogState: Sendable {
     public var secretsProject: SecretsProjectState?
     /// F7.6: whether the build can update itself and checks on its own.
     public var updates = UpdatesAvailability.unavailable
+    /// F8.5: the projects to offer and where "Guardar layout del proyecto" writes; `nil` lists none.
+    public var projects: CatalogProjects?
 
     public init(
         workspaces: WorkspaceSet, savedLayouts: [NamedLayoutSummary] = [],
@@ -335,5 +376,19 @@ public struct NamedLayoutSummary: Equatable, Sendable {
 
     public init(name: LayoutName, layout: WorkspaceSnapshot) {
         self.init(name: name, paneCount: layout.panes.count, agentCount: layout.panes.count { $0.agent != nil })
+    }
+}
+
+/// F8.5: what ⌘K lists about projects: the listings, the home to write paths with `~`, and the repo the active
+/// workspace would be saved to (`nil` without a pane).
+public struct CatalogProjects: Equatable, Sendable {
+    public let listings: [ProjectListing]
+    public let home: String
+    public let saveRoot: String?
+
+    public init(listings: [ProjectListing], home: String, saveRoot: String?) {
+        self.listings = listings
+        self.home = home
+        self.saveRoot = saveRoot
     }
 }

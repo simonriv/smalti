@@ -12,6 +12,23 @@ public struct PendingProjectSave: Equatable, Sendable {
     public let layout: SharedLayout
     /// What the file will run, for the replace confirmation.
     public let commands: [PlannedCommand]
+
+    public init(root: String, name: LayoutName, layout: SharedLayout, commands: [PlannedCommand]) {
+        self.root = root
+        self.name = name
+        self.layout = layout
+        self.commands = commands
+    }
+}
+
+extension ProjectSaveError {
+    /// The reason after "No se pudo guardar el layout del proyecto: ".
+    public func message(_ texts: ProjectTexts, layout: SharedLayoutErrorTexts) -> String {
+        switch self {
+        case .layout(let error): error.message(layout)
+        case .file(let error): error.message(texts, layout: layout)
+        }
+    }
 }
 
 public enum ProjectSaveStep: Equatable, Sendable {

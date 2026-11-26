@@ -8,6 +8,16 @@ public struct ProjectListing: Equatable, Sendable {
     public let lastOpened: Date?
     public let isInFocusedPane: Bool
     public let openIn: OpenProjectWorkspace?
+
+    public init(
+        root: String, name: String, lastOpened: Date?, isInFocusedPane: Bool, openIn: OpenProjectWorkspace?
+    ) {
+        self.root = root
+        self.name = name
+        self.lastOpened = lastOpened
+        self.isInFocusedPane = isInFocusedPane
+        self.openIn = openIn
+    }
 }
 
 /// The projects to offer (F8.5): the recents whose file still exists and the ones discovered from the panes' folders,

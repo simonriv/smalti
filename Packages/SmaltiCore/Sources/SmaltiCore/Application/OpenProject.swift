@@ -24,6 +24,16 @@ public struct PreparedProject: Equatable, Sendable {
     public let snapshot: WorkspaceSnapshot
     public let fingerprint: String
     public let commands: [PlannedCommand]
+
+    public init(
+        root: String, name: LayoutName, snapshot: WorkspaceSnapshot, fingerprint: String, commands: [PlannedCommand]
+    ) {
+        self.root = root
+        self.name = name
+        self.snapshot = snapshot
+        self.fingerprint = fingerprint
+        self.commands = commands
+    }
 }
 
 public struct ProjectConfirmation: Equatable, Sendable {
@@ -31,6 +41,12 @@ public struct ProjectConfirmation: Equatable, Sendable {
     public let changes: ProjectChanges
     /// When the user approved an earlier version of the file; `nil` the first time.
     public let approvedAt: Date?
+
+    public init(prepared: PreparedProject, changes: ProjectChanges, approvedAt: Date?) {
+        self.prepared = prepared
+        self.changes = changes
+        self.approvedAt = approvedAt
+    }
 }
 
 public enum ProjectStep: Equatable, Sendable {

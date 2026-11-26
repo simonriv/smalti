@@ -73,8 +73,8 @@ struct MenuModelTests {
         #expect(menus.map(\.title) == ["Smalti", "Archivo", "Edición", "Ver", "Ventana", "Ayuda"])
         #expect(
             menus[1].items.map(\.title) == [
-                "Nueva ventana", "Nuevo panel", "Nuevo workspace", "", "Cerrar panel", "Cerrar workspace",
-                "Cerrar ventana",
+                "Nueva ventana", "Nuevo panel", "Nuevo workspace", "", "Proyectos recientes…",
+                "Guardar layout del proyecto", "", "Cerrar panel", "Cerrar workspace", "Cerrar ventana",
             ])
         #expect(
             menus[2].items.map(\.title) == [
