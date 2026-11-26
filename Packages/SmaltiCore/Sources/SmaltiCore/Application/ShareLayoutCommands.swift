@@ -40,10 +40,20 @@ public struct ExportLayout {
 }
 
 /// What importing a file would do, shown before anything is saved.
+/// One command a shared layout runs, and where when it is not the layout's root ("make en api").
+public struct PlannedCommand: Equatable, Sendable {
+    public let command: String
+    public let place: String?
+
+    public func text(_ texts: SessionTexts) -> String {
+        place.map { texts.located(["command": command, "place": $0]) } ?? command
+    }
+}
+
 public struct ImportPreview: Equatable, Sendable {
     public let name: LayoutName
     /// What the layout runs when opened, one per pane that runs something, as typed in the shell.
-    public let commands: [String]
+    public let commands: [PlannedCommand]
     /// The root on this machine (`~` resolved).
     public let root: String
     public let isRootPresent: Bool
@@ -93,7 +103,7 @@ public struct ImportLayout {
     }
 
     /// What each pane will run, read through `PaneLaunch.saved`: the same choice restoring makes.
-    private func commands(of layout: SharedLayout, root: String) -> [String] {
+    private func commands(of layout: SharedLayout, root: String) -> [PlannedCommand] {
         layout.workspaceSnapshot(root: root, home: home).panes.compactMap { pane in
             let command: String? =
                 switch PaneLaunch.saved(pane) {
@@ -107,11 +117,11 @@ public struct ImportLayout {
     }
 
     /// "make en api", "claude --continue en ~/.ssh": a command that does not run in the layout's root says where.
-    private func located(_ command: String, in directory: String, root: String) -> String {
+    private func located(_ command: String, in directory: String, root: String) -> PlannedCommand {
         guard let place = PortablePaths.relative(directory, to: root) else {
-            return "\(command) en \(PortablePaths(home: home).portable(directory))"
+            return PlannedCommand(command: command, place: PortablePaths(home: home).portable(directory))
         }
-        return place == "." ? command : "\(command) en \(place)"
+        return PlannedCommand(command: command, place: place == "." ? nil : place)
     }
 
     private func freeName(for name: LayoutName) -> LayoutName {
@@ -139,7 +149,8 @@ public enum ImportTexts {
     public static func confirmationBody(_ preview: ImportPreview, texts: SessionTexts) -> String {
         let commands =
             preview.commands.isEmpty
-            ? texts.opensOnlyShells : texts.willRun(["commands": preview.commands.joined(separator: " · ")])
+            ? texts.opensOnlyShells
+            : texts.willRun(["commands": preview.commands.map { $0.text(texts) }.joined(separator: " · ")])
         return ([commands] + preview.warnings.map { warning($0, texts: texts) }).joined(separator: "\n")
     }
 

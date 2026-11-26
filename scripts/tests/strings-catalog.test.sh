@@ -74,7 +74,8 @@ for folder in folders:
             path = os.path.join(base, name)
             for number, line in enumerate(open(path, encoding="utf-8"), 1):
                 code = line.strip()
-                if code.startswith("//") or "String(localized:" in code or "Text(" in code:
+                if (code.startswith("//") or "String(localized:" in code or "Text(" in code
+                        or "strings-catalog: keep" in code):
                     continue
                 for text in literal.findall(line):
                     if len(text) > 1 and spanish.search(text):

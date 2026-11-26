@@ -62,7 +62,7 @@ public struct SessionTexts: Sendable, Equatable {
         archiveNewer: "{file}: guardado por una versión más nueva de Smalti (formato {version})",
         keptNewer:
             "La sesión la guardó una versión más nueva de Smalti (formato {version}): esta no la abre ni la sobrescribe",
-        archiveNotFound: "{name}: not found", unreadable: "no se pudo leer {path} ({reason})",
+        archiveNotFound: "{name}: no se encontró", unreadable: "no se pudo leer {path} ({reason})",
         unwritable: "no se pudo escribir {path} ({reason})", layoutErrors: .spanish, located: "{command} en {place}",
         importTitle: "¿Importar el layout “{name}”?", opensOnlyShells: "Al abrirlo solo abrirá shells.",
         willRun: "Al abrirlo ejecutará: {commands}", folderPrompt: "Elige la carpeta de “{name}” en este Mac",

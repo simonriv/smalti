@@ -94,3 +94,18 @@ struct TextCatalogAuditTests {
         #expect(!SpanishMarkers.looksSpanish(text))
     }
 }
+
+/// Review 1 (M3): a list with a missing line in one language is reported.
+@Suite("TextCatalogAudit lists")
+struct TextCatalogAuditListTests {
+    private struct Lines: Sendable {
+        let weekdays: [String]
+    }
+
+    @Test func listsOfDifferentLengthAreAProblem() {
+        let problems = TextCatalogAudit.problems(
+            spanish: Lines(weekdays: ["lun", "mar"]), english: Lines(weekdays: ["Mon"]))
+
+        #expect(problems == ["weekdays: count differs (es: 2; en: 1)"])
+    }
+}

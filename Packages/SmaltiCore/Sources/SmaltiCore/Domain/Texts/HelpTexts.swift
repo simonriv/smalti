@@ -1,7 +1,7 @@
 /// F7.7: the help view's words (⌘?). Rows without their own title here take the palette's shared one.
 public struct HelpTexts: Sendable, Equatable {
-    /// The keys of a command without a chord.
-    public let inPalette: String
+    /// The keys of a command without a chord: "en ⌘K", with the palette's chord in effect.
+    public let inPalette: TextTemplate
     public let sections: [HelpSectionID: String]
     public let titles: [CommandID: String]
     public let goToWorkspaces: String
@@ -24,7 +24,7 @@ public struct HelpTexts: Sendable, Equatable {
     public let commands: CommandTexts
 
     public static let spanish = HelpTexts(
-        inPalette: "en ⌘K",
+        inPalette: "en {palette}",
         sections: [
             .windows: "Ventanas y workspaces", .panes: "Paneles", .terminal: "Terminal", .search: "Buscar",
             .tiling: "Tiling", .agents: "Agentes y observatorio", .prompt: "En el prompt", .mouse: "Ratón",
@@ -59,7 +59,7 @@ public struct HelpTexts: Sendable, Equatable {
         commands: .spanish)
 
     public static let english = HelpTexts(
-        inPalette: "in ⌘K",
+        inPalette: "in {palette}",
         sections: [
             .windows: "Windows and Workspaces", .panes: "Panes", .terminal: "Terminal", .search: "Find",
             .tiling: "Tiling", .agents: "Agents and Observatory", .prompt: "At the Prompt", .mouse: "Mouse",

@@ -116,12 +116,17 @@ private struct Rows {
         texts.privacyLines.map { HelpEntry(title: $0, keys: "", command: nil, covers: []) } + [titled(.helpPrivacy)]
     }
 
+    /// "en ⌘K", naming the palette's chord in effect.
+    private var inPalette: String {
+        texts.inPalette(["palette": WelcomeContent.palette(keymap)])
+    }
+
     private func titled(_ id: CommandID) -> HelpEntry {
         entry(id, texts.titles[id] ?? texts.commands.titles[id] ?? texts.commands.paletteTitles[id] ?? id.rawValue)
     }
 
     private func entry(_ id: CommandID, _ title: String) -> HelpEntry {
-        HelpEntry(title: title, keys: keymap.chord(for: id)?.display ?? texts.inPalette, command: id, covers: [id])
+        HelpEntry(title: title, keys: keymap.chord(for: id)?.display ?? inPalette, command: id, covers: [id])
     }
 
     /// One row for related commands: "⌘1…⌘9" for a numbered run, "⌥⌘←→↑↓" when every chord shares its modifiers,
@@ -133,7 +138,7 @@ private struct Rows {
     private func keys(for ids: [CommandID]) -> String {
         let chords = ids.map(keymap.chord(for:))
         let bound = chords.compactMap { $0 }
-        guard let first = bound.first else { return texts.inPalette }
+        guard let first = bound.first else { return inPalette }
         guard bound.count == chords.count, bound.allSatisfy({ $0.modifiers == first.modifiers }) else {
             return bound.map(\.display).joined(separator: " ")
         }

@@ -168,6 +168,23 @@ struct LazyNvimDetectionTests {
         #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .unknown)
     }
 
+    /// Review 1 (M7): written without spaces it counts; commented out it does not.
+    @Test func importWithoutSpacesCounts() async throws {
+        defer { try? FileManager.default.removeItem(at: nvim.deletingLastPathComponent()) }
+        try write(#"require("lazy").setup({ {import="plugins"} })"#, to: "init.lua")
+        try write("return {}\n", to: "lua/plugins/init.lua")
+
+        #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .notInstalled)
+    }
+
+    @Test func commentedImportDoesNotCount() async throws {
+        defer { try? FileManager.default.removeItem(at: nvim.deletingLastPathComponent()) }
+        try write("require('lazy').setup({\n  -- { import = \"plugins\" },\n})\n", to: "init.lua")
+        try write("return {}\n", to: "lua/plugins/init.lua")
+
+        #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .unknown)
+    }
+
     /// The real LazyVim starter, cloned into a temporary folder; skipped without network or git.
     @Test func realLazyVimStarterIsDetected() async throws {
         let base = nvim.deletingLastPathComponent()

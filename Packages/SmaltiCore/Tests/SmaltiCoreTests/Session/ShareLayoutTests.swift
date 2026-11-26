@@ -83,7 +83,8 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["pnpm dev", "fake --continue", "nvim +42 \(root)/src/a.ts"])
+        #expect(
+            preview.commands.map { $0.text(.spanish) } == ["pnpm dev", "fake --continue", "nvim +42 \(root)/src/a.ts"])
     }
 
     @Test func previewOfShellsOnlyHasNoCommands() throws {
@@ -251,7 +252,7 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["fake --continue", "nvim +42 \(root)/src/a.ts"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["fake --continue", "nvim +42 \(root)/src/a.ts"])
     }
 
     @Test func freeNameIgnoresCase() throws {
@@ -271,7 +272,7 @@ struct ShareLayoutTests {
         let preview = try importer().preview(file, root: "/Volumes/work/solen")
 
         #expect(preview.root == "/Volumes/work/solen")
-        #expect(preview.commands == ["nvim +42 /Volumes/work/solen/src/a.ts"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["nvim +42 /Volumes/work/solen/src/a.ts"])
         #expect(!preview.isRootPresent)
     }
 
@@ -293,6 +294,7 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["pnpm dev", "make en api", "fake --continue en ~/.ssh"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["pnpm dev", "make en api", "fake --continue en ~/.ssh"])
+        #expect(preview.commands.map { $0.text(.english) } == ["pnpm dev", "make in api", "fake --continue in ~/.ssh"])
     }
 }

@@ -22,3 +22,13 @@ struct SmaltiLinksTests {
                 == "https://smalti.sh/es/changelog#v0.7.7")
     }
 }
+
+/// Review 1 (M6): a version from outside never crashes the link; it is escaped.
+@Suite("SmaltiLinks release notes")
+struct SmaltiLinksReleaseNotesTests {
+    @Test func oddVersionIsEscaped() {
+        #expect(
+            SmaltiLinks.releaseNotes(version: "0.7 beta", for: .english).absoluteString
+                == "https://smalti.sh/changelog#v0.7%20beta")
+    }
+}

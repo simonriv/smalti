@@ -12,14 +12,20 @@ public enum WelcomeContent {
     ]
 
     public static func shortcuts(keymap: Keymap, texts: WelcomeTexts) -> [WelcomeShortcut] {
-        commands.map { command in
+        let inPalette = texts.inPalette(["palette": palette(keymap)])
+        return commands.map { command in
             WelcomeShortcut(
                 label: texts.shortcuts[command] ?? command.rawValue,
-                keys: keymap.chord(for: command)?.display ?? texts.inPalette)
+                keys: keymap.chord(for: command)?.display ?? inPalette)
         }
     }
 
     public static func subtitle(keymap: Keymap, texts: WelcomeTexts) -> String {
-        texts.subtitle(["palette": keymap.chord(for: .paletteOpen)?.display ?? "⌘K"])
+        texts.subtitle(["palette": palette(keymap)])
+    }
+
+    /// The palette's chord in effect; ⌘K, its standard one, when the user unbound it (the menu still opens it).
+    static func palette(_ keymap: Keymap) -> String {
+        keymap.chord(for: .paletteOpen)?.display ?? "⌘K"
     }
 }

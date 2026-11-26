@@ -139,3 +139,24 @@ struct InMemoryWelcomeRecordContractTests {
         #expect(await WelcomeRecordContract.problems { InMemoryWelcomeRecord() }.isEmpty)
     }
 }
+
+/// Review 1 (M5): "in ⌘K" names the palette's chord in effect.
+@Suite("In-palette hint follows the keymap")
+struct InPaletteHintTests {
+    private func keymap() throws -> Keymap {
+        try Keymap.standard.overriding([
+            try KeyChord.parse("cmd+k"): nil, try KeyChord.parse("cmd+p"): .paletteOpen,
+            try KeyChord.parse("cmd+j"): nil,
+        ])
+    }
+
+    @Test func welcomeNamesTheReboundPalette() throws {
+        #expect(WelcomeContent.shortcuts(keymap: try keymap(), texts: .english)[5].keys == "in ⌘P")
+    }
+
+    @Test func helpNamesTheReboundPalette() throws {
+        let entries = HelpCatalog.sections(keymap: try keymap(), texts: .spanish).flatMap(\.entries)
+
+        #expect(entries.first { $0.command == .agentJump }?.keys == "en ⌘P")
+    }
+}

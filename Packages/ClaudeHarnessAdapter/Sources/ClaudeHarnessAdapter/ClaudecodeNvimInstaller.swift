@@ -6,7 +6,8 @@ import SmaltiCore
 /// (spec F6). Claude runs in its Smalti pane, so the plugin opens no terminal of its own.
 @MainActor
 public final class ClaudecodeNvimInstaller: HarnessIntegration {
-    public static let marker = "-- Instalado por Smalti"
+    /// File content, not interface: earlier Smalti versions wrote it, so it stays as it is (strings-catalog: keep).
+    public static let marker = "-- Instalado por Smalti"  // strings-catalog: keep
     static let relativePath = "lua/plugins/smalti-claudecode.lua"
     static let contents = """
         \(marker): claudecode.nvim para aprobar los diffs de Claude Code (⌘K › Desinstalar claudecode.nvim lo quita).
@@ -74,12 +75,17 @@ public final class ClaudecodeNvimInstaller: HarnessIntegration {
         return hasPlugins
             && Self.setupFiles.contains { relative in
                 let text = (try? String(contentsOf: configHome.appending(path: relative), encoding: .utf8)) ?? ""
-                return Self.importLines.contains { text.contains($0) }
+                return text.split(separator: "\n").contains { Self.importsPlugins($0) }
             }
     }
 
     private static let setupFiles = ["init.lua", "lua/config/lazy.lua"]
-    private static let importLines = [#"import = "plugins""#, "import = 'plugins'"]
+
+    /// `import = "plugins"` (any spacing, either quote) before a `--` comment on the line.
+    static func importsPlugins(_ line: Substring) -> Bool {
+        let code = line.range(of: "--").map { line[..<$0.lowerBound] } ?? line
+        return code.contains(/import\s*=\s*["']plugins["']/)
+    }
 
     private func refusal(_ action: String) -> IntegrationError {
         .commandFailed(

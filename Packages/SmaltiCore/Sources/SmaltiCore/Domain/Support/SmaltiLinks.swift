@@ -17,9 +17,15 @@ public enum SmaltiLinks {
         link(prefix(language) + "/privacy")
     }
 
+    /// The version is escaped for the fragment, so a value from outside can never make an invalid URL.
     public static func releaseNotes(version: String, for language: InterfaceLanguage) -> URL {
-        link(prefix(language) + "/changelog#v" + version)
+        let fragment = version.addingPercentEncoding(withAllowedCharacters: fragmentCharacters) ?? ""
+        return link(prefix(language) + "/changelog#v" + fragment)
     }
+
+    /// RFC 3986's unreserved characters and dots: everything else in a version is percent-encoded.
+    private static let fragmentCharacters = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
     private static func prefix(_ language: InterfaceLanguage) -> String {
         language == .spanish ? site + "/es" : site
@@ -28,7 +34,7 @@ public enum SmaltiLinks {
 
     private static func link(_ text: String) -> URL {
         guard let url = URL(string: text) else {
-            // Unreachable: every argument is a constant, valid URL.
+            // Unreachable: every argument is a constant URL or one whose variable part was percent-encoded.
             preconditionFailure("invalid link \(text)")
         }
         return url

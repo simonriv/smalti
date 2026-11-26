@@ -132,3 +132,12 @@ struct SessionSearchTokenCountTests {
                 == "Codex · web · ollama · 4,439 tokens")
     }
 }
+
+/// Review 1 (M8): the Spanish interface said "not found" in English; F7.7 translates it (amendment).
+@Suite("Archive not found in both languages")
+struct ArchiveNotFoundTests {
+    @Test func notFoundIsTranslated() {
+        #expect(SessionArchiveError.notFound(name: "web").summary(.spanish) == "web: no se encontró")
+        #expect(SessionArchiveError.notFound(name: "web").summary(.english) == "web: not found")
+    }
+}

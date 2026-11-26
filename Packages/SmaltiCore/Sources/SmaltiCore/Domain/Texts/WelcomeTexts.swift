@@ -2,7 +2,7 @@
 public struct WelcomeTexts: Sendable, Equatable {
     public let title: String
     public let subtitle: TextTemplate
-    public let inPalette: String
+    public let inPalette: TextTemplate
     public let shortcuts: [CommandID: String]
     public let rows: [WelcomeRow: String]
     public let install: String
@@ -17,7 +17,7 @@ public struct WelcomeTexts: Sendable, Equatable {
 
     public static let spanish = WelcomeTexts(
         title: "Bienvenido a Smalti", subtitle: "Todo está en {palette}: escribe lo que quieres hacer.",
-        inPalette: "en ⌘K",
+        inPalette: "en {palette}",
         shortcuts: [
             .paletteOpen: "Paleta de comandos", .helpShow: "Ayuda y atajos", .observatoryToggle: "Observatorio",
             .harnessSearch: "Sesiones de agentes", .paneNew: "Dividir panel",
@@ -33,7 +33,7 @@ public struct WelcomeTexts: Sendable, Equatable {
 
     public static let english = WelcomeTexts(
         title: "Welcome to Smalti", subtitle: "Everything is in {palette}: type what you want to do.",
-        inPalette: "in ⌘K",
+        inPalette: "in {palette}",
         shortcuts: [
             .paletteOpen: "Command palette", .helpShow: "Help and shortcuts", .observatoryToggle: "Observatory",
             .harnessSearch: "Agent sessions", .paneNew: "Split pane", .agentJump: "Jump to the waiting agent",

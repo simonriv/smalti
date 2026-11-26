@@ -79,7 +79,7 @@ public struct ClaudeProjectPermissions: ProjectPermissions {
         } catch let error as ProjectPermissionsError {
             throw error
         } catch {
-            throw .unreadable(path: path, reason: "JSON inválido")
+            throw .invalidJSON(path: path)
         }
     }
 }

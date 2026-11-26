@@ -28,6 +28,7 @@ public struct GuardTexts: Sendable, Equatable {
     public let homeFolder: String
     public let notAnObject: String
     public let denyNotAList: String
+    public let invalidJSON: String
 
     public static let spanish = GuardTexts(
         command: "comando", against: "{rule} contra {environment}",
@@ -55,7 +56,8 @@ public struct GuardTexts: Sendable, Equatable {
         tooManyPending: "Hay demasiados comandos esperando aprobación en Smalti.",
         unreadableFile: "No se pudo leer {path}: {reason}", unwritableFile: "No se pudo escribir {path}: {reason}",
         homeFolder: "es tu carpeta personal: Smalti no escribe tu configuración global",
-        notAnObject: "no es un objeto JSON", denyNotAList: "permissions.deny no es una lista de textos")
+        notAnObject: "no es un objeto JSON", denyNotAList: "permissions.deny no es una lista de textos",
+        invalidJSON: "JSON inválido")
 
     public static let english = GuardTexts(
         command: "command", against: "{rule} against {environment}",
@@ -82,5 +84,6 @@ public struct GuardTexts: Sendable, Equatable {
         tooManyPending: "Too many commands are waiting for approval in Smalti.",
         unreadableFile: "Couldn’t read {path}: {reason}", unwritableFile: "Couldn’t write {path}: {reason}",
         homeFolder: "it’s your home folder: Smalti doesn’t write your global settings",
-        notAnObject: "it isn’t a JSON object", denyNotAList: "permissions.deny isn’t a list of texts")
+        notAnObject: "it isn’t a JSON object", denyNotAList: "permissions.deny isn’t a list of texts",
+        invalidJSON: "invalid JSON")
 }

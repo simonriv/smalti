@@ -33,6 +33,9 @@ public enum TextCatalogAudit {
                 compare(esPairs[key] as Any, enPairs[key] as Any, path: "\(path)[\(key)]", allowed: allowed)
             }
         }
+        guard es.children.count == en.children.count else {
+            return ["\(path): count differs (es: \(es.children.count); en: \(en.children.count))"]
+        }
         return zip(es.children, en.children).flatMap { esChild, enChild in
             compare(esChild.value, enChild.value, path: join(path, esChild.label ?? "?"), allowed: allowed)
         }

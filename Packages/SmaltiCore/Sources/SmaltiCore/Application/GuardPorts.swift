@@ -51,6 +51,7 @@ public enum ProjectPermissionsError: Error, Equatable, Sendable {
     /// The settings file is not a JSON object, or its `permissions.deny` is not a list of texts.
     case notAnObject(path: String)
     case denyNotAList(path: String)
+    case invalidJSON(path: String)
 
     public func message(_ texts: GuardTexts) -> String {
         switch self {
@@ -59,6 +60,7 @@ public enum ProjectPermissionsError: Error, Equatable, Sendable {
         case .homeFolder(let path): texts.unwritableFile(["path": path, "reason": texts.homeFolder])
         case .notAnObject(let path): texts.unreadableFile(["path": path, "reason": texts.notAnObject])
         case .denyNotAList(let path): texts.unreadableFile(["path": path, "reason": texts.denyNotAList])
+        case .invalidJSON(let path): texts.unreadableFile(["path": path, "reason": texts.invalidJSON])
         }
     }
 }
