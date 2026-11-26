@@ -49,6 +49,20 @@ public struct ProcessRow: Equatable, Sendable {
     /// Shown dimmed in the tree: an ancestor of a match that does not match itself.
     public let isContext: Bool
 
+    public init(
+        record: ProcessRecord, pane: PaneID?, cpu: Double?, state: ProcessState, verdict: StopVerdict,
+        treePrefix: String, depth: Int, isContext: Bool
+    ) {
+        self.record = record
+        self.pane = pane
+        self.cpu = cpu
+        self.state = state
+        self.verdict = verdict
+        self.treePrefix = treePrefix
+        self.depth = depth
+        self.isContext = isContext
+    }
+
     public var identity: ProcessIdentity { record.identity }
     public var pid: Int32 { record.pid }
     public var name: String { record.displayName }
