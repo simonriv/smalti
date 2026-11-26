@@ -41,9 +41,14 @@ public struct ExportLayout {
 
 /// What importing a file would do, shown before anything is saved.
 /// One command a shared layout runs, and where when it is not the layout's root ("make en api").
-public struct PlannedCommand: Equatable, Sendable {
+public struct PlannedCommand: Codable, Equatable, Sendable {
     public let command: String
     public let place: String?
+
+    public init(command: String, place: String?) {
+        self.command = command
+        self.place = place
+    }
 
     public func text(_ texts: SessionTexts) -> String {
         place.map { texts.located(["command": command, "place": $0]) } ?? command
