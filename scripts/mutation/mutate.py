@@ -8,8 +8,8 @@ and runs the package's tests. A mutant the tests catch is "killed"; one they mis
 Usage:
     scripts/mutation/mutate.py [--package Packages/SmaltiCore] [--min-score 80] [--timeout 120] [--changed-since REF]
 
---changed-since mutates only the package sources that differ from REF (committed, uncommitted or untracked): the
-quick run during a phase. The full run, without it, closes the phase.
+--changed-since mutates only the lines that differ from REF (committed or uncommitted; an untracked file whole):
+a phase that only swaps a string in a file mutates that line, not the file. Never run without it during a phase.
 
 Prints one line per mutant as "[n/total] ok|FAIL <file:line operator>" (total fixed from the first line) and
 exits non-zero when the mutation score falls below --min-score. The real sources are never modified.
@@ -188,6 +188,41 @@ def git_changes(root: Path, since: str) -> list[str]:
     return (diff.stdout + untracked.stdout).splitlines()
 
 
+HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+
+def changed_lines(diff: str) -> dict[str, set[int]]:
+    """New-side line numbers per repository-relative path, from `git diff -U0`; deleted files and pure deletions
+    add nothing (there is no line left to mutate)."""
+    lines: dict[str, set[int]] = {}
+    current: str | None = None
+    for row in diff.splitlines():
+        if row.startswith("+++ "):
+            current = row[6:] if row.startswith("+++ b/") else None
+        elif current and (hunk := HUNK.match(row)):
+            start, count = int(hunk.group(1)), int(hunk.group(2) or "1")
+            if count:
+                lines.setdefault(current, set()).update(range(start, start + count))
+    return lines
+
+
+def only_changed_lines(mutants: list[Mutant], lines: dict[str, set[int]], untracked: set[str]) -> list[Mutant]:
+    """The mutants on a changed line (`lines` keyed like `Mutant.path`); an untracked file counts whole."""
+    return [m for m in mutants if m.path in untracked or m.line_number in lines.get(m.path, set())]
+
+
+def git_changed_lines(root: Path, since: str) -> dict[str, set[int]]:
+    diff = subprocess.run(
+        ["git", "diff", "-U0", "--no-color", since], cwd=root, capture_output=True, text=True, check=True)
+    return changed_lines(diff.stdout)
+
+
+def git_untracked(root: Path) -> set[str]:
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"], cwd=root, capture_output=True, text=True, check=True)
+    return set(untracked.stdout.splitlines())
+
+
 def missing_sources_message(package: Path, files: list[Path]) -> str | None:
     """An error message when there is nothing to mutate; a silent 100 % score would be misleading."""
     return None if files else f"no sources under Sources/{package.name}"
@@ -207,6 +242,7 @@ def main() -> int:
     if problem:
         print(problem, file=sys.stderr)
         return 2
+    root: Path | None = None
     if args.changed_since:
         root = Path(subprocess.run(
             ["git", "rev-parse", "--show-toplevel"], cwd=source_package, capture_output=True, text=True, check=True
@@ -221,6 +257,12 @@ def main() -> int:
         for file in sources
         for mutant in mutants_for_source(file.read_text(), str(file.relative_to(source_package / "Sources")))
     ]
+    if root is not None:
+        prefix = str((source_package / "Sources").relative_to(root)) + "/"
+        relative = lambda paths: {p[len(prefix):] for p in paths if p.startswith(prefix)}
+        lines = {p[len(prefix):]: n for p, n in git_changed_lines(root, args.changed_since).items() if p.startswith(prefix)}
+        mutants = only_changed_lines(mutants, lines, relative(git_untracked(root)))
+        print(f"changed lines only: {len(mutants)} mutant(s)")
     total = len(mutants)
 
     with tempfile.TemporaryDirectory(prefix="smalti-mutation-") as scratch:
