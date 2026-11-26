@@ -69,3 +69,7 @@ Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-ass
 ## Puertos y procesos (F8)
 
 Ningún tablero los dibuja. La referencia es la maqueta `docs/specs/F8-assets/mockup.html` (`?view=processes|ports|confirm&lang=es|en`; capturas `mockup-*-{es,en}.png`), compuesta con el fondo, la franja superior, las tarjetas, las tablas y los chips de `Observatorio.dc.html` y la tarjeta de aprobación de F7.5 (en ámbar) para confirmar «Forzar». Atajos ⌘⇧M y ⌘⇧U; textos en inglés del glosario de la spec F8.
+
+## Proyectos (F8.5)
+
+Ningún tablero los dibuja. La referencia es la maqueta `docs/specs/F8.5-assets/mockup.html` (`?view=palette|recent|confirm|changed|replace&lang=es|en`; capturas `mockup-*-{es,en}.png`), compuesta con la caja de vidrio, las filas, los grupos y el pie de `Paleta.dc.html`, y el borde y el punto ámbar de la aprobación de F7.5 para la confirmación. Atajo ⌘O; textos en inglés del glosario de la spec F8.5.
