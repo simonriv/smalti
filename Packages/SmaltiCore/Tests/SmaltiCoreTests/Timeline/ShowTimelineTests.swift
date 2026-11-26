@@ -69,6 +69,7 @@ struct ShowTimelineTests {
         await transcripts.add(ref, reads: [F.workB])
         let show = make(transcripts)
         await show.show(.session(.claude, "c1"), root: "/w")
+        await waitUntil { await transcripts.watchers == 1 }
 
         show.close()
         await waitUntil { await transcripts.watchers == 0 }
