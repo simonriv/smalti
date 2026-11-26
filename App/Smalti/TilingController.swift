@@ -172,7 +172,7 @@ final class TilingController {
             let edited = deps.editor.editedFiles
             Task { await edited.record(event) }
         }
-        _ = HandleAgentEvent(notifier: deps.agents.notifier, texts: .spanish /* T9 */).execute(
+        _ = HandleAgentEvent(notifier: deps.agents.notifier, texts: .current).execute(
             event, in: &set, isAppActive: deps.agents.isAppActive())
         publish()
     }
@@ -234,7 +234,7 @@ final class TilingController {
             if protect { try guards.secrets.protect(project) } else { try guards.secrets.unprotect(project) }
             show(protect ? .secretsProtected(name) : .secretsUnprotected(name))
         } catch {
-            show(.secretsFailed(error.message(.spanish /* T9 */)))
+            show(.secretsFailed(error.message(.current)))
         }
     }
 
@@ -244,7 +244,7 @@ final class TilingController {
             guard set.workspace(containing: pane) != nil else { return }
             show(.secretBlocked(path))
         } else {
-            HandleApprovalChange(notifier: deps.agents.notifier, texts: .spanish /* T9 */).execute(change, in: &set)
+            HandleApprovalChange(notifier: deps.agents.notifier, texts: .current).execute(change, in: &set)
         }
         publish()
     }
@@ -258,7 +258,7 @@ final class TilingController {
         let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration, id: id, texts: .spanish).execute()  // T9
+            let line = await command.init(integration: integration, id: id, texts: .current).execute()
             self?.report(.integration(line))
             status.refresh(forced: true)
         }
@@ -295,7 +295,7 @@ final class TilingController {
                 try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
                 show(.layoutSaved(name.rawValue))
             } catch {
-                show(.layoutSaveFailed(name.rawValue, reason: error.summary(.spanish /* T9 */)))
+                show(.layoutSaveFailed(name.rawValue, reason: error.summary(.current)))
             }
         case .restore(let name): restoreLayout(name)
         // F7: the save panel belongs to the window, so the app runs it.
@@ -311,7 +311,7 @@ final class TilingController {
             if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
             reportRestoreFailures(outcome.failures)
         } catch {
-            show(.layoutRestoreFailed(name.rawValue, reason: error.summary(.spanish /* T9 */)))
+            show(.layoutRestoreFailed(name.rawValue, reason: error.summary(.current)))
         }
     }
 
@@ -321,7 +321,7 @@ final class TilingController {
         return RestoreSession(
             .init(
                 engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }, texts: .spanish /* T9 */,
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }, texts: .current,
                 // F6: Claude reopens with `--ide` while claudecode.nvim is installed.
                 connectsEditor: deps.editor.connectsEditor(),
                 editorCommand: { position, pane in
@@ -533,16 +533,16 @@ final class TilingController {
                 if folderMissing {
                     show(
                         .harnessSession(
-                            OpenHarnessSession.folderMissingMessage(directory ?? "", texts: .spanish /* T9 */)))
+                            OpenHarnessSession.folderMissingMessage(directory ?? "", texts: .current)))
                 }
             } catch {
                 show(Self.message(for: error))
             }
             publish()
         case .cannotFork(let harness):
-            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness, texts: .spanish /* T9 */)))
+            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness, texts: .current)))
         case .unavailable(let harness):
-            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness, texts: .spanish /* T9 */)))
+            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness, texts: .current)))
         }
     }
 
@@ -567,10 +567,10 @@ final class TilingController {
     /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
     /// then publishes itself, since the question returns after `perform` did.
     private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
-        let busy = RunningPrograms(engine: deps.engine, texts: .spanish /* T9 */).busy(in: panes)
+        let busy = RunningPrograms(engine: deps.engine, texts: .current).busy(in: panes)
         guard
             let question = CloseGuard.question(
-                for: scope, busy: busy, settings: config.window, texts: .spanish /* T9 */),
+                for: scope, busy: busy, settings: config.window, texts: .current),
             let onConfirmClose
         else {
             close()
@@ -683,7 +683,7 @@ final class TilingController {
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
         status = status.withPersistent(nil)
         // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
-        if let warning = reload.warnings.first { show(.configWarning(warning.message(.spanish /* T9 */))) }
+        if let warning = reload.warnings.first { show(.configWarning(warning.message(.current))) }
         return true
     }
 

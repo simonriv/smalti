@@ -45,7 +45,7 @@ final class TemplateCardView: PanelButtonView {
     init(template: PromptTemplate) {
         self.template = template
         super.init(
-            identifier: "smalti.studio.template.\(Self.name(of: template))", label: template.title(.spanish /* T9 */))
+            identifier: "smalti.studio.template.\(Self.name(of: template))", label: template.title(.current))
         let stack = NSStackView(views: [preview, name])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -81,12 +81,12 @@ final class TemplateCardView: PanelButtonView {
         preview.attributedStringValue = PromptRunText.attributed(
             Self.sample(template, theme: theme), theme: theme, size: theme.promptStudio.templateFontSize)
         let title = NSMutableAttributedString(
-            string: template.title(.spanish /* T9 */),
+            string: template.title(.current),
             attributes: [
                 .font: theme.interfaceFont(size: panel.rowFontSize, weight: 500),
                 .foregroundColor: (isSelected ? panel.title : panel.text).nsColor,
             ])
-        if let note = template.note(.spanish /* T9 */) {
+        if let note = template.note(.current) {
             title.append(
                 NSAttributedString(
                     string: " " + note,
@@ -103,7 +103,7 @@ final class TemplateCardView: PanelButtonView {
         var config = PromptConfig.standard.applying(template)
         config.icons = .none
         config.modules = [.directory, .gitBranch, .runtime]
-        var context = PromptContext(directory: "/Users/you/dev/solen", home: "/Users/you", copy: .spanish /* T9 */)
+        var context = PromptContext(directory: "/Users/you/dev/solen", home: "/Users/you", copy: .current)
         context.repoRoot = "/Users/you/dev/solen"
         context.branch = "main"
         context.runtime = RuntimeVersion(kind: .node, version: "22.11")
@@ -137,7 +137,7 @@ final class ModuleRowView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityIdentifier("smalti.studio.module")
-        setAccessibilityLabel(row.id.title(.spanish /* T9 */))
+        setAccessibilityLabel(row.id.title(.current))
         let handle = NSTextField(labelWithString: "⋮⋮")
         handle.textColor = tokens.handle.nsColor
         handle.font = theme.interfaceFont(size: panel.rowFontSize)
@@ -166,12 +166,12 @@ final class ModuleRowView: NSView {
     private static func title(_ row: ModuleRow, theme: Theme) -> NSAttributedString {
         let panel = theme.appearancePanel
         let text = NSMutableAttributedString(
-            string: row.id.title(.spanish /* T9 */),
+            string: row.id.title(.current),
             attributes: [
                 .font: theme.interfaceFont(size: panel.rowFontSize),
                 .foregroundColor: (row.isActive ? panel.text : panel.muted).nsColor,
             ])
-        if row.isActive, let detail = row.id.detail(.spanish /* T9 */) {
+        if row.isActive, let detail = row.id.detail(.current) {
             text.append(
                 NSAttributedString(
                     string: " · " + detail,

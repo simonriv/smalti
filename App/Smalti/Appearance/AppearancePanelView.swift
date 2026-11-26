@@ -109,7 +109,7 @@ final class AppearancePanelView: NSView {
         }
         opacity.doubleValue = (appearance.glassOpacity * 100).rounded()
         opacityValue.stringValue = AppearanceTexts.opacity(
-            chosen: appearance.glassOpacity, underText: state.applied.opacities.panel, copy: .spanish /* T9 */)
+            chosen: appearance.glassOpacity, underText: state.applied.opacities.panel, copy: .current)
         blur.doubleValue = appearance.blur
         blurValue.stringValue = AppearanceTexts.blur(appearance.blur)
         legibility.state = appearance.protectLegibility ? .on : .off
@@ -118,7 +118,7 @@ final class AppearancePanelView: NSView {
             overrides: appearance.ansiOverrides[appearance.theme] ?? .none)
         for (swatch, color) in zip(swatches, palette.colors) { swatch.render(color, tokens: tokens) }
         adjusted.stringValue =
-            AppearanceTexts.adjusted(state.applied.adjustedColorCount, copy: .spanish /* T9 */) ?? ""
+            AppearanceTexts.adjusted(state.applied.adjustedColorCount, copy: .current) ?? ""
         adjusted.isHidden = state.applied.adjustedColorCount == 0
         for (mode, segment) in segments { segment.render(isSelected: mode == state.document.buttons, theme: theme) }
         segmentContainer.layer?.backgroundColor = tokens.segmentContainer.nsColor.cgColor

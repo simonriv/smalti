@@ -26,7 +26,7 @@ struct StatusMessage: Equatable {
     /// File name instead of the full path: the bar is one short line.
     static func invalidConfig(_ error: ConfigError) -> StatusMessage {
         let short = error.located(in: URL(filePath: error.file).lastPathComponent)
-        return StatusMessage(text: short.summary(.spanish /* T9 */), isTransient: false)
+        return StatusMessage(text: short.summary(.current), isTransient: false)
     }
 
     /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.
@@ -152,7 +152,7 @@ struct StatusMessage: Equatable {
     /// F7.6: the session on disk is from a newer Smalti; this one leaves it alone (shown once, at launch).
     static func newerSession(_ version: Int) -> StatusMessage {
         StatusMessage(
-            text: SaveOutcome.keptNewer(version: version).message(.spanish /* T9 */) ?? "", isTransient: false)
+            text: SaveOutcome.keptNewer(version: version).message(.current) ?? "", isTransient: false)
     }
 
     static func restoreFailures(first: String, count: Int) -> StatusMessage {

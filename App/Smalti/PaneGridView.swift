@@ -86,7 +86,7 @@ final class PaneGridView: NSView {
             container.removeFromSuperview()
         }
         let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
-        var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now, texts: .spanish /* T9 */)
+        var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now, texts: .current)
         context.agentDetails = state.observatory?.paneDetails ?? [:]
         context.promptHeaders = state.promptHeaders
         for pane in workspace.panes.map(\.id) {
@@ -107,7 +107,7 @@ final class PaneGridView: NSView {
         guard let pending = state.approvals[pane], let first = pending.first else { return nil }
         return ApprovalCardContent(
             approval: first, count: pending.count, workspace: workspace, keys: state.config.keys, now: .now,
-            texts: .spanish /* T9 */)
+            texts: .current)
     }
 
     /// A new pane appears at its place; only the panes that already existed move.

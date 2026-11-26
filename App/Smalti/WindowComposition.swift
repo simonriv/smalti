@@ -240,9 +240,9 @@ final class WindowComposition {
             windows: ResumeListing.windows(
                 in: snapshot,
                 context: ResumeListing.Context(
-                    home: controller.home, harnesses: services.harnesses, texts: .spanish /* T9 */)),
+                    home: controller.home, harnesses: services.harnesses, texts: .current)),
             closedAt: ClosedAtPhrase.text(
-                closedAt: snapshot.savedAt, now: .now, calendar: .current, texts: .spanish /* T9 */))
+                closedAt: snapshot.savedAt, now: .now, calendar: .current, texts: .current))
         let screen = RestoreController(
             listing, theme: controller.theme, preferences: preferences, sessions: services.makeSessionSearch()
         ) {
@@ -322,7 +322,7 @@ final class WindowComposition {
             actions: .init(
                 search: { [weak controller] query in
                     guard let controller else { return [] }
-                    return SearchCommands(layouts: .standard, texts: .spanish) /* T9 */.execute(
+                    return SearchCommands(layouts: .standard, texts: .current).execute(
                         query, state: controller.catalogState(), keymap: controller.config.keys)
                 },
                 perform: { [weak controller] command in controller?.perform(command) },

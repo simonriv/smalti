@@ -80,7 +80,7 @@ final class SearchBarController: NSObject, NSTextFieldDelegate {
         case .searchSelected(let index): progress = progress.selected(index)
         default: return
         }
-        view?.showCount(progress.text(.spanish /* T9 */))
+        view?.showCount(progress.text(.current))
     }
 
     /// Closes when the focused pane changed (a click, a workspace switch) or the pane closed.

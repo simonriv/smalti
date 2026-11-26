@@ -142,7 +142,7 @@ private final class TableRowView: NSView {
         setAccessibilityRole(.row)
         setAccessibilityIdentifier("smalti.observatory.row.\(row.id)")
         setAccessibilityLabel(row.label)
-        setAccessibilityValue(isSelected ? "selected" : ObservatoryTexts.state(row.state, copy: .spanish /* T9 */))
+        setAccessibilityValue(isSelected ? "selected" : ObservatoryTexts.state(row.state, copy: .current))
         needsDisplay = true
     }
 
@@ -150,7 +150,7 @@ private final class TableRowView: NSView {
         let color = state == .stopped ? theme.text.secondary : theme.color(for: state)
         let dot = StatusDot(diameter: theme.observatory.tableDot, style: theme.statusDot(for: state))
         let text = ObservatoryText.label(
-            ObservatoryTexts.state(state, copy: .spanish /* T9 */),
+            ObservatoryTexts.state(state, copy: .current),
             .init(size: theme.observatory.rowFontSize, color: color), theme: theme)
         let stack = NSStackView(views: [dot, text])
         stack.spacing = theme.observatory.spacing.stateDot

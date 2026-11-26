@@ -6,7 +6,7 @@ import SmaltiCore
 final class CommandGroupLabel: NSView {
     convenience init(_ group: CommandGroup, theme: Theme) {
         self.init(
-            text: CommandTexts.spanish.groups[group] ?? "",  // T9
+            text: CommandTexts.current.groups[group] ?? "",
             theme: theme, identifier: "smalti.paletteGroup")
     }
 

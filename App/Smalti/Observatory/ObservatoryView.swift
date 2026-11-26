@@ -179,22 +179,22 @@ final class ObservatoryView: NSView {
     }
 
     func showReading(period current: ObservatoryPeriod) {
-        period.show(current.title(copy: .spanish /* T9 */))
+        period.show(current.title(copy: .current))
         cards.showReading()
     }
 
     func show(_ report: ObservatoryReport, snapshot: ObservatorySnapshot, period current: ObservatoryPeriod) {
         let zone = TimeZone.autoupdatingCurrent
-        period.show(current.title(copy: .spanish /* T9 */))
+        period.show(current.title(copy: .current))
         cards.show(report.summary, timeZone: zone)
         let tokens = theme.observatory
         tableHeight?.constant =
             tokens.tableHeaderHeight + tokens.rowHeight * Double(min(max(report.rows.count, 1), Self.visibleRows))
         table.show(report.rows, selected: report.detail?.sessionID)
         detail.show(report.detail, timeZone: zone)
-        localModels.show(LocalModelsFigures.make(snapshot.localModels, now: snapshot.now, copy: .spanish /* T9 */))
+        localModels.show(LocalModelsFigures.make(snapshot.localModels, now: snapshot.now, copy: .current))
         system.show(
-            SystemFigures.make(snapshot, copy: .spanish /* T9 */), cpuHistory: snapshot.cpuHistory,
+            SystemFigures.make(snapshot, copy: .current), cpuHistory: snapshot.cpuHistory,
             gpuHistory: snapshot.gpuHistory,
             footnote: report.footnote)
     }

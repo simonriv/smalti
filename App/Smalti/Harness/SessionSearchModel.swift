@@ -97,7 +97,7 @@ final class SessionSearchModel {
         onChange?()
     }
 
-    func rows() -> [SessionSearchRow] { state.rows(now: Date(), calendar: .current, texts: .spanish /* T9 */) }
+    func rows() -> [SessionSearchRow] { state.rows(now: Date(), calendar: .current, texts: .current) }
 
     /// The plan for the selected session; nil without one.
     func plan(forking: Bool) -> OpenPlan? {

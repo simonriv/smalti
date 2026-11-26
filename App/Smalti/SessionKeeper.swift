@@ -80,7 +80,7 @@ final class SessionKeeper {
             lastFailure = nil
             return
         }
-        let reason = error.summary(.spanish /* T9 */)
+        let reason = error.summary(.current)
         logger.error("could not save the session: \(reason, privacy: .public)")
         guard reason != lastFailure else { return }
         lastFailure = reason

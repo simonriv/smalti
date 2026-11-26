@@ -11,7 +11,11 @@ extension XCUIApplication {
     /// write the user's `~/.config/smalti/config.toml`. Without `config` the file does not exist and the defaults
     /// apply. `shell` overrides the shell (`-SmaltiShellCommand`); pass `nil` only with a valid `config` whose
     /// `[shell] command` is the isolated shell, because the user's login shell attaches to a shared tmux session.
-    static func isolatedSmalti(shell: String? = isolatedShell, config: String? = nil) -> XCUIApplication {
+    /// F7.7: `language` is forced with `-AppleLanguages` (never the Mac's), Spanish unless a test asks for English;
+    /// the welcome card stays closed (its mark is written in the temporary state) unless `welcome` is true.
+    static func isolatedSmalti(
+        shell: String? = isolatedShell, config: String? = nil, language: String = "es", welcome: Bool = false
+    ) -> XCUIApplication {
         precondition(
             shell != nil || config?.contains("command = \"\(isolatedShell)\"") == true,
             "a launch without -SmaltiShellCommand needs a config whose shell is \(isolatedShell)")
@@ -38,8 +42,23 @@ extension XCUIApplication {
             file.deletingLastPathComponent().appending(path: "managed-settings.json").path(percentEncoded: false),
         ]
         app.launchArguments += isolatedHarnessArguments(next: file.deletingLastPathComponent())
+        app.launchArguments += ["-AppleLanguages", "(\(language))"]
+        if !welcome { markWelcomeSeen(in: file.deletingLastPathComponent().appending(path: "state")) }
         if let config { app.writeConfig(config) }
         return app
+    }
+
+    /// The same isolated launch again (same arguments and environment, so the same language and state).
+    static func relaunched(from app: XCUIApplication) -> XCUIApplication {
+        let again = XCUIApplication()
+        again.launchArguments = app.launchArguments
+        again.launchEnvironment = app.launchEnvironment
+        return again
+    }
+
+    private static func markWelcomeSeen(in state: URL) {
+        try? FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        try? Data(#"{"version":1}"#.utf8).write(to: state.appending(path: "welcome.json"))
     }
 
     /// F6: empty homes for Codex, Antigravity and OpenCode, an empty Neovim config, `nvim --clean` for the editor

@@ -131,7 +131,7 @@ final class ObservatoryController {
                     snapshot,
                     for: .init(
                         period: period, selection: selection, calendar: .autoupdatingCurrent, filter: filter,
-                        copy: .spanish /* T9 */))
+                        copy: .current))
             }.value
             guard let self, generation == self.renderGeneration, let view = self.view else { return }
             self.report = report

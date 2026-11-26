@@ -53,13 +53,13 @@ final class SummaryCardsView: NSStackView {
         }
         set(
             cards[1], value: ObservatoryFormat.count(summary.input),
-            note: plain(ObservatoryTexts.cache(summary, copy: .spanish /* T9 */)))
+            note: plain(ObservatoryTexts.cache(summary, copy: .current)))
         set(
             cards[2], value: ObservatoryFormat.count(summary.output),
-            note: plain(ObservatoryTexts.peak(summary, timeZone: timeZone, copy: .spanish /* T9 */)))
+            note: plain(ObservatoryTexts.peak(summary, timeZone: timeZone, copy: .current)))
         set(
             cards[3], value: ObservatoryFormat.usd(summary.cost.usd),
-            note: plain(ObservatoryTexts.cost(summary, copy: .spanish /* T9 */)))
+            note: plain(ObservatoryTexts.cost(summary, copy: .current)))
     }
 
     func showReading() {
@@ -84,7 +84,7 @@ final class SummaryCardsView: NSStackView {
 
     /// "2 trabajando" in green and "1 esperando" in amber, as the board colours them.
     private func sessionsNote(_ summary: ObservatoryReport.Summary) -> NSAttributedString {
-        let text = ObservatoryTexts.sessions(summary, copy: .spanish /* T9 */)
+        let text = ObservatoryTexts.sessions(summary, copy: .current)
         let note = NSMutableAttributedString(attributedString: plain(text))
         let tones: [(String, RGBAColor)] = [
             ("\(summary.working) trabajando", theme.agent.working),

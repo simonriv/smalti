@@ -110,7 +110,7 @@ final class RestoreController: NSObject, NSTextFieldDelegate {
     private func openSession(forking: Bool) {
         guard let plan = sessions.plan(forking: forking) else { return }
         if case .cannotFork(let harness) = plan {
-            notice = OpenHarnessSession.cannotForkMessage(harness, texts: .spanish /* T9 */)
+            notice = OpenHarnessSession.cannotForkMessage(harness, texts: .current)
             renderSessions()
             return
         }

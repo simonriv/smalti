@@ -45,10 +45,10 @@ final class PromptStudioView: NSView {
     private let moduleStack = NSStackView()
     private let iconSegments = PromptIcons.allCases.map {
         SegmentView(
-            identifier: "smalti.studio.icons.\($0.rawValue)", title: $0.title(.spanish /* T9 */),
+            identifier: "smalti.studio.icons.\($0.rawValue)", title: $0.title(.current),
             inset: Theme.obsidian.appearancePanel.segmentLabelInset)
     }
-    private let noNerdFont = NSTextField(labelWithString: PromptCopy.spanish.noNerdFont)
+    private let noNerdFont = NSTextField(labelWithString: PromptCopy.current.noNerdFont)
     private let symbols = PromptSymbol.allCases.map {
         SegmentView(
             identifier: "smalti.studio.symbol.\($0.rawValue)", title: $0.rawValue,
@@ -56,7 +56,7 @@ final class PromptStudioView: NSView {
     }
     private let layoutChoice = PanelButtonView(identifier: "smalti.studio.layout", label: "Disposición")
     private let layoutLabel = NSTextField(labelWithString: "")
-    private let shellPrompt = NSButton(checkboxWithTitle: PromptCopy.spanish.shellPrompt, target: nil, action: nil)
+    private let shellPrompt = NSButton(checkboxWithTitle: PromptCopy.current.shellPrompt, target: nil, action: nil)
     private let labels = ["Plantillas", "Módulos", "Iconos", "Símbolo", "Disposición"].map {
         NSTextField(labelWithString: $0)
     }
@@ -104,8 +104,8 @@ final class PromptStudioView: NSView {
         for (symbol, segment) in zip(PromptSymbol.allCases, symbols) {
             segment.render(isSelected: symbol == state.draft.symbol, theme: theme)
         }
-        layoutLabel.stringValue = state.draft.layout.title(.spanish /* T9 */)
-        layoutChoice.setAccessibilityValue(state.draft.layout.title(.spanish /* T9 */))
+        layoutLabel.stringValue = state.draft.layout.title(.current)
+        layoutChoice.setAccessibilityValue(state.draft.layout.title(.current))
         shellPrompt.state = state.draft.source == .shell ? .on : .off
         paintButtons(tokens)
     }
@@ -186,7 +186,7 @@ final class PromptStudioView: NSView {
         layoutLabel.font = theme.interfaceFont(size: panel.rowFontSize)
         layoutLabel.textColor = panel.text.nsColor
         shellPrompt.attributedTitle = NSAttributedString(
-            string: PromptCopy.spanish.shellPrompt,
+            string: PromptCopy.current.shellPrompt,
             attributes: [.font: theme.interfaceFont(size: panel.rowFontSize), .foregroundColor: panel.text.nsColor])
     }
 

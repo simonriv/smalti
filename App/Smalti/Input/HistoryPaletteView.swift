@@ -233,7 +233,7 @@ final class HistoryRowView: NSView {
         let dot = NSTextField(labelWithString: "●")
         dot.font = theme.interfaceFont(size: tokens.dotSize)
         dot.textColor = Self.color(for: hit.stats.lastExit, theme: theme).nsColor
-        let ago = HistorySearch.ago(hit.stats.lastUsed, now: now, calendar: .current, texts: .spanish /* T9 */)
+        let ago = HistorySearch.ago(hit.stats.lastUsed, now: now, calendar: .current, texts: .current)
         let meta = NSTextField(labelWithString: "\(ago)   ×\(hit.stats.uses)")
         meta.font = theme.interfaceFont(size: palette.footerFontSize)
         meta.textColor = theme.text.secondary.nsColor

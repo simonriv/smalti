@@ -97,7 +97,7 @@ final class PromptStudioController {
     private func render() {
         guard let editor, let view else { return }
         let previews = PreviewSituation.allCases.map {
-            (title: $0.title(.spanish /* T9 */), lines: editor.preview($0))
+            (title: $0.title(.current), lines: editor.preview($0))
         }
         view.render(
             PromptStudioState(

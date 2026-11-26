@@ -83,7 +83,7 @@ final class HelpController: NSObject, NSTextFieldDelegate {
     private func refresh() {
         guard let view else { return }
         let sections = HelpCatalog.filtered(
-            HelpCatalog.sections(keymap: keymap(), texts: .spanish) /* T9 */, query: view.field.stringValue)
+            HelpCatalog.sections(keymap: keymap(), texts: .current), query: view.field.stringValue)
         entries = Self.readingOrder(sections)
         selected = min(selected, max(entries.count - 1, 0))
         view.show(
