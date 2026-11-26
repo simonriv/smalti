@@ -181,6 +181,38 @@ struct ClaudeTimelineTests {
         timeout.cancel()
     }
 
+    @Test func aSubagentBornWhileWatchingIsWatchedToo() async throws {
+        let projects = try ScratchProjects()
+        let folder = try projects.folder("-w")
+        try Data("{}\n".utf8).write(to: folder.appending(path: "s1.jsonl"))
+        let subagents = folder.appending(path: "s1/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        let adapter = ClaudeTimeline(projectsRoot: projects.root)
+        let ref = try await adapter.locate(sessionID: "s1")
+        let counter = Counter()
+        let listening = Task {
+            for await _ in adapter.changes(of: ref) { await counter.add() }
+        }
+        try await Task.sleep(for: .milliseconds(50))
+
+        let agent = subagents.appending(path: "agent-a1.jsonl")
+        try Data("{}\n".utf8).write(to: agent)
+        try await Task.sleep(for: .milliseconds(400))
+        let afterBirth = await counter.value
+        let handle = try FileHandle(forWritingTo: agent)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("{}\n".utf8))
+        try handle.close()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while await counter.value == afterBirth, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        listening.cancel()
+
+        #expect(afterBirth >= 1)
+        #expect(await counter.value > afterBirth)
+    }
+
     @Test func projectSessionsIncludeSubfoldersButNotSiblings() async throws {
         let projects = try ScratchProjects()
         let source = try String(
@@ -230,4 +262,10 @@ struct ClaudeTimelineTests {
 
         #expect(count == 0)
     }
+}
+
+actor Counter {
+    private(set) var value = 0
+
+    func add() { value += 1 }
 }

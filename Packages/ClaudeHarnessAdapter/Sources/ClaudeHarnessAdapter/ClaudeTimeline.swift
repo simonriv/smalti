@@ -57,14 +57,11 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
     }
 
     public func changes(of session: TranscriptSessionRef) -> AsyncStream<Void> {
-        let targets =
-            [URL(filePath: session.file)] + (session.subagentFolder.map { [URL(filePath: $0)] } ?? [])
-            + subagentFiles(of: session).map(\.0)
-        return AsyncStream { continuation in
-            let watches = targets.compactMap { target in
-                try? FileWatch(file: target, coalescing: Self.coalescing) { continuation.yield() }
-            }
-            continuation.onTermination = { _ in watches.forEach { $0.cancel() } }
+        AsyncStream { continuation in
+            let watch = SessionWatch(
+                session: session, coalescing: Self.coalescing, subagents: { subagentFiles(of: session).map(\.0) },
+                onChange: { continuation.yield() })
+            continuation.onTermination = { _ in watch.cancel() }
         }
     }
 
@@ -184,5 +181,55 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         case .missing(let path): .missing(path: path)
         case .unreadable(let path, let reason): .unreadable(path: path, reason: reason)
         }
+    }
+}
+
+/// The files of one session under watch: the main transcript, the subagents' folder and each subagent's transcript,
+/// including those born while watching (the folder tells when one appears).
+private final class SessionWatch: @unchecked Sendable {
+    // Unchecked: `watches` and `isCancelled` are only touched under `lock`.
+    private let lock = NSLock()
+    private var watches: [String: FileWatch] = [:]
+    private var isCancelled = false
+    private let coalescing: Duration
+    private let subagents: @Sendable () -> [URL]
+    private let onChange: @Sendable () -> Void
+
+    init(
+        session: TranscriptSessionRef, coalescing: Duration, subagents: @escaping @Sendable () -> [URL],
+        onChange: @escaping @Sendable () -> Void
+    ) {
+        self.coalescing = coalescing
+        self.subagents = subagents
+        self.onChange = onChange
+        watch(URL(filePath: session.file), then: onChange)
+        if let folder = session.subagentFolder {
+            watch(URL(filePath: folder)) { [weak self] in
+                self?.watchNewSubagents()
+                onChange()
+            }
+        }
+        watchNewSubagents()
+    }
+
+    private func watchNewSubagents() {
+        for file in subagents() { watch(file, then: onChange) }
+    }
+
+    private func watch(_ file: URL, then action: @escaping @Sendable () -> Void) {
+        let path = file.path(percentEncoded: false)
+        lock.withLock {
+            guard !isCancelled, watches[path] == nil else { return }
+            watches[path] = try? FileWatch(file: file, coalescing: coalescing, onChange: action)
+        }
+    }
+
+    func cancel() {
+        let current = lock.withLock {
+            isCancelled = true
+            defer { watches = [:] }
+            return Array(watches.values)
+        }
+        current.forEach { $0.cancel() }
     }
 }
