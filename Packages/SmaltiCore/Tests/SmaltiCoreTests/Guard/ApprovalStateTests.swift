@@ -37,8 +37,8 @@ struct ApprovalStateTests {
 
     @Test func noticeNamesCommandAndEnvironment() {
         let notice = AttentionNotice.make(
-            .approval(command: "supabase db push", environment: "PROD"), workspace: "rizaria",
-            directory: SessionFixtures.directory("/p/web"), pane: PaneID())
+            .approval(command: "supabase db push", environment: "PROD"),
+            at: ("rizaria", SessionFixtures.directory("/p/web"), PaneID()), texts: .spanish)
 
         #expect(notice.title == "rizaria/web")
         #expect(notice.body == "Aprobación: `supabase db push` contra PROD")
@@ -52,12 +52,13 @@ struct ApprovalStateTests {
         var set = agentSet()
         let pane = set.active.panes[0].id
         let pending = PendingApproval(id: UUID(), pane: pane, subject: subject, since: t0, deadline: t0)
-        HandleApprovalChange(notifier: RecordingNotifier()).execute(.waiting(pending), in: &set)
+        HandleApprovalChange(notifier: RecordingNotifier(), texts: .spanish).execute(.waiting(pending), in: &set)
 
         let content = PaneHeaderContent(
             set.active.panes[0], index: 1,
             context: HeaderContext(
-                keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: t0.addingTimeInterval(125)))
+                keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: t0.addingTimeInterval(125),
+                texts: .spanish))
 
         #expect(content.detail == HeaderDetail(text: "espera tu aprobación · 2m", tone: .waiting))
     }
@@ -81,12 +82,13 @@ struct ApprovalStateTests {
         let pane = set.active.panes[0].id
         let pending = PendingApproval(id: UUID(), pane: pane, subject: subject, since: t0, deadline: t0)
 
-        HandleApprovalChange(notifier: notifier).execute(.waiting(pending), in: &set)
+        HandleApprovalChange(notifier: notifier, texts: .spanish).execute(.waiting(pending), in: &set)
 
         #expect(set.active.panes[0].agent?.state.kind == .waiting)
         #expect(notifier.delivered.map(\.body) == ["Aprobación: `supabase db push` contra PROD"])
 
-        HandleApprovalChange(notifier: notifier).execute(.settled(pending, approved: true, remaining: 0), in: &set)
+        HandleApprovalChange(notifier: notifier, texts: .spanish).execute(
+            .settled(pending, approved: true, remaining: 0), in: &set)
         #expect(set.active.panes[0].agent?.state == .working)
     }
 
@@ -94,7 +96,7 @@ struct ApprovalStateTests {
         var set = agentSet()
         let pane = set.active.panes[0].id
         let pending = PendingApproval(id: UUID(), pane: pane, subject: subject, since: t0, deadline: t0)
-        let handle = HandleApprovalChange(notifier: RecordingNotifier())
+        let handle = HandleApprovalChange(notifier: RecordingNotifier(), texts: .spanish)
         handle.execute(.waiting(pending), in: &set)
 
         handle.execute(.settled(pending, approved: false, remaining: 1), in: &set)
@@ -108,7 +110,7 @@ struct ApprovalStateTests {
         let pending = PendingApproval(
             id: UUID(), pane: set.active.panes[0].id, subject: subject, since: t0, deadline: t0)
 
-        HandleApprovalChange(notifier: notifier).execute(.waiting(pending), in: &set)
+        HandleApprovalChange(notifier: notifier, texts: .spanish).execute(.waiting(pending), in: &set)
 
         #expect(notifier.delivered.count == 1)
         #expect(set.active.panes[0].agent == nil)

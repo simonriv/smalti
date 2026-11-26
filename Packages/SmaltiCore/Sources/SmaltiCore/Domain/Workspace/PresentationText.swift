@@ -1,8 +1,7 @@
 extension Workspace {
     /// Status bar line, as in Main.dc.html: "solen · 3 paneles · dwindle".
-    public var statusLine: String {
-        let count = panes.count
-        return "\(name) · \(count) \(count == 1 ? "panel" : "paneles") · \(layout.statusName)"
+    public func statusLine(texts: StatusTexts) -> String {
+        "\(name) · \(texts.panes(panes.count)) · \(texts.layoutNames[layout.id] ?? layout.id.rawValue)"
     }
 }
 
@@ -23,16 +22,16 @@ public struct HeaderDetail: Equatable, Sendable {
         self.tone = tone
     }
 
-    static func of(_ agent: AgentSession?, now: Date) -> HeaderDetail? {
+    static func of(_ agent: AgentSession?, now: Date, texts: StatusTexts) -> HeaderDetail? {
         guard let agent else { return nil }
+        let elapsed = { (since: Date) in ["elapsed": ElapsedText.short(since: since, now: now)] }
         switch agent.state {
         case .waiting(let since, .approval):
-            return HeaderDetail(
-                text: "espera tu aprobación · \(ElapsedText.short(since: since, now: now))", tone: .waiting)
+            return HeaderDetail(text: texts.waitingForApproval(elapsed(since)), tone: .waiting)
         case .waiting(let since, _):
-            return HeaderDetail(text: "te espera · \(ElapsedText.short(since: since, now: now))", tone: .waiting)
+            return HeaderDetail(text: texts.waiting(elapsed(since)), tone: .waiting)
         case .failed(let since, _):
-            return HeaderDetail(text: "error · \(ElapsedText.short(since: since, now: now))", tone: .failed)
+            return HeaderDetail(text: texts.failed(elapsed(since)), tone: .failed)
         case .working: return HeaderDetail(text: ElapsedText.short(since: agent.startedAt, now: now), tone: .secondary)
         case .stopped: return nil
         }
@@ -48,11 +47,14 @@ public struct HeaderContext: Sendable {
     public var agentDetails: [String: PaneAgentDetail] = [:]
     /// F5 "Solo símbolo": the prompt's context per pane, shown instead of the directory.
     public var promptHeaders: [PaneID: String] = [:]
+    /// F7.7: the words of the interface's language.
+    public let texts: StatusTexts
 
-    public init(keymap: Keymap, home: WorkingDirectory, now: Date) {
+    public init(keymap: Keymap, home: WorkingDirectory, now: Date, texts: StatusTexts) {
         self.keymap = keymap
         self.home = home
         self.now = now
+        self.texts = texts
     }
 }
 
@@ -84,7 +86,7 @@ public struct PaneHeaderContent: Equatable, Sendable {
         let shown = context.promptHeaders[pane.id] ?? agentDetail?.family.map { "\(directory) · \($0)" } ?? directory
         self.init(
             process: pane.headerName, directory: shown,
-            status: pane.agent?.state.kind, detail: HeaderDetail.of(pane.agent, now: context.now),
+            status: pane.agent?.state.kind, detail: HeaderDetail.of(pane.agent, now: context.now, texts: context.texts),
             shortcut: index.flatMap { context.keymap.chord(for: .paneFocus($0))?.display } ?? "")
         if pane.agent?.state.kind == .working, let load = agentDetail?.context, load != .unavailable {
             self.context = load
@@ -102,12 +104,9 @@ public struct StripCounter: Equatable, Sendable {
         self.text = text
     }
 
-    public static func counters(_ counts: AgentCounts) -> [StripCounter] {
-        [
-            (AgentStateKind.working, counts.working, "trabajando"), (.waiting, counts.waiting, "te espera"),
-            (.failed, counts.failed, "error"),
-        ]
-        .filter { $0.1 > 0 }
-        .map { StripCounter(kind: $0.0, text: "\($0.1) \($0.2)") }
+    public static func counters(_ counts: AgentCounts, texts: StatusTexts) -> [StripCounter] {
+        [(AgentStateKind.working, counts.working), (.waiting, counts.waiting), (.failed, counts.failed)]
+            .filter { $0.1 > 0 }
+            .map { StripCounter(kind: $0.0, text: "\($0.1) \(texts.counters[$0.0] ?? "")") }
     }
 }

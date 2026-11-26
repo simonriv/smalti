@@ -24,11 +24,7 @@ public enum ObservatoryPeriod: CaseIterable, Sendable {
         return all[(index + 1) % all.count]
     }
 
-    public var title: String {
-        switch self {
-        case .today: "Hoy"
-        case .lastSevenDays: "7 días"
-        case .lastThirtyDays: "30 días"
-        }
+    public func title(copy: ObservatoryCopy) -> String {
+        copy.periods[self] ?? ""
     }
 }

@@ -150,7 +150,7 @@ struct LayoutStrategyTests {
 
     @Test func strategiesHaveSpanishNamesForTheInterface() {
         let names = LayoutCatalog.standard.all.map {
-            [CommandTexts.spanish.layoutNames[$0.id] ?? "", $0.statusName]
+            [CommandTexts.spanish.layoutNames[$0.id] ?? "", StatusTexts.spanish.layoutNames[$0.id] ?? ""]
         }
 
         #expect(names == [["Dwindle", "dwindle"], ["Columnas", "columnas"], ["Maestro + pila", "maestro"]])

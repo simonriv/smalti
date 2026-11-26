@@ -4,7 +4,6 @@ public struct MasterStackLayout: LayoutStrategy {
     private static let masterRatio = Ratio(1.15 / 2.15)
 
     public let id = LayoutID.master
-    public let statusName = "maestro"
     /// Paleta.dc.html icon of this layout's command.
     public let icon = CommandIcon.layoutFrame(strokes: [
         [Point(x: 1.5, y: 8.5), Point(x: 14.5, y: 8.5)], [Point(x: 8, y: 8.5), Point(x: 8, y: 14)],

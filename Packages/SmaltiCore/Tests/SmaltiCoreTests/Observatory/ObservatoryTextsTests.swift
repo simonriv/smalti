@@ -19,27 +19,28 @@ struct ObservatoryTextsTests {
     }
 
     @Test func sessionsLineCountsWorkingAndWaiting() {
-        #expect(ObservatoryTexts.sessions(summary()) == "2 trabajando · 1 esperando")
+        #expect(ObservatoryTexts.sessions(summary(), copy: .spanish) == "2 trabajando · 1 esperando")
     }
 
     @Test func sessionsLineAddsErrorsOnlyWhenThereAreSome() {
-        #expect(ObservatoryTexts.sessions(summary(failed: 1)) == "2 trabajando · 1 esperando · 1 error")
+        #expect(ObservatoryTexts.sessions(summary(failed: 1), copy: .spanish) == "2 trabajando · 1 esperando · 1 error")
     }
 
     @Test func cacheLineAndItsAbsence() {
-        #expect(ObservatoryTexts.cache(summary()) == "71% desde caché")
-        #expect(ObservatoryTexts.cache(summary(cacheShare: nil)) == "sin entrada")
+        #expect(ObservatoryTexts.cache(summary(), copy: .spanish) == "71% desde caché")
+        #expect(ObservatoryTexts.cache(summary(cacheShare: nil), copy: .spanish) == "sin entrada")
     }
 
     @Test func peakLineHasRateAndTime() {
-        let line = ObservatoryTexts.peak(summary(peak: OutputPeak(output: 4_800, at: at)), timeZone: bogota)
+        let line = ObservatoryTexts.peak(
+            summary(peak: OutputPeak(output: 4_800, at: at)), timeZone: bogota, copy: .spanish)
 
         #expect(line == "pico 4.8k/min · 06:06")
-        #expect(ObservatoryTexts.peak(summary(), timeZone: bogota) == "sin salida")
+        #expect(ObservatoryTexts.peak(summary(), timeZone: bogota, copy: .spanish) == "sin salida")
     }
 
     @Test func costLineSaysItIsAnEstimate() {
-        #expect(ObservatoryTexts.cost(summary()) == "estimado · incluido en tu plan")
+        #expect(ObservatoryTexts.cost(summary(), copy: .spanish) == "estimado · incluido en tu plan")
     }
 
     @Test func costLineCountsUnpricedModels() {
@@ -47,10 +48,10 @@ struct ObservatoryTextsTests {
         let two: Set<ModelID> = [ModelID(rawValue: "a"), ModelID(rawValue: "b")]
 
         #expect(
-            ObservatoryTexts.cost(summary(unpriced: one)) == "estimado · sin precio para 1 modelo"
+            ObservatoryTexts.cost(summary(unpriced: one), copy: .spanish) == "estimado · sin precio para 1 modelo"
         )
         #expect(
-            ObservatoryTexts.cost(summary(unpriced: two))
+            ObservatoryTexts.cost(summary(unpriced: two), copy: .spanish)
                 == "estimado · sin precio para 2 modelos")
     }
 
@@ -75,9 +76,10 @@ struct ObservatoryTextsTests {
 
     @Test func rowStatesUseTheTableWords() {
         #expect(
-            [AgentStateKind.working, .waiting, .failed, .stopped].map(ObservatoryTexts.state) == [
-                "trabajando", "te espera", "error", "detenida",
-            ])
+            [AgentStateKind.working, .waiting, .failed, .stopped].map { ObservatoryTexts.state($0, copy: .spanish) }
+                == [
+                    "trabajando", "te espera", "error", "detenida",
+                ])
     }
 
     @Test func peakLabelOfTheChart() {

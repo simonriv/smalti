@@ -14,8 +14,6 @@ public struct LayoutID: Hashable, Sendable, RawRepresentable {
 /// A way of arranging panes: builds the tree for an ordered list of panes.
 public protocol LayoutStrategy: Sendable {
     var id: LayoutID { get }
-    /// Short name shown in the status bar.
-    var statusName: String { get }
     /// Icon of its palette command.
     var icon: CommandIcon { get }
     /// The tree holding `panes` in order, or `nil` when there are none.

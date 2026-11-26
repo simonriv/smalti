@@ -185,9 +185,11 @@ public final class AgentApprovals {
 @MainActor
 public struct HandleApprovalChange {
     private let notifier: any Notifier
+    private let texts: StatusTexts
 
-    public init(notifier: any Notifier) {
+    public init(notifier: any Notifier, texts: StatusTexts) {
         self.notifier = notifier
+        self.texts = texts
     }
 
     public func execute(_ change: AgentApprovalChange, in set: inout WorkspaceSet) {
@@ -209,7 +211,7 @@ public struct HandleApprovalChange {
         else { return }
         let reason = AttentionReason.approval(
             command: approval.subject.shortCommand, environment: approval.subject.environment.label)
-        notifier.notify(.make(reason, workspace: workspace.name, directory: pane.workingDirectory, pane: pane.id))
+        notifier.notify(.make(reason, at: (workspace.name, pane.workingDirectory, pane.id), texts: texts))
     }
 
     private func update(_ pane: PaneID, in set: inout WorkspaceSet, _ transform: (Workspace) -> Workspace) {

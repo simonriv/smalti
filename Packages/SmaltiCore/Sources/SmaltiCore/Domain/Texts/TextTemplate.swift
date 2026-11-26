@@ -22,6 +22,11 @@ public struct TextTemplate: Sendable, Equatable, ExpressibleByStringLiteral {
         filled(Dictionary(values.map { ($0.key, $0.value) }, uniquingKeysWith: { first, _ in first }))
     }
 
+    /// The same with values gathered beforehand.
+    public func callAsFunction(_ values: [String: String]) -> String {
+        filled(values)
+    }
+
     func filled(_ lookup: [String: String]) -> String {
         pieces.map { piece in
             switch piece {

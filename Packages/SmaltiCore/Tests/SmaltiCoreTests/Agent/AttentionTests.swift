@@ -59,11 +59,11 @@ struct AttentionTests {
         let directory = SessionFixtures.directory("/Users/s/dev/web")
         let id = PaneID()
         func body(_ reason: AttentionReason) -> String {
-            AttentionNotice.make(reason, workspace: "rizaria", directory: directory, pane: id).body
+            AttentionNotice.make(reason, at: ("rizaria", directory, id), texts: .spanish).body
         }
 
         #expect(
-            AttentionNotice.make(.turnFinished, workspace: "rizaria", directory: directory, pane: id).title
+            AttentionNotice.make(.turnFinished, at: ("rizaria", directory, id), texts: .spanish).title
                 == "rizaria/web")
         #expect(
             body(.permission("pnpm db:migrate --name add_user_prefs"))

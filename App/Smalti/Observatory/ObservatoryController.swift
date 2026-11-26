@@ -129,7 +129,9 @@ final class ObservatoryController {
             let report = await Task.detached(priority: .userInitiated) {
                 ObservatoryReport.make(
                     snapshot,
-                    for: .init(period: period, selection: selection, calendar: .autoupdatingCurrent, filter: filter))
+                    for: .init(
+                        period: period, selection: selection, calendar: .autoupdatingCurrent, filter: filter,
+                        copy: .spanish /* T9 */))
             }.value
             guard let self, generation == self.renderGeneration, let view = self.view else { return }
             self.report = report

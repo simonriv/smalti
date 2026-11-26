@@ -238,7 +238,8 @@ final class WindowComposition {
         let listing = RestoreController.Content(
             snapshot: snapshot,
             windows: ResumeListing.windows(in: snapshot, home: controller.home, harnesses: services.harnesses),
-            closedAt: ClosedAtPhrase.text(closedAt: snapshot.savedAt, now: .now, calendar: .current))
+            closedAt: ClosedAtPhrase.text(
+                closedAt: snapshot.savedAt, now: .now, calendar: .current, texts: .spanish /* T9 */))
         let screen = RestoreController(
             listing, theme: controller.theme, preferences: preferences, sessions: services.makeSessionSearch()
         ) {

@@ -74,7 +74,7 @@ final class WorkspaceStripView: NSView {
             pills: state.set.workspaces.map {
                 .init(id: $0.id, name: $0.name, isActive: $0.id == state.set.activeID, status: $0.agentStatus)
             },
-            counters: StripCounter.counters(AgentCounts.of(state.set)),
+            counters: StripCounter.counters(AgentCounts.of(state.set), texts: .spanish /* T9 */),
             paletteChord: state.config.keys.chord(for: .paletteOpen)?.display ?? "", theme: state.theme)
         guard model != rendered else { return }
         rendered = model

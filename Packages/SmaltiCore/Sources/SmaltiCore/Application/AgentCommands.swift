@@ -9,9 +9,11 @@ public enum HandleAgentEventOutcome: Equatable, Sendable {
 @MainActor
 public struct HandleAgentEvent {
     private let notifier: any Notifier
+    private let texts: StatusTexts
 
-    public init(notifier: any Notifier) {
+    public init(notifier: any Notifier, texts: StatusTexts) {
         self.notifier = notifier
+        self.texts = texts
     }
 
     public func execute(_ event: AgentEvent, in set: inout WorkspaceSet, isAppActive: Bool) -> HandleAgentEventOutcome {
@@ -25,7 +27,7 @@ public struct HandleAgentEvent {
             let pane = updated.panes.first(where: { $0.id == event.pane })
         {
             notifier.notify(
-                .make(attention, workspace: updated.name, directory: pane.workingDirectory, pane: pane.id))
+                .make(attention, at: (updated.name, pane.workingDirectory, pane.id), texts: texts))
         }
         return .applied
     }

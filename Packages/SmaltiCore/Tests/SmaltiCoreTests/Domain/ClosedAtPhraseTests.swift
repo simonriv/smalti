@@ -21,7 +21,7 @@ struct ClosedAtPhraseTests {
 
     private func phrase(_ closed: String, now: String) -> String {
         ClosedAtPhrase.text(
-            closedAt: date(closed, in: bogota), now: date(now, in: bogota), calendar: bogota)
+            closedAt: date(closed, in: bogota), now: date(now, in: bogota), calendar: bogota, texts: .spanish)
     }
 
     @Test func sameDayIsToday() {
@@ -53,8 +53,9 @@ struct ClosedAtPhraseTests {
         let closed = date("2026-11-22 03:00", in: utc)  // 21-nov 22:00 in Bogotá
         let now = date("2026-11-22 13:00", in: utc)  // 22-nov 08:00 in Bogotá
 
-        #expect(ClosedAtPhrase.text(closedAt: closed, now: now, calendar: utc) == "hoy a las 03:00")
-        #expect(ClosedAtPhrase.text(closedAt: closed, now: now, calendar: bogota) == "anoche a las 22:00")
+        #expect(ClosedAtPhrase.text(closedAt: closed, now: now, calendar: utc, texts: .spanish) == "hoy a las 03:00")
+        #expect(
+            ClosedAtPhrase.text(closedAt: closed, now: now, calendar: bogota, texts: .spanish) == "anoche a las 22:00")
     }
 
     @Test func bannerFormatsDayMonthAndTime() {

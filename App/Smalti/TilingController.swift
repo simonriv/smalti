@@ -172,7 +172,7 @@ final class TilingController {
             let edited = deps.editor.editedFiles
             Task { await edited.record(event) }
         }
-        _ = HandleAgentEvent(notifier: deps.agents.notifier).execute(
+        _ = HandleAgentEvent(notifier: deps.agents.notifier, texts: .spanish /* T9 */).execute(
             event, in: &set, isAppActive: deps.agents.isAppActive())
         publish()
     }
@@ -244,7 +244,7 @@ final class TilingController {
             guard set.workspace(containing: pane) != nil else { return }
             show(.secretBlocked(path))
         } else {
-            HandleApprovalChange(notifier: deps.agents.notifier).execute(change, in: &set)
+            HandleApprovalChange(notifier: deps.agents.notifier, texts: .spanish /* T9 */).execute(change, in: &set)
         }
         publish()
     }

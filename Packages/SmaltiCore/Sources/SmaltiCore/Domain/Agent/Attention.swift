@@ -52,18 +52,23 @@ public struct AttentionNotice: Equatable, Sendable {
     }
 
     public static func make(
-        _ reason: AttentionReason, workspace: String, directory: WorkingDirectory, pane: PaneID
+        _ reason: AttentionReason, at place: (workspace: String, directory: WorkingDirectory, pane: PaneID),
+        texts: StatusTexts
     ) -> AttentionNotice {
-        AttentionNotice(pane: pane, title: "\(workspace)/\(directory.lastComponent)", body: body(for: reason))
+        AttentionNotice(
+            pane: place.pane, title: "\(place.workspace)/\(place.directory.lastComponent)",
+            body: body(for: reason, texts: texts))
     }
 
-    private static func body(for reason: AttentionReason) -> String {
+    private static func body(for reason: AttentionReason, texts: StatusTexts) -> String {
         switch reason {
-        case .permission(let summary): summary.isEmpty ? "pide permiso" : "pide permiso para `\(summary)`"
+        case .permission(let summary):
+            summary.isEmpty ? texts.asksPermission : texts.asksPermissionFor(["summary": summary])
         case .attention(let message): message
-        case .turnFinished: "terminó y te espera"
-        case .failure(let message): "error: \(message)"
-        case .approval(let command, let environment): "Aprobación: `\(command)` contra \(environment)"
+        case .turnFinished: texts.turnFinished
+        case .failure(let message): texts.failure(["message": message])
+        case .approval(let command, let environment):
+            texts.approval(["command": command, "environment": environment])
         }
     }
 }

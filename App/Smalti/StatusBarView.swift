@@ -61,7 +61,7 @@ final class StatusBarView: NSView {
         layer?.backgroundColor = state.chromeBackground.nsColor.cgColor
         label.font = theme.interfaceFont(size: theme.statusBar.fontSize)
         label.textColor = theme.statusBar.text.nsColor
-        label.stringValue = state.message?.text ?? state.set.active.statusLine
+        label.stringValue = state.message?.text ?? state.set.active.statusLine(texts: .spanish /* T9 */)
         setAccessibilityValue(label.stringValue)
         for field in [link, secure] {
             field.font = label.font

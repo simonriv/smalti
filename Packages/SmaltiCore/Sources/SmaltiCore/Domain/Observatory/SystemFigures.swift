@@ -23,20 +23,20 @@ public struct SystemFigures: Equatable, Sendable {
     /// Fractions of the installed memory, for the segmented bar.
     public let shares: Shares
 
-    public static func make(_ snapshot: ObservatorySnapshot) -> SystemFigures {
+    public static func make(_ snapshot: ObservatorySnapshot, copy: ObservatoryCopy) -> SystemFigures {
         let system = snapshot.system
         let model = loadedBytes(snapshot.localModels)
         return SystemFigures(
-            title: "Sistema · \(system.machineName)",
-            cpu: percent(system.cpu), gpu: percent(system.gpu),
+            title: copy.systemTitle(["machine": system.machineName]),
+            cpu: percent(system.cpu, copy: copy), gpu: percent(system.gpu, copy: copy),
             memory: system.memoryUsed.value.map { ObservatoryFormat.memory(used: $0, total: system.memoryTotal) }
-                ?? StatusFigures.unavailable,
-            split: splitText(system, model: model),
+                ?? copy.unavailable,
+            split: splitText(system, model: model, copy: copy),
             shares: shares(system, model: model))
     }
 
-    private static func percent(_ value: Reading<Double>) -> String {
-        value.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? StatusFigures.unavailable
+    private static func percent(_ value: Reading<Double>, copy: ObservatoryCopy) -> String {
+        value.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? copy.unavailable
     }
 
     private static func loadedBytes(_ report: LocalModelsReport) -> UInt64? {
@@ -44,18 +44,19 @@ public struct SystemFigures: Equatable, Sendable {
         return loaded.reduce(0) { $0 + ($1.vramBytes ?? $1.bytes) }
     }
 
-    private static func splitText(_ system: SystemSample, model: UInt64?) -> String {
-        guard let used = system.memoryUsed.value else { return StatusFigures.unavailable }
+    private static func splitText(_ system: SystemSample, model: UInt64?, copy: ObservatoryCopy) -> String {
+        guard let used = system.memoryUsed.value else { return copy.unavailable }
         var parts: [String] = []
-        if let model { parts.append("modelo \(ObservatoryFormat.gigabyteNumber(model))") }
+        if let model { parts.append(copy.splitModel(["value": ObservatoryFormat.gigabyteNumber(model)])) }
         if let agents = system.agentsMemory.value {
-            parts.append("agentes \(ObservatoryFormat.gigabyteNumber(agents))")
-            parts.append("resto \(ObservatoryFormat.gigabyteNumber(rest(used: used, model: model, agents: agents))) GB")
+            let rest = ObservatoryFormat.gigabyteNumber(rest(used: used, model: model, agents: agents))
+            parts.append(copy.splitAgents(["value": ObservatoryFormat.gigabyteNumber(agents)]))
+            parts.append(copy.splitRest(["value": rest]))
         } else {
-            parts.append("agentes \(StatusFigures.unavailable)")
+            parts.append(copy.splitAgents(["value": copy.unavailable]))
         }
-        let pressure = system.pressure.value?.rawValue ?? StatusFigures.unavailable
-        return (parts + ["presión \(pressure)"]).joined(separator: " · ")
+        let pressure = system.pressure.value.flatMap { copy.pressures[$0] } ?? copy.unavailable
+        return (parts + [copy.splitPressure(["value": pressure])]).joined(separator: " · ")
     }
 
     private static func rest(used: UInt64, model: UInt64?, agents: UInt64) -> UInt64 {
@@ -94,15 +95,15 @@ public enum LocalModelsFigures: Equatable, Sendable {
 
     private static let contextUnit = 1_024
 
-    public static func make(_ report: LocalModelsReport, now: Date) -> LocalModelsFigures {
-        guard case .available(let loaded, let onDisk) = report else { return .message("Ollama no está corriendo") }
+    public static func make(_ report: LocalModelsReport, now: Date, copy: ObservatoryCopy) -> LocalModelsFigures {
+        guard case .available(let loaded, let onDisk) = report else { return .message(copy.ollamaNotRunning) }
         let loadedNames = Set(loaded.map(\.name))
         let rows =
-            loaded.map { Row(name: $0.name, status: "cargado", isLoaded: true, detail: loadedDetail($0)) }
+            loaded.map { Row(name: $0.name, status: copy.loaded, isLoaded: true, detail: loadedDetail($0)) }
             + onDisk.filter { !loadedNames.contains($0.name) }.map {
-                Row(name: $0.name, status: "en disco", isLoaded: false, detail: diskDetail($0, now: now))
+                Row(name: $0.name, status: copy.onDisk, isLoaded: false, detail: diskDetail($0, now: now, copy: copy))
             }
-        return rows.isEmpty ? .message("Sin modelos locales") : .models(rows)
+        return rows.isEmpty ? .message(copy.noLocalModels) : .models(rows)
     }
 
     private static func loadedDetail(_ model: LocalModel) -> String {
@@ -111,8 +112,10 @@ public enum LocalModelsFigures: Equatable, Sendable {
             .joined(separator: " · ")
     }
 
-    private static func diskDetail(_ model: LocalModel, now: Date) -> String {
-        let downloaded = model.downloadedAt.map { "descargado " + ObservatoryFormat.ago(now.timeIntervalSince($0)) }
+    private static func diskDetail(_ model: LocalModel, now: Date, copy: ObservatoryCopy) -> String {
+        let downloaded = model.downloadedAt.map {
+            copy.downloaded(["ago": ObservatoryFormat.ago(now.timeIntervalSince($0), texts: copy.time)])
+        }
         return ([ObservatoryFormat.gigabytes(model.bytes), downloaded].compactMap { $0 }).joined(separator: " · ")
     }
 }

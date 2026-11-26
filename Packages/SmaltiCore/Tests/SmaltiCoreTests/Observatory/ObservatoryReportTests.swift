@@ -11,7 +11,8 @@ struct ObservatoryReportTests {
     private func report(_ snapshot: ObservatorySnapshot, _ period: ObservatoryPeriod = .today, selection: String? = nil)
         -> ObservatoryReport
     {
-        ObservatoryReport.make(snapshot, for: .init(period: period, selection: selection, calendar: calendar))
+        ObservatoryReport.make(
+            snapshot, for: .init(period: period, selection: selection, calendar: calendar, copy: .spanish))
     }
 
     @Test func sessionCrossingMidnightCountsOnlyTodayBuckets() {
@@ -246,8 +247,10 @@ struct ObservatoryReportTests {
         let snapshot = F.snapshot(sessions: [session], now: F.date("2026-11-18 10:00"))
         let tokyo = F.calendar("Asia/Tokyo")
 
-        let inBogota = ObservatoryReport.make(snapshot, for: .init(period: .today, selection: nil, calendar: calendar))
-        let inTokyo = ObservatoryReport.make(snapshot, for: .init(period: .today, selection: nil, calendar: tokyo))
+        let inBogota = ObservatoryReport.make(
+            snapshot, for: .init(period: .today, selection: nil, calendar: calendar, copy: .spanish))
+        let inTokyo = ObservatoryReport.make(
+            snapshot, for: .init(period: .today, selection: nil, calendar: tokyo, copy: .spanish))
 
         #expect(inBogota.summary.output == 9)
         #expect(inTokyo.summary.output == 0)

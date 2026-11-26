@@ -12,7 +12,8 @@ struct ObservatoryFrame: Sendable {
     static func make(_ snapshot: ObservatorySnapshot) -> ObservatoryFrame {
         let sessions = snapshot.panes.map(\.session.sessionID)
         return ObservatoryFrame(
-            snapshot: snapshot, statusFigures: StatusFigures.make(snapshot, calendar: .autoupdatingCurrent),
+            snapshot: snapshot,
+            statusFigures: StatusFigures.make(snapshot, calendar: .autoupdatingCurrent, copy: .spanish /* T9 */),
             paneDetails: Dictionary(
                 sessions.map { ($0, PaneAgentDetail.make(sessionID: $0, snapshot: snapshot)) }, uniquingKeysWith: { $1 }
             ))

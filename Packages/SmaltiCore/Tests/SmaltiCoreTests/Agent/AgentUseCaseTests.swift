@@ -34,7 +34,7 @@ struct AgentUseCaseTests {
     private func handle(_ event: AgentEvent, in set: inout WorkspaceSet, appActive: Bool = true)
         -> HandleAgentEventOutcome
     {
-        HandleAgentEvent(notifier: notifier).execute(event, in: &set, isAppActive: appActive)
+        HandleAgentEvent(notifier: notifier, texts: .spanish).execute(event, in: &set, isAppActive: appActive)
     }
 
     @Test func eventForMissingPaneIsIgnored() {

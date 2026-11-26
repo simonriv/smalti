@@ -17,22 +17,23 @@ struct PresentationTextTests {
     }
 
     @Test func statusLineMatchesTheBoard() throws {
-        #expect(try workspace(panes: 3).statusLine == "solen · 3 paneles · dwindle")
+        #expect(try workspace(panes: 3).statusLine(texts: .spanish) == "solen · 3 paneles · dwindle")
     }
 
     @Test func statusLineUsesSingularForOnePane() throws {
-        #expect(try workspace(panes: 1).statusLine == "solen · 1 panel · dwindle")
+        #expect(try workspace(panes: 1).statusLine(texts: .spanish) == "solen · 1 panel · dwindle")
     }
 
     @Test func statusLineForEmptyWorkspace() throws {
-        #expect(try workspace(panes: 0).statusLine == "solen · 0 paneles · dwindle")
+        #expect(try workspace(panes: 0).statusLine(texts: .spanish) == "solen · 0 paneles · dwindle")
     }
 
     @Test func headerShowsProcessDirectoryAndShortcut() throws {
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/simon/dev/xolken"))
             .applying(.foregroundProcessChanged(ForegroundProcess(name: "claude")))
 
-        let header = PaneHeaderContent(pane, index: 3, context: HeaderContext(keymap: .standard, home: home, now: .now))
+        let header = PaneHeaderContent(
+            pane, index: 3, context: HeaderContext(keymap: .standard, home: home, now: .now, texts: .spanish))
 
         #expect(
             header
@@ -43,7 +44,7 @@ struct PresentationTextTests {
     /// F5 "Solo símbolo": the prompt's context replaces the directory in the header.
     @Test func promptContextReplacesTheDirectory() throws {
         let pane = Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/Users/simon/dev/xolken"))
-        var context = HeaderContext(keymap: .standard, home: home, now: .now)
+        var context = HeaderContext(keymap: .standard, home: home, now: .now, texts: .spanish)
         context.promptHeaders = [pane.id: "xolken · main +2"]
 
         let header = PaneHeaderContent(pane, index: 3, context: context)
@@ -55,7 +56,7 @@ struct PresentationTextTests {
         let pane = Pane(id: PaneID(), workingDirectory: home).applying(.titleChanged("vim notes.md"))
 
         let header = PaneHeaderContent(
-            pane, index: nil, context: HeaderContext(keymap: .standard, home: home, now: .now))
+            pane, index: nil, context: HeaderContext(keymap: .standard, home: home, now: .now, texts: .spanish))
 
         #expect(
             header == PaneHeaderContent(process: "vim notes.md", directory: "~", status: nil, detail: nil, shortcut: "")
@@ -74,7 +75,8 @@ struct PresentationTextTests {
     private func header(_ pane: Pane, now: Date) throws -> PaneHeaderContent {
         PaneHeaderContent(
             pane, index: 1,
-            context: HeaderContext(keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now))
+            context: HeaderContext(
+                keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now, texts: .spanish))
     }
 
     @Test func waitingHeaderSaysForHowLong() throws {
@@ -112,22 +114,23 @@ struct PresentationTextTests {
 
     @Test func countersNameEachStateAndSkipZeros() {
         #expect(
-            StripCounter.counters(AgentCounts(working: 2, waiting: 1, failed: 0))
+            StripCounter.counters(AgentCounts(working: 2, waiting: 1, failed: 0), texts: .spanish)
                 == [
                     StripCounter(kind: .working, text: "2 trabajando"),
                     StripCounter(kind: .waiting, text: "1 te espera"),
                 ])
         #expect(
-            StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 3)) == [
+            StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 3), texts: .spanish) == [
                 StripCounter(kind: .failed, text: "3 error")
             ])
-        #expect(StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 0)).isEmpty)
+        #expect(StripCounter.counters(AgentCounts(working: 0, waiting: 0, failed: 0), texts: .spanish).isEmpty)
     }
 
     // MARK: - Observatory details (F3)
 
     private func header(_ pane: Pane, now: Date, details: [String: PaneAgentDetail]) throws -> PaneHeaderContent {
-        var context = HeaderContext(keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now)
+        var context = HeaderContext(
+            keymap: .standard, home: try WorkingDirectory(path: "/Users/s"), now: now, texts: .spanish)
         context.agentDetails = details
         return PaneHeaderContent(pane, index: 1, context: context)
     }
