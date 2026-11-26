@@ -40,7 +40,10 @@ struct TimelineCells {
     }
 
     private func wrapping(_ text: String, size: Double, color: RGBAColor, lines: Int) -> NSTextField {
-        let field = NSTextField(wrappingLabelWithString: text)
+        // A wrapping label counts wrapped lines, not the text's own: cut explicit lines first so the clamp holds.
+        let explicit = text.split(separator: "\n", omittingEmptySubsequences: false)
+        let shown = explicit.count > lines ? explicit.prefix(lines).joined(separator: "\n") + "…" : text
+        let field = NSTextField(wrappingLabelWithString: shown)
         field.font = theme.interfaceFont(size: size)
         field.textColor = color.nsColor
         field.maximumNumberOfLines = lines

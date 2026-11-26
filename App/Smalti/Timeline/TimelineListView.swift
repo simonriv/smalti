@@ -26,7 +26,10 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
         self.theme = theme
         super.init(frame: .zero)
         let column = NSTableColumn(identifier: .init("item"))
+        // The one column fills the list, so a chosen row's glow spans it whole.
+        column.resizingMask = .autoresizingMask
         table.addTableColumn(column)
+        table.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
         table.headerView = nil
         table.backgroundColor = .clear
         table.usesAutomaticRowHeights = true

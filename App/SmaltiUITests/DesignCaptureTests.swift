@@ -583,6 +583,65 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    /// F9: the timeline's session (a tool expanded), its search and a pane without agent, in both languages, over the
+    /// sanitized fixtures moved to a neutral `/tmp/acme` (made and removed by the pane's shell). English shows Codex's
+    /// English session; Spanish, Claude's.
+    func testCaptureF9Timeline() throws {
+        let root = "/private/tmp/acme"
+        guard !FileManager.default.fileExists(atPath: root) else { throw XCTSkip("\(root) already exists") }
+        for language in ["en", "es"] {
+            let app = XCUIApplication.isolatedSmaltiWithIntegration(language: language)
+            try TimelineFixture.install(in: app, root: root, from: Bundle(for: Self.self))
+            launch(app)
+            app.run("mkdir -p \(root) && cd \(root) && clear")
+            Thread.sleep(forTimeInterval: 1.5)
+            openPalette()
+            app.typeText(language == "en" ? "renameworkspace" : "renombrar")
+            app.typeKey(.return, modifierFlags: [])
+            app.typeText("acme")
+            app.typeKey(.return, modifierFlags: [])
+            app.typeKey("d", modifierFlags: .command)
+            app.typeKey("1", modifierFlags: .command)
+
+            app.typeKey("t", modifierFlags: [.command, .shift])
+            XCTAssertTrue(app.element("smalti.timeline.empty").waitForExistence(timeout: 10))
+            Thread.sleep(forTimeInterval: 0.8)
+            try save(app.windows.firstMatch.screenshot(), as: "f9-empty-\(language).png")
+
+            let session = language == "en" ? "Run the shell" : "fixture prompt B"
+            let rows = app.descendants(matching: .any).matching(
+                NSPredicate(format: "identifier BEGINSWITH 'smalti.timeline.recent.'"))
+            let row = rows.matching(NSPredicate(format: "label BEGINSWITH %@", session)).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 5))
+            row.click()
+            app.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(app.element("smalti.timeline.session.title").waitForExistence(timeout: 10))
+            let tool = app.descendants(matching: .any).matching(
+                NSPredicate(format: "identifier BEGINSWITH 'smalti.timeline.item.' AND label CONTAINS %@", "error")
+            )
+            .firstMatch
+            XCTAssertTrue(tool.waitForExistence(timeout: 5))
+            tool.click()
+            app.typeKey(.rightArrow, modifierFlags: [])
+            XCTAssertTrue(app.element("smalti.timeline.output").waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 0.8)
+            try save(app.windows.firstMatch.screenshot(), as: "f9-session-\(language).png")
+
+            app.typeKey("f", modifierFlags: .command)
+            app.typeText(language == "en" ? "files" : "archivos")
+            XCTAssertTrue(app.element("smalti.timeline.hit.1").waitForExistence(timeout: 10))
+            app.typeKey(.downArrow, modifierFlags: [])
+            Thread.sleep(forTimeInterval: 0.8)
+            try save(app.windows.firstMatch.screenshot(), as: "f9-search-\(language).png")
+            app.typeKey(.escape, modifierFlags: [])
+            app.typeKey(.escape, modifierFlags: [])
+            app.typeKey("1", modifierFlags: .command)
+            app.run("cd / && rm -rf \(root)")
+            Thread.sleep(forTimeInterval: 1)
+            app.terminate()
+        }
+    }
+
     /// Recent projects for the captures; rizaria approved once with other commands, so its card shows the change.
     private func seedCaptureProjects(in app: XCUIApplication) throws {
         let approved: [String: Any] = [
