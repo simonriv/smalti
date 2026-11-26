@@ -102,6 +102,8 @@ final class TilingController {
     var onViewEvent: ((TerminalEvent, PaneID) -> Void)?
     /// F4.5: asks the user before closing a running program; `proceed` runs only if they confirm.
     var onConfirmClose: ((CloseQuestion, _ proceed: @escaping () -> Void) -> Void)?
+    /// F8.5: the projects ⌘K offers in this window; the app reads them across windows.
+    var projectCatalog: (() -> CatalogProjects?)?
 
     /// What `onAppCommand` receives: they act on several windows or on the window itself.
     static let appCommands: Set<CommandID> = [
@@ -109,7 +111,7 @@ final class TilingController {
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
         .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
         .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport, .helpWelcome,
-        .helpPrivacy,
+        .helpPrivacy, .projectRecent, .projectSave,
     ]
 
     private let deps: Dependencies
@@ -289,6 +291,7 @@ final class TilingController {
         state.pendingApprovals = deps.agents.guards?.entries() ?? []
         state.secretsProject = secretsProjectState()
         state.updates = UpdatesAvailability(deps.updates)
+        state.projects = projectCatalog?()
         return state
     }
 
@@ -380,7 +383,7 @@ final class TilingController {
     }
 
     func perform(_ command: CommandID) {
-        if Self.appCommands.contains(command) {
+        if Self.appCommands.contains(command) || command.projectRoot != nil {
             onAppCommand?(command)
             return
         }
@@ -925,4 +928,51 @@ struct EditorSettings {
     let bridge: any EditorBridge
     /// claudecode.nvim is installed right now: Claude relaunched by Smalti (restore, search) adds `--ide`.
     let connectsEditor: () -> Bool
+}
+
+// MARK: - Projects (F8.5)
+
+/// F8.5: what the projects need from one window's tiling: its workspaces as the projects see them, opening a
+/// project's prepared workspace, jumping to a workspace and marking the active one as a project's.
+extension TilingController {
+    /// This window's workspaces, numbered from 1.
+    func openWorkspaces(isThisWindow: Bool) -> [OpenProjectWorkspace] {
+        set.workspaces.enumerated().map { index, workspace in
+            OpenProjectWorkspace(
+                id: workspace.id, project: workspace.project, isInThisWindow: isThisWindow, number: index + 1)
+        }
+    }
+
+    /// The folders of every pane of this window, and the focused pane's.
+    var paneDirectories: (all: [String], focused: String?) {
+        let focused = set.active.panes.first { $0.id == set.active.focusedPane }?.workingDirectory.path
+        return (set.workspaces.flatMap(\.panes).map(\.workingDirectory.path), focused)
+    }
+
+    /// Opens the project as a new workspace, the way a saved layout opens. False when no pane could open.
+    func openProject(_ prepared: PreparedProject) -> Bool {
+        let before = set.workspaces.count
+        let outcome = RestoreNamedLayout(layouts: deps.namedLayouts, restore: restoreSession).open(
+            project: prepared.snapshot, into: &set, home: deps.home)
+        set.active.panes.forEach { observe($0.id) }
+        if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
+        reportRestoreFailures(outcome.failures)
+        publish()
+        return set.workspaces.count > before
+    }
+
+    /// Shows `workspace` when this window has it.
+    @discardableResult
+    func goTo(_ workspace: WorkspaceID) -> Bool {
+        guard set.workspaces.contains(where: { $0.id == workspace }) else { return false }
+        SwitchWorkspace(engine: deps.engine).execute(.id(workspace), in: &set)
+        publish()
+        return true
+    }
+
+    /// "Guardar layout del proyecto" made the active workspace the project's.
+    func markActiveProject(_ root: String) {
+        set = set.updating(set.active.id) { $0.markingProject(root) }
+        publish()
+    }
 }

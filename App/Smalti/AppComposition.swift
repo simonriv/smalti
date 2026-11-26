@@ -65,6 +65,8 @@ final class AppComposition {
     private var claudeTelemetry: CollectTelemetry?
     /// F7: export and import of saved layouts as portable files.
     private var layoutSharing: LayoutSharing?
+    /// F8.5: projects across windows.
+    private var projects: ProjectsCoordinator?
     private var reportedTelemetryFailure: String?
     /// F7.5: the commands the panes' agents wait to have approved, shared by every window.
     private var approvals: AgentApprovals?
@@ -205,6 +207,10 @@ final class AppComposition {
         layoutSharing = LayoutSharing(
             layouts: archive, files: SharedLayoutFiles(), harnesses: harnesses,
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
+        projects = ProjectsCoordinator(
+            files: FileProjectFiles(), records: FileProjectRecords(directory: state), harnesses: harnesses,
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            windows: { [weak self] in self?.compositions ?? [] })
         let captures = HarnessCaptures(registry: harnesses)
         self.captures = captures
         // F6: `-SmaltiNvimConfigHome` in tests, never the user's `~/.config/nvim`.
@@ -371,6 +377,10 @@ final class AppComposition {
         window.makeKeyAndOrderFront(nil)
         if let path = stateDirectoryForTests { window.setAccessibilityValue(path) }
         let composition = WindowComposition(window: window, controller: controller, services: windowServices(engine))
+        controller.projectCatalog = { [weak self, weak composition] in
+            guard let self, let composition else { return nil }
+            return projects?.catalog(for: composition)
+        }
         compositions.append(composition)
         frontID = composition.id
         window.contentView?.layoutSubtreeIfNeeded()
@@ -472,7 +482,13 @@ final class AppComposition {
             layoutSharing?.importLayout(in: composition.window) { [weak composition] in
                 composition?.controller.report($0)
             }
+        case .projectRecent: projects?.showRecents(in: composition)
+        case .projectSave: projects?.save(from: composition)
         default:
+            if let root = command.projectRoot {
+                projects?.open(root, from: composition)
+                return
+            }
             if case .export(let name)? = command.namedLayout {
                 layoutSharing?.export(name, from: composition.window) { [weak composition] in
                     composition?.controller.report($0)
