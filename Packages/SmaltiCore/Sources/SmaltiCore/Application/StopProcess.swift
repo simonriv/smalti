@@ -56,12 +56,15 @@ public final class StopProcess {
         requests.tick(alive: alive, now: now, grace: grace)
     }
 
+    /// The request is recorded before the signal goes out, so a repeated ⌘⌫ meanwhile waits instead of sending a
+    /// second SIGTERM (review 1, minor 2).
     private func requestStop(_ process: ProcessIdentity, now: UInt64) async -> StopOutcome {
+        requests.request(process, at: now)
         do {
             try await control.stop(process)
-            requests.request(process, at: now)
             return .requested
         } catch {
+            requests.forget(process)
             return .failed(error)
         }
     }

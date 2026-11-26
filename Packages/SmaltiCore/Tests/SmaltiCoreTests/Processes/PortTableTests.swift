@@ -34,7 +34,7 @@ struct PortTableTests {
             paneNames: [web: "web · 2"], phases: [:])
         let processes = ProcessTable.rowsByPID(input)
         return PortTable.rows(
-            sockets: sockets, processes: processes, paneNames: input.paneNames,
+            sockets: sockets, context: PortContext(processes: processes, paneNames: input.paneNames),
             query: PortQuery(filter: filter, order: order))
     }
 
@@ -83,7 +83,10 @@ struct PortTableTests {
 
     @Test func noSocketsNoRows() {
         #expect(
-            PortTable.rows(sockets: [], processes: [:], paneNames: [:], query: PortQuery(filter: "", order: .port))
-                .isEmpty)
+            PortTable.rows(
+                sockets: [], context: PortContext(processes: [:], paneNames: [:]),
+                query: PortQuery(filter: "", order: .port)
+            )
+            .isEmpty)
     }
 }

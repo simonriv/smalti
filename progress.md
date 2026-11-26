@@ -460,14 +460,14 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · Tipos, CPU y puertos de salida
-- [ ] T2 · Atribución a paneles, política de detener y prioridad
-- [ ] T3 · Tablas de procesos y de puertos
-- [ ] T4 · Detener, bajar prioridad y observar
-- [ ] T5 · Textos, comandos, atajos y motor
+- [x] T1 · Tipos, CPU y puertos de salida
+- [x] T2 · Atribución a paneles, política de detener y prioridad
+- [x] T3 · Tablas de procesos y de puertos
+- [x] T4 · Detener, bajar prioridad y observar
+- [x] T5 · Textos, comandos, atajos y motor
 #### Bloque 2 · Adaptadores
-- [ ] T6 · `DarwinProcessesAdapter`: lectura
-- [ ] T7 · `DarwinProcessControl` y el motor
+- [x] T6 · `DarwinProcessesAdapter`: lectura
+- [x] T7 · `DarwinProcessControl` y el motor
 - [ ] Revisión intermedia 1 + mutación incremental
 #### Bloque 3 · App
 - [ ] T8 · Superposición, refresco y teclado

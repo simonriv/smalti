@@ -64,6 +64,15 @@ struct StopPolicyTests {
         #expect(verdict(node, roots: [login, shell]) == .allowed)
     }
 
+    @Test func serverAdoptedByLaunchdOnThePaneTerminalIsAllowed() {
+        let login = F.record(101, parent: 500, name: "login", isOwn: false, terminal: 7)
+        let shell = F.record(102, parent: 101, name: "zsh", terminal: 7)
+        let launchd = F.record(1, parent: 0, name: "launchd", isOwn: false)
+        let server = F.record(400, parent: 1, name: "python3", terminal: 7)
+
+        #expect(verdict(server, roots: [login, shell, launchd]) == .allowed)
+    }
+
     @Test func zombieIsProtected() {
         #expect(verdict(F.record(900, run: .zombie)) == .protected(.zombie))
     }

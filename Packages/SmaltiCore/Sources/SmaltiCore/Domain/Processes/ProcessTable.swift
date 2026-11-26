@@ -149,26 +149,36 @@ private struct ProcessTree {
 
     func flattened() -> [ProcessRow] {
         let roots = rows.filter { visible.contains($0.pid) && !visible.contains($0.record.parent) }
-        var result: [ProcessRow] = []
-        var placed: Set<Int32> = []
-        for root in roots { append(root, guides: "", isLast: nil, depth: 0, into: &result, placed: &placed) }
-        return result
+        var walk = Walk()
+        for root in roots { append(root, at: Placement(guides: "", isLast: nil, depth: 0), into: &walk) }
+        return walk.rows
     }
 
-    /// `isLast` is nil for a root; `guides` are the ancestors' columns (`│  ` or three spaces).
-    private func append(
-        _ row: ProcessRow, guides: String, isLast: Bool?, depth: Int, into result: inout [ProcessRow],
-        placed: inout Set<Int32>
-    ) {
-        guard placed.insert(row.pid).inserted else { return }
-        let prefix = isLast.map { guides + ($0 ? "└─ " : "├─ ") } ?? ""
-        result.append(row.placed(prefix: prefix, depth: depth, isContext: !matching.contains(row.pid)))
+    /// Where a row goes: its ancestors' columns (`│  ` or three spaces), whether it is its parent's last child (nil
+    /// for a root) and how deep.
+    private struct Placement {
+        let guides: String
+        let isLast: Bool?
+        let depth: Int
+
+        var prefix: String { isLast.map { guides + ($0 ? "└─ " : "├─ ") } ?? "" }
+
+        func child(isLast last: Bool) -> Placement {
+            Placement(guides: isLast.map { guides + ($0 ? "   " : "│  ") } ?? "", isLast: last, depth: depth + 1)
+        }
+    }
+
+    private struct Walk {
+        var rows: [ProcessRow] = []
+        var placed: Set<Int32> = []
+    }
+
+    private func append(_ row: ProcessRow, at place: Placement, into walk: inout Walk) {
+        guard walk.placed.insert(row.pid).inserted else { return }
+        walk.rows.append(row.placed(prefix: place.prefix, depth: place.depth, isContext: !matching.contains(row.pid)))
         let below = children[row.pid] ?? []
-        let nextGuides = isLast.map { guides + ($0 ? "   " : "│  ") } ?? ""
         for (index, child) in below.enumerated() {
-            append(
-                child, guides: nextGuides, isLast: index == below.count - 1, depth: depth + 1, into: &result,
-                placed: &placed)
+            append(child, at: place.child(isLast: index == below.count - 1), into: &walk)
         }
     }
 }

@@ -23,8 +23,9 @@ public struct ProcessRecord: Equatable, Sendable {
     /// The controlling terminal's device; nil without one.
     public let terminal: Int32?
     public let run: RunState
-    /// User plus system CPU time, in nanoseconds.
-    public let cpuTime: UInt64
+    /// User plus system CPU time, in nanoseconds; nil when it could not be read (never 0, which would make the next
+    /// sample read as a spike).
+    public let cpuTime: UInt64?
     /// Physical footprint, in bytes (Activity Monitor's "Memory").
     public let memory: UInt64
     public let threads: Int
@@ -32,7 +33,7 @@ public struct ProcessRecord: Equatable, Sendable {
 
     public init(
         identity: ProcessIdentity, parent: Int32, isOwn: Bool, name: String, executable: String?,
-        arguments: [String], workingDirectory: String?, terminal: Int32?, run: RunState, cpuTime: UInt64,
+        arguments: [String], workingDirectory: String?, terminal: Int32?, run: RunState, cpuTime: UInt64?,
         memory: UInt64, threads: Int, nice: Int32
     ) {
         self.identity = identity

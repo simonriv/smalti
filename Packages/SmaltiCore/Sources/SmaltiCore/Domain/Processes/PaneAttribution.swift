@@ -26,10 +26,14 @@ public struct PaneAttribution: Sendable {
         return nil
     }
 
-    /// The pane's own process, the one ⌘W closes: the shell (or the pane's command), whose parent is root's `login`.
+    /// The pane's own process, the one ⌘W closes: the shell (or the pane's command), child of root's `login` on the
+    /// same terminal, which is the top of the pane (its own parent, Smalti, is in no pane). Something launchd adopted
+    /// or root's `sudo` started inside the pane is not it. An unknown parent counts as the top: protecting by mistake
+    /// is the safe side.
     public func isPaneRoot(_ pid: Int32) -> Bool {
-        guard let record = records[pid], record.isOwn, pane(of: pid) != nil else { return false }
+        guard let record = records[pid], record.isOwn, let pane = pane(of: pid) else { return false }
         guard let parent = records[record.parent] else { return true }
-        return !parent.isOwn || pane(of: parent.pid) == nil
+        let isTopOfPane = self.pane(of: parent.parent) != pane
+        return !parent.isOwn && parent.terminal == record.terminal && isTopOfPane
     }
 }

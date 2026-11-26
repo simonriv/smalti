@@ -58,15 +58,13 @@ struct LsofParityTests {
         #expect(await ports.current().allSatisfy { $0.pid != pid })
     }
 
-    /// Wildcards print as `*` in lsof; ours are `0.0.0.0` and `::`.
     private static func entry(_ socket: ListeningSocket) -> Entry {
-        let address = ["0.0.0.0", "::"].contains(socket.address) ? "*" : socket.address
-        return Entry(pid: socket.pid, transport: socket.transport, port: socket.port, address: address)
+        Entry(pid: socket.pid, transport: socket.transport, port: socket.port, address: socket.address)
     }
 
     static func lsof() throws -> Set<Entry> {
-        let tcp = try run(["-nP", "-iTCP", "-sTCP:LISTEN", "-FpPn"])
-        let udp = try run(["-nP", "-iUDP", "-FpPn"])
+        let tcp = try run(["-nP", "-iTCP", "-sTCP:LISTEN", "-FpPtn"])
+        let udp = try run(["-nP", "-iUDP", "-FpPtn"])
         return parse(tcp).union(parse(udp))
     }
 
@@ -83,21 +81,26 @@ struct LsofParityTests {
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// `-F pPn`: `p<pid>`, then per file `P<protocol>` and `n<address:port>`; a connected UDP socket has `->`.
+    /// `-F pPtn`: `p<pid>`, then per file `t<IPv4|IPv6>`, `P<protocol>` and `n<address:port>`; a connected UDP socket
+    /// has `->`. lsof writes a wildcard as `*` for both families: the family tells `0.0.0.0` from `::` (review 1, minor 6;
+    /// wildcard listeners such as rapportd's and ControlCenter's are among the user's own, compared below).
     private static func parse(_ output: String) -> Set<Entry> {
         var entries: Set<Entry> = []
         var pid: Int32 = 0
         var transport = Transport.tcp
+        var isIPv6 = false
         for line in output.split(separator: "\n") {
             let value = String(line.dropFirst())
             switch line.first {
             case "p": pid = Int32(value) ?? 0
+            case "t": isIPv6 = value == "IPv6"
             case "P": transport = value == "UDP" ? .udp : .tcp
             case "n":
                 guard !value.contains("->"), let colon = value.lastIndex(of: ":"),
                     let port = UInt16(value[value.index(after: colon)...])
                 else { continue }
-                let address = value[..<colon].trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+                let written = value[..<colon].trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+                let address = written == "*" ? (isIPv6 ? "::" : "0.0.0.0") : written
                 entries.insert(Entry(pid: pid, transport: transport, port: port, address: address))
             default: continue
             }

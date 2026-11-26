@@ -47,6 +47,16 @@ struct CPUUsageTests {
         #expect(CPUUsage.percentages(previous: before, current: after).isEmpty)
     }
 
+    /// Review 1 (minor 3): an unreadable CPU time is unknown, never 0, or the next sample would read as a huge spike.
+    @Test func unreadableCPUTimeOnEitherSideGivesNothing() {
+        let unknownBefore = F.sample([F.record(10, cpuTime: nil)], at: 10)
+        let known = F.sample([F.record(10, cpuTime: 3600 * F.second)], at: 12)
+        let unknownAfter = F.sample([F.record(10, cpuTime: nil)], at: 14)
+
+        #expect(CPUUsage.percentages(previous: unknownBefore, current: known).isEmpty)
+        #expect(CPUUsage.percentages(previous: known, current: unknownAfter).isEmpty)
+    }
+
     @Test func cpuTimeGoingBackIsZero() {
         let before = F.sample([F.record(10, cpuTime: F.second)], at: 10)
         let after = F.sample([F.record(10, cpuTime: 0)], at: 11)

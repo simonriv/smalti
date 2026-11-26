@@ -6,8 +6,8 @@ public enum CPUUsage {
         let before = Dictionary(previous.records.map { ($0.identity, $0.cpuTime) }) { first, _ in first }
         var usage: [ProcessIdentity: Double] = [:]
         for record in current.records {
-            guard let earlier = before[record.identity] else { continue }
-            let used = record.cpuTime >= earlier ? Double(record.cpuTime - earlier) : 0
+            guard let now = record.cpuTime, let earlier = before[record.identity] ?? nil else { continue }
+            let used = now >= earlier ? Double(now - earlier) : 0
             usage[record.identity] = used * 100 / wall
         }
         return usage

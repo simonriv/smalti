@@ -57,6 +57,26 @@ struct PaneAttributionTests {
         #expect(attribution.isPaneRoot(202))
     }
 
+    /// Review 1 (important 1): a double-forked server re-parented to launchd keeps the pane's terminal; it belongs to
+    /// the pane but is not its shell.
+    @Test func adoptedByLaunchdKeepsThePaneButIsNoShell() {
+        let adopted = F.record(400, parent: 1, name: "python3", terminal: 7)
+        let launchd = F.record(1, parent: 0, name: "launchd", isOwn: false)
+        let attribution = PaneAttribution(records: records + [adopted, launchd], foregroundGroups: [pane: 102])
+
+        #expect(attribution.pane(of: 400) == pane)
+        #expect(!attribution.isPaneRoot(400))
+    }
+
+    /// Review 1 (minor 6): `sudo -u me cmd` in a pane: root's sudo on the pane's terminal is not the pane's top.
+    @Test func childOfAnotherRootProcessInThePaneIsNoShell() {
+        let sudo = F.record(500, parent: 102, name: "sudo", isOwn: false, terminal: 7)
+        let command = F.record(501, parent: 500, name: "cmd", terminal: 7)
+        let attribution = PaneAttribution(records: records + [sudo, command], foregroundGroups: [pane: 102])
+
+        #expect(!attribution.isPaneRoot(501))
+    }
+
     @Test func loginItselfIsNotAPaneProcess() {
         let attribution = PaneAttribution(records: records, foregroundGroups: [pane: 104])
 

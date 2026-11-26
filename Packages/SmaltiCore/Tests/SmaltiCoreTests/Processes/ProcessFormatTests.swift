@@ -49,41 +49,50 @@ struct ProcessFormatTests {
 
     @Test func stopNotices() {
         #expect(
-            ProcessFormat.notice(StopOutcome.requested, name: "node", texts: es, closeKey: "⌘W")
+            ProcessFormat.notice(StopOutcome.requested, for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: es)
                 == "Se pidió a node que termine")
-        #expect(ProcessFormat.notice(StopOutcome.confirming, name: "node", texts: es, closeKey: "⌘W") == nil)
         #expect(
-            ProcessFormat.notice(StopOutcome.protected(.paneShell), name: "zsh", texts: es, closeKey: "⌘W")
+            ProcessFormat.notice(StopOutcome.confirming, for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: es)
+                == nil)
+        #expect(
+            ProcessFormat.notice(
+                StopOutcome.protected(.paneShell), for: NoticeSubject(name: "zsh", closeKey: "⌘W"), texts: es)
                 == "zsh es el shell del panel: ciérralo con ⌘W")
         #expect(
-            ProcessFormat.notice(StopOutcome.failed(.gone), name: "node", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(StopOutcome.failed(.gone), for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: en)
                 == "node no longer exists")
         #expect(
-            ProcessFormat.notice(StopOutcome.failed(.refused(code: 1)), name: "node", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(
+                StopOutcome.failed(.refused(code: 1)), for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: en)
                 == "The system refused to act on node (error 1)")
         #expect(
-            ProcessFormat.notice(StopOutcome.forced, name: "node", texts: es, closeKey: "⌘W")
+            ProcessFormat.notice(StopOutcome.forced, for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: es)
                 == "Se forzó el cierre de node")
         #expect(
-            ProcessFormat.notice(StopOutcome.waiting, name: "node", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(StopOutcome.waiting, for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: en)
                 == "Waiting for node to quit…")
         #expect(
-            ProcessFormat.notice(StopOutcome.failed(.notYours), name: "x", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(
+                StopOutcome.failed(.notYours), for: NoticeSubject(name: "x", closeKey: "⌘W"), texts: en)
                 == "x isn’t yours: nothing was touched")
     }
 
     @Test func priorityNotices() {
         #expect(
-            ProcessFormat.notice(PriorityOutcome.lowered(to: 5), name: "node", texts: es, closeKey: "⌘W")
+            ProcessFormat.notice(
+                PriorityOutcome.lowered(to: 5), for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: es)
                 == "node ahora tiene prioridad baja (5)")
         #expect(
-            ProcessFormat.notice(PriorityOutcome.alreadyLowest, name: "node", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(
+                PriorityOutcome.alreadyLowest, for: NoticeSubject(name: "node", closeKey: "⌘W"), texts: en)
                 == "node already has the lowest priority")
         #expect(
-            ProcessFormat.notice(PriorityOutcome.protected(.system), name: "Dock", texts: en, closeKey: "⌘W")
+            ProcessFormat.notice(
+                PriorityOutcome.protected(.system), for: NoticeSubject(name: "Dock", closeKey: "⌘W"), texts: en)
                 == "Can’t stop Dock: it is part of the system")
         #expect(
-            ProcessFormat.notice(PriorityOutcome.failed(.gone), name: "x", texts: es, closeKey: "⌘W")
+            ProcessFormat.notice(
+                PriorityOutcome.failed(.gone), for: NoticeSubject(name: "x", closeKey: "⌘W"), texts: es)
                 == "x ya no existe")
     }
 

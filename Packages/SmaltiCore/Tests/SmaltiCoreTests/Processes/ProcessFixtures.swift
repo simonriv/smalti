@@ -9,7 +9,7 @@ enum ProcessFixtures {
     static func record(
         _ pid: Int32, parent: Int32 = 1, name: String = "proc", isOwn: Bool = true, terminal: Int32? = nil,
         executable: String? = nil, arguments: [String] = [], directory: String? = nil, run: RunState = .sleeping,
-        cpuTime: UInt64 = 0, memory: UInt64 = 0, startedAt: Date = start, nice: Int32 = 0
+        cpuTime: UInt64? = 0, memory: UInt64 = 0, startedAt: Date = start, nice: Int32 = 0
     ) -> ProcessRecord {
         ProcessRecord(
             identity: ProcessIdentity(pid: pid, startedAt: startedAt), parent: parent, isOwn: isOwn, name: name,

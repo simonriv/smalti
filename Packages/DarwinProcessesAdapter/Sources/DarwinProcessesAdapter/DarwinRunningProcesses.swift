@@ -35,7 +35,7 @@ public struct DarwinRunningProcesses: RunningProcesses {
             isOwn: true, name: process.name, executable: ProcessDetails.executable(process.pid),
             arguments: ProcessDetails.arguments(process.pid) ?? [],
             workingDirectory: ProcessDetails.workingDirectory(process.pid), terminal: process.terminal,
-            run: process.state, cpuTime: task?.cpuTime ?? 0, memory: ProcessDetails.footprint(process.pid) ?? 0,
+            run: process.state, cpuTime: task?.cpuTime, memory: ProcessDetails.footprint(process.pid) ?? 0,
             threads: task?.threads ?? 0, nice: ProcessDetails.nice(process.pid) ?? 0)
     }
 
@@ -43,6 +43,6 @@ public struct DarwinRunningProcesses: RunningProcesses {
         ProcessRecord(
             identity: ProcessIdentity(pid: process.pid, startedAt: process.startedAt), parent: process.parent,
             isOwn: false, name: process.name, executable: nil, arguments: [], workingDirectory: nil,
-            terminal: process.terminal, run: process.state, cpuTime: 0, memory: 0, threads: 0, nice: 0)
+            terminal: process.terminal, run: process.state, cpuTime: nil, memory: 0, threads: 0, nice: 0)
     }
 }

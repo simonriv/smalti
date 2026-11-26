@@ -42,6 +42,20 @@ struct StopProcessTests {
         #expect(stop.requests.phase(of: node.identity) == .requested(at: 5))
     }
 
+    /// Review 1 (minor 2): a held ⌘⌫ repeats while the first SIGTERM is on its way; only one is sent.
+    @Test func repeatedPressWhileTheFirstIsOnItsWaySendsOneStop() async {
+        let control = FakeProcessControl()
+        let stop = StopProcess(control: control, grace: grace)
+        let row = node
+
+        async let first = stop.press(row, now: 5)
+        async let second = stop.press(row, now: 5)
+        let outcomes = await [first, second]
+
+        #expect(await control.calls == [.stop(row.identity)])
+        #expect(Set(outcomes.map { "\($0)" }) == ["requested", "waiting"])
+    }
+
     @Test func pressWithinTheGraceWaits() async {
         let control = FakeProcessControl()
         let stop = StopProcess(control: control, grace: grace)

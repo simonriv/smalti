@@ -20,6 +20,17 @@ public struct PortRow: Equatable, Sendable {
     public let process: ProcessRow?
 }
 
+/// What the port view knows about the processes behind the listeners.
+public struct PortContext: Sendable {
+    public let processes: [Int32: ProcessRow]
+    public let paneNames: [PaneID: String]
+
+    public init(processes: [Int32: ProcessRow], paneNames: [PaneID: String]) {
+        self.processes = processes
+        self.paneNames = paneNames
+    }
+}
+
 public struct PortSummary: Equatable, Sendable {
     public let total: Int
     public let openToNetwork: Int
@@ -27,13 +38,11 @@ public struct PortSummary: Equatable, Sendable {
 
 /// The port view: listeners grouped by process, transport and port (IPv4 and IPv6 are one row).
 public enum PortTable {
-    public static func rows(
-        sockets: [ListeningSocket], processes: [Int32: ProcessRow], paneNames: [PaneID: String], query: PortQuery
-    ) -> [PortRow] {
+    public static func rows(sockets: [ListeningSocket], context: PortContext, query: PortQuery) -> [PortRow] {
         let filter = TextFilter(query.filter)
-        return grouped(sockets, processes: processes)
-            .filter { filter.isEmpty || filter.matches(fields(of: $0, paneNames)) }
-            .sorted(by: comparator(query.order, paneNames))
+        return grouped(sockets, processes: context.processes)
+            .filter { filter.isEmpty || filter.matches(fields(of: $0, context.paneNames)) }
+            .sorted(by: comparator(query.order, context.paneNames))
     }
 
     public static func summary(_ rows: [PortRow]) -> PortSummary {
