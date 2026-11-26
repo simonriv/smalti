@@ -30,6 +30,22 @@ struct ProjectFinalReviewTests {
         }
     }
 
+    @Test(arguments: [
+        SharedPane(directory: "gone", harness: .claude),
+        SharedPane(directory: "gone", editor: SharedEditor(file: "a.md", line: 1)),
+    ])
+    func aMissingFolderOfAnAgentOrAnEditorIsATypedError(pane: SharedPane) {
+        let files = InMemoryProjectFiles()
+        var layout = projectLayout(commands: [nil])
+        layout.panes = [pane]
+        files.put(layout, at: root, fingerprint: "f1")
+        files.folders = [root]
+
+        #expect(throws: ProjectFileError.missingFolder(pane: 1, path: "gone")) {
+            try opener(files).prepare(root: root, open: [])
+        }
+    }
+
     @Test func aMissingFolderOfAShellIsFine() throws {
         let files = InMemoryProjectFiles()
         var layout = projectLayout(commands: [nil])
