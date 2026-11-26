@@ -1,8 +1,8 @@
 import XCTest
 
 /// F7.7 (C1): with the app in English no interface text is Spanish. A walk through ⌘K, every menu, the help, the
-/// Observatory, Appearance, the prompt studio, feedback, the session search, «About», a status message and the
-/// approval card; each surface's accessibility snapshot must hold no Spanish.
+/// Observatory, Appearance, the prompt studio, feedback, the session search, «About», the resume screen, status
+/// messages (invalid config, no room for a pane) and the approval card; each surface's snapshot must hold no Spanish.
 final class LocalizationTests: SmaltiUITestCase {
     override var launchesAtSetUp: Bool { false }
     private var offenders: [String] = []
@@ -108,6 +108,44 @@ final class LocalizationTests: SmaltiUITestCase {
         collect("status bar figures")
 
         XCTAssertTrue(offenders.isEmpty, "Spanish in the English Observatory: " + offenders.joined(separator: " | "))
+    }
+
+    func testEnglishResumeScreenHasNoSpanish() {
+        let english = XCUIApplication.isolatedSmalti(language: "en")
+        SessionState.seed(
+            [
+                .init(
+                    name: "web", root: "/tmp", layout: "columns",
+                    panes: [
+                        .init(directory: "/tmp", process: "zsh", lines: 120, commands: 4),
+                        .init(directory: "/tmp", relaunch: ["nvim", "+3"], process: "nvim"),
+                    ])
+            ], alwaysRestore: false, in: english)
+        self.app = english
+        english.launch()
+
+        XCTAssertTrue(app.element("smalti.restore").waitForExistence(timeout: 10))
+        collect("resume screen")
+
+        XCTAssertTrue(offenders.isEmpty, "Spanish in the English resume screen: " + offenders.joined(separator: " | "))
+    }
+
+    func testEnglishStatusMessagesHaveNoSpanish() {
+        launch(XCUIApplication.isolatedSmalti(config: "[appearance]\nblur = 99\n", language: "en"))
+        let status = app.element("smalti.statusBar")
+        let invalid = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (status.value as? String ?? "").contains("blur") }, object: nil)
+        wait(for: [invalid], timeout: 10)
+        record("invalid config", [status.value as? String ?? ""])
+
+        // Splits until the window has no room for another pane (each ⌘D halves a pane).
+        for _ in 0..<24 where !(status.value as? String ?? "").contains("No room") {
+            app.typeKey("d", modifierFlags: .command)
+        }
+        XCTAssertTrue((status.value as? String ?? "").contains("No room"), status.value as? String ?? "")
+        record("no room for a pane", [status.value as? String ?? ""])
+
+        XCTAssertTrue(offenders.isEmpty, "Spanish in English status messages: " + offenders.joined(separator: " | "))
     }
 
     func testEnglishApprovalCardAndGuardReason() throws {
