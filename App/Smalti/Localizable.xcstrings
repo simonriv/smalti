@@ -1777,6 +1777,22 @@
         }
       }
     },
+    "Search": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        }
+      }
+    },
     "Search by topic, project or file": {
       "localizations": {
         "en": {
@@ -2321,6 +2337,22 @@
         }
       }
     },
+    "Timeline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline"
+          }
+        }
+      }
+    },
     "Tokens per minute · last hour": {
       "localizations": {
         "en": {
@@ -2481,6 +2513,22 @@
         }
       }
     },
+    "back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "back"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "volver"
+          }
+        }
+      }
+    },
     "buttons with fade": {
       "localizations": {
         "en": {
@@ -2557,6 +2605,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "cerrar"
+          }
+        }
+      }
+    },
+    "copy whole": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "copy whole"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "copiar íntegro"
+          }
+        }
+      }
+    },
+    "expand": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "expand"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "desplegar"
           }
         }
       }
@@ -2673,6 +2753,22 @@
         }
       }
     },
+    "jump to turn": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jump to turn"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "saltar al turno"
+          }
+        }
+      }
+    },
     "kind": {
       "localizations": {
         "en": {
@@ -2753,6 +2849,22 @@
         }
       }
     },
+    "open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "open"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "abrir"
+          }
+        }
+      }
+    },
     "preview in three real situations": {
       "localizations": {
         "en": {
@@ -2829,6 +2941,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "ejecutar"
+          }
+        }
+      }
+    },
+    "search": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "buscar"
+          }
+        }
+      }
+    },
+    "search this project": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "search this project"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "buscar en este proyecto"
           }
         }
       }

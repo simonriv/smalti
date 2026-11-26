@@ -228,3 +228,18 @@ Según `.claude/rules/`:
 - `docs/ROADMAP.md`, F9: la spec y el criterio de cierre concretado.
 - `docs/design/README.md`: sección «Timeline (F9)» que apunta a la maqueta.
 - `CLAUDE.md`: los puertos nuevos, `JSONLReader` en «Comandos» y en `swift format`, el oráculo y `measure-timeline.sh`.
+
+## Enmiendas
+
+Durante la ejecución (2026-11-26), con su porqué:
+
+1. **El prefiltro de búsqueda pliega tildes en los bytes.** Un prefiltro solo ASCII no encuentra «migración» buscando «migracion» (ni al revés). El escáner pliega a minúsculas ASCII, Latin-1 (`0xC3 xx`) y Latin Extended-A (`0xC4`/`0xC5 xx`) a su letra base y omite las marcas combinantes (texto en NFD); la aguja es la consulta plegada entera (el trozo más largo sin `"` ni `\`, de 3 caracteres o más). La confirmación del dominio usa la comparación de Foundation sin mayúsculas ni tildes, fuera del hilo principal, y cada coincidencia guarda solo su fragmento (revisión 1).
+2. **Sin progreso «k de n sesiones».** El puerto busca por harness; el resumen dice «Buscando…» y los grupos se ordenan por fecha de la sesión al llegar, de cualquier harness (revisión 1).
+3. **El resumen de herramientas es el del Observatorio** (`ToolSummary`, ampliado con `exec_command`, `shell`, `apply_patch`, `Agent` y `Task`): muestra el nombre del archivo, no la ruta relativa a la raíz.
+4. **Copiar una imagen o una compactación las describe** sin ir al disco («Imagen adjunta · image/png · 186 KB», «Conversación compactada · 168k → 22k tokens»), igual en los dos harnesses; ⇧⌘C sobre algo sin llamada no copia nada (revisión 1).
+5. **La llamada de Claude se copia como JSON canónico** (compacto, claves por punto de código, sin escapar lo no ASCII), el mismo que escribe el oráculo: Foundation no conserva el orden de claves del archivo y su `.sortedKeys` ordena de otra forma (revisión 1).
+6. **Los observadores siguen la ruta**, no el inodo: cuando Claude reescribe el transcript con un `rename`, `FileWatch` vuelve a vigilar el archivo nuevo; la carpeta de subagentes y cada subagente se vigilan también si nacen con el timeline abierto (revisión 1).
+7. **Solo `Agent` y `Task` anidan subagentes**: un «agentId:» en la salida de otra herramienta no enlaza nada (revisión 1).
+8. **Codex: el rollout bajo el propio `CODEX_HOME`.** Si el índice guarda una ruta de otro home (copiado o movido), se usa la misma ruta bajo `<home>/sessions`.
+9. **El contrato compartido vive en `SmaltiCoreTestSupport`** (`TranscriptsContract` y `TimelineOracle`, como el de F6) en lugar de dos archivos iguales.
+10. **Fixture de las UI tests compuesto por script** (`scripts/timeline/compose-ui-fixture.py`): los transcripts saneados de F6, el sintético y una sesión con un prompt de 3.000 caracteres, con `{{root}}` en lugar de su directorio, y el home de Codex de F9 en base64.

@@ -34,6 +34,11 @@ final class ProjectsCoordinator {
         SaveProjectLayout(files: files, records: records, harnesses: harnesses, home: home, clock: { Date() })
     }
 
+    /// F9: the project a pane's folder belongs to (the timeline searches its sessions): the same root ⌘K would save.
+    func root(of workspace: Workspace, focusedDirectory: String) -> String {
+        saver.root(of: workspace, focusedDirectory: focusedDirectory)
+    }
+
     /// What ⌘K offers in `composition`: the projects and where "Guardar layout del proyecto" would write.
     func catalog(for composition: WindowComposition) -> CatalogProjects {
         let controller = composition.controller

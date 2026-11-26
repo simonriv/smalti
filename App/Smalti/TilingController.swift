@@ -427,6 +427,8 @@ final class TilingController {
         .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch, .observatoryFilter,
         // F8: the processes and ports views.
         .processesToggle, .portsToggle, .processesStop, .processesLowerPriority, .processesTree, .processesSort,
+        // F9: the timeline.
+        .timelineToggle, .timelineSearch, .timelineCopy, .timelineCopyCall,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {

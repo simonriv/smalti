@@ -155,6 +155,43 @@ final class LocalizationTests: SmaltiUITestCase {
             offenders.isEmpty, "Spanish in the English processes views: " + offenders.joined(separator: " | "))
     }
 
+    /// F9 (C9): the timeline's session, expanded tool, search and empty state, in English (Codex's English fixture).
+    func testEnglishTimelineHasNoSpanish() throws {
+        let english = XCUIApplication.isolatedSmalti(language: "en")
+        let root = try TimelineFixture.root(for: english)
+        try TimelineFixture.install(in: english, root: root, from: Bundle(for: Self.self), claude: false)
+        SessionState.seed(
+            [
+                .init(
+                    name: "acme", root: root, layout: "columns",
+                    panes: [
+                        .init(directory: root, process: "codex", harness: ("codex", TimelineFixture.codex)),
+                        .init(directory: root),
+                    ])
+            ], alwaysRestore: true, in: english)
+        launch(english, shells: 2)
+
+        app.typeKey("1", modifierFlags: .command)
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.timeline.session.title").waitForExistence(timeout: 10))
+        app.typeKey(.upArrow, modifierFlags: [])
+        app.typeKey(.upArrow, modifierFlags: [])
+        app.typeKey(.rightArrow, modifierFlags: [])
+        collect("timeline session")
+        app.typeKey("c", modifierFlags: .command)
+        collect("timeline copied")
+        app.typeKey("f", modifierFlags: .command)
+        app.typeText("missing")
+        XCTAssertTrue(app.element("smalti.timeline.hit.1").waitForExistence(timeout: 10))
+        collect("timeline search")
+        app.typeKey(.escape, modifierFlags: [])
+        app.typeKey("2", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.timeline.empty").waitForExistence(timeout: 10))
+        collect("timeline empty")
+
+        XCTAssertTrue(offenders.isEmpty, "Spanish in the English timeline: " + offenders.joined(separator: " | "))
+    }
+
     /// F8.5: the ⌘O selector and the confirmation of a repo's layout, with a repo made for the test.
     func testEnglishProjectsHaveNoSpanish() throws {
         let repo = FileManager.default.temporaryDirectory.appending(path: "smalti-l10n-\(UUID().uuidString)/demo")
