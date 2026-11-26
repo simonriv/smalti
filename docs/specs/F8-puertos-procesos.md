@@ -191,4 +191,7 @@ Durante la ejecución (2026-11-25/26), con su porqué:
 5. **La fila muestra el comando corto.** Nombre del programa y sus argumentos («Python server.py»), sin la ruta de `argv[0]`; el bloque del detalle conserva el comando completo. La nota de memoria escribe MB o GB.
 6. **Columna «Protocolo» de 104 pt** (la maqueta usaba 84): «PROTOCOLO» no cabía en español.
 7. **La lupa del filtro** es el símbolo `magnifyingglass` de la búsqueda de sesiones (F6), no un dibujo propio.
-8. **Valores de accesibilidad «selected», «on» y «off» en inglés.** Es la convención de toda la app (las UI tests la leen); localizarlos es un cambio transversal fuera de F8.
+8. **El menú sigue al teclado.** Con la vista cerrada, «Detener…», «Bajar prioridad…», «Árbol» y «Ordenar» salen desactivados en el menú Ver (como «Filtrar el Observatorio» desde F6: el menú usa el mismo contexto que el teclado); con la vista abierta, actúan. Desde ⌘K sí abren la vista primero (revisión final).
+9. **Los atajos de la vista no se roban a los campos de texto.** En ⌘K, la ayuda, la búsqueda y las sesiones, ⌘⌫ y ⌘⇧↓ siguen editando el texto (revisión final).
+10. **El grupo en primer plano sin líder** (`cat archivo | less` tras terminar `cat`) sigue dando el terminal del panel por cualquiera de sus miembros, así que el shell sigue protegido (revisión final).
+11. **Valores de accesibilidad «selected», «on» y «off» en inglés.** Es la convención de toda la app (las UI tests la leen); localizarlos es un cambio transversal fuera de F8.

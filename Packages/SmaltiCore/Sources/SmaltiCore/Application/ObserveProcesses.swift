@@ -24,6 +24,8 @@ public final class ObserveProcesses {
     private let processes: any RunningProcesses
     private let ports: any ListeningPorts
     private var previous: ProcessSample?
+    /// Bumped by `reset`: a read that lands after it belongs to a closed view and is not kept.
+    private var epoch = 0
 
     public init(processes: any RunningProcesses, ports: any ListeningPorts) {
         self.processes = processes
@@ -31,11 +33,12 @@ public final class ObserveProcesses {
     }
 
     public func refresh(foregroundGroups: [PaneID: Int32]) async -> ProcessesSnapshot {
+        let started = epoch
         async let sample = processes.current()
         async let sockets = ports.current()
         let current = await sample
-        let cpu = CPUUsage.percentages(previous: previous, current: current)
-        previous = current
+        let cpu = CPUUsage.percentages(previous: started == epoch ? previous : nil, current: current)
+        if started == epoch { previous = current }
         return ProcessesSnapshot(
             sample: current, cpu: cpu, sockets: await sockets,
             attribution: PaneAttribution(records: current.records, foregroundGroups: foregroundGroups))
@@ -44,5 +47,6 @@ public final class ObserveProcesses {
     /// On closing the view: the next opening starts without CPU, not with a delta across the time it was closed.
     public func reset() {
         previous = nil
+        epoch += 1
     }
 }

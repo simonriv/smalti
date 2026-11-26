@@ -43,6 +43,24 @@ struct ProcessesRefresherTests {
         #expect(!refresher.isRunning)
     }
 
+    /// Final review (minor 5): stopping with a read on its way and starting again at once refreshes right away.
+    @Test func restartWhileAReadIsOnItsWayRefreshesAtOnce() async throws {
+        let running = FakeRunningProcesses(samples: [F.sample([F.record(10)])])
+        await running.slowDown(.milliseconds(150))
+        let refresher = ProcessesRefresher(
+            observe: observe(running, FakeListeningPorts()), timing: .init(first: .seconds(60), every: .seconds(60)))
+        refresher.start(foregroundGroups: { [:] }) { _ in }
+        while await running.reads == 0 { try await Task.sleep(for: .milliseconds(5)) }
+        refresher.stop()
+        var delivered = 0
+
+        refresher.start(foregroundGroups: { [:] }) { _ in delivered += 1 }
+        for _ in 0..<200 where delivered == 0 { try await Task.sleep(for: .milliseconds(10)) }
+
+        #expect(delivered == 1)
+        refresher.stop()
+    }
+
     @Test func stopForgetsThePreviousSample() async throws {
         let first = F.sample([F.record(10, cpuTime: 0)], at: 10)
         let second = F.sample([F.record(10, cpuTime: F.second)], at: 12)

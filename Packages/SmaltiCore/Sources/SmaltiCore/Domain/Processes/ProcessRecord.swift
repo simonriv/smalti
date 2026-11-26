@@ -13,6 +13,8 @@ public enum RunState: Equatable, Sendable {
 public struct ProcessRecord: Equatable, Sendable {
     public let identity: ProcessIdentity
     public let parent: Int32
+    /// The process group it belongs to; a terminal's foreground group outlives its leader (`cat file | less`).
+    public let processGroup: Int32
     public let isOwn: Bool
     /// The kernel's short name (`p_comm`).
     public let name: String
@@ -32,12 +34,13 @@ public struct ProcessRecord: Equatable, Sendable {
     public let nice: Int32
 
     public init(
-        identity: ProcessIdentity, parent: Int32, isOwn: Bool, name: String, executable: String?,
+        identity: ProcessIdentity, parent: Int32, processGroup: Int32, isOwn: Bool, name: String, executable: String?,
         arguments: [String], workingDirectory: String?, terminal: Int32?, run: RunState, cpuTime: UInt64?,
         memory: UInt64, threads: Int, nice: Int32
     ) {
         self.identity = identity
         self.parent = parent
+        self.processGroup = processGroup
         self.isOwn = isOwn
         self.name = name
         self.executable = executable

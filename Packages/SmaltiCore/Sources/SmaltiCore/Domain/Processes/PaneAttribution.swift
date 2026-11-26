@@ -11,7 +11,9 @@ public struct PaneAttribution: Sendable {
         self.records = byPID
         var panes: [Int32: PaneID] = [:]
         for (pane, group) in foregroundGroups {
-            if let terminal = byPID[group]?.terminal { panes[terminal] = pane }
+            // The group's leader may have ended while the group stays in front: any member names the terminal.
+            let member = byPID[group] ?? records.first { $0.processGroup == group && $0.terminal != nil }
+            if let terminal = member?.terminal { panes[terminal] = pane }
         }
         panesByTerminal = panes
     }

@@ -34,6 +34,22 @@ struct ObserveProcessesTests {
         #expect(snapshot.alive == [ProcessIdentity(pid: 10, startedAt: F.start)])
     }
 
+    /// Final review (minor 5): a read that lands after a reset (the view closed meanwhile) does not become the next
+    /// opening's previous sample.
+    @Test func readLandingAfterResetIsNotKept() async throws {
+        let first = F.sample([F.record(10, cpuTime: 0)], at: 10)
+        let second = F.sample([F.record(10, cpuTime: F.second)], at: 12)
+        let running = FakeRunningProcesses(samples: [first, second])
+        let observe = ObserveProcesses(processes: running, ports: FakeListeningPorts())
+
+        let landing = Task { await observe.refresh(foregroundGroups: [:]) }
+        while await running.reads == 0 { await Task.yield() }
+        observe.reset()
+        _ = await landing.value
+
+        #expect(await observe.refresh(foregroundGroups: [:]).cpu.isEmpty)
+    }
+
     @Test func resetForgetsThePreviousSample() async {
         let first = F.sample([F.record(10, cpuTime: 0)], at: 10)
         let second = F.sample([F.record(10, cpuTime: F.second)], at: 12)

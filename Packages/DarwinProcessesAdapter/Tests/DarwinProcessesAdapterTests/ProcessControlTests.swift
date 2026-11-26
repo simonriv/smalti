@@ -5,7 +5,7 @@ import Testing
 
 /// C2 of F8 at the adapter: only the test's own children are ever signalled; launchd, this process and a stale
 /// identity are refused before any signal.
-@Suite("DarwinProcessControl", .serialized)
+@Suite("DarwinProcessControl", .serialized, .timeLimit(.minutes(1)))
 struct ProcessControlTests {
     private let control = DarwinProcessControl()
     private let processes = DarwinRunningProcesses()

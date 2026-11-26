@@ -53,8 +53,8 @@ struct ProcessesPresenter {
             side: .totals(totals(snapshot, history: state.cpuHistory)), order: orderTitle(state.processOrder),
             isTree: state.isTree)
         return Output(
-            screen: screen, processes: Dictionary(uniqueKeysWithValues: zip(ids, rows)),
-            panes: Dictionary(uniqueKeysWithValues: zip(ids, rows).compactMap { id, row in row.pane.map { (id, $0) } }))
+            screen: screen, processes: Dictionary(zip(ids, rows)) { first, _ in first },
+            panes: Dictionary(zip(ids, rows).compactMap { id, row in row.pane.map { (id, $0) } }) { first, _ in first })
     }
 
     static func id(of row: ProcessRow) -> String { "p\(row.pid)" }
@@ -176,8 +176,8 @@ struct ProcessesPresenter {
         let pairs = zip(ids, rows)
         return Output(
             screen: screen,
-            processes: Dictionary(uniqueKeysWithValues: pairs.compactMap { id, row in row.process.map { (id, $0) } }),
-            panes: Dictionary(uniqueKeysWithValues: pairs.compactMap { id, row in row.process?.pane.map { (id, $0) } }))
+            processes: Dictionary(pairs.compactMap { id, row in row.process.map { (id, $0) } }) { first, _ in first },
+            panes: Dictionary(pairs.compactMap { id, row in row.process?.pane.map { (id, $0) } }) { first, _ in first })
     }
 
     static func id(of row: PortRow) -> String {

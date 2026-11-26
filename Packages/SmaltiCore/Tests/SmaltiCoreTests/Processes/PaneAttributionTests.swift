@@ -99,6 +99,16 @@ struct PaneAttributionTests {
         #expect(attribution.pane(of: 104) == nil)
     }
 
+    /// Final review (important 1): `cat file | less`: `cat`, the group's leader, ended, but the group stays in front.
+    /// Its other members still name the pane's terminal, so the shell stays the pane's and stays protected.
+    @Test func groupWhoseLeaderEndedStillGivesTheTerminal() {
+        let less = F.record(110, parent: 102, name: "less", terminal: 7, processGroup: 109)
+        let attribution = PaneAttribution(records: records + [less], foregroundGroups: [pane: 109])
+
+        #expect(attribution.pane(of: 110) == pane)
+        #expect(attribution.isPaneRoot(102))
+    }
+
     @Test func parentCycleEnds() {
         let looped = [F.record(300, parent: 301, name: "a"), F.record(301, parent: 300, name: "b")]
 

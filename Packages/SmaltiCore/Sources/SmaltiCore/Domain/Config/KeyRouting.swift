@@ -40,9 +40,10 @@ public struct KeyContext: Equatable, Sendable {
         KeyContext(allowing: allowing, passingThrough: Set(CommandID.allStandard).subtracting(allowing))
     }
 
-    /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys.
+    /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys,
+    /// among them ⌘⌫ and ⌘⇧↓ (F8: the processes view's chords only act inside that view).
     public static func overlay(allowing: Set<CommandID>) -> KeyContext {
-        KeyContext(allowing: allowing, passingThrough: textEditing)
+        KeyContext(allowing: allowing, passingThrough: textEditing.union(CommandID.processesContextual))
     }
 }
 

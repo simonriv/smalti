@@ -6,6 +6,7 @@ import SmaltiCore
 struct KernelProcess {
     let pid: Int32
     let parent: Int32
+    let processGroup: Int32
     let uid: uid_t
     let state: RunState
     let terminal: Int32?
@@ -47,7 +48,8 @@ enum KernelProcessTable {
         let start = info.kp_proc.p_un.__p_starttime
         let terminal = info.kp_eproc.e_tdev
         return KernelProcess(
-            pid: info.kp_proc.p_pid, parent: info.kp_eproc.e_ppid, uid: info.kp_eproc.e_ucred.cr_uid,
+            pid: info.kp_proc.p_pid, parent: info.kp_eproc.e_ppid, processGroup: info.kp_eproc.e_pgid,
+            uid: info.kp_eproc.e_ucred.cr_uid,
             state: state(info.kp_proc.p_stat), terminal: terminal == noDevice ? nil : terminal,
             name: name(info.kp_proc.p_comm),
             startedAt: Date(timeIntervalSince1970: Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000))

@@ -32,6 +32,7 @@ public struct DarwinRunningProcesses: RunningProcesses {
         let task = ProcessDetails.task(process.pid, timebase: timebase)
         return ProcessRecord(
             identity: ProcessIdentity(pid: process.pid, startedAt: process.startedAt), parent: process.parent,
+            processGroup: process.processGroup,
             isOwn: true, name: process.name, executable: ProcessDetails.executable(process.pid),
             arguments: ProcessDetails.arguments(process.pid) ?? [],
             workingDirectory: ProcessDetails.workingDirectory(process.pid), terminal: process.terminal,
@@ -42,6 +43,7 @@ public struct DarwinRunningProcesses: RunningProcesses {
     private func otherRecord(_ process: KernelProcess) -> ProcessRecord {
         ProcessRecord(
             identity: ProcessIdentity(pid: process.pid, startedAt: process.startedAt), parent: process.parent,
+            processGroup: process.processGroup,
             isOwn: false, name: process.name, executable: nil, arguments: [], workingDirectory: nil,
             terminal: process.terminal, run: process.state, cpuTime: nil, memory: 0, threads: 0, nice: 0)
     }

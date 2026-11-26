@@ -5,7 +5,7 @@ import Testing
 
 /// C1 of F8: the listening ports match lsof's (TCP in LISTEN plus unconnected UDP), for this test's own listeners
 /// and for every process of the user.
-@Suite("Listening ports match lsof", .serialized)
+@Suite("Listening ports match lsof", .serialized, .timeLimit(.minutes(1)))
 struct LsofParityTests {
     private let ports = DarwinListeningPorts()
 

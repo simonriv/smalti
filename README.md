@@ -1,6 +1,6 @@
 # Smalti
 
-A native macOS terminal built for working with several AI agents at once: automatic tiling, each agent's state in view, resuming Claude Code, Codex, Antigravity and OpenCode sessions, a usage observatory and guards for destructive commands. Swift + AppKit on [libghostty](https://github.com/ghostty-org/ghostty).
+A native macOS terminal built for working with several AI agents at once: automatic tiling, each agent's state in view, resuming Claude Code, Codex, Antigravity and OpenCode sessions, a usage observatory, a ports and processes view you can stop things from safely, and guards for destructive commands. Swift + AppKit on [libghostty](https://github.com/ghostty-org/ghostty).
 
 - Website: https://smalti.sh
 - Documentation: https://smalti.sh/docs (en español: https://smalti.sh/es/docs)

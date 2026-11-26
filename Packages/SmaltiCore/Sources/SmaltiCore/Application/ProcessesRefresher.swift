@@ -19,6 +19,8 @@ public final class ProcessesRefresher {
     private let timing: Timing
     private var loop: Task<Void, Never>?
     private var isRefreshing = false
+    /// Bumped by every start and stop: a read under way for an older run delivers nothing and blocks nothing.
+    private var generation = 0
     private var foregroundGroups: () -> [PaneID: Int32] = { [:] }
     private var deliver: (ProcessesSnapshot) -> Void = { _ in }
 
@@ -51,16 +53,19 @@ public final class ProcessesRefresher {
     public func stop() {
         loop?.cancel()
         loop = nil
+        generation += 1
+        isRefreshing = false
         observe.reset()
     }
 
     /// One refresh now (after an action), if running and none is under way.
     public func refreshNow() async {
-        guard let running = loop, !isRefreshing else { return }
+        guard loop != nil, !isRefreshing else { return }
+        let run = generation
         isRefreshing = true
-        defer { isRefreshing = false }
         let snapshot = await observe.refresh(foregroundGroups: foregroundGroups())
-        guard loop == running, !running.isCancelled else { return }
+        guard run == generation else { return }
+        isRefreshing = false
         deliver(snapshot)
     }
 }

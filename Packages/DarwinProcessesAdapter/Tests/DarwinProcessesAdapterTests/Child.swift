@@ -34,13 +34,17 @@ final class Child {
         return lines
     }
 
-    /// Ends it and its group, whatever it ignores.
+    /// Ends it and its group, whatever it ignores. Polls instead of `waitUntilExit`, which needs a run loop and
+    /// could hang on a concurrency thread (final review, minor 4).
     func end() {
         guard process.isRunning else { return }
         kill(-pid, SIGKILL)
         kill(pid, SIGKILL)
-        process.waitUntilExit()
+        let deadline = Date().addingTimeInterval(Self.endTimeout)
+        while process.isRunning, Date() < deadline { usleep(10_000) }
     }
+
+    private static let endTimeout: TimeInterval = 5
 
     deinit { end() }
 

@@ -3,7 +3,7 @@ import Foundation
 import SmaltiCore
 import Testing
 
-@Suite("DarwinRunningProcesses", .serialized)
+@Suite("DarwinRunningProcesses", .serialized, .timeLimit(.minutes(1)))
 struct RunningProcessesTests {
     private let processes = DarwinRunningProcesses()
 
