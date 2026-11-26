@@ -477,3 +477,26 @@
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones, capturas, checklist, revisión final (0 críticos, 2 importantes, 4 menores; corregidos) y mutación de la fase (132 mutantes, 99,0 %; el sobreviviente muerto y verificado)
 - [x] T12 · 0.8.0, PRs, release y despliegue (PRs #55–#56; release `v0.8.0` por el pipeline, appcast smalti-web #14 y cask homebrew-tap #5; web smalti-web #13; el diario 0.7.7 → 0.8.0 por Sparkle, sin Gatekeeper y con la sesión intacta)
+
+## F8.5 · Proyectos
+
+### Spec
+- [x] Maqueta (`docs/specs/F8.5-assets/mockup.html`) enviada a Simón (PARA 1); sin respuesta, se sigue con la recomendación (2026-11-26)
+- [x] Spec `docs/specs/F8.5-proyectos.md`, aprobada de antemano (2026-11-26)
+
+### Plan
+- [x] Plan `docs/plans/F8.5-proyectos.md`, aprobado de antemano (2026-11-26)
+
+### Tareas
+- [ ] T1 · Formato de proyecto
+- [ ] T2 · Tipos, puertos, fakes y descubrimiento
+- [ ] T3 · Recientes, cambios y textos
+- [ ] T4 · Casos de uso y workspace del proyecto
+- [ ] T5 · Adaptador de archivos y estado
+- [ ] Revisión intermedia 1
+- [ ] T6 · Comandos, atajo, ayuda y menú
+- [ ] T7 · Selector, confirmación y apertura en la app
+- [ ] T8 · XCUITest
+- [ ] T9 · Web y documentos
+- [ ] Revisión intermedia 2
+- [ ] Revisión final, mutación, mediciones, capturas, checklist, release y despliegue
