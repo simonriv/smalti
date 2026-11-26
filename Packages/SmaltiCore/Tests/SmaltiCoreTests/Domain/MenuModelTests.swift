@@ -84,7 +84,9 @@ struct MenuModelTests {
         #expect(
             menus[3].items.map(\.title) == [
                 "Paleta de comandos", "Observatorio", "Filtrar el Observatorio", "Buscar sesiones de agentes",
-                "Importar layout…", "",
+                "Importar layout…", "", "Procesos", "Puertos", "Detener el proceso elegido",
+                "Bajar la prioridad del proceso elegido", "Ver procesos en árbol",
+                "Cambiar el orden de procesos y puertos", "",
                 "Layout", "Igualar paneles", "", "Aumentar letra", "Reducir letra", "Tamaño real", "", "Desplazamiento",
                 "Abrir en Quick Look", "Abrir Neovim junto al agente", "Abrir en Neovim el último archivo editado", "",
                 "Pantalla completa",

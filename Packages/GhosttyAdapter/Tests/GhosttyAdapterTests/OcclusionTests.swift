@@ -70,6 +70,19 @@ struct OcclusionTests {
         #expect(engine.foregroundProcess(of: pane)?.commandLine == ["sleep", "30"])
     }
 
+    /// F8: the raw foreground group, readable or not, is what ties processes to the pane by its terminal.
+    @Test func foregroundGroupIsTheRawPIDEvenWithoutAName() throws {
+        let pane = try engine.open(spec)
+        defer { engine.close(pane) }
+        let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
+        #expect(wait { (view.surface.map(ghostty_surface_foreground_pid) ?? 0) > 0 })
+
+        let group = engine.foregroundGroup(of: pane)
+
+        #expect(group == view.surface.map { Int32(ghostty_surface_foreground_pid($0)) })
+        #expect(engine.foregroundGroup(of: PaneID()) == nil)
+    }
+
     private func wait(_ condition: () -> Bool, timeout: TimeInterval = 10) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

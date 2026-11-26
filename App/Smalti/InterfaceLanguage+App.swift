@@ -35,3 +35,4 @@ extension ConfigTemplateTexts: Bilingual {}
 extension PromptCopy: Bilingual {}
 extension AppearanceCopy: Bilingual {}
 extension WelcomeTexts: Bilingual {}
+extension ProcessTexts: Bilingual {}

@@ -78,6 +78,12 @@ public struct Keymap: Sendable, Equatable {
             (chord("p", .command), .observatoryPeriod),
             (chord("enter", .shift, .command), .guardApprove),
             (chord("escape", .shift, .command), .guardReject),
+            (chord("m", .shift, .command), .processesToggle),
+            (chord("u", .shift, .command), .portsToggle),
+            (chord("backspace", .command), .processesStop),
+            (chord("down", .shift, .command), .processesLowerPriority),
+            (chord("t", .command), .processesTree),
+            (chord("s", .shift, .command), .processesSort),
         ]
         entries += basicEntries
         for number in NumberedShortcuts.range {

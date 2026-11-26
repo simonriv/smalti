@@ -18,7 +18,7 @@ public enum KeyChordTranslator {
     /// Keys whose characters are private-use or control codes; the key code identifies them on every layout.
     private static let namedKeys: [UInt16: String] = [
         123: "left", 124: "right", 125: "down", 126: "up", 36: "enter", 76: "enter", 53: "escape", 48: "tab",
-        116: "pageup", 121: "pagedown", 115: "home", 119: "end",
+        116: "pageup", 121: "pagedown", 115: "home", 119: "end", 51: "backspace",
     ]
 
     private static func characterKey(_ characters: String?) -> String? {
