@@ -82,10 +82,11 @@ struct AgentsModule: PromptModule {
 
     func segment(in context: PromptContext) -> PromptSegment? {
         let agents = context.agents
-        if let text = Self.phrase(agents.waiting, one: "te espera", many: "te esperan") {
+        let copy = context.copy
+        if let text = Self.phrase(agents.waiting, one: copy.agentWaiting, many: copy.agentsWaiting) {
             return PromptSegment(module: id, icon: nil, runs: [ColoredText(text, .waiting)])
         }
-        return Self.phrase(agents.failed, one: "falló", many: "fallaron").map {
+        return Self.phrase(agents.failed, one: copy.agentFailed, many: copy.agentsFailed).map {
             PromptSegment(module: id, icon: nil, runs: [ColoredText($0, .failed)])
         }
     }

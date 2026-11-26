@@ -18,7 +18,7 @@ struct OcclusionTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-occlusion-\(UUID()).conf"))
-        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         spec = TerminalSessionSpec(
             workingDirectory: try WorkingDirectory(path: "/tmp"), command: .custom("/bin/zsh -f"))
     }

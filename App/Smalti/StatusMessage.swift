@@ -12,22 +12,23 @@ struct StatusMessage: Equatable {
 
     static func paneTooSmall(minimum: Size) -> StatusMessage {
         StatusMessage(
-            text: "No cabe otro panel: mínimo \(Int(minimum.width)) × \(Int(minimum.height))", isTransient: true)
+            text: String(localized: "No room for another pane: minimum \(Int(minimum.width)) × \(Int(minimum.height))"),
+            isTransient: true)
     }
 
     /// Same wording as F0's dialog, now in the status bar so the window stays.
     static func failedStart(exitCode: Int?) -> StatusMessage {
-        let code = exitCode.map { " (código \($0))" } ?? ""
+        let code = exitCode.map { String(localized: " (code \($0))") } ?? ""
         return StatusMessage(
-            text: "El shell terminó al iniciar\(code). Revisa el comando del shell y sus archivos de inicio.",
+            text: String(
+                localized: "The shell exited at startup\(code). Check the shell command and its startup files."),
             isTransient: true)
     }
 
     /// File name instead of the full path: the bar is one short line.
     static func invalidConfig(_ error: ConfigError) -> StatusMessage {
-        let short = ConfigError(
-            file: URL(filePath: error.file).lastPathComponent, line: error.line, key: error.key, reason: error.reason)
-        return StatusMessage(text: short.summary, isTransient: false)
+        let short = error.located(in: URL(filePath: error.file).lastPathComponent)
+        return StatusMessage(text: short.summary(.current), isTransient: false)
     }
 
     /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.
@@ -37,19 +38,21 @@ struct StatusMessage: Equatable {
     }
 
     // F7.5: agent guards.
-    static let commandApproved = StatusMessage(text: "Comando aprobado", isTransient: true)
-    static let commandRejected = StatusMessage(text: "Comando rechazado", isTransient: true)
+    static let commandApproved = StatusMessage(text: String(localized: "Command approved"), isTransient: true)
+    static let commandRejected = StatusMessage(text: String(localized: "Command rejected"), isTransient: true)
     /// Review 2: chosen in ⌘K after it expired or was decided elsewhere.
-    static let approvalGone = StatusMessage(text: "Ese comando ya no espera aprobación", isTransient: true)
+    static let approvalGone = StatusMessage(
+        text: String(localized: "That command no longer awaits approval"), isTransient: true)
     static let noApprovalWaiting = StatusMessage(
-        text: "No hay comandos esperando en este panel (⌘J salta al agente que espera)", isTransient: true)
+        text: String(localized: "No commands are waiting in this pane (⌘J jumps to the waiting agent)"),
+        isTransient: true)
 
     static func secretsProtected(_ project: String) -> StatusMessage {
-        StatusMessage(text: "Secretos protegidos en \(project)", isTransient: true)
+        StatusMessage(text: String(localized: "Secrets protected in \(project)"), isTransient: true)
     }
 
     static func secretsUnprotected(_ project: String) -> StatusMessage {
-        StatusMessage(text: "Protección de secretos quitada en \(project)", isTransient: true)
+        StatusMessage(text: String(localized: "Secret protection removed in \(project)"), isTransient: true)
     }
 
     static func secretsFailed(_ reason: String) -> StatusMessage {
@@ -57,11 +60,11 @@ struct StatusMessage: Equatable {
     }
 
     static func secretBlocked(_ path: String) -> StatusMessage {
-        StatusMessage(text: "Smalti bloqueó la lectura de \(path)", isTransient: true)
+        StatusMessage(text: String(localized: "Smalti blocked reading \(path)"), isTransient: true)
     }
 
     static func sessionSaveFailed(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo guardar la sesión: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t save the session: \(reason)"), isTransient: true)
     }
 
     /// The result line of installing or uninstalling the Claude Code integration.
@@ -84,80 +87,84 @@ struct StatusMessage: Equatable {
         StatusMessage(text: message, isTransient: true)
     }
 
-    static let nobodyWaiting = StatusMessage(text: "Ningún agente te espera", isTransient: true)
+    static let nobodyWaiting = StatusMessage(text: String(localized: "No agent is waiting for you"), isTransient: true)
 
     static let notificationsDisabled = StatusMessage(
-        text: "Notificaciones desactivadas en macOS; el estado sigue en los paneles", isTransient: true)
+        text: String(localized: "Notifications are off in macOS; the state stays in the panes"), isTransient: true)
 
     /// Another instance of this build owns the socket.
     static let agentSocketInUse = StatusMessage(
-        text: "Otra ventana de Smalti recibe ya los avisos de Claude; esta no mostrará su estado", isTransient: true)
+        text: String(
+            localized: "Another Smalti window already receives Claude’s events; this one won’t show their state"),
+        isTransient: true)
 
     static func agentSocketFailed(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo abrir el canal de avisos de Claude: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t open Claude’s event channel: \(reason)"), isTransient: true)
     }
 
     static func layoutSaveFailed(_ name: String, reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo guardar el layout “\(name)”: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t save the layout “\(name)”: \(reason)"), isTransient: true)
     }
 
     static func layoutRestoreFailed(_ name: String, reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo restaurar el layout “\(name)”: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t restore the layout “\(name)”: \(reason)"), isTransient: true)
     }
 
     static func layoutSaved(_ name: String) -> StatusMessage {
-        StatusMessage(text: "Layout “\(name)” guardado", isTransient: true)
+        StatusMessage(text: String(localized: "Layout “\(name)” saved"), isTransient: true)
     }
 
     /// F7: the OTLP receiver could not listen; panes then get no telemetry variables.
     static func telemetryReceiverFailed(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo arrancar el receptor de telemetría: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t start the telemetry receiver: \(reason)"), isTransient: true)
     }
 
     /// F7: shared layouts.
     static func layoutExported(_ name: String) -> StatusMessage {
-        StatusMessage(text: "Layout “\(name)” exportado", isTransient: true)
+        StatusMessage(text: String(localized: "Layout “\(name)” exported"), isTransient: true)
     }
 
     static func layoutExportFailed(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo exportar el layout: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t export the layout: \(reason)"), isTransient: true)
     }
 
     static func layoutImported(_ name: String) -> StatusMessage {
-        StatusMessage(text: "Layout “\(name)” importado", isTransient: true)
+        StatusMessage(text: String(localized: "Layout “\(name)” imported"), isTransient: true)
     }
 
     static func layoutImportFailed(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo importar el layout: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t import the layout: \(reason)"), isTransient: true)
     }
 
     /// A saved layout's agent session already runs in another pane, so that pane opened a plain shell.
     static func sessionAlreadyOpen(_ session: String) -> StatusMessage {
-        StatusMessage(text: "La sesión \(session.prefix(8)) ya está abierta en otro panel", isTransient: true)
+        StatusMessage(
+            text: String(localized: "Session \(session.prefix(8)) is already open in another pane"), isTransient: true)
     }
 
     /// F4.5 "Mostrar registros…": the file could not be written.
     static func logsFailed(_ path: String) -> StatusMessage {
-        StatusMessage(text: "No se pudieron guardar los registros en \(path)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t save the logs in \(path)"), isTransient: true)
     }
 
     /// F4.5 ⌘,: the template could not be written where the config lives.
     static func configTemplateFailed(_ path: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo crear \(path)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t create \(path)"), isTransient: true)
     }
 
     static func unreadableSession(_ reason: String) -> StatusMessage {
-        StatusMessage(text: "No se pudo leer la sesión anterior: \(reason)", isTransient: true)
+        StatusMessage(text: String(localized: "Couldn’t read the previous session: \(reason)"), isTransient: true)
     }
 
     /// F7.6: the session on disk is from a newer Smalti; this one leaves it alone (shown once, at launch).
     static func newerSession(_ version: Int) -> StatusMessage {
-        StatusMessage(text: SaveOutcome.keptNewer(version: version).message ?? "", isTransient: false)
+        StatusMessage(
+            text: SaveOutcome.keptNewer(version: version).message(.current) ?? "", isTransient: false)
     }
 
     static func restoreFailures(first: String, count: Int) -> StatusMessage {
-        let more = count > 1 ? " (y \(count - 1) más)" : ""
-        return StatusMessage(text: "No se restauró todo: \(first)\(more)", isTransient: true)
+        let more = count > 1 ? String(localized: " (and \(count - 1) more)") : ""
+        return StatusMessage(text: String(localized: "Not everything was restored: \(first)\(more)"), isTransient: true)
     }
 
     static func engineFailure(_ error: TerminalEngineError) -> StatusMessage {
@@ -168,10 +175,6 @@ struct StatusMessage: Equatable {
 /// Human text for engine errors, shared by the startup alert and the status bar.
 enum EngineErrorText {
     static func describe(_ error: TerminalEngineError) -> String {
-        switch error {
-        case .engineStartFailed(let reason): reason
-        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
-        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
-        }
+        TerminalTexts.current.describe(error)
     }
 }

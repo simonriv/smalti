@@ -19,7 +19,7 @@ struct LibghosttyF45ApiTests {
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: work.appending(path: "g.conf"))
-        runtime = try GhosttyRuntime(config: config)
+        runtime = try GhosttyRuntime(config: config, texts: .spanish)
     }
 
     @MainActor

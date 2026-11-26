@@ -64,9 +64,30 @@ struct ProtectProjectSecretsTests {
     @Test func errorsSayWhatFailed() {
         let error = ProjectPermissionsError.unreadable(path: "/p/.claude/settings.local.json", reason: "JSON inválido")
 
-        #expect(error.message == "No se pudo leer /p/.claude/settings.local.json: JSON inválido")
+        #expect(error.message(.spanish) == "No se pudo leer /p/.claude/settings.local.json: JSON inválido")
         #expect(
-            ProjectPermissionsError.unwritable(path: "/p/x", reason: "permiso denegado").message
+            ProjectPermissionsError.unwritable(path: "/p/x", reason: "permiso denegado").message(.spanish)
                 == "No se pudo escribir /p/x: permiso denegado")
+    }
+}
+
+/// Review 1 (M4): the home folder is refused with its own reason, in both languages.
+@Suite("Protect project secrets in the home folder")
+struct ProtectHomeFolderTests {
+    @Test func homeIsRefusedWithItsReason() {
+        let useCase = ProtectProjectSecrets(permissions: InMemoryProjectPermissions(), home: "/Users/u")
+
+        #expect(throws: ProjectPermissionsError.homeFolder(path: "/Users/u")) { try useCase.protect("/Users/u") }
+    }
+
+    @Test func homeReasonInBothLanguages() {
+        let error = ProjectPermissionsError.homeFolder(path: "/Users/u")
+
+        #expect(
+            error.message(.spanish)
+                == "No se pudo escribir /Users/u: es tu carpeta personal: Smalti no escribe tu configuración global")
+        #expect(
+            error.message(.english)
+                == "Couldn’t write /Users/u: it’s your home folder: Smalti doesn’t write your global settings")
     }
 }

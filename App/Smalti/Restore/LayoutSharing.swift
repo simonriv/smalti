@@ -45,7 +45,7 @@ final class LayoutSharing {
             try export.execute(name, to: file)
             report(.layoutExported(name.rawValue))
         } catch {
-            report(.layoutExportFailed(error.message))
+            report(.layoutExportFailed(error.message(.current)))
         }
     }
 
@@ -72,7 +72,7 @@ final class LayoutSharing {
     private func preview(_ file: URL, in window: NSWindow, report: @escaping (StatusMessage) -> Void) {
         let first: ImportPreview
         do { first = try importer.preview(file) } catch {
-            report(.layoutImportFailed(error.message))
+            report(.layoutImportFailed(error.message(.current)))
             return
         }
         chooseRoot(for: first, in: window) { [weak self] root in
@@ -81,7 +81,7 @@ final class LayoutSharing {
             switch rooted(first, file: file, root: root) {
             case .success(let value): preview = value
             case .failure(let error):
-                report(.layoutImportFailed(error.message))
+                report(.layoutImportFailed(error.message(.current)))
                 return
             }
             confirm(preview, in: window) { [weak self] isConfirmed in
@@ -101,11 +101,11 @@ final class LayoutSharing {
     private func confirm(_ preview: ImportPreview, in window: NSWindow, then answer: @escaping (Bool) -> Void) {
         if let value = Self.testValue(Self.confirmImportKey) { return answer(value == "yes") }
         let alert = NSAlert()
-        alert.messageText = ImportTexts.confirmationTitle(preview.name)
-        alert.informativeText = ImportTexts.confirmationBody(preview)
+        alert.messageText = ImportTexts.confirmationTitle(preview.name, texts: .current)
+        alert.informativeText = ImportTexts.confirmationBody(preview, texts: .current)
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Importar")
-        let cancel = alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: String(localized: "Import"))
+        let cancel = alert.addButton(withTitle: String(localized: "Cancel"))
         cancel.keyEquivalent = "\u{1b}"
         alert.beginSheetModal(for: window) { response in answer(response == .alertFirstButtonReturn) }
     }
@@ -118,7 +118,7 @@ final class LayoutSharing {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = ImportTexts.folderPrompt(preview.name)
+        panel.message = ImportTexts.folderPrompt(preview.name, texts: .current)
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             MainActor.assumeIsolated { use(url.path(percentEncoded: false)) }
@@ -130,7 +130,7 @@ final class LayoutSharing {
             let name = try importer.confirm(preview, root: root)
             report(.layoutImported(name.rawValue))
         } catch {
-            report(.layoutImportFailed(error.message))
+            report(.layoutImportFailed(error.message(.current)))
         }
     }
 

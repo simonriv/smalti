@@ -9,8 +9,8 @@ enum CloseConfirmation {
         alert.messageText = question.title
         alert.informativeText = question.detail
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Cerrar")
-        let cancel = alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: String(localized: "Close"))
+        let cancel = alert.addButton(withTitle: String(localized: "Cancel"))
         cancel.keyEquivalent = "\u{1b}"
         alert.beginSheetModal(for: window) { response in answer(response == .alertFirstButtonReturn) }
     }

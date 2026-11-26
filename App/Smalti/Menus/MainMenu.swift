@@ -13,7 +13,7 @@ final class MainMenu: NSObject, NSMenuDelegate {
     /// A menu is open: its items are not replaced under the pointer (it refreshed when it opened).
     private var openMenus = 0
     /// Built once and kept: AppKit fills it with the Services.
-    private let services = NSMenu(title: "Servicios")
+    private let services = NSMenu(title: String(localized: "Services"))
     /// Marks Smalti's items, so the window list AppKit adds to "Ventana" survives a refresh.
     private static let ownTag = 0xF45
 
@@ -114,10 +114,11 @@ final class MainMenu: NSObject, NSMenuDelegate {
     private func dictationAndEmoji() -> [NSMenuItem] {
         // `startDictation:` is answered by the text system of the key view; it has no Swift-visible declaration.
         let dictation = NSMenuItem(
-            title: "Iniciar dictado…", action: Selector(("startDictation:")), keyEquivalent: "")
+            title: String(localized: "Start Dictation…"), action: Selector(("startDictation:")), keyEquivalent: "")
         dictation.setAccessibilityIdentifier("smalti.menu.dictation")
         let emoji = NSMenuItem(
-            title: "Emoji y símbolos", action: #selector(NSApplication.orderFrontCharacterPalette(_:)),
+            title: String(localized: "Emoji & Symbols"),
+            action: #selector(NSApplication.orderFrontCharacterPalette(_:)),
             keyEquivalent: "")
         emoji.setAccessibilityIdentifier("smalti.menu.emoji")
         return [.separator(), dictation, emoji]

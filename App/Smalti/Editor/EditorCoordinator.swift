@@ -101,7 +101,7 @@ final class EditorCoordinator: EditorPanes {
     func openLastEdited(from pane: PaneID) {
         let workspace = host?.panes(nearEditorOf: pane).map(\.id) ?? []
         guard let file = editedFiles.recent(in: pane, workspace: workspace).first else {
-            host?.report(EditedFiles.noneText)
+            host?.report(TerminalTexts.current.editedNone)
             return
         }
         open(EditorTarget(path: file.path, line: file.line, column: nil), from: pane)

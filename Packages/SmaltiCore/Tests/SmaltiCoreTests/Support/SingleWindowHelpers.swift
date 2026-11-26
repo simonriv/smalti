@@ -30,6 +30,6 @@ extension ResumeListing {
     static func workspaces(in snapshot: SessionSnapshot, home: WorkingDirectory, harnesses: HarnessRegistry)
         -> [ResumeWorkspace]
     {
-        windows(in: snapshot, home: home, harnesses: harnesses).flatMap(\.workspaces)
+        windows(in: snapshot, context: Context(home: home, harnesses: harnesses, texts: .spanish)).flatMap(\.workspaces)
     }
 }

@@ -13,12 +13,12 @@ final class FeedbackView: NSView {
     private let bug: FeedbackChoice
     private let idea: FeedbackChoice
     private let logs = NSButton(
-        checkboxWithTitle: "Guardar los registros de esta sesión para adjuntarlos", target: nil, action: nil)
+        checkboxWithTitle: String(localized: "Save this session’s logs to attach them"), target: nil, action: nil)
 
     init(theme: Theme, summary: String) {
         self.theme = theme
-        bug = FeedbackChoice("Fallo", dot: theme.agent.failed, theme: theme)
-        idea = FeedbackChoice("Idea", dot: theme.feedback.ideaDot, theme: theme)
+        bug = FeedbackChoice((String(localized: "Bug"), "bug"), dot: theme.agent.failed, theme: theme)
+        idea = FeedbackChoice((String(localized: "Idea"), "idea"), dot: theme.feedback.ideaDot, theme: theme)
         super.init(frame: .zero)
         OverlayBox.decorate(self, around: content(summary: summary), theme: theme)
         bug.onClick = { [weak self] in self?.onKind?(.bug) }
@@ -27,7 +27,7 @@ final class FeedbackView: NSView {
         logs.action = #selector(logsClicked)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Reportar un problema o una idea")
+        setAccessibilityLabel(String(localized: "Report a Problem or Idea"))
         setAccessibilityIdentifier("smalti.feedback")
     }
 
@@ -73,7 +73,7 @@ final class FeedbackView: NSView {
 
     private func content(summary: String) -> NSView {
         let tokens = theme.feedback
-        let title = NSTextField(labelWithString: "Reportar un problema o una idea")
+        let title = NSTextField(labelWithString: String(localized: "Report a Problem or Idea"))
         title.font = theme.interfaceFont(size: tokens.titleFontSize, weight: 600)
         title.textColor = theme.text.title.nsColor
         let choices = NSStackView(views: [bug, idea])
@@ -82,7 +82,8 @@ final class FeedbackView: NSView {
         logs.font = theme.interfaceFont(size: tokens.logsFontSize)
         logs.setAccessibilityIdentifier("smalti.feedbackLogs")
         let note = NSTextField(
-            wrappingLabelWithString: "Se guardan en Descargas y se muestran en Finder; los arrastras tú al issue.")
+            wrappingLabelWithString: String(
+                localized: "They’re saved in Downloads and shown in Finder; you drag them into the issue."))
         note.font = theme.interfaceFont(size: tokens.noteFontSize)
         note.textColor = theme.text.secondary.nsColor
         let build = NSTextField(labelWithString: summary)
@@ -118,10 +119,11 @@ final class FeedbackView: NSView {
         let palette = theme.palette
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let open = OverlayBox.hint("↩", "Abrir en GitHub", theme: theme)
+        let open = OverlayBox.hint("↩", String(localized: "Open on GitHub"), theme: theme)
         let row = NSStackView(views: [
-            OverlayBox.hint("←→", "tipo", theme: theme), OverlayBox.hint("espacio", "registros", theme: theme), spacer,
-            OverlayBox.hint("esc", "cancelar", theme: theme), open,
+            OverlayBox.hint("←→", String(localized: "kind"), theme: theme),
+            OverlayBox.hint(String(localized: "space"), String(localized: "logs"), theme: theme), spacer,
+            OverlayBox.hint("esc", String(localized: "cancel"), theme: theme), open,
         ])
         row.spacing = palette.footerGap
         row.edgeInsets = NSEdgeInsets(top: 0, left: palette.fieldPadding, bottom: 0, right: palette.fieldPadding)
@@ -136,7 +138,9 @@ private final class FeedbackChoice: NSView {
     var onClick: (() -> Void)?
     private let theme: Theme
 
-    init(_ title: String, dot color: RGBAColor, theme: Theme) {
+    /// `name.id` names it for accessibility in every language (`smalti.feedback.bug`).
+    init(_ name: (title: String, id: String), dot color: RGBAColor, theme: Theme) {
+        let title = name.title
         self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
@@ -157,7 +161,7 @@ private final class FeedbackChoice: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.radioButton)
         setAccessibilityLabel(title)
-        setAccessibilityIdentifier("smalti.feedback.\(title.lowercased())")
+        setAccessibilityIdentifier("smalti.feedback.\(name.id)")
     }
 
     @available(*, unavailable, message: "Built in code only")

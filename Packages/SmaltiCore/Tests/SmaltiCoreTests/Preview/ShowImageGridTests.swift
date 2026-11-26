@@ -28,7 +28,7 @@ struct ShowImageGridTests {
     }
 
     private func listing(_ names: [String], skipped: Int = 0) -> ImageListing {
-        ImageListing(source: "shots", images: names.map { "/w/\($0)" }, skipped: skipped)
+        ImageListing(source: "shots", images: names.map { "/w/\($0)" }, skipped: skipped, texts: .spanish)
     }
 
     private func render(_ listing: ImageListing, terminal: Bool = true, files: InMemoryImageFiles) async

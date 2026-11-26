@@ -16,13 +16,13 @@ final class DetailView: NSView {
     private let empty: NSTextField
     private var activity: NSStackView?
 
-    static let noActivity = "Sin actividad en la última hora"
+    static let noActivity = String(localized: "No activity in the last hour")
 
     init(theme: Theme) {
         self.theme = theme
         card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.detailStack, height: .fill)
         let tokens = theme.observatory
-        activityTitle = ObservatoryText.caption("Actividad", theme: theme)
+        activityTitle = ObservatoryText.caption(String(localized: "Activity"), theme: theme)
         compaction = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         telemetry = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         empty = ObservatoryText.label(
@@ -45,7 +45,8 @@ final class DetailView: NSView {
         chart.setAccessibilityIdentifier("smalti.observatory.chart")
         let right = column(
             [
-                ObservatoryText.caption("Tokens por minuto · última hora", theme: theme), chart, empty, compaction,
+                ObservatoryText.caption(String(localized: "Tokens per minute · last hour"), theme: theme), chart, empty,
+                compaction,
                 telemetry,
             ],
             identifier: "smalti.observatory.output")
@@ -75,7 +76,7 @@ final class DetailView: NSView {
     func show(_ detail: ObservatoryReport.Detail?, timeZone: TimeZone) {
         guard let detail else {
             activityTitle.attributedStringValue =
-                ObservatoryText.caption("Actividad", theme: theme).attributedStringValue
+                ObservatoryText.caption(String(localized: "Activity"), theme: theme).attributedStringValue
             activityRows.setViews([], in: .leading)
             chart.isHidden = true
             empty.isHidden = false

@@ -26,7 +26,7 @@ struct SystemFiguresTests {
             sessions: [], localModels: .available(loaded: [qwen], onDisk: []),
             system: sample(used: 12_025_908_428, agents: 3_758_096_384), now: now)
 
-        let figures = SystemFigures.make(snapshot)
+        let figures = SystemFigures.make(snapshot, copy: .spanish)
 
         #expect(figures.title == "Sistema · MacBook Air M4")
         #expect(figures.cpu == "31%")
@@ -43,7 +43,7 @@ struct SystemFiguresTests {
     @Test func memorySplitOmitsModelWithoutOllama() {
         let snapshot = F.snapshot(sessions: [], system: sample(used: 8 * gib, agents: 2 * gib), now: now)
 
-        let figures = SystemFigures.make(snapshot)
+        let figures = SystemFigures.make(snapshot, copy: .spanish)
 
         #expect(figures.split == "agentes 2.0 · resto 6.0 GB · presión media")
         #expect(figures.shares.model == 0)
@@ -54,7 +54,7 @@ struct SystemFiguresTests {
             cpu: .unavailable, gpu: .unavailable, memoryUsed: .unavailable, memoryTotal: 16 * gib,
             agentsMemory: .unavailable, pressure: .unavailable, machineName: "Apple M4")
 
-        let figures = SystemFigures.make(F.snapshot(sessions: [], system: system, now: now))
+        let figures = SystemFigures.make(F.snapshot(sessions: [], system: system, now: now), copy: .spanish)
 
         #expect(figures.cpu == "no disponible")
         #expect(figures.gpu == "no disponible")
@@ -68,7 +68,7 @@ struct SystemFiguresTests {
             sessions: [], localModels: .available(loaded: [qwen], onDisk: []),
             system: sample(used: 10 * gib, agents: 3 * gib), now: now)
 
-        let figures = SystemFigures.make(snapshot)
+        let figures = SystemFigures.make(snapshot, copy: .spanish)
 
         #expect(figures.split == "modelo 9.0 · agentes 3.0 · resto 0.0 GB · presión media")
         #expect(figures.shares.rest == 0)
@@ -78,7 +78,8 @@ struct SystemFiguresTests {
         let loaded = model("qwen3.5:9b", bytes: 6_549_825_126, vram: 6_549_825_126)
         let disk = model("nomic-embed-text", bytes: 287_309_824, downloaded: now.addingTimeInterval(-2 * 86_400))
 
-        let figures = LocalModelsFigures.make(.available(loaded: [loaded], onDisk: [disk, loaded]), now: now)
+        let figures = LocalModelsFigures.make(
+            .available(loaded: [loaded], onDisk: [disk, loaded]), now: now, copy: .spanish)
 
         #expect(
             figures
@@ -91,11 +92,12 @@ struct SystemFiguresTests {
     }
 
     @Test func ollamaUnavailableHasItsText() {
-        #expect(LocalModelsFigures.make(.unavailable, now: now) == .message("Ollama no está corriendo"))
+        #expect(LocalModelsFigures.make(.unavailable, now: now, copy: .spanish) == .message("Ollama no está corriendo"))
     }
 
     @Test func noModelsHasItsText() {
         #expect(
-            LocalModelsFigures.make(.available(loaded: [], onDisk: []), now: now) == .message("Sin modelos locales"))
+            LocalModelsFigures.make(.available(loaded: [], onDisk: []), now: now, copy: .spanish)
+                == .message("Sin modelos locales"))
     }
 }

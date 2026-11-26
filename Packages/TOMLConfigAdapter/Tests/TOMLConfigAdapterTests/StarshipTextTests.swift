@@ -12,8 +12,8 @@ struct StarshipTextTests {
         var appearance = AppearanceSettings.obsidian
         appearance.protectLegibility = false
         let preset = StarshipPreset.make(
-            from: PromptConfig.standard.applying(template), theme: ThemeCatalog.apply(appearance))
-        return StarshipText.render(preset)
+            from: PromptConfig.standard.applying(template), theme: ThemeCatalog.apply(appearance), copy: .spanish)
+        return StarshipText.render(preset, texts: .spanish)
     }
 
     private static let goldenNames: [PromptTemplate: String] = [
@@ -44,9 +44,9 @@ struct StarshipTextTests {
     @Test func quotesAndBackslashesAreEscaped() throws {
         var config = PromptConfig.standard
         config.symbol = .dollar
-        let preset = StarshipPreset.make(from: config, theme: ThemeCatalog.apply(.obsidian))
+        let preset = StarshipPreset.make(from: config, theme: ThemeCatalog.apply(.obsidian), copy: .spanish)
 
-        let table = try TOMLTable(source: StarshipText.render(preset))
+        let table = try TOMLTable(source: StarshipText.render(preset, texts: .spanish))
 
         #expect(try table.table(forKey: "character").string(forKey: "success_symbol").hasPrefix("[\\$]"))
     }

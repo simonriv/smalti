@@ -86,7 +86,7 @@ final class PaneGridView: NSView {
             container.removeFromSuperview()
         }
         let frames = workspace.tree?.frames(in: area, gap: theme.panel.gap) ?? [:]
-        var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now)
+        var context = HeaderContext(keymap: state.config.keys, home: state.home, now: .now, texts: .current)
         context.agentDetails = state.observatory?.paneDetails ?? [:]
         context.promptHeaders = state.promptHeaders
         for pane in workspace.panes.map(\.id) {
@@ -98,7 +98,7 @@ final class PaneGridView: NSView {
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
             container.showApproval(approvalContent(state, pane: pane, workspace: workspace.name))
-            container.setAccessibilityLabel(workspace.index(of: pane).map { "Panel \($0)" })
+            container.setAccessibilityLabel(workspace.index(of: pane).map { String(localized: "Pane \($0)") })
         }
     }
 
@@ -106,7 +106,8 @@ final class PaneGridView: NSView {
     private func approvalContent(_ state: TilingState, pane: PaneID, workspace: String) -> ApprovalCardContent? {
         guard let pending = state.approvals[pane], let first = pending.first else { return nil }
         return ApprovalCardContent(
-            approval: first, count: pending.count, workspace: workspace, keys: state.config.keys, now: .now)
+            approval: first, count: pending.count, workspace: workspace, keys: state.config.keys, now: .now,
+            texts: .current)
     }
 
     /// A new pane appears at its place; only the panes that already existed move.

@@ -40,9 +40,7 @@ final class HarnessCaptureTests: SmaltiUITestCase {
         let sheet = app.sheets.firstMatch
         if sheet.waitForExistence(timeout: 5) { sheet.buttons["Cerrar"].click() }
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
-        let again = XCUIApplication()
-        again.launchArguments = app.launchArguments
-        again.launchEnvironment = app.launchEnvironment
+        let again = XCUIApplication.relaunched(from: app)
         self.app = again
         again.launch()
         return again

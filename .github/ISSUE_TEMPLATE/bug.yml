@@ -1,24 +1,24 @@
-name: Fallo
-description: Algo de Smalti no funciona como esperabas.
-title: "Fallo: "
+name: Bug
+description: Something in Smalti doesn't work as you expected.
+title: "Bug: "
 labels: ["bug"]
 body:
   - type: textarea
     id: what
     attributes:
-      label: Qué pasó
+      label: What happened
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Qué esperabas
+      label: What you expected
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Pasos
+      label: Steps
       value: |
         1.
     validations:
@@ -26,8 +26,8 @@ body:
   - type: input
     id: build
     attributes:
-      label: Versión
-      description: La rellena «Reportar un problema o una idea…» (⌘K). Si no, copia la línea de «Acerca de Smalti».
-      placeholder: Smalti 0.7.6 (abc1234) · macOS 27.2 · Apple M4
+      label: Version
+      description: '"Report a Problem or Idea…" (⌘K) fills it in. Otherwise, copy the line from "About Smalti".'
+      placeholder: Smalti 0.7.7 (abc1234) · macOS 27.2 · Apple M4
     validations:
       required: true

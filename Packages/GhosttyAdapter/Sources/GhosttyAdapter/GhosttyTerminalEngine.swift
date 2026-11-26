@@ -40,7 +40,7 @@ public final class GhosttyTerminalEngine: TerminalEngine {
         let path = spec.workingDirectory.path
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
-            throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
+            throw .surfaceCreationFailed(workingDirectory: path, reason: .directoryMissing)
         }
         do {
             let view = try GhosttySurfaceView(app: runtime.app, spec: prepared(spec, for: pane))

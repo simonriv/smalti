@@ -18,7 +18,7 @@ struct NamedLayoutCommandTests {
     private func id(_ id: CommandID) -> (Command) -> Bool { { $0.id == id } }
 
     private func search(_ query: String, saved: [NamedLayoutSummary] = []) -> [Command] {
-        SearchCommands(layouts: .standard).execute(
+        SearchCommands(layouts: .standard, texts: .spanish).execute(
             query, state: CatalogState(workspaces: set, savedLayouts: saved), keymap: .standard
         )
         .map(\.command)
@@ -27,7 +27,7 @@ struct NamedLayoutCommandTests {
     @Test func catalogListsSavedLayoutsWithSubtitle() throws {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: set, savedLayouts: [try summary("rizaria-full", panes: 4, agents: 2)]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         let restore = commands.first(where: id(.layoutRestore(try LayoutName("rizaria-full"))))
         #expect(restore?.title == "Restaurar layout “rizaria-full”")
@@ -38,7 +38,7 @@ struct NamedLayoutCommandTests {
     @Test func catalogOmitsAgentClauseWithoutAgents() throws {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: set, savedLayouts: [try summary("solo", panes: 1, agents: 0)]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         #expect(commands.first(where: id(.layoutRestore(try LayoutName("solo"))))?.subtitle == "— 1 panel")
     }
@@ -46,7 +46,7 @@ struct NamedLayoutCommandTests {
     @Test func oneAgentIsSingular() throws {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: set, savedLayouts: [try summary("uno", panes: 2, agents: 1)]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         #expect(
             commands.first(where: id(.layoutRestore(try LayoutName("uno"))))?.subtitle
@@ -92,7 +92,7 @@ struct NamedLayoutCommandTests {
             for: CatalogState(
                 workspaces: set,
                 savedLayouts: [try summary("a", panes: 1, agents: 0), try summary("b", panes: 2, agents: 0)]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         let ids = commands.map(\.id)
         let restoreA = try #require(ids.firstIndex(of: .layoutRestore(try LayoutName("a"))))
@@ -104,7 +104,7 @@ struct NamedLayoutCommandTests {
 
     @Test func catalogOffersImport() {
         let commands = CommandCatalog.commands(
-            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard, texts: .spanish)
 
         let importCommand = commands.first(where: id(.layoutImport))
         #expect(importCommand?.title == "Importar layout…")
@@ -126,7 +126,7 @@ struct NamedLayoutCommandTests {
     @Test func exportIsNeverMarkedCurrent() throws {
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: set, savedLayouts: [try summary("a", panes: 1, agents: 0)]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         #expect(commands.first(where: id(.layoutExport(try LayoutName("a"))))?.isCurrent == false)
     }

@@ -52,4 +52,11 @@ struct TerminalAppearanceFontSizeTests {
         #expect(scaled.fontSize == 20)
         #expect(scaled.withFontSize(base.fontSize) == base)
     }
+
+    @Test func scaledKeepsOptionAsMeta() {
+        var base = Theme.obsidian.terminal
+        base.optionAsMeta = .left
+
+        #expect(base.withFontSize(20).optionAsMeta == .left)
+    }
 }

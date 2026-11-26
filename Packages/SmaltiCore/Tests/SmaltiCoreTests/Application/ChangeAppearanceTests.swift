@@ -148,7 +148,7 @@ struct ChangeAppearanceTests {
     }
 
     @Test func saveFailureIsReported() {
-        store.failure = ConfigError(file: "theme.toml", line: nil, key: "", reason: "disco lleno")
+        store.failure = ConfigError(file: "theme.toml", line: nil, key: "", problem: .unwritable(detail: "disco lleno"))
         var reported: [ConfigError] = []
         let change = ChangeAppearance(
             document: AppearanceDocument(config: .defaults), store: store, debouncer: debouncer,
@@ -157,7 +157,7 @@ struct ChangeAppearanceTests {
         _ = change.apply { $0.appearance.blur = 10 }
         debouncer.fire()
 
-        #expect(reported.map(\.reason) == ["disco lleno"])
+        #expect(reported.map(\.problem) == [.unwritable(detail: "disco lleno")])
     }
 
     @Test func documentGoesBackIntoConfig() {
@@ -202,7 +202,7 @@ struct ChangeAppearanceReviewTests {
     @Test func studioApplySavesOnce() {
         let change = ChangeAppearance(
             document: AppearanceDocument(config: .defaults), store: store, debouncer: debouncer)
-        let edit = EditPrompt(appearance: change)
+        let edit = EditPrompt(appearance: change, copy: .spanish)
         edit.draft.symbol = .dollar
 
         edit.apply()

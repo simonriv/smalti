@@ -53,29 +53,30 @@ public enum WindowButtons: String, CaseIterable, Sendable {
 
 /// Decides whether closing needs the user's confirmation, and with which words.
 public enum CloseGuard {
-    public static func question(for scope: CloseScope, busy: [BusyPane], settings: WindowSettings) -> CloseQuestion? {
+    public static func question(
+        for scope: CloseScope, busy: [BusyPane], settings: WindowSettings, texts: TerminalTexts
+    ) -> CloseQuestion? {
         guard settings.confirmClose, let first = busy.first else { return nil }
         switch scope {
         case .pane:
             return CloseQuestion(
-                title: "¿Cerrar el panel?",
-                detail: "\(shortened(first.command)) sigue en marcha. Si cierras el panel, el proceso termina.")
+                title: texts.closePane, detail: texts.closePaneDetail(["command": shortened(first.command)]))
         case .workspace(let name):
-            return CloseQuestion(title: "¿Cerrar el workspace “\(name)”?", detail: listing(busy))
+            return CloseQuestion(title: texts.closeWorkspace(["name": name]), detail: listing(busy, texts: texts))
         case .window:
-            return CloseQuestion(title: "¿Cerrar la ventana?", detail: listing(busy))
+            return CloseQuestion(title: texts.closeWindow, detail: listing(busy, texts: texts))
         case .quit(let windowCount):
-            return CloseQuestion(title: "¿Salir de Smalti?", detail: quitDetail(busy.count, windows: windowCount))
+            return CloseQuestion(title: texts.quit, detail: quitDetail(busy.count, windows: windowCount, texts: texts))
         }
     }
 
     /// Every busy pane of every workspace of every window, hidden ones included.
-    public static func busyPanes(in windows: WindowSet) -> [BusyPane] {
-        busyPanes(windows.allPanes)
+    public static func busyPanes(in windows: WindowSet, texts: TerminalTexts) -> [BusyPane] {
+        busyPanes(windows.allPanes, texts: texts)
     }
 
-    public static func busyPanes(_ panes: [Pane]) -> [BusyPane] {
-        panes.filter(\.isBusy).map { BusyPane(pane: $0.id, command: command(of: $0)) }
+    public static func busyPanes(_ panes: [Pane], texts: TerminalTexts) -> [BusyPane] {
+        panes.filter(\.isBusy).map { BusyPane(pane: $0.id, command: command(of: $0, texts: texts)) }
     }
 
     public static func windowsWithBusyPanes(_ busy: [BusyPane], in windows: WindowSet) -> Int {
@@ -84,9 +85,9 @@ public enum CloseGuard {
     }
 
     /// How the dialog names what runs in `pane`: its command line, else its process, else "un proceso".
-    public static func command(of pane: Pane) -> String {
+    public static func command(of pane: Pane, texts: TerminalTexts) -> String {
         if let line = pane.foregroundCommandLine, !line.isEmpty { return line.joined(separator: " ") }
-        return pane.processName ?? "un proceso"
+        return pane.processName ?? texts.aProcess
     }
 
     /// Commands named in a dialog, and the characters each keeps.
@@ -94,22 +95,18 @@ public enum CloseGuard {
     static let commandLength = 40
 
     /// "Hay 5 procesos en marcha: job 1, job 2, job 3 y 2 más."
-    private static func listing(_ busy: [BusyPane]) -> String {
+    private static func listing(_ busy: [BusyPane], texts: TerminalTexts) -> String {
         let named = busy.prefix(listedCommands).map { shortened($0.command) }.joined(separator: ", ")
-        let rest = busy.count > listedCommands ? " y \(busy.count - listedCommands) más" : ""
-        return "Hay \(processes(busy.count)) en marcha: \(named)\(rest)."
+        let rest = busy.count > listedCommands ? texts.runningRest(["count": String(busy.count - listedCommands)]) : ""
+        return texts.running(["processes": texts.processes(busy.count), "named": named, "rest": rest])
     }
 
     private static func shortened(_ command: String) -> String {
         command.count > commandLength ? String(command.prefix(commandLength)) + "…" : command
     }
 
-    private static func quitDetail(_ count: Int, windows: Int) -> String {
-        let place = windows >= 2 ? " en \(windows) ventanas" : ""
-        return "Hay \(processes(count)) en marcha\(place). Al volver podrás retomarlos desde Reanudar."
-    }
-
-    private static func processes(_ count: Int) -> String {
-        count == 1 ? "1 proceso" : "\(count) procesos"
+    private static func quitDetail(_ count: Int, windows: Int, texts: TerminalTexts) -> String {
+        let place = windows >= 2 ? texts.inWindows(["count": String(windows)]) : ""
+        return texts.quitDetail(["processes": texts.processes(count), "place": place])
     }
 }

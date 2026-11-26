@@ -6,14 +6,7 @@ public enum ThemeID: String, CaseIterable, Sendable {
     case bosque
 
     /// The card title in the Appearance panel.
-    public var displayName: String {
-        switch self {
-        case .obsidiana: "Obsidiana"
-        case .niebla: "Niebla"
-        case .ambarNocturno: "Ámbar nocturno"
-        case .bosque: "Bosque"
-        }
-    }
+    public func displayName(_ copy: AppearanceCopy) -> String { copy.themeNames[self] ?? rawValue }
 
     public var isLight: Bool { self == .niebla }
 

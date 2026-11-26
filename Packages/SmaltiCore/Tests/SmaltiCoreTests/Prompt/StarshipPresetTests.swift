@@ -13,7 +13,7 @@ struct StarshipPresetTests {
     private func preset(_ change: (inout PromptConfig) -> Void = { _ in }) -> StarshipPreset {
         var config = PromptConfig.standard
         change(&config)
-        return StarshipPreset.make(from: config, theme: theme)
+        return StarshipPreset.make(from: config, theme: theme, copy: .spanish)
     }
 
     @Test func formatFollowsModulesAndLayout() {
@@ -102,7 +102,7 @@ struct StarshipPresetReviewTests {
         change(&config)
         var appearance = AppearanceSettings.obsidian
         appearance.protectLegibility = false
-        return StarshipPreset.make(from: config, theme: ThemeCatalog.apply(appearance))
+        return StarshipPreset.make(from: config, theme: ThemeCatalog.apply(appearance), copy: .spanish)
     }
 
     @Test func dollarSymbolIsEscaped() {
@@ -132,7 +132,7 @@ struct StarshipPresetReviewTests {
 struct StarshipPresetNotesTests {
     /// Block 2 review (M7): Starship cannot show the repository's name and two levels outside it at once.
     @Test func directoryDifferenceIsNoted() {
-        let preset = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian))
+        let preset = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian), copy: .spanish)
 
         #expect(preset.comments.contains { $0.hasPrefix("Directorio:") })
     }
@@ -141,7 +141,7 @@ struct StarshipPresetNotesTests {
         var config = PromptConfig.standard
         config.modules = [.time]
 
-        let preset = StarshipPreset.make(from: config, theme: ThemeCatalog.apply(.obsidian))
+        let preset = StarshipPreset.make(from: config, theme: ThemeCatalog.apply(.obsidian), copy: .spanish)
 
         #expect(!preset.comments.contains { $0.hasPrefix("Directorio:") })
     }

@@ -24,7 +24,7 @@ struct PromptStateTests {
             to: zdotdir.appending(path: ".zshrc"), atomically: true, encoding: .utf8)
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: work.appending(path: "g.conf"))
-        runtime = try GhosttyRuntime(config: config)
+        runtime = try GhosttyRuntime(config: config, texts: .spanish)
     }
 
     /// The view and the window that holds it; the runtime lives in the suite. Close it at the end of each test.

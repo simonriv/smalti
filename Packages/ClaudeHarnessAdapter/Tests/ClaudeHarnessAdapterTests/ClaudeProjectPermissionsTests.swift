@@ -50,8 +50,11 @@ struct ClaudeProjectPermissionsTests {
         let text = "{\n  // comentario\n  \"model\": \"x\",\n}\n"
         try write(text)
 
-        #expect(throws: ProjectPermissionsError.self) { try ClaudeProjectPermissions().deniedRules(in: path) }
-        #expect(throws: ProjectPermissionsError.self) {
+        let file = settings.path(percentEncoded: false)
+        #expect(throws: ProjectPermissionsError.invalidJSON(path: file)) {
+            try ClaudeProjectPermissions().deniedRules(in: path)
+        }
+        #expect(throws: ProjectPermissionsError.invalidJSON(path: file)) {
             try ClaudeProjectPermissions().setDeniedRules(["Read(**/.env)"], in: path)
         }
         #expect(String(decoding: try Data(contentsOf: settings), as: UTF8.self) == text)
@@ -60,7 +63,18 @@ struct ClaudeProjectPermissionsTests {
     @Test func nonListDenyIsUnreadable() throws {
         try write(#"{"permissions":{"deny":"Read(./a)"}}"#)
 
-        #expect(throws: ProjectPermissionsError.self) { try ClaudeProjectPermissions().deniedRules(in: path) }
+        #expect(throws: ProjectPermissionsError.denyNotAList(path: settings.path(percentEncoded: false))) {
+            try ClaudeProjectPermissions().deniedRules(in: path)
+        }
+    }
+
+    /// Review 1 (M4): a settings file that is JSON but not an object.
+    @Test func nonObjectSettingsAreUnreadable() throws {
+        try write("[1, 2]")
+
+        #expect(throws: ProjectPermissionsError.notAnObject(path: settings.path(percentEncoded: false))) {
+            try ClaudeProjectPermissions().deniedRules(in: path)
+        }
     }
 
     /// Review 1: a symlinked settings file stays a symlink, and its permissions are kept.

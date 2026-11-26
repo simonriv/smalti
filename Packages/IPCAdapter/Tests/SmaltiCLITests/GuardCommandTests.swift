@@ -109,24 +109,27 @@ struct GuardCommandTests {
     }
 
     @Test func secretDenialIsExactJSON() {
-        #expect(run(Self.read("/p/.env"), .unreachable).output == Self.denial(GuardReasons.secret(path: "/p/.env")))
+        #expect(
+            run(Self.read("/p/.env"), .unreachable).output
+                == Self.denial(GuardTexts.spanish.secretReason(["path": "/p/.env"])))
     }
 
     @Test(arguments: [FakeAnswer.unreachable, .timeout, .closed, .garbage])
     func askDeniedWhenAppDoesNotAnswer(answer: FakeAnswer) {
-        #expect(run(Self.bash("terraform destroy"), answer).output == Self.denial(GuardReasons.unreachable))
+        #expect(run(Self.bash("terraform destroy"), answer).output == Self.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func askDeniedWhenAppDoesNotKnowGuards() {
         let old = IPCResponse(ok: false, error: "unsupported request v1 guard")
 
-        #expect(run(Self.bash("terraform destroy"), .response(old)).output == Self.denial(GuardReasons.unreachable))
+        #expect(
+            run(Self.bash("terraform destroy"), .response(old)).output == Self.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func askDeniedWhenAnswerHasNoDecision() {
         let output = run(Self.bash("terraform destroy"), .response(IPCResponse(ok: true, error: nil))).output
 
-        #expect(output == Self.denial(GuardReasons.unreachable))
+        #expect(output == Self.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func appAllowIsSilent() {
@@ -189,14 +192,14 @@ struct GuardCommandTests {
 
     /// Review 1: a hook input Smalti cannot read is not let through.
     @Test func unreadableInputIsDenied() {
-        #expect(run("not json", .unreachable).output == Self.denial(GuardReasons.unreadableInput))
-        #expect(run(#"{"cwd":"/p"}"#, .unreachable).output == Self.denial(GuardReasons.unreadableInput))
+        #expect(run("not json", .unreachable).output == Self.denial(GuardTexts.spanish.unreadableInput))
+        #expect(run(#"{"cwd":"/p"}"#, .unreachable).output == Self.denial(GuardTexts.spanish.unreadableInput))
     }
 
     @Test func eventPreToolUseDeniesUnreadableInput() {
         #expect(
             EventCommand.preToolUseOutput(Data("{".utf8), environment: Self.environment)
-                == Self.denial(GuardReasons.unreadableInput))
+                == Self.denial(GuardTexts.spanish.unreadableInput))
     }
 
     /// Review 1 (C1): the app must know the command was cut, so it asks instead of judging the cut text.
@@ -216,20 +219,20 @@ struct GuardCommandTests {
     @Test func oversizedCommandAsks() {
         let long = Self.bash("echo " + String(repeating: "a", count: 70_000))
 
-        #expect(run(long, .unreachable).output == Self.denial(GuardReasons.unreachable))
+        #expect(run(long, .unreachable).output == Self.denial(GuardTexts.spanish.unreachable))
     }
 
     @Test func eventPreToolUseDeniesAskAsOutdated() {
         let output = EventCommand.preToolUseOutput(
             Data(Self.bash("terraform destroy").utf8), environment: Self.environment)
 
-        #expect(output == Self.denial(GuardReasons.outdatedIntegration))
+        #expect(output == Self.denial(GuardTexts.spanish.outdatedIntegration))
     }
 
     @Test func eventPreToolUseDeniesSecrets() {
         let output = EventCommand.preToolUseOutput(Data(Self.read("/p/.env").utf8), environment: Self.environment)
 
-        #expect(output == Self.denial(GuardReasons.secret(path: "/p/.env")))
+        #expect(output == Self.denial(GuardTexts.spanish.secretReason(["path": "/p/.env"])))
     }
 
     @Test func eventPreToolUseLetsInnocentPass() {

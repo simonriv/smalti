@@ -12,7 +12,8 @@ struct ObservatoryFrame: Sendable {
     static func make(_ snapshot: ObservatorySnapshot) -> ObservatoryFrame {
         let sessions = snapshot.panes.map(\.session.sessionID)
         return ObservatoryFrame(
-            snapshot: snapshot, statusFigures: StatusFigures.make(snapshot, calendar: .autoupdatingCurrent),
+            snapshot: snapshot,
+            statusFigures: StatusFigures.make(snapshot, calendar: .autoupdatingCurrent, copy: .current),
             paneDetails: Dictionary(
                 sessions.map { ($0, PaneAgentDetail.make(sessionID: $0, snapshot: snapshot)) }, uniquingKeysWith: { $1 }
             ))
@@ -149,8 +150,9 @@ final class ObservatoryRefresher {
             )
             lastHealth = health
         }
-        if let error = snapshot.lastError, error != lastError { onError(error) }
-        lastError = snapshot.lastError
+        let message = snapshot.lastError?.message(.current)
+        if let message, message != lastError { onError(message) }
+        lastError = message
         onSnapshot(frame)
     }
 }

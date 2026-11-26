@@ -55,8 +55,7 @@ public struct Keymap: Sendable, Equatable {
     /// Rejects a chord no keymap may bind: ⌥ without ⌘ or ⌃ (R8). `file` and `line` are left for the config reader.
     public static func validate(_ chord: KeyChord) throws(ConfigError) {
         guard chord.usesOptionAlone else { return }
-        throw ConfigError(
-            file: "", line: nil, key: chord.display, reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+        throw ConfigError(file: "", line: nil, key: chord.display, problem: .reservedOption)
     }
 
     /// Ordered: for a command with several chords, the first listed is its primary.

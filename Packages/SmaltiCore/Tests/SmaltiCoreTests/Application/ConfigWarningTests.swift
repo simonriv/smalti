@@ -30,7 +30,7 @@ struct ConfigWarningTests {
     @Test func duplicatedKeysMessageNamesThem() {
         let warning = ConfigWarning.duplicatedKeys(["appearance.blur", "prompt.symbol"])
 
-        #expect(warning.message == "theme.toml manda sobre config.toml en: appearance.blur, prompt.symbol")
+        #expect(warning.message(.spanish) == "theme.toml manda sobre config.toml en: appearance.blur, prompt.symbol")
     }
 
     @Test func storesWithoutWarningsReportNone() {

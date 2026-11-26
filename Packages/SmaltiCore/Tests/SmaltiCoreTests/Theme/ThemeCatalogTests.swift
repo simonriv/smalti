@@ -47,7 +47,8 @@ struct ThemeCatalogTests {
     }
 
     @Test func displayNamesMatchBoard() {
-        #expect(ThemeID.allCases.map(\.displayName) == ["Obsidiana", "Niebla", "Ámbar nocturno", "Bosque"])
+        #expect(
+            ThemeID.allCases.map { $0.displayName(.spanish) } == ["Obsidiana", "Niebla", "Ámbar nocturno", "Bosque"])
     }
 
     @Test func configNamesMatchSpec() {
@@ -63,7 +64,7 @@ struct ThemeCatalogTests {
     }
 
     @Test func themeNamesAreDisplayNames() {
-        #expect(ThemeID.allCases.map { ThemeCatalog.theme($0).name } == ThemeID.allCases.map(\.displayName))
+        #expect(ThemeID.allCases.map { ThemeCatalog.theme($0).name } == ThemeID.allCases.map(\.rawValue))
     }
 
     @Test func themeColorsMatchMockupTable() {

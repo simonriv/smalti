@@ -94,7 +94,7 @@ final class CommandPaletteView: NSView {
         field.focusRingType = .none
         field.font = theme.interfaceFont(size: palette.fieldFontSize)
         field.textColor = theme.text.title.nsColor
-        field.setAccessibilityLabel("Buscar comando")
+        field.setAccessibilityLabel(String(localized: "Search commands"))
         field.setAccessibilityIdentifier("smalti.paletteField")
         let row = NSStackView(views: [icon, field, KbdView("esc", theme: theme)])
         row.spacing = palette.fieldGap
@@ -137,11 +137,11 @@ final class CommandPaletteView: NSView {
         let palette = theme.palette
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
-        let navigate = hint("↑↓", "navegar")
+        let navigate = hint("↑↓", String(localized: "navigate"))
         navigateHint = navigate
         let row = NSStackView(views: [
-            navigate, hint("↵", "ejecutar"), spacer,
-            footerLabel("Todo lo que hacen los botones vive aquí"),
+            navigate, hint("↵", String(localized: "run")), spacer,
+            footerLabel(String(localized: "Everything buttons would do lives here")),
         ])
         row.spacing = palette.footerGap
         row.edgeInsets = NSEdgeInsets(top: 0, left: palette.fieldPadding, bottom: 0, right: palette.fieldPadding)

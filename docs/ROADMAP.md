@@ -21,7 +21,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7, F7.5 y F7.6.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7, F7.5, F7.6 y F7.7.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -189,7 +189,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - **Primer arranque:** pantalla breve que explica ⌘K y los atajos clave, ofrece instalar la integración con Claude Code y la de Neovim, y elige tema; se puede saltar y volver a abrir desde la ayuda.
   - **Valores por defecto neutrales:** revisar lo que asume el flujo de Simón (instalador solo para NvChad, ⌥ reservado al teclado latinoamericano, ejemplos con sus proyectos) y dejarlo configurable o documentado.
   - **Privacidad explícita:** una página en la ayuda y en la web: nada sale de la máquina salvo la comprobación de actualizaciones; la telemetría de Claude Code se queda en `127.0.0.1`.
-- **Criterio de cierre:** por definir en su spec; como mínimo, con el sistema en inglés no queda ningún texto de interfaz en español (prueba que recorre ⌘K, menús, ayuda y Observatorio), y el primer arranque se completa y se salta por teclado.
+- **Criterio de cierre:** C1–C12 de `docs/specs/F7.7-primer-uso.md`: con la app en inglés no queda español (recorrido de UI y pruebas de catálogo), en español nada cambia, la bienvenida se completa, se salta y se reabre por teclado, ninguna prueba depende del idioma del Mac, y 0.7.7 llega al Smalti diario por Sparkle.
 - **Dependencias:** F7.6 (la app ya es pública).
 
 ## F8 · Puertos y procesos

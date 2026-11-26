@@ -4,7 +4,6 @@ import SmaltiCore
 /// line, including the ones `Keymap.overriding` raises (R8).
 enum TOMLKeysReader {
     private static let unbindKeyword = "none"
-    private static let valueReason = "se esperaba un id de comando o \"none\""
     private static let knownCommands = Set(CommandID.allStandard)
 
     static func read(_ section: TOMLSection, over keymap: Keymap) throws(ConfigError) -> Keymap {
@@ -13,7 +12,7 @@ enum TOMLKeysReader {
         for text in section.keysInFileOrder {
             let chord = try chord(text, in: section)
             if let first = writtenChords[chord] {
-                throw section.error(at: text, "atajo repetido; ya aparece como \(first)")
+                throw section.error(at: text, .repeatedShortcut(first: first))
             }
             try validate(chord, writtenAs: text, in: section)
             writtenChords[chord] = text
@@ -30,7 +29,7 @@ enum TOMLKeysReader {
         do {
             return try KeyChord.parse(text)
         } catch {
-            throw section.error(at: text, reason(for: error))
+            throw section.error(at: text, .invalidChord(error))
         }
     }
 
@@ -41,7 +40,7 @@ enum TOMLKeysReader {
         do {
             try Keymap.validate(chord)
         } catch {
-            throw section.error(at: text, error.reason)
+            throw section.error(at: text, error.problem)
         }
     }
 
@@ -53,12 +52,12 @@ enum TOMLKeysReader {
     }
 
     private static func binding(at key: String, in section: TOMLSection) throws(ConfigError) -> Binding {
-        let text = try section.text(key, reason: valueReason) ?? unbindKeyword
+        let text = try section.text(key, reason: .expectedCommandID) ?? unbindKeyword
         if text == unbindKeyword { return .unbound }
         let command = CommandID(rawValue: text)
         guard knownCommands.contains(command) else {
             try section.skipUnknownValue(
-                text, at: key, else: section.error(at: key, "comando desconocido; \(valueReason)"))
+                text, at: key, else: section.error(at: key, .unknownCommand))
             return .skipped
         }
         return .command(command)
@@ -73,18 +72,7 @@ enum TOMLKeysReader {
             return try keymap.overriding(ordered: bindings)
         } catch {
             guard let text = texts.first(where: { $0.key.display == error.key })?.value else { throw error }
-            throw section.error(at: text, error.reason)
-        }
-    }
-
-    private static func reason(for error: KeyChordError) -> String {
-        switch error {
-        case .missingModifier: "falta un modificador (⌘, ⌃ o ⌥)"
-        case .duplicateModifier(let name): "modificador repetido: \(name)"
-        case .unknownModifier(let name): "modificador desconocido: \(name)"
-        case .unknownKey(let key): "tecla desconocida: \(key)"
-        case .missingKey: "falta la tecla; el + se escribe plus"
-        case .shiftOnSymbol: "⇧ no cuenta con números ni símbolos: escribe el carácter (cmd+? en vez de shift+cmd+/)"
+            throw section.error(at: text, error.problem)
         }
     }
 }

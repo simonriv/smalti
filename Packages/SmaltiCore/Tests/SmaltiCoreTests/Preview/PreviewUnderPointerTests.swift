@@ -15,7 +15,7 @@ struct PreviewUnderPointerTests {
 
     private func preview(_ files: InMemoryImageFiles) -> PreviewUnderPointer {
         PreviewUnderPointer(
-            ports: PreviewUnderPointer.Ports(files: files, debouncer: debouncer),
+            ports: PreviewUnderPointer.Ports(files: files, debouncer: debouncer, texts: .spanish),
             thumbnailSize: Size(width: 388, height: 208), show: { [shown] in shown.cards.append($0) })
     }
 
@@ -150,7 +150,7 @@ struct PreviewUnderPointerTests {
         debouncer.fire()
         await preview.settle()
 
-        #expect(preview.current?.caption(shortcut: "⌘Y") == "a.png · No se pudo leer la imagen")
+        #expect(preview.current?.caption(shortcut: "⌘Y", texts: .spanish) == "a.png · No se pudo leer la imagen")
         #expect(preview.current?.thumbnail == nil)
     }
 
@@ -161,7 +161,7 @@ struct PreviewUnderPointerTests {
         debouncer.fire()
         await preview.settle()
 
-        #expect(preview.current?.caption(shortcut: "⌘Y") == "a.png · Imagen demasiado grande")
+        #expect(preview.current?.caption(shortcut: "⌘Y", texts: .spanish) == "a.png · Imagen demasiado grande")
         #expect(preview.current?.path == "/w/shots/a.png")
     }
 

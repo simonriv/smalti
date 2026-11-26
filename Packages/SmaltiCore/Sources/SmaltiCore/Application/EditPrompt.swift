@@ -4,15 +4,17 @@
 public final class EditPrompt {
     public var draft: PromptConfig
     private let appearance: ChangeAppearance
+    private let copy: PromptCopy
 
-    public init(appearance: ChangeAppearance) {
+    public init(appearance: ChangeAppearance, copy: PromptCopy) {
         self.appearance = appearance
+        self.copy = copy
         draft = appearance.document.prompt
     }
 
     public func preview(_ situation: PreviewSituation) -> [[PreviewRun]] {
         let theme = ThemeCatalog.apply(appearance.document.appearance).theme
-        return PromptPreview.lines(draft, context: situation.context, theme: theme)
+        return PromptPreview.lines(draft, context: situation.context(copy), theme: theme)
     }
 
     public func apply() {

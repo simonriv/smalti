@@ -29,8 +29,7 @@ public struct ProtectProjectSecrets: Sendable {
 
     public func protect(_ project: String) throws(ProjectPermissionsError) {
         guard canProtect(project) else {
-            throw .unwritable(
-                path: project, reason: "es tu carpeta personal: Smalti no escribe tu configuración global")
+            throw .homeFolder(path: project)
         }
         let current = try permissions.deniedRules(in: project)
         let missing = rules.filter { !current.contains($0) }

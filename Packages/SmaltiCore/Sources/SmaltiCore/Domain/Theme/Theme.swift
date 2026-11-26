@@ -188,12 +188,16 @@ public struct TerminalAppearance: Equatable, Sendable {
     public internal(set) var palette: [RGBAColor]
     public let paddingX: Double
     public let paddingY: Double
+    /// F7.7 `[keyboard] option_as_meta`, carried with the rest of the engine's settings; set from the config.
+    public var optionAsMeta = OptionAsMeta.auto
 
     /// F4.5 ⌘+ ⌘− ⌘0: the same appearance at another size (`FontScale.size`).
     public func withFontSize(_ size: Double) -> TerminalAppearance {
-        TerminalAppearance(
+        var resized = TerminalAppearance(
             fontFamily: fontFamily, fontSize: size, lineHeight: lineHeight, foreground: foreground, cursor: cursor,
             palette: palette, paddingX: paddingX, paddingY: paddingY)
+        resized.optionAsMeta = optionAsMeta
+        return resized
     }
 }
 

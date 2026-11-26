@@ -21,6 +21,30 @@ struct ImageGridTests {
         #expect(grid.rows.map(\.cells.count) == [5, 5, 2])
     }
 
+    @Test func theSameLayoutIsEqual() {
+        #expect(ImageGrid.layout(images(3), skipped: 1, in: wide) == ImageGrid.layout(images(3), skipped: 1, in: wide))
+    }
+
+    @Test func gridsDifferInTheirRows() {
+        let landscape = ImageGrid.layout([image("a", 1440, 900)], skipped: 0, in: wide)
+        let portrait = ImageGrid.layout([image("a", 900, 1440)], skipped: 0, in: wide)
+
+        #expect(landscape.columnsPerRow == portrait.columnsPerRow)
+        #expect(landscape != portrait)
+    }
+
+    @Test func gridsDifferInTheirColumns() {
+        let five = ImageGrid.layout([image("a")], skipped: 0, in: wide)
+        let two = ImageGrid.layout([image("a")], skipped: 0, in: CellMetrics(columns: 26, cellWidth: 8, cellHeight: 16))
+
+        #expect(five.rows == two.rows)
+        #expect(five != two)
+    }
+
+    @Test func gridsDifferInTheirCounts() {
+        #expect(ImageGrid.layout(images(2), skipped: 0, in: wide) != ImageGrid.layout(images(2), skipped: 1, in: wide))
+    }
+
     @Test func narrowTerminalGivesOneColumn() {
         let grid = ImageGrid.layout(images(3), skipped: 0, in: CellMetrics(columns: 10, cellWidth: 8, cellHeight: 16))
 
@@ -88,22 +112,25 @@ struct ImageGridTests {
 
     @Test func summaryCountsSkipped() {
         #expect(
-            ImageGrid.layout(images(12), skipped: 3, in: wide).summary == "12 imágenes · 3 omitidas (no son imagen)")
+            ImageGrid.layout(images(12), skipped: 3, in: wide).summary(.spanish)
+                == "12 imágenes · 3 omitidas (no son imagen)")
     }
 
     @Test func summaryOmitsSkippedWhenZero() {
-        #expect(ImageGrid.layout(images(4), skipped: 0, in: wide).summary == "4 imágenes")
+        #expect(ImageGrid.layout(images(4), skipped: 0, in: wide).summary(.spanish) == "4 imágenes")
     }
 
     @Test func summaryIsSingular() {
-        #expect(ImageGrid.layout(images(1), skipped: 1, in: wide).summary == "1 imagen · 1 omitida (no es imagen)")
+        #expect(
+            ImageGrid.layout(images(1), skipped: 1, in: wide).summary(.spanish) == "1 imagen · 1 omitida (no es imagen)"
+        )
     }
 
     @Test func overLimitAddsMore() {
         let grid = ImageGrid.layout(images(123), skipped: 0, in: wide)
 
         #expect(grid.rows.flatMap(\.cells).count == 100)
-        #expect(grid.summary == "100 imágenes · … y 23 más (máximo 100)")
+        #expect(grid.summary(.spanish) == "100 imágenes · … y 23 más (máximo 100)")
     }
 
     @Test func limitKeepsTheFirstInNaturalOrder() {

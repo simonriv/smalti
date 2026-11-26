@@ -56,3 +56,20 @@ struct ImportGuardTests {
             .appending(path: "Sources/SmaltiCore")
     }
 }
+
+@Suite("Locale guard")
+struct LocaleGuardTests {
+    @Test func scannerFlagsSystemLanguageLookups() {
+        let source = "let a = Locale.current\n// Bundle.main\nlet b = String(localized: \"x\")\nlet c = 1\n"
+
+        #expect(LocaleScanner.violations(in: source, file: "X.swift").map(\.line) == [1, 3])
+    }
+
+    @Test func coreSourcesNeverReadTheSystemLanguage() throws {
+        let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().appending(path: "Sources/SmaltiCore")
+        let violations = try LocaleScanner.violations(inDirectory: root)
+
+        #expect(violations.isEmpty, "\(violations.map(\.description).joined(separator: "\n"))")
+    }
+}

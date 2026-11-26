@@ -1,15 +1,15 @@
 /// The `config.toml` that ⌘, creates when there is none: every table and key, commented, with its default value,
 /// so the user uncomments what they want to change.
 public enum ConfigTemplate {
-    public static func text(defaults: SmaltiConfig) -> String {
+    public static func text(defaults: SmaltiConfig, texts: ConfigTemplateTexts) -> String {
         let appearance = defaults.appearance
         let input = defaults.input
+        let comment = { (lines: [String]) in lines.map { "# " + $0 }.joined(separator: "\n") }
         return """
-            # Configuración de Smalti. Quita el # de una línea para cambiar su valor; lo que no escribas conserva \
-            el valor por defecto.
-            # Después de guardar: ⌘K → "Recargar configuración".
+            \(comment(texts.header))
+            # \(texts.afterSave)
 
-            # Formato del archivo: no lo cambies.
+            # \(texts.format)
             version = 1
 
             [appearance]
@@ -22,11 +22,11 @@ public enum ConfigTemplate {
             # radius = \(number(appearance.radius))
 
             [tiling]
-            # Layouts: dwindle, columns, master.
+            # \(texts.layouts)
             # default_layout = "\(defaults.defaultLayout.rawValue)"
 
             [shell]
-            # "login" abre tu shell de inicio de sesión; también vale una orden, por ejemplo "/bin/zsh".
+            # \(texts.shell)
             # command = "\(escaped(shell(defaults.shell)))"
 
             [input]
@@ -36,18 +36,21 @@ public enum ConfigTemplate {
             # history_limit = \(input.historyLimit)
             # generator_timeout_ms = \(milliseconds(input.generatorTimeout))
 
+            [keyboard]
+            # \(texts.keyboard)
+            # option_as_meta = "\(defaults.optionAsMeta.rawValue)"
+
             [window]
-            # Preguntar antes de cerrar un panel, un workspace o una ventana, o de salir, con procesos en marcha.
+            # \(texts.confirmClose)
             # confirm_close = \(defaults.window.confirmClose)
 
             [preview]
-            # Miniatura al pasar el cursor sobre un nombre de imagen; ⌘Y la abre en Quick Look.
+            # \(texts.preview)
             # hover = \(defaults.preview.hover)
 
             [observatory]
-            # Precios en dólares por millón de tokens y ventana de contexto; un modelo que Smalti no conoce necesita
-            # todas las claves. Por ejemplo:
-            # [observatory.models."mi-modelo"]
+            \(comment(texts.observatory))
+            # [observatory.models."\(texts.exampleModel)"]
             #   input = 3
             #   output = 15
             #   cache_read = 0.3
@@ -56,10 +59,9 @@ public enum ConfigTemplate {
             #   context = 200000
 
             [keys]
-            # Un atajo por línea, del atajo al id del comando (la ayuda, ⌘?, muestra el id de cada acción al filtrar):
+            # \(texts.keys[0])
             # "cmd+t" = "pane.new"
-            # Los atajos que escribas para un comando reemplazan los suyos por defecto; dos líneas para el mismo
-            # comando le dan dos atajos. "none" suelta un atajo.
+            \(comment(Array(texts.keys.dropFirst())))
 
             """
     }

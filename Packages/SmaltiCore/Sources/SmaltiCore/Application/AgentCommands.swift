@@ -9,9 +9,11 @@ public enum HandleAgentEventOutcome: Equatable, Sendable {
 @MainActor
 public struct HandleAgentEvent {
     private let notifier: any Notifier
+    private let texts: StatusTexts
 
-    public init(notifier: any Notifier) {
+    public init(notifier: any Notifier, texts: StatusTexts) {
         self.notifier = notifier
+        self.texts = texts
     }
 
     public func execute(_ event: AgentEvent, in set: inout WorkspaceSet, isAppActive: Bool) -> HandleAgentEventOutcome {
@@ -25,7 +27,7 @@ public struct HandleAgentEvent {
             let pane = updated.panes.first(where: { $0.id == event.pane })
         {
             notifier.notify(
-                .make(attention, workspace: updated.name, directory: pane.workingDirectory, pane: pane.id))
+                .make(attention, at: (updated.name, pane.workingDirectory, pane.id), texts: texts))
         }
         return .applied
     }
@@ -73,22 +75,41 @@ public struct ActivatePane {
 }
 
 /// "Instalar integración con Claude Code": the status bar line it ends with.
+/// What installing or uninstalling an integration left, with the line the status bar shows.
+public enum IntegrationOutcome: Equatable, Sendable {
+    case done(String)
+    case failed(String)
+
+    public var text: String {
+        switch self {
+        case .done(let text), .failed(let text): text
+        }
+    }
+}
+
 @MainActor
 public struct InstallClaudeIntegration {
     private let integration: any HarnessIntegration
     private let id: IntegrationID
+    private let texts: IntegrationTexts
 
-    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin, texts: IntegrationTexts) {
         self.integration = integration
         self.id = id
+        self.texts = texts
     }
 
     public func execute() async -> String {
+        await run().text
+    }
+
+    /// The same as `execute`, saying whether it worked (the welcome card paints a failure in red).
+    public func run() async -> IntegrationOutcome {
         do {
             try await integration.install()
-            return id.installedText
+            return .done(texts.installed[id] ?? "")
         } catch {
-            return IntegrationErrorText.describe(error)
+            return .failed(IntegrationErrorText.describe(error, texts: texts))
         }
     }
 }
@@ -97,29 +118,37 @@ public struct InstallClaudeIntegration {
 public struct UninstallClaudeIntegration {
     private let integration: any HarnessIntegration
     private let id: IntegrationID
+    private let texts: IntegrationTexts
 
-    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin) {
+    public init(integration: any HarnessIntegration, id: IntegrationID = .claudePlugin, texts: IntegrationTexts) {
         self.integration = integration
         self.id = id
+        self.texts = texts
     }
 
     public func execute() async -> String {
+        await run().text
+    }
+
+    public func run() async -> IntegrationOutcome {
         do {
             try await integration.uninstall()
-            return id.uninstalledText
+            return .done(texts.uninstalled[id] ?? "")
         } catch {
-            return IntegrationErrorText.describe(error)
+            return .failed(IntegrationErrorText.describe(error, texts: texts))
         }
     }
 }
 
 enum IntegrationErrorText {
-    static func describe(_ error: IntegrationError) -> String {
+    static func describe(_ error: IntegrationError, texts: IntegrationTexts) -> String {
         switch error {
-        case .harnessMissing(let binary): "No se encontró `\(binary)` en el PATH del shell de inicio"
+        case .harnessMissing(let binary): texts.harnessMissing(["binary": binary])
         // The last line: a login shell's own output (rc files) comes first, the command's error last.
         case .commandFailed(let command, let output):
-            "Falló `\(command)`: \(output.split(separator: "\n").last.map(String.init) ?? "")"
+            texts.commandFailed([
+                "command": command, "output": output.split(separator: "\n").last.map(String.init) ?? "",
+            ])
         }
     }
 }

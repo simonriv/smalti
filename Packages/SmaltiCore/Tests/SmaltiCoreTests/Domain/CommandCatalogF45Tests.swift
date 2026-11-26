@@ -18,7 +18,8 @@ struct CommandCatalogF45Tests {
 
     private func commands(panes: Int) -> [Command] {
         CommandCatalog.commands(
-            for: CatalogState(workspaces: workspaces(panes: panes)), keymap: .standard, layouts: .standard)
+            for: CatalogState(workspaces: workspaces(panes: panes)), keymap: .standard, layouts: .standard,
+            texts: .spanish)
     }
 
     @Test(arguments: [
@@ -55,8 +56,8 @@ struct CommandCatalogF45Tests {
     }
 
     @Test func newGroupsHaveTheirNames() {
-        #expect(CommandGroup.windows.rawValue == "Ventanas")
-        #expect(CommandGroup.terminal.rawValue == "Terminal")
-        #expect(CommandGroup.help.rawValue == "Ayuda")
+        #expect(CommandTexts.spanish.groups[.windows] == "Ventanas")
+        #expect(CommandTexts.spanish.groups[.terminal] == "Terminal")
+        #expect(CommandTexts.spanish.groups[.help] == "Ayuda")
     }
 }

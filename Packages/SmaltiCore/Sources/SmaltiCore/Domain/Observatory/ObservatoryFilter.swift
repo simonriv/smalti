@@ -3,12 +3,12 @@
 public enum ObservatoryFilter: CaseIterable, Equatable, Sendable {
     case all, claude, opencode, local
 
-    public var title: String {
+    public func title(_ copy: ObservatoryCopy) -> String {
         switch self {
-        case .all: "Todas"
+        case .all: copy.allHarnesses
         case .claude: "Claude Code"
         case .opencode: "OpenCode"
-        case .local: "Locales"
+        case .local: copy.localModels
         }
     }
 

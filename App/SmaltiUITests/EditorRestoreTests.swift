@@ -68,9 +68,7 @@ final class EditorRestoreTests: SmaltiUITestCase {
         XCTAssertEqual(editor["line"] as? Int, 150)
         XCTAssertEqual((editor["file"] as? String)?.hasSuffix("/notes.txt"), true)
 
-        let again = XCUIApplication()
-        again.launchArguments = app.launchArguments
-        again.launchEnvironment = app.launchEnvironment
+        let again = XCUIApplication.relaunched(from: app)
         app = again
         again.launch()
         XCTAssertTrue(again.element("smalti.restore").waitForExistence(timeout: 10))

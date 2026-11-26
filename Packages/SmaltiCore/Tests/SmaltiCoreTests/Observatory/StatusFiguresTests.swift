@@ -15,12 +15,12 @@ struct StatusFiguresTests {
         let loaded = F.snapshot(sessions: [], localModels: .available(loaded: [qwen], onDisk: []), now: now)
         let idle = F.snapshot(sessions: [], localModels: .available(loaded: [], onDisk: [qwen]), now: now)
 
-        #expect(StatusFigures.make(loaded, calendar: F.calendar()).localModel == "qwen3.5:9b · 6.1 GB")
-        #expect(StatusFigures.make(idle, calendar: F.calendar()).localModel == nil)
+        #expect(StatusFigures.make(loaded, calendar: F.calendar(), copy: .spanish).localModel == "qwen3.5:9b · 6.1 GB")
+        #expect(StatusFigures.make(idle, calendar: F.calendar(), copy: .spanish).localModel == nil)
     }
 
     @Test func statusShowsRamAndGpu() {
-        let figures = StatusFigures.make(F.snapshot(sessions: [], now: now), calendar: F.calendar())
+        let figures = StatusFigures.make(F.snapshot(sessions: [], now: now), calendar: F.calendar(), copy: .spanish)
 
         #expect(figures.ram == "RAM 11.2 / 16 GB")
         #expect(figures.gpu == "GPU 38%")
@@ -31,7 +31,8 @@ struct StatusFiguresTests {
         system.gpu = .unavailable
         system.memoryUsed = .unavailable
 
-        let figures = StatusFigures.make(F.snapshot(sessions: [], system: system, now: now), calendar: F.calendar())
+        let figures = StatusFigures.make(
+            F.snapshot(sessions: [], system: system, now: now), calendar: F.calendar(), copy: .spanish)
 
         #expect(figures.gpu == "GPU no disponible")
         #expect(figures.ram == "RAM no disponible")
@@ -45,7 +46,8 @@ struct StatusFiguresTests {
                 F.turn("0", at: F.date("2026-11-17 09:00"), output: 999_999),
             ])
 
-        let figures = StatusFigures.make(F.snapshot(sessions: [session], now: now), calendar: F.calendar())
+        let figures = StatusFigures.make(
+            F.snapshot(sessions: [session], now: now), calendar: F.calendar(), copy: .spanish)
 
         #expect(figures.todayTokens == "hoy 1.24M tokens")
     }
@@ -68,6 +70,6 @@ struct StatusFiguresTests {
         let session = F.session("s", [F.turn("1", at: F.date("2026-11-18 09:00"))])
         let snapshot = F.snapshot(sessions: [session], now: now, indexedSince: F.date("2026-11-18 08:00"))
 
-        #expect(StatusFigures.make(snapshot, calendar: F.calendar()).todayTokens == "hoy …")
+        #expect(StatusFigures.make(snapshot, calendar: F.calendar(), copy: .spanish).todayTokens == "hoy …")
     }
 }

@@ -10,6 +10,8 @@ from mutate import (
     run,
     Mutant,
     changed_sources,
+    changed_lines,
+    only_changed_lines,
     missing_sources_message,
     mutants_for_line,
     mutants_for_source,
@@ -144,11 +146,6 @@ class MissingSources(unittest.TestCase):
     def test_some_files_is_not_an_error(self):
         self.assertIsNone(missing_sources_message(Path("/x/SmaltiCore"), [Path("A.swift")]))
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ChangedSources(unittest.TestCase):
     """--changed-since: during a phase only the sources the branch touched are mutated."""
 
@@ -232,3 +229,42 @@ class Runner(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertTrue(result.stdout.startswith("ok"))
+
+
+class ChangedLines(unittest.TestCase):
+    """--changed-since mutates only the lines the branch changed: touching one string must not mutate the file."""
+
+    DIFF = "\n".join([
+        "diff --git a/Packages/P/Sources/P/A.swift b/Packages/P/Sources/P/A.swift",
+        "--- a/Packages/P/Sources/P/A.swift",
+        "+++ b/Packages/P/Sources/P/A.swift",
+        "@@ -3 +3 @@ struct A {",
+        "@@ -10,0 +11,2 @@",
+        "@@ -20,4 +22,0 @@",
+        "diff --git a/Packages/P/Sources/P/Gone.swift b/Packages/P/Sources/P/Gone.swift",
+        "+++ /dev/null",
+        "@@ -1,3 +0,0 @@",
+    ])
+
+    def test_hunks_give_the_new_line_numbers(self):
+        self.assertEqual(changed_lines(self.DIFF), {"Packages/P/Sources/P/A.swift": {3, 11, 12}})
+
+    def test_only_mutants_on_changed_lines_are_kept(self):
+        source = "let a = x == y\nlet b = x == y\nlet c = x == y"
+        mutants = mutants_for_source(source, "A.swift")
+
+        kept = only_changed_lines(mutants, {"A.swift": {2}}, untracked=set())
+
+        self.assertEqual([m.line_number for m in kept], [2])
+
+    def test_an_untracked_file_is_mutated_whole(self):
+        mutants = mutants_for_source("let a = x == y\nlet b = x == y", "New.swift")
+
+        kept = only_changed_lines(mutants, {}, untracked={"New.swift"})
+
+        self.assertEqual(len(kept), len(mutants))
+
+
+if __name__ == "__main__":
+    unittest.main()
+

@@ -31,8 +31,6 @@ public enum GhosttyConfigText {
             "window-padding-x = \(number(appearance.paddingX))",
             "window-padding-y = \(number(appearance.paddingY))",
             "window-padding-balance = false",
-            // ⌥ composes characters on the Latin American layout (@, |, #…), so it must not act as Meta.
-            "macos-option-as-alt = false",
             "shell-integration = zsh",
             // F4: makes `ghostty_surface_needs_confirm_quit` report OSC 133's "not at the prompt"; Smalti ignores
             // the confirm flag of `close_surface_cb`, so closing is unchanged.
@@ -42,8 +40,22 @@ public enum GhosttyConfigText {
             // F5: the prompt's thin-stroke icons come from Smalti's own font, registered for the process.
             "font-codepoint-map = \(iconCodepoints)=SmaltiSymbols",
         ]
+        let option = optionAsAlt(appearance.optionAsMeta).map { ["macos-option-as-alt = \($0)"] } ?? []
         let palette = appearance.palette.enumerated().map { index, color in "palette = \(index)=\(hex(color))" }
-        return (keybinds + fontFamily(appearance.fontFamily) + settings + palette).joined(separator: "\n") + "\n"
+        return (keybinds + fontFamily(appearance.fontFamily) + settings + option + palette).joined(separator: "\n")
+            + "\n"
+    }
+
+    /// libghostty's `macos-option-as-alt`; nil for `auto`, which leaves the key unset so libghostty decides by the
+    /// active layout (Meta on U.S. and U.S. International, characters elsewhere: `input/keyboard.zig`).
+    private static func optionAsAlt(_ choice: OptionAsMeta) -> String? {
+        switch choice {
+        case .auto: nil
+        case .never: "false"
+        case .always: "true"
+        case .left: "left"
+        case .right: "right"
+        }
     }
 
     /// Defense in depth behind the config's own validation: an invalid name (one that could close the quote or start

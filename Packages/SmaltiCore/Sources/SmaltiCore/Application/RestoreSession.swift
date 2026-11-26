@@ -24,10 +24,13 @@ public struct RestoreSession {
         let connectsEditor: Bool
         /// F6: how a Neovim pane reopens; the app adds its socket.
         let editorCommand: @Sendable (EditorPosition, PaneID) -> String
+        /// F7.7: the words of the failures it reports.
+        let texts: SessionTexts
 
         public init(
             engine: any TerminalEngine, transcripts: any PaneTranscripts, harnesses: HarnessRegistry,
             environment: PaneEnvironment, shell: TerminalCommand, clock: @escaping @Sendable () -> Date,
+            texts: SessionTexts,
             connectsEditor: Bool = false,
             editorCommand: @escaping @Sendable (EditorPosition, PaneID) -> String = { position, _ in
                 position.plainCommand
@@ -41,6 +44,7 @@ public struct RestoreSession {
             self.clock = clock
             self.connectsEditor = connectsEditor
             self.editorCommand = editorCommand
+            self.texts = texts
         }
     }
 
@@ -118,7 +122,8 @@ public struct RestoreSession {
             ? nil : PaneRestoration(scrollback: scrollback, restoresHistory: planned.restoresHistory, savedAt: savedAt)
         let saved = try? WorkingDirectory(path: planned.workingDirectory)
         var unreachable: Set<WorkingDirectory> = []
-        var lastError = "invalid directory"
+        var lastError = deps.texts.terminal.reason(
+            .surfaceCreationFailed(workingDirectory: planned.workingDirectory, reason: .directoryMissing))
         for directory in ([saved].compactMap { $0 } + fallbacks) where !unreachable.contains(directory) {
             let spec = TerminalSessionSpec(
                 workingDirectory: directory, command: deps.shell, environment: deps.environment.variables(for: id),
@@ -129,10 +134,10 @@ public struct RestoreSession {
                 return (start.binding.map(pane.binding) ?? pane, start.failures, unreachable)
             } catch {
                 unreachable.insert(directory)
-                lastError = String(describing: error)
+                lastError = deps.texts.terminal.reason(error)
             }
         }
-        let failure = "\(planned.workingDirectory): no se pudo abrir el panel (\(lastError))"
+        let failure = deps.texts.paneFailed(["directory": planned.workingDirectory, "error": lastError])
         return (nil, start.failures + [failure], unreachable)
     }
 
@@ -160,7 +165,7 @@ public struct RestoreSession {
     /// (a saved state) gets an `AgentSession`; every harness pane keeps its binding for the capture (spec F6).
     private func resume(_ agent: AgentSnapshot) -> Startup {
         guard let adapter = deps.harnesses.adapter(for: agent.harness) else {
-            let failure = "\(agent.harness.rawValue): harness sin adaptador, no se reanuda \(agent.sessionID ?? "")"
+            let failure = deps.texts.noAdapter(["harness": agent.harness.rawValue, "session": agent.sessionID ?? ""])
             return Startup(failures: [failure])
         }
         let binding = HarnessBinding(harness: agent.harness, sessionID: agent.sessionID, processStartedAt: deps.clock())

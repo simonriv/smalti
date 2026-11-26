@@ -2,23 +2,22 @@ import SmaltiCore
 
 /// The text of `theme.toml` (spec F5): every key the UI owns, in the spec's order, with the choices as comments.
 enum TOMLWriter {
-    static let header =
-        "# Lo escribe Smalti (Apariencia y Estudio de prompt). Puedes editarlo a mano: la app lo lee al recargar y lo "
-        + "reescribe entero al guardar."
-
-    static func text(_ document: AppearanceDocument) -> String {
-        ([header, "", "\(TOMLConfigParser.versionKey) = \(TOMLConfigParser.supportedVersion)", ""]
-            + appearance(document.appearance) + ansi(document.appearance.ansiOverrides)
+    /// `texts` words the comments, in the interface's language when the file is written.
+    static func text(_ document: AppearanceDocument, texts: ConfigTexts) -> String {
+        let header = "# " + texts.themeFileHeader
+        return
+            ([header, "", "\(TOMLConfigParser.versionKey) = \(TOMLConfigParser.supportedVersion)", ""]
+            + appearance(document.appearance, texts: texts) + ansi(document.appearance.ansiOverrides, texts: texts)
             + window(document.buttons) + prompt(document.prompt)).joined(separator: "\n") + "\n"
     }
 
-    private static func appearance(_ appearance: AppearanceSettings) -> [String] {
+    private static func appearance(_ appearance: AppearanceSettings, texts: ConfigTexts) -> [String] {
         var lines = [
             "[appearance]",
             line("theme", string(appearance.theme.rawValue), choices(ThemeID.self)),
         ]
         if let accent = appearance.accent {
-            lines.append(line("accent", string(accent.hexString), "sin él, el del tema"))
+            lines.append(line("accent", string(accent.hexString), texts.accentComment))
         }
         lines += [
             line("glass_opacity", number(appearance.glassOpacity), "0.30–0.95"),
@@ -33,12 +32,12 @@ enum TOMLWriter {
         return lines
     }
 
-    private static func ansi(_ overrides: [ThemeID: ANSIOverrides]) -> [String] {
+    private static func ansi(_ overrides: [ThemeID: ANSIOverrides], texts: ConfigTexts) -> [String] {
         ThemeID.allCases.compactMap { theme -> [String]? in
             guard let colors = overrides[theme]?.colors, !colors.isEmpty else { return nil }
             let header =
                 "[appearance.ansi.\(theme.rawValue)]"
-                + (theme == .obsidiana ? "  # solo los colores cambiados, 0–15" : "")
+                + (theme == .obsidiana ? "  # " + texts.ansiComment : "")
             return [header] + colors.keys.sorted().map { "\($0) = \(string(colors[$0]?.hexString ?? ""))" } + [""]
         }.flatMap { $0 }
     }

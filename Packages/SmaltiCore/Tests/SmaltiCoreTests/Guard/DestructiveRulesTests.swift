@@ -6,7 +6,8 @@ func guardFindings(
     _ text: String, settings: GuardSettings = .standard, environmentHosts: [String] = []
 ) -> [GuardFinding] {
     DestructiveCommandRules.findings(
-        in: text, context: GuardContext(settings: settings, environmentHosts: environmentHosts), home: "/Users/u")
+        in: text, context: GuardContext(settings: settings, environmentHosts: environmentHosts, texts: .spanish),
+        home: "/Users/u")
 }
 
 @Suite("Destructive command rules")
@@ -113,7 +114,7 @@ struct DestructiveRulesTests {
         let environment = guardFindings("supabase db push").first?.environment
 
         #expect(environment?.kind == .production)
-        #expect(environment?.detail == "proyecto enlazado")
+        #expect(environment?.detail(.spanish) == "proyecto enlazado")
     }
 
     @Test func databaseCommandsUseTheEnvironmentHost() {

@@ -14,9 +14,8 @@ public struct StatusFigures: Equatable, Sendable {
         self.todayTokens = todayTokens
     }
 
-    public static let unavailable = "no disponible"
-
-    public static func make(_ snapshot: ObservatorySnapshot, calendar: Calendar) -> StatusFigures {
+    public static func make(_ snapshot: ObservatorySnapshot, calendar: Calendar, copy: ObservatoryCopy) -> StatusFigures
+    {
         let window = PeriodWindow(
             start: ObservatoryPeriod.today.start(now: snapshot.now, calendar: calendar), end: snapshot.now)
         let today = snapshot.activity.sessions.flatMap { window.usage(of: $0).values }.reduce(.zero, +)
@@ -27,10 +26,11 @@ public struct StatusFigures: Equatable, Sendable {
             localModel: loadedModel(snapshot.localModels),
             ram: "RAM "
                 + (system.memoryUsed.value.map { ObservatoryFormat.memory(used: $0, total: system.memoryTotal) }
-                    ?? unavailable),
-            gpu: "GPU " + (system.gpu.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? unavailable),
+                    ?? copy.unavailable),
+            gpu: "GPU " + (system.gpu.value.map { ObservatoryFormat.percent(Int($0.rounded())) } ?? copy.unavailable),
             todayTokens: isTodayRead
-                ? "hoy \(ObservatoryFormat.count(today.inputTotal + today.output)) tokens" : "hoy …")
+                ? copy.todayTokens(["count": ObservatoryFormat.count(today.inputTotal + today.output)])
+                : copy.todayPending)
     }
 
     private static func loadedModel(_ report: LocalModelsReport) -> String? {

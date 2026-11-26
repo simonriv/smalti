@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Runs the XCUITest suite, or only what is named (classes or single tests, any number:
+# Runs only the XCUITests named (classes or single tests, any number; never the whole suite, testing rules:
 # scripts/test-ui.sh MainWindowTests MenuTests/testAboutShowsVersionAndCommit), building once for all of it, and
 # prints one line per finished test as "[n/total] ok|FAIL <Class.test>". Exits with xcodebuild's own status.
 set -uo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 logs="$root/build/test-ui"; mkdir -p "$logs"
 args=(-project "$root/App/Smalti.xcodeproj" -scheme Smalti -destination "platform=macOS" -derivedDataPath "$root/build")
+if [[ $# == 0 ]]; then
+  echo "test-ui.sh: name the affected classes or tests (e.g. WelcomeTests HelpTests/testX); the whole e2e suite never runs" >&2
+  exit 2
+fi
 only=(); for target in "$@"; do only+=("-only-testing:SmaltiUITests/$target"); done
 
 xcodebuild build-for-testing "${args[@]}" > "$logs/build.log" 2>&1 || { tail -30 "$logs/build.log"; exit 1; }

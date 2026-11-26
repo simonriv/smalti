@@ -5,7 +5,7 @@ public enum MenuAction: Equatable, Sendable {
 }
 
 /// Standard items whose behavior AppKit provides; the app maps each to its selector.
-public enum SystemMenuAction: Equatable, Sendable {
+public enum SystemMenuAction: Hashable, Sendable {
     case services, hide, hideOthers, showAll, quit, zoom, bringAllToFront
 }
 
@@ -46,7 +46,7 @@ extension [MenuItem] {
 }
 
 /// Which menu of the bar: the app finds Edición, Ventana and Ayuda by this, never by their titles.
-public enum MenuID: Equatable, Sendable {
+public enum MenuID: Hashable, Sendable {
     case app, file, edit, view, window, help
 }
 
@@ -84,27 +84,24 @@ public struct MenuState: Sendable {
 /// The menus of macOS (F4.5), built from the keymap in effect and the palette's commands for the current state: an
 /// item shows its command's primary chord and is enabled when ⌘K would offer it.
 public enum MenuModel {
-    public static func bar(keymap: Keymap, commands: [Command], state: MenuState) -> MenuBar {
+    public static func bar(keymap: Keymap, commands: [Command], state: MenuState, texts: MenuTexts) -> MenuBar {
         let context = state.context
         let offered = Set(commands.map(\.id)).union(alwaysAvailable).filter {
             context.allowing?.contains($0) ?? true
         }
         let builder = Builder(
             keymap: keymap, available: offered.subtracting(context.passingThrough), checked: state.checked,
-            offeredTitles: Dictionary(commands.map { ($0.id, $0.title) }) { first, _ in first })
+            texts: texts, offeredTitles: Dictionary(commands.map { ($0.id, $0.title) }) { first, _ in first })
         let workspaces = state.workspaces
-        return MenuBar(menus: [
-            Menu(id: .app, title: "Smalti", items: builder.app),
-            Menu(id: .file, title: "Archivo", items: builder.file),
-            Menu(id: .edit, title: "Edición", items: builder.edit),
-            Menu(id: .view, title: "Ver", items: builder.view),
-            Menu(id: .window, title: "Ventana", items: builder.window(workspaces)),
-            Menu(id: .help, title: "Ayuda", items: builder.help),
-        ])
+        let menus: [(MenuID, [MenuItem])] = [
+            (.app, builder.app), (.file, builder.file), (.edit, builder.edit), (.view, builder.view),
+            (.window, builder.window(workspaces)), (.help, builder.help),
+        ]
+        return MenuBar(menus: menus.map { Menu(id: $0.0, title: texts.menus[$0.0] ?? "", items: $0.1) })
     }
 
-    public static func contextMenu(keymap: Keymap) -> [MenuItem] {
-        let builder = Builder(keymap: keymap, available: nil, checked: [])
+    public static func contextMenu(keymap: Keymap, texts: MenuTexts) -> [MenuItem] {
+        let builder = Builder(keymap: keymap, available: nil, checked: [], texts: texts)
         return [
             builder.item(.terminalCopy), builder.item(.terminalPaste), builder.item(.terminalSelectAll), .separator,
             builder.item(.searchOpen), builder.item(.terminalClear), .separator, builder.item(.paneNew),
@@ -112,8 +109,8 @@ public enum MenuModel {
         ]
     }
 
-    public static func dockMenu() -> [MenuItem] {
-        [Builder(keymap: .standard, available: nil, checked: []).item(.windowNew, chord: nil)]
+    public static func dockMenu(texts: MenuTexts) -> [MenuItem] {
+        [Builder(keymap: .standard, available: nil, checked: [], texts: texts).item(.windowNew, chord: nil)]
     }
 
     /// Commands the palette does not list but that always apply.
@@ -125,18 +122,9 @@ private struct Builder {
     /// nil: everything is enabled (the context menu acts on the pane it was opened on).
     let available: Set<CommandID>?
     let checked: Set<CommandID>
+    let texts: MenuTexts
     /// The palette's titles, for items whose title depends on the state (F7.6: the automatic-updates toggle).
     var offeredTitles: [CommandID: String] = [:]
-
-    private static let titles: [CommandID: String] = CommandCatalog.titles.merging([
-        .paneNew: "Nuevo panel", .paneClose: "Cerrar panel", .workspaceNew: "Nuevo workspace",
-        .workspaceClose: "Cerrar workspace", .configReload: "Recargar configuración",
-        .historySearch: "Buscar en el historial", .paletteOpen: "Paleta de comandos",
-        .observatoryToggle: "Observatorio",
-        .panesEqualize: "Igualar paneles", .agentJump: "Ir al agente que espera",
-        .workspaceRename: "Renombrar workspace…", .guardApprove: "Aprobar comando que espera",
-        .guardReject: "Rechazar comando que espera",
-    ]) { first, _ in first }
 
     func item(_ id: CommandID, title: String? = nil) -> MenuItem {
         item(id, chord: keymap.chord(for: id), title: title)
@@ -144,17 +132,19 @@ private struct Builder {
 
     func item(_ id: CommandID, chord: KeyChord?, title: String? = nil) -> MenuItem {
         var item = MenuItem(
-            title: title ?? Self.titles[id] ?? offeredTitles[id] ?? id.rawValue, action: .command(id), chord: chord,
+            title: title ?? texts.titles[id] ?? texts.commands.titles[id] ?? offeredTitles[id] ?? id.rawValue,
+            action: .command(id), chord: chord,
             isEnabled: available?.contains(id) ?? true, children: [])
         item.isChecked = checked.contains(id)
         return item
     }
 
     /// A chord the TOML gave to one of Smalti's commands is that command's: the system item shows none.
-    private func system(_ title: String, _ action: SystemMenuAction, _ chord: String? = nil) -> MenuItem {
+    private func system(_ action: SystemMenuAction, _ chord: String? = nil) -> MenuItem {
         let parsed = chord.flatMap { try? KeyChord.parse($0) }
         let free = parsed.flatMap { keymap.command(for: $0) == nil ? $0 : nil }
-        return MenuItem(title: title, action: .system(action), chord: free, isEnabled: true, children: [])
+        return MenuItem(
+            title: texts.system[action] ?? "", action: .system(action), chord: free, isEnabled: true, children: [])
     }
 
     var app: [MenuItem] {
@@ -163,9 +153,8 @@ private struct Builder {
         ] + updateItems + [
             .separator, item(.appearanceOpen), item(.promptStudio), item(.configOpen),
             item(.configReload), .separator, item(.secureInputToggle),
-            .separator, system("Servicios", .services), .separator, system("Ocultar Smalti", .hide, "cmd+h"),
-            system("Ocultar otros", .hideOthers, "cmd+opt+h"), system("Mostrar todo", .showAll), .separator,
-            system("Salir de Smalti", .quit, "cmd+q"),
+            .separator, system(.services), .separator, system(.hide, "cmd+h"), system(.hideOthers, "cmd+opt+h"),
+            system(.showAll), .separator, system(.quit, "cmd+q"),
         ]
     }
 
@@ -189,7 +178,9 @@ private struct Builder {
     }
 
     var view: [MenuItem] {
-        let layouts = LayoutCatalog.standard.all.map { item(.layout($0.id), title: $0.displayName) }
+        let layouts = LayoutCatalog.standard.all.map {
+            item(.layout($0.id), title: texts.commands.layoutNames[$0.id] ?? $0.id.rawValue)
+        }
         let scrolling = [
             CommandID.scrollPageUp, .scrollPageDown, .scrollTop, .scrollBottom, .promptPrevious, .promptNext,
         ]
@@ -197,36 +188,41 @@ private struct Builder {
             item(.paletteOpen), item(.observatoryToggle), item(.observatoryFilter), item(.harnessSearch),
             item(.layoutImport),
             .separator,
-            .submenu("Layout", layouts), item(.panesEqualize),
+            .submenu(texts.layoutSubmenu, layouts), item(.panesEqualize),
             .separator, item(.fontIncrease), item(.fontDecrease), item(.fontReset), .separator,
-            .submenu("Desplazamiento", scrolling.map { item($0) }), item(.previewQuickLook), item(.editorOpenBeside),
+            .submenu(texts.scrollingSubmenu, scrolling.map { item($0) }), item(.previewQuickLook),
+            item(.editorOpenBeside),
             item(.editorOpenLastEdited), .separator, item(.windowFullscreen),
         ]
     }
 
     func window(_ workspaces: WorkspaceSet) -> [MenuItem] {
         [
-            item(.windowMinimize), system("Zoom", .zoom), .separator,
-            .submenu("Panel", numberedPanes(workspaces.active) + [.separator] + paneItems), item(.agentJump),
+            item(.windowMinimize), system(.zoom), .separator,
+            .submenu(texts.paneSubmenu, numberedPanes(workspaces.active) + [.separator] + paneItems), item(.agentJump),
             item(.guardApprove), item(.guardReject),
-            .separator, .submenu("Workspace", workspaceItems(workspaces)), .separator,
-            system("Traer todo al frente", .bringAllToFront),
+            .separator, .submenu(texts.workspaceSubmenu, workspaceItems(workspaces)), .separator,
+            system(.bringAllToFront),
         ]
     }
 
     var help: [MenuItem] {
         [
-            item(.helpShow), item(.helpDocs), .separator, item(.feedbackReport), item(.logsShow), .separator,
+            item(.helpShow), item(.helpWelcome), item(.helpDocs), item(.helpPrivacy), .separator,
+            item(.feedbackReport), item(.logsShow), .separator,
             item(.appSupport),
         ]
     }
 
     private var paneItems: [MenuItem] {
-        let families: [(verb: String, id: (Direction) -> CommandID)] = [
-            ("Enfocar", CommandID.paneFocus), ("Intercambiar", CommandID.paneSwap), ("Agrandar", CommandID.paneResize),
+        let families: [(template: TextTemplate, id: (Direction) -> CommandID)] = [
+            (texts.focusToward, CommandID.paneFocus), (texts.swapToward, CommandID.paneSwap),
+            (texts.resizeToward, CommandID.paneResize),
         ]
         let groups = families.map { family in
-            Direction.allCases.map { item(family.id($0), title: "\(family.verb) hacia \($0.menuPhrase)") }
+            Direction.allCases.map {
+                item(family.id($0), title: family.template(["direction": texts.directions[$0] ?? ""]))
+            }
         }
         return groups.dropFirst().reduce(groups[0]) { $0 + [.separator] + $1 }
     }
@@ -235,8 +231,10 @@ private struct Builder {
     private func numberedPanes(_ workspace: Workspace) -> [MenuItem] {
         workspace.panes.prefix(NumberedShortcuts.range.upperBound).enumerated().map { index, pane in
             let name = pane.headerName
-            return item(
-                .paneFocus(index + 1), title: name.isEmpty ? "Panel \(index + 1)" : "Panel \(index + 1) · \(name)")
+            let number = String(index + 1)
+            let title =
+                name.isEmpty ? texts.pane(["number": number]) : texts.namedPane(["number": number, "name": name])
+            return item(.paneFocus(index + 1), title: title)
         }
     }
 
@@ -248,17 +246,5 @@ private struct Builder {
                 chord: keymap.chord(for: .workspace(index + 1)), isEnabled: true, children: [])
         }
         return numbered + [.separator, item(.workspaceRename)]
-    }
-}
-
-extension Direction {
-    /// The direction as it ends "Enfocar hacia …" in the Ventana menu.
-    fileprivate var menuPhrase: String {
-        switch self {
-        case .left: "la izquierda"
-        case .right: "la derecha"
-        case .up: "arriba"
-        case .down: "abajo"
-        }
     }
 }

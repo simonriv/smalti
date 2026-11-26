@@ -4,7 +4,7 @@
 set -uo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 products="$root/build/Build/Products"
-total=21; n=0; failures=0
+total=27; n=0; failures=0
 mkdir -p "$root/build"
 lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 # The Release copy built here shares the daily bundle ID; keep LaunchServices pointing at /Applications.
@@ -70,4 +70,14 @@ arm64_only() { [[ "$(lipo -archs "$1")" == arm64 ]]; }
 check release_is_arm64_only arm64_only "$release/Contents/MacOS/Smalti"
 check debug_is_arm64_only arm64_only "$debug/Contents/MacOS/Smalti Dev"
 check release_carries_the_notices "$root/scripts/release/check-notices.sh" --app "$release"
+
+# F7.7: English is the development language and both localizations ship, so AppKit, Sparkle and the app agree on
+# the interface's language (spike in the spec: with only `es`, panels stay Spanish on an English system).
+expect debug_development_region "$debug/Contents/Info.plist" CFBundleDevelopmentRegion en
+expect release_development_region "$release/Contents/Info.plist" CFBundleDevelopmentRegion en
+localized() { [[ -s "$1/Contents/Resources/$2.lproj/Localizable.strings" ]]; }
+check debug_ships_english localized "$debug" en
+check debug_ships_spanish localized "$debug" es
+check release_ships_english localized "$release" en
+check release_ships_spanish localized "$release" es
 exit "$failures"

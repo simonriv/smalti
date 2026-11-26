@@ -1,10 +1,11 @@
 /// Texts of the Appearance panel (`Apariencia.dc.html`) that depend on values.
 public enum AppearanceTexts {
     /// "62%", or "62% · 66% bajo el texto" when "Proteger legibilidad" raised the panels.
-    public static func opacity(chosen: Double, underText: Double) -> String {
+    public static func opacity(chosen: Double, underText: Double, copy: AppearanceCopy) -> String {
         let chosenText = percent(chosen)
         let underTextText = percent(underText)
-        return underTextText == chosenText ? chosenText : "\(chosenText) · \(underTextText) bajo el texto"
+        return underTextText == chosenText
+            ? chosenText : copy.underText(["chosen": chosenText, "under": underTextText])
     }
 
     public static func blur(_ pixels: Double) -> String { pixelsText(pixels) }
@@ -14,17 +15,13 @@ public enum AppearanceTexts {
     public static func font(family: String, size: Double) -> String { "\(family) \(number(size))" }
 
     /// Spec F5 (Claude): how many ANSI colors protection moved; nothing when none.
-    public static func adjusted(_ count: Int) -> String? {
-        switch count {
-        case 0: nil
-        case 1: "Ajustados por legibilidad: 1 color"
-        default: "Ajustados por legibilidad: \(count) colores"
-        }
+    public static func adjusted(_ count: Int, copy: AppearanceCopy) -> String? {
+        count == 0 ? nil : copy.adjusted(count)
     }
 
     /// "se guarda en ~/.config/…/theme.toml": the real path, with the home as `~` and the middle folders elided.
-    public static func savedIn(path: String, home: String) -> String {
-        "se guarda en " + shortened(path, home: home)
+    public static func savedIn(path: String, home: String, copy: AppearanceCopy) -> String {
+        copy.savedIn(["path": shortened(path, home: home)])
     }
 
     private static let maximumWholeComponents = 2

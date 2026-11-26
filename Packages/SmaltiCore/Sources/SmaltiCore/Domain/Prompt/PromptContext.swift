@@ -17,9 +17,13 @@ public struct PromptContext: Equatable, Sendable {
     public var awsProfile: String?
     public var kubeContext: String?
 
-    public init(directory: String, home: String) {
+    /// F7.7: the words modules write (the agents module).
+    public let copy: PromptCopy
+
+    public init(directory: String, home: String, copy: PromptCopy) {
         self.directory = directory
         self.home = home
+        self.copy = copy
         lastExit = 0
         now = Date(timeIntervalSince1970: 0)
         timeZone = TimeZone(secondsFromGMT: 0) ?? .current

@@ -11,46 +11,36 @@ public struct ToolResultText: Equatable, Sendable {
     }
 }
 
-/// The observatory's words, as the board writes them.
+/// The observatory's sentences, built from `ObservatoryCopy` (F7.7).
 public enum ObservatoryTexts {
-    /// The board's footnote, with OpenCode's database since F6.
-    public static let footnote =
-        "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
-
-    /// F7: the footnote once Claude Code's telemetry arrived.
-    public static let footnoteWithTelemetry =
-        "Datos: hooks, transcripts y telemetría de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
-
-    /// F7: the footnote when the user's own Claude settings send the telemetry elsewhere.
-    public static let footnoteTelemetryElsewhere =
-        "Telemetría de Claude Code configurada fuera de Smalti: no se recibe aquí."
-
-    public static func footnote(status: TelemetryStatus, hasTelemetry: Bool) -> String {
-        if status == .configuredByUser { return footnoteTelemetryElsewhere }
-        return hasTelemetry ? footnoteWithTelemetry : footnote
+    public static func footnote(status: TelemetryStatus, hasTelemetry: Bool, copy: ObservatoryCopy) -> String {
+        if status == .configuredByUser { return copy.footnoteTelemetryElsewhere }
+        return hasTelemetry ? copy.footnoteWithTelemetry : copy.footnote
     }
 
     /// "2 trabajando · 1 esperando" (the board's summary card says "esperando"), "· 1 error" only with errors.
-    public static func sessions(_ summary: ObservatoryReport.Summary) -> String {
-        let base = "\(summary.working) trabajando · \(summary.waiting) esperando"
-        return summary.failed > 0 ? "\(base) · \(summary.failed) error" : base
+    public static func sessions(_ summary: ObservatoryReport.Summary, copy: ObservatoryCopy) -> String {
+        let base = copy.sessions(["working": String(summary.working), "waiting": String(summary.waiting)])
+        return summary.failed > 0 ? base + copy.sessionsFailed(["failed": String(summary.failed)]) : base
     }
 
-    public static func cache(_ summary: ObservatoryReport.Summary) -> String {
-        summary.cacheShare.map { "\(ObservatoryFormat.percent($0)) desde caché" } ?? "sin entrada"
+    public static func cache(_ summary: ObservatoryReport.Summary, copy: ObservatoryCopy) -> String {
+        summary.cacheShare.map { copy.fromCache(["percent": ObservatoryFormat.percent($0)]) } ?? copy.noInput
     }
 
-    public static func peak(_ summary: ObservatoryReport.Summary, timeZone: TimeZone) -> String {
-        guard let peak = summary.peak else { return "sin salida" }
-        return
-            "pico \(ObservatoryFormat.count(peak.output))/min · \(ObservatoryFormat.clock(peak.at, timeZone: timeZone))"
+    public static func peak(_ summary: ObservatoryReport.Summary, timeZone: TimeZone, copy: ObservatoryCopy) -> String {
+        guard let peak = summary.peak else { return copy.noOutput }
+        return copy.peak([
+            "count": ObservatoryFormat.count(peak.output),
+            "clock": ObservatoryFormat.clock(peak.at, timeZone: timeZone),
+        ])
     }
 
-    public static func cost(_ summary: ObservatoryReport.Summary) -> String {
+    public static func cost(_ summary: ObservatoryReport.Summary, copy: ObservatoryCopy) -> String {
         let unpriced = summary.cost.unpricedModels.count
         // The warning replaces "incluido en tu plan": the card is one line, and a missing price must be read.
-        guard unpriced > 0 else { return "estimado · incluido en tu plan" }
-        return "estimado · sin precio para \(unpriced) \(unpriced == 1 ? "modelo" : "modelos")"
+        guard unpriced > 0 else { return copy.costIncluded }
+        return copy.costUnpriced(unpriced)
     }
 
     public static func result(of tool: RecentTool) -> ToolResultText {
@@ -63,13 +53,8 @@ public enum ObservatoryTexts {
         }
     }
 
-    public static func state(_ kind: AgentStateKind) -> String {
-        switch kind {
-        case .working: "trabajando"
-        case .waiting: "te espera"
-        case .failed: "error"
-        case .stopped: "detenida"
-        }
+    public static func state(_ kind: AgentStateKind, copy: ObservatoryCopy) -> String {
+        copy.states[kind] ?? kind.rawValue
     }
 
     /// "4.8k · 10:42" next to the chart's peak.

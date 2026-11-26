@@ -34,7 +34,7 @@ struct AgentUseCaseTests {
     private func handle(_ event: AgentEvent, in set: inout WorkspaceSet, appActive: Bool = true)
         -> HandleAgentEventOutcome
     {
-        HandleAgentEvent(notifier: notifier).execute(event, in: &set, isAppActive: appActive)
+        HandleAgentEvent(notifier: notifier, texts: .spanish).execute(event, in: &set, isAppActive: appActive)
     }
 
     @Test func eventForMissingPaneIsIgnored() {
@@ -136,9 +136,31 @@ struct AgentUseCaseTests {
         let integration = FakeHarnessIntegration()
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Integración con Claude Code instalada")
         #expect(await integration.installState == .installed)
+    }
+
+    @Test func installOutcomeSaysWhetherItWorked() async {
+        let working = FakeHarnessIntegration()
+        let failing = FakeHarnessIntegration()
+        failing.failure = .harnessMissing(binary: "claude")
+
+        #expect(
+            await InstallClaudeIntegration(integration: working, texts: .english).run()
+                == .done("Claude Code integration installed"))
+        #expect(
+            await InstallClaudeIntegration(integration: failing, texts: .spanish).run()
+                == .failed("No se encontró `claude` en el PATH del shell de inicio"))
+    }
+
+    @Test func uninstallOutcomeSaysWhetherItWorked() async {
+        let failing = FakeHarnessIntegration()
+        failing.failure = .harnessMissing(binary: "claude")
+
+        #expect(
+            await UninstallClaudeIntegration(integration: failing, texts: .spanish).run()
+                == .failed("No se encontró `claude` en el PATH del shell de inicio"))
     }
 
     @Test func installReportsMissingClaude() async {
@@ -146,7 +168,7 @@ struct AgentUseCaseTests {
         integration.failure = .harnessMissing(binary: "claude")
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "No se encontró `claude` en el PATH del shell de inicio")
     }
 
@@ -155,7 +177,7 @@ struct AgentUseCaseTests {
         integration.failure = .commandFailed(command: "claude plugin install smalti@smalti", output: "boom\nmore")
 
         #expect(
-            await InstallClaudeIntegration(integration: integration).execute()
+            await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Falló `claude plugin install smalti@smalti`: more")
     }
 
@@ -163,19 +185,19 @@ struct AgentUseCaseTests {
         let integration = FakeHarnessIntegration()
 
         #expect(
-            await InstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+            await InstallClaudeIntegration(integration: integration, id: .claudecodeNvim, texts: .spanish).execute()
                 == "claudecode.nvim instalado: se activa al abrir Neovim")
         #expect(
-            await UninstallClaudeIntegration(integration: integration, id: .claudecodeNvim).execute()
+            await UninstallClaudeIntegration(integration: integration, id: .claudecodeNvim, texts: .spanish).execute()
                 == "claudecode.nvim desinstalado")
     }
 
     @Test func uninstallReportsSuccess() async {
         let integration = FakeHarnessIntegration()
-        _ = await InstallClaudeIntegration(integration: integration).execute()
+        _ = await InstallClaudeIntegration(integration: integration, texts: .spanish).execute()
 
         #expect(
-            await UninstallClaudeIntegration(integration: integration).execute()
+            await UninstallClaudeIntegration(integration: integration, texts: .spanish).execute()
                 == "Integración con Claude Code desinstalada")
         #expect(await integration.installState == .notInstalled)
     }

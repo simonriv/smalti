@@ -19,7 +19,7 @@ struct RestoredSurfaceTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-restored-\(UUID()).conf"))
-        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         tmp = try WorkingDirectory(path: "/tmp")
     }
 

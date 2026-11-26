@@ -18,16 +18,16 @@ struct IncidentCommandsTests {
             .first
 
         #expect(finding?.rule == "npm run db:push")
-        #expect(finding?.environment.label == "PROD")
-        #expect(finding?.environment.detail == "host no reconocido")
+        #expect(finding?.environment.label(.spanish) == "PROD")
+        #expect(finding?.environment.detail(.spanish) == "host no reconocido")
     }
 
     @Test func dataTalksTerraformDestroy() {
         let finding = guardFindings(IncidentCommands.dataTalks).first
 
         #expect(finding?.rule == "terraform destroy")
-        #expect(finding?.environment.label == "PROD")
-        #expect(finding?.environment.detail == "no determinado")
+        #expect(finding?.environment.label(.spanish) == "PROD")
+        #expect(finding?.environment.detail(.spanish) == "no determinado")
     }
 
     @Test func pocketOSRailwayVolumeDelete() {

@@ -25,8 +25,9 @@ struct MenuModelTests {
         let set = set ?? workspaces()
         return MenuModel.bar(
             keymap: keymap,
-            commands: CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: keymap, layouts: .standard),
-            state: MenuState(workspaces: set, checked: checked, context: context))
+            commands: CommandCatalog.commands(
+                for: CatalogState(workspaces: set), keymap: keymap, layouts: .standard, texts: .spanish),
+            state: MenuState(workspaces: set, checked: checked, context: context), texts: .spanish)
     }
 
     private func item(_ title: String, in menu: String, of bar: MenuBar) -> MenuItem? {
@@ -44,7 +45,7 @@ struct MenuModelTests {
     }
 
     @Test func everyContextMenuItemIsEnabled() {
-        let items = MenuModel.contextMenu(keymap: .standard).filter { !$0.isSeparator }
+        let items = MenuModel.contextMenu(keymap: .standard, texts: .spanish).filter { !$0.isSeparator }
 
         #expect(items.allSatisfy { $0.isEnabled })
     }
@@ -90,7 +91,9 @@ struct MenuModelTests {
             ])
         #expect(
             menus[5].items.map(\.title) == [
-                "Ayuda de Smalti", "Abrir la documentación", "", "Reportar un problema o una idea…",
+                "Ayuda de Smalti", "Bienvenida a Smalti", "Abrir la documentación", "Abrir la política de privacidad",
+                "",
+                "Reportar un problema o una idea…",
                 "Mostrar registros…", "", "Apoyar Smalti…",
             ])
     }
@@ -191,15 +194,15 @@ struct MenuModelTests {
 
     @Test func contextMenuMatchesSpec() {
         #expect(
-            MenuModel.contextMenu(keymap: .standard).map(\.title) == [
+            MenuModel.contextMenu(keymap: .standard, texts: .spanish).map(\.title) == [
                 "Copiar", "Pegar", "Seleccionar todo", "", "Buscar…", "Limpiar pantalla", "", "Nuevo panel",
                 "Cerrar panel",
             ])
     }
 
     @Test func dockMenuHasNewWindow() {
-        #expect(MenuModel.dockMenu().map(\.title) == ["Nueva ventana"])
-        #expect(MenuModel.dockMenu().first?.command == .windowNew)
+        #expect(MenuModel.dockMenu(texts: .spanish).map(\.title) == ["Nueva ventana"])
+        #expect(MenuModel.dockMenu(texts: .spanish).first?.command == .windowNew)
     }
 
     /// F7: importing a layout is in the View menu, next to the session search.

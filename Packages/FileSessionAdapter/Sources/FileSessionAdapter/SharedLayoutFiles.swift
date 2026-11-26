@@ -32,18 +32,18 @@ public final class SharedLayoutFiles: LayoutFiles {
         do {
             return try JSONDecoder().decode(SharedLayout.self, from: data)
         } catch {
-            throw .invalid(.notJSON(reason: Self.describe(error)))
+            throw .invalid(.notJSON(Self.describe(error)))
         }
     }
 
-    private static func describe(_ error: any Error) -> String {
-        guard let decoding = error as? DecodingError else { return error.localizedDescription }
+    private static func describe(_ error: any Error) -> LayoutJSONProblem {
+        guard let decoding = error as? DecodingError else { return .other(error.localizedDescription) }
         switch decoding {
-        case .keyNotFound(let key, _): return "falta «\(key.stringValue)»"
+        case .keyNotFound(let key, _): return .missingKey(key.stringValue)
         case .typeMismatch(_, let context), .valueNotFound(_, let context), .dataCorrupted(let context):
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
-            return path.isEmpty ? "JSON no válido" : "valor no válido en «\(path)»"
-        @unknown default: return "JSON no válido"
+            return path.isEmpty ? .invalid : .invalidValue(path: path)
+        @unknown default: return .invalid
         }
     }
 }

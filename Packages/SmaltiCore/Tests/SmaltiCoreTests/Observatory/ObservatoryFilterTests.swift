@@ -26,11 +26,14 @@ struct ObservatoryFilterTests {
     private func report(_ filter: ObservatoryFilter, usage: [UsageRow]) -> ObservatoryReport {
         ObservatoryReport.make(
             snapshot(usage: usage),
-            for: .init(period: .today, selection: nil, calendar: ObservatoryFixtures.calendar(), filter: filter))
+            for: .init(
+                period: .today, selection: nil, calendar: ObservatoryFixtures.calendar(), filter: filter, copy: .spanish
+            ))
     }
 
     @Test func filtersCycleInTheBoardsOrder() {
-        #expect(ObservatoryFilter.allCases.map(\.title) == ["Todas", "Claude Code", "OpenCode", "Locales"])
+        #expect(
+            ObservatoryFilter.allCases.map { $0.title(.spanish) } == ["Todas", "Claude Code", "OpenCode", "Locales"])
         #expect(ObservatoryFilter.local.next == .all)
         #expect(ObservatoryFilter.all.next == .claude)
     }
@@ -80,7 +83,9 @@ struct ObservatoryFilterTests {
     @Test func goneSelectionFallsBackToFirstRow() {
         let report = ObservatoryReport.make(
             snapshot(usage: [opencode("oc-1")]),
-            for: .init(period: .today, selection: "gone", calendar: ObservatoryFixtures.calendar(), filter: .all))
+            for: .init(
+                period: .today, selection: "gone", calendar: ObservatoryFixtures.calendar(), filter: .all,
+                copy: .spanish))
 
         #expect(report.detail?.sessionID == "claude-1")
     }
@@ -101,7 +106,7 @@ struct ObservatoryFilterTests {
 
     @Test func footerNamesOpenCode() {
         #expect(
-            ObservatoryTexts.footnote
+            ObservatoryCopy.spanish.footnote
                 == "Datos: hooks y transcripts de Claude Code, base de OpenCode y API local de Ollama. El costo es estimado."
         )
     }

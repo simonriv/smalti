@@ -128,10 +128,11 @@ final class ObservatoryView: NSView {
     private func layoutStrip(_ body: NSView) {
         let tokens = theme.observatory
         let title = ObservatoryText.label(
-            "Observatorio",
+            String(localized: "Observatory"),
             .init(size: tokens.stripTitleSize, color: theme.text.title, weight: tokens.stripTitleWeight), theme: theme)
         let subtitle = ObservatoryText.label(
-            "agentes y modelos en esta máquina", .init(size: tokens.stripSubtitleSize, color: theme.text.secondary),
+            String(localized: "agents and models on this machine"),
+            .init(size: tokens.stripSubtitleSize, color: theme.text.secondary),
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
@@ -179,22 +180,23 @@ final class ObservatoryView: NSView {
     }
 
     func showReading(period current: ObservatoryPeriod) {
-        period.show(current.title)
+        period.show(current.title(copy: .current))
         cards.showReading()
     }
 
     func show(_ report: ObservatoryReport, snapshot: ObservatorySnapshot, period current: ObservatoryPeriod) {
         let zone = TimeZone.autoupdatingCurrent
-        period.show(current.title)
+        period.show(current.title(copy: .current))
         cards.show(report.summary, timeZone: zone)
         let tokens = theme.observatory
         tableHeight?.constant =
             tokens.tableHeaderHeight + tokens.rowHeight * Double(min(max(report.rows.count, 1), Self.visibleRows))
         table.show(report.rows, selected: report.detail?.sessionID)
         detail.show(report.detail, timeZone: zone)
-        localModels.show(LocalModelsFigures.make(snapshot.localModels, now: snapshot.now))
+        localModels.show(LocalModelsFigures.make(snapshot.localModels, now: snapshot.now, copy: .current))
         system.show(
-            SystemFigures.make(snapshot), cpuHistory: snapshot.cpuHistory, gpuHistory: snapshot.gpuHistory,
+            SystemFigures.make(snapshot, copy: .current), cpuHistory: snapshot.cpuHistory,
+            gpuHistory: snapshot.gpuHistory,
             footnote: report.footnote)
     }
 }
@@ -257,7 +259,7 @@ private final class FilterChips: NSStackView {
         let tokens = theme.observatoryFilter
         spacing = tokens.chipGap
         for filter in ObservatoryFilter.allCases {
-            let button = NSButton(title: filter.title, target: self, action: #selector(clicked(_:)))
+            let button = NSButton(title: filter.title(.current), target: self, action: #selector(clicked(_:)))
             button.isBordered = false
             button.wantsLayer = true
             button.layer?.cornerRadius = tokens.chipRadius
@@ -285,7 +287,7 @@ private final class FilterChips: NSStackView {
         for (filter, button) in buttons {
             let isChosen = filter == chosen
             button.attributedTitle = NSAttributedString(
-                string: filter.title,
+                string: filter.title(.current),
                 attributes: [
                     .font: theme.interfaceFont(size: tokens.pillFontSize, weight: tokens.pillWeight),
                     .foregroundColor: (isChosen ? chips.chosenText : chips.inactiveText).nsColor,

@@ -4,7 +4,7 @@ import Testing
 @MainActor
 @Suite("SearchCommands")
 struct SearchCommandsTests {
-    private let search = SearchCommands(layouts: .standard)
+    private let search = SearchCommands(layouts: .standard, texts: .spanish)
     private let set: WorkspaceSet
 
     init() throws {
@@ -29,7 +29,8 @@ struct SearchCommandsTests {
     @Test func emptyQueryReturnsEveryCommandInCatalogOrder() {
         let results = search.execute("", state: CatalogState(workspaces: set), keymap: .standard)
 
-        let catalog = CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+        let catalog = CommandCatalog.commands(
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard, texts: .spanish)
         #expect(results.map(\.command) == catalog)
     }
 }

@@ -32,7 +32,7 @@ struct HostEnvironmentTests {
             host: "db.abc.supabase.co", settings: settings(production: ["db.abc.supabase.co"]))
 
         #expect(result == DetectedEnvironment(kind: .production, host: "db.abc.supabase.co", cause: .listed))
-        #expect(result.detail == nil)
+        #expect(result.detail(.spanish) == nil)
     }
 
     @Test func productionListWinsOverNonProduction() {
@@ -45,20 +45,20 @@ struct HostEnvironmentTests {
         let result = HostEnvironment.classify(host: "db.example.com", settings: .standard)
 
         #expect(result.kind == .production)
-        #expect(result.label == "PROD")
-        #expect(result.detail == "host no reconocido")
+        #expect(result.label(.spanish) == "PROD")
+        #expect(result.detail(.spanish) == "host no reconocido")
     }
 
     @Test func missingHostIsProductionUndetermined() {
         let result = HostEnvironment.classify(host: nil, settings: .standard)
 
         #expect(result == DetectedEnvironment(kind: .production, host: nil, cause: .undetermined))
-        #expect(result.detail == "no determinado")
+        #expect(result.detail(.spanish) == "no determinado")
     }
 
     @Test func labels() {
-        #expect(DetectedEnvironment(kind: .local, host: "localhost", cause: .localHost).label == "local")
-        #expect(DetectedEnvironment(kind: .nonProduction, host: "a", cause: .listed).label == "QA/desarrollo")
+        #expect(DetectedEnvironment(kind: .local, host: "localhost", cause: .localHost).label(.spanish) == "local")
+        #expect(DetectedEnvironment(kind: .nonProduction, host: "a", cause: .listed).label(.spanish) == "QA/desarrollo")
     }
 
     @Test func severityOrdersProductionFirst() {

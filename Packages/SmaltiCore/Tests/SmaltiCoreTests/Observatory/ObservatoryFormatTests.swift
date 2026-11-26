@@ -28,7 +28,7 @@ struct ObservatoryFormatTests {
 
     @Test(arguments: agos)
     func agoSwitchesUnitsAtHourAndDay(seconds: Double, text: String) {
-        #expect(ObservatoryFormat.ago(seconds) == text)
+        #expect(ObservatoryFormat.ago(seconds, texts: .spanish) == text)
     }
 
     @Test func gigabytesAndMegabytes() {
@@ -69,6 +69,6 @@ struct ObservatoryFormatTests {
     /// The table's "Vida" column is 76 pt, as the board's: "hace 3h" fits, "hace 22 min" does not.
     @Test(arguments: compactAgos)
     func compactAgoFitsTheTable(seconds: Double, text: String) {
-        #expect(ObservatoryFormat.agoCompact(seconds) == text)
+        #expect(ObservatoryFormat.agoCompact(seconds, texts: .spanish) == text)
     }
 }

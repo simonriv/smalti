@@ -50,7 +50,7 @@ final class SessionSearchView: NSView {
         }
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Todas las sesiones de agentes")
+        setAccessibilityLabel(String(localized: "All Agent Sessions"))
         setAccessibilityIdentifier("sessions.search")
     }
 
@@ -77,18 +77,19 @@ final class SessionSearchView: NSView {
     static func chipIndex(forCommandDigit event: NSEvent) -> Int? {
         guard event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
             let digit = event.charactersIgnoringModifiers.flatMap(Int.init),
-            (1...SessionSearchState.chips.count) ~= digit
+            (1...SessionSearchState.chips(.current).count) ~= digit
         else { return nil }
         return digit - 1
     }
 
     func render(_ state: SessionSearchState, rows: [SessionSearchRow], notice: String? = nil) {
         chips.setViews(
-            SessionSearchState.chips.enumerated().map { index, chip in
+            SessionSearchState.chips(.current).enumerated().map { index, chip in
                 chipView(chip.title, index: index, isSelected: index == state.chipIndex)
             }, in: .leading)
         notes.setViews(
-            ([notice].compactMap { $0 } + state.failureMessages + [state.emptyText].compactMap { $0 }).map { note($0) },
+            ([notice].compactMap { $0 } + state.failureMessages(.current)
+                + [state.emptyText(.current)].compactMap { $0 }).map { note($0) },
             in: .leading)
         source.rows = rows
         source.selectedID = state.selected?.id
@@ -102,15 +103,16 @@ final class SessionSearchView: NSView {
         let tokens = theme.sessionSearch
         let title = NSTextField(labelWithString: "")
         title.attributedStringValue = NSAttributedString(
-            string: "TODAS LAS SESIONES DE AGENTES",
+            string: String(localized: "ALL AGENT SESSIONS"),
             attributes: [
                 .font: theme.interfaceFont(size: theme.resume.tagFontSize),
                 .kern: theme.resume.tagFontSize * tokens.headerLetterSpacing,
                 .foregroundColor: tokens.secondaryText.nsColor,
             ])
-        title.setAccessibilityLabel("Todas las sesiones de agentes")
+        title.setAccessibilityLabel(String(localized: "All Agent Sessions"))
         let subtitle = label(
-            "Leídas del disco de cada harness, aunque no las abrieras aquí.", size: tokens.subtitleFontSize,
+            String(localized: "Read from each harness’s disk, even if you didn’t open them here."),
+            size: tokens.subtitleFontSize,
             color: tokens.secondaryText)
         let stack = NSStackView(views: [title, subtitle])
         stack.orientation = .vertical
@@ -127,11 +129,11 @@ final class SessionSearchView: NSView {
         field.font = theme.interfaceFont(size: tokens.fieldFontSize)
         field.textColor = tokens.selectedText.nsColor
         field.placeholderAttributedString = NSAttributedString(
-            string: "Buscar por tema, proyecto o archivo",
+            string: String(localized: "Search by topic, project or file"),
             attributes: [
                 .font: theme.interfaceFont(size: tokens.fieldFontSize), .foregroundColor: tokens.secondaryText.nsColor,
             ])
-        field.setAccessibilityLabel("Buscar sesiones")
+        field.setAccessibilityLabel(String(localized: "Search sessions"))
         field.setAccessibilityIdentifier("sessions.field")
         let icon = NSImageView(
             image: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil) ?? NSImage())
@@ -202,7 +204,10 @@ final class SessionSearchView: NSView {
     private func footer() -> NSView {
         let text = NSTextField(
             wrappingLabelWithString:
-                "Enter abre la sesión en un panel nuevo con el comando correcto del harness. ⌘Enter la bifurca cuando el harness lo permite."
+                String(
+                    localized:
+                        "Enter opens the session in a new pane with the harness’s own command. ⌘Enter forks it when the harness allows."
+                )
         )
         text.font = theme.interfaceFont(size: theme.sessionSearch.footerFontSize)
         text.textColor = theme.sessionSearch.secondaryText.nsColor

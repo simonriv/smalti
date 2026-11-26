@@ -32,21 +32,20 @@ public enum ObservatoryFormat {
     }
 
     /// `hace 22 min` under an hour, `hace 3h` under a day, `hace 2 días` after.
-    public static func ago(_ seconds: TimeInterval) -> String {
+    public static func ago(_ seconds: TimeInterval, texts: TimeTexts) -> String {
         let whole = max(0, Int(seconds))
-        if whole < secondsPerHour { return "hace \(whole / secondsPerMinute) min" }
-        if whole < secondsPerDay { return "hace \(whole / secondsPerHour)h" }
-        let days = whole / secondsPerDay
-        return "hace \(days) \(days == 1 ? "día" : "días")"
+        if whole < secondsPerHour { return texts.agoMinutes(["n": String(whole / secondsPerMinute)]) }
+        if whole < secondsPerDay { return texts.agoHours(["n": String(whole / secondsPerHour)]) }
+        return texts.agoDays(whole / secondsPerDay)
     }
 
     /// Memory is counted in binary units, as Activity Monitor does, and written "GB" as macOS writes it.
     /// `hace 22m`, `hace 3h`, `hace 2d`: the sessions table's 76 pt "Vida" column, where "hace 22 min" truncates.
-    public static func agoCompact(_ seconds: TimeInterval) -> String {
+    public static func agoCompact(_ seconds: TimeInterval, texts: TimeTexts) -> String {
         let whole = max(0, Int(seconds))
-        if whole < secondsPerHour { return "hace \(whole / secondsPerMinute)m" }
-        if whole < secondsPerDay { return "hace \(whole / secondsPerHour)h" }
-        return "hace \(whole / secondsPerDay)d"
+        if whole < secondsPerHour { return texts.compactMinutes(["n": String(whole / secondsPerMinute)]) }
+        if whole < secondsPerDay { return texts.compactHours(["n": String(whole / secondsPerHour)]) }
+        return texts.compactDays(["n": String(whole / secondsPerDay)])
     }
 
     private static let bytesPerGibibyte = 1_073_741_824.0

@@ -1,5 +1,6 @@
 import AppKit
 import GhosttyKit
+import SmaltiCore
 
 /// What Smalti does when libghostty asks to confirm a clipboard access.
 enum ClipboardConfirmation: Equatable {
@@ -25,14 +26,12 @@ enum ClipboardConfirmation: Equatable {
 
     /// Asks before pasting text with line breaks into a program that may run each line.
     @MainActor
-    static func userApprovesPaste(of text: String) -> Bool {
+    static func userApprovesPaste(of text: String, texts: TerminalTexts) -> Bool {
         let alert = NSAlert()
-        alert.messageText = "¿Pegar texto de varias líneas?"
-        alert.informativeText =
-            "El programa no usa pegado protegido, así que cada línea podría ejecutarse al pegarla.\n\n"
-            + preview(of: text)
-        alert.addButton(withTitle: "Pegar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.messageText = texts.pasteTitle
+        alert.informativeText = texts.pasteMessage + "\n\n" + preview(of: text)
+        alert.addButton(withTitle: texts.pasteButton)
+        alert.addButton(withTitle: texts.cancelButton)
         return alert.runModal() == .alertFirstButtonReturn
     }
 

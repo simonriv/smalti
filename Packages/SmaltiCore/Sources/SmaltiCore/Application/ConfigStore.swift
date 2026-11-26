@@ -20,11 +20,11 @@ public enum ConfigWarning: Equatable, Sendable {
     /// F7.6: the file was written for a newer Smalti; what this build does not know was ignored.
     case newerFormat(file: String, version: Int, ignored: [String])
 
-    public var message: String {
+    public func message(_ texts: ConfigTexts) -> String {
         switch self {
-        case .duplicatedKeys(let keys): "theme.toml manda sobre config.toml en: " + keys.joined(separator: ", ")
+        case .duplicatedKeys(let keys): texts.duplicatedKeys(["keys": keys.joined(separator: ", ")])
         case .newerFormat(let file, let version, let ignored):
-            "\(file) es de una versión más nueva de Smalti (\(version)): se ignoran " + ignored.joined(separator: ", ")
+            texts.newerFormat(["file": file, "version": String(version), "keys": ignored.joined(separator: ", ")])
         }
     }
 }

@@ -25,7 +25,7 @@ struct ObservatoryTelemetryTests {
     }
 
     private func report(_ snapshot: ObservatorySnapshot) -> ObservatoryReport {
-        ObservatoryReport.make(snapshot, for: .init(period: .today, selection: "s", calendar: calendar))
+        ObservatoryReport.make(snapshot, for: .init(period: .today, selection: "s", calendar: calendar, copy: .spanish))
     }
 
     @Test func detailShowsTelemetryLineForSessionWithEvents() {
@@ -64,7 +64,7 @@ struct ObservatoryTelemetryTests {
         let snapshot = F.snapshot(sessions: [session], now: now).adding(
             telemetry: TelemetryLedger(), status: .listening(TelemetryEndpoint(port: 1, token: "t")))
 
-        #expect(report(snapshot).footnote == ObservatoryTexts.footnote)
+        #expect(report(snapshot).footnote == ObservatoryCopy.spanish.footnote)
     }
 
     @Test func footnoteWithTelemetryNamesIt() {
