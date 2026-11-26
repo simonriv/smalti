@@ -28,7 +28,7 @@ public struct ListProjects {
     public func execute(paneDirectories: [String], focusedDirectory: String?, open: [OpenProjectWorkspace])
         -> [ProjectListing]
     {
-        let recents = RecentProjects(records: records.all()).pruned { files.hasLayout(in: $0) }.0
+        let recents = RecentProjects(records: records.all())
         let focused = focusedDirectory.flatMap(discoveredRoot)
         var listed = recents.ordered.map { listing($0.root, $0.name, $0.lastOpened, focused: focused, open: open) }
         let known = Set(listed.map(\.root))

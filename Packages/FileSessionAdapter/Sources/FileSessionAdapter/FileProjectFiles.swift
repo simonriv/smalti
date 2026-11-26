@@ -29,24 +29,34 @@ public final class FileProjectFiles: ProjectFiles {
         return String(cString: resolved)
     }
 
-    /// Checks the size before reading: a file over the limit is refused without loading it.
+    /// Reads at most one byte past the limit from a regular file opened without following links, so neither a link
+    /// to a huge file or a device nor a file growing meanwhile can make it read without end (review 1).
     public func layout(at root: String) throws(ProjectFileError) -> ProjectLayoutFile {
-        let path = file(at: root).path(percentEncoded: false)
-        guard FileManager.default.fileExists(atPath: path) else { throw .missing(root: root) }
-        let data: Data
-        do {
-            let size = try FileManager.default.attributesOfItem(atPath: path)[.size] as? Int ?? 0
-            guard size <= SharedLayout.maximumBytes else { throw ProjectFileError.invalid(.tooLarge(bytes: size)) }
-            data = try Data(contentsOf: URL(filePath: path))
-        } catch let error as ProjectFileError {
-            throw error
-        } catch {
-            throw .unreadable(root: root, reason: error.localizedDescription)
-        }
+        let data = try Self.boundedContents(of: file(at: root).path(percentEncoded: false), root: root)
+        guard data.count <= SharedLayout.maximumBytes else { throw .invalid(.tooLarge(bytes: data.count)) }
         let layout: SharedLayout
         do { layout = try SharedLayoutJSON.decoded(data) } catch { throw Self.translated(error, root: root) }
         do { _ = try layout.validatedAsProject() } catch { throw .invalid(error) }
         return ProjectLayoutFile(layout: layout, fingerprint: Self.fingerprint(of: data))
+    }
+
+    private static func boundedContents(of path: String, root: String) throws(ProjectFileError) -> Data {
+        let descriptor = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        guard descriptor >= 0 else {
+            if errno == ENOENT { throw .missing(root: root) }
+            if errno == ELOOP { throw .notRegularFile(root: root) }
+            throw .unreadable(root: root, reason: String(cString: strerror(errno)))
+        }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        var status = stat()
+        guard fstat(descriptor, &status) == 0, status.st_mode & S_IFMT == S_IFREG else {
+            throw .notRegularFile(root: root)
+        }
+        do {
+            return try handle.read(upToCount: SharedLayout.maximumBytes + 1) ?? Data()
+        } catch {
+            throw .unreadable(root: root, reason: error.localizedDescription)
+        }
     }
 
     public func write(_ layout: SharedLayout, to root: String) throws(ProjectFileError) -> String {

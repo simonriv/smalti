@@ -30,3 +30,15 @@ struct ProjectTextsTests {
                 == "pane 2 is outside the project: /etc")
     }
 }
+
+@Suite("ProjectTexts, review 1")
+struct ProjectTextsReviewTests {
+    @Test func aFileThatIsNotRegularSaysSo() {
+        #expect(
+            ProjectFileError.notRegularFile(root: "~/dev/x").message(.spanish, layout: .spanish)
+                == "~/dev/x/.smalti/layout.json no es un archivo normal (¿un enlace?)")
+        #expect(
+            ProjectFileError.notRegularFile(root: "~/dev/x").message(.english, layout: .english)
+                == "~/dev/x/.smalti/layout.json isn’t a regular file (a link?)")
+    }
+}

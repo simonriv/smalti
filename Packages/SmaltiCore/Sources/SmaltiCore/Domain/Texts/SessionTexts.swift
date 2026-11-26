@@ -132,6 +132,7 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
     public let invalidTree: String
     public let invalidRoot: TextTemplate
     public let outsideProject: TextTemplate
+    public let editorOutsidePane: TextTemplate
     public let jsonMissingKey: TextTemplate
     public let jsonInvalidValue: TextTemplate
     public let jsonInvalid: String
@@ -151,6 +152,7 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         invalidTree: "su árbol no coloca cada panel una sola vez",
         invalidRoot: "la carpeta «{root}» no es una ruta absoluta ni empieza por ~",
         outsideProject: "el panel {pane} está fuera del proyecto: {path}",
+        editorOutsidePane: "el archivo del editor del panel {pane} no está en su carpeta: {path}",
         jsonMissingKey: "falta «{key}»", jsonInvalidValue: "valor no válido en «{path}»", jsonInvalid: "JSON no válido")
 
     public static let english = SharedLayoutErrorTexts(
@@ -168,6 +170,7 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         invalidTree: "its tree doesn’t place each pane exactly once",
         invalidRoot: "the folder “{root}” is neither an absolute path nor starts with ~",
         outsideProject: "pane {pane} is outside the project: {path}",
+        editorOutsidePane: "pane {pane}’s editor file isn’t in its folder: {path}",
         jsonMissingKey: "“{key}” is missing", jsonInvalidValue: "invalid value at “{path}”", jsonInvalid: "invalid JSON"
     )
 

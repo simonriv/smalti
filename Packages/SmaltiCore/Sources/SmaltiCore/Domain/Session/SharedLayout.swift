@@ -22,6 +22,8 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     case invalidRoot(String)
     /// F8.5: a project file (`.smalti/layout.json`) only opens folders and files inside its repo.
     case outsideProject(pane: Int, path: String)
+    /// F8.5: a project file writes the editor's file relative to its pane's folder, so it must be inside it.
+    case editorOutsidePane(pane: Int, path: String)
 
     public func message(_ texts: SharedLayoutErrorTexts) -> String {
         switch self {
@@ -44,6 +46,7 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
         case .invalidTree: texts.invalidTree
         case .invalidRoot(let root): texts.invalidRoot(["root": root])
         case .outsideProject(let pane, let path): texts.outsideProject(["pane": String(pane), "path": path])
+        case .editorOutsidePane(let pane, let path): texts.editorOutsidePane(["pane": String(pane), "path": path])
         }
     }
 }
@@ -136,26 +139,33 @@ public struct SharedLayout: Codable, Equatable, Sendable {
         let paths = PortablePaths(home: home)
         var panes: [SharedPane] = []
         for (index, pane) in snapshot.panes.enumerated() {
-            guard let directory = PortablePaths.relative(pane.workingDirectory, to: root) else {
-                throw .outsideProject(pane: index + 1, path: paths.portable(pane.workingDirectory))
-            }
-            let editor = try pane.editor.map { position throws(SharedLayoutError) in
-                guard PortablePaths.relative(position.file, to: root) != nil else {
-                    throw .outsideProject(pane: index + 1, path: paths.portable(position.file))
-                }
-                return SharedEditor(
-                    file: PortablePaths.relative(position.file, to: pane.workingDirectory)
-                        ?? PortablePaths.relative(position.file, to: root) ?? position.file,
-                    line: position.line)
-            }
-            panes.append(
-                SharedPane(
-                    directory: directory, command: pane.relaunch?.arguments.map(paths.portableArgument),
-                    harness: pane.agent?.harness, editor: editor))
+            panes.append(try Self.projectPane(pane, number: index + 1, root: root, paths: paths))
         }
         self.init(
             smaltiLayout: Self.formatVersion, name: name.rawValue, root: Self.projectRoot, layout: snapshot.layout,
             focused: snapshot.focusedIndex, tree: snapshot.tree, panes: panes)
+    }
+
+    private static func projectPane(_ pane: PaneSnapshot, number: Int, root: String, paths: PortablePaths)
+        throws(SharedLayoutError) -> SharedPane
+    {
+        let folder = pane.workingDirectory
+        guard let directory = PortablePaths.relative(folder, to: root) else {
+            throw .outsideProject(pane: number, path: paths.portable(folder))
+        }
+        let editor = try pane.editor.map { position throws(SharedLayoutError) in
+            guard PortablePaths.relative(position.file, to: root) != nil else {
+                throw .outsideProject(pane: number, path: paths.portable(position.file))
+            }
+            guard let file = PortablePaths.relative(position.file, to: folder) else {
+                throw .editorOutsidePane(pane: number, path: PortablePaths.relative(position.file, to: root) ?? "")
+            }
+            return SharedEditor(file: file, line: position.line)
+        }
+        let command = pane.relaunch?.arguments.map {
+            paths.portableArgument(PortablePaths.relativeArgument($0, root: root, from: folder))
+        }
+        return SharedPane(directory: directory, command: command, harness: pane.agent?.harness, editor: editor)
     }
 
     private static func sharedPane(_ pane: PaneSnapshot, root: String, paths: PortablePaths) -> SharedPane {
@@ -328,6 +338,25 @@ struct PortablePaths {
         if path == base { return "." }
         let prefix = base + "/"
         return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : nil
+    }
+
+    /// F8.5: an argument that is a path inside the repo, written from the pane's folder (`./scripts/dev.sh`,
+    /// `../shared/a.json`), so the project file never carries where the repo lives. Anything else as is.
+    static func relativeArgument(_ argument: String, root: String, from folder: String) -> String {
+        guard let target = relative(argument, to: root), let folderInRoot = relative(folder, to: root) else {
+            return argument
+        }
+        let own = components(folderInRoot)
+        let theirs = components(target)
+        // Only the part of the pane's folder not shared with the target is climbed.
+        let shared = zip(own, theirs).prefix { $0 == $1 }.count
+        let parts = Array(repeating: "..", count: own.count - shared) + theirs.dropFirst(shared)
+        guard let first = parts.first else { return "." }
+        return first == ".." ? parts.joined(separator: "/") : "./" + parts.joined(separator: "/")
+    }
+
+    private static func components(_ relative: String) -> [String] {
+        relative == "." ? [] : relative.split(separator: "/").map(String.init)
     }
 
     /// A relative path with a `..` component could reach outside the layout's folder.

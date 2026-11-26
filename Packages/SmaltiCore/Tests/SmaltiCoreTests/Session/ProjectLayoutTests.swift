@@ -133,3 +133,58 @@ struct ProjectLayoutTests {
         #expect(reopened.panes[2].editor == EditorPosition(file: clone + "/README.md", line: 9))
     }
 }
+
+@Suite("Project layout, review 1 (F8.5)")
+struct ProjectLayoutReviewTests {
+    private let home = "/Users/ana"
+    private let root = "/Users/ana/dev/rizaria"
+    // Safe: "rizaria" has none of what `LayoutName` rejects.
+    private let name = try! LayoutName("rizaria")
+
+    private func snapshot(_ panes: [PaneSnapshot]) -> WorkspaceSnapshot {
+        WorkspaceSnapshot(
+            name: "x", rootDirectory: root, layout: "dwindle", tree: nil, focusedIndex: 0, panes: panes)
+    }
+
+    private func pane(_ directory: String, relaunch: [String]? = nil, editor: EditorPosition? = nil) -> PaneSnapshot {
+        PaneSnapshot(
+            id: UUID(), workingDirectory: directory, title: nil, processName: nil, scrollbackLines: 0,
+            commandCount: 0, relaunch: relaunch.map(RelaunchCommand.init(arguments:)), agent: nil, editor: editor)
+    }
+
+    @Test func anEditorFileOutsideItsPaneFolderIsRefused() {
+        let source = snapshot([pane(root + "/api", editor: EditorPosition(file: root + "/README.md", line: 2))])
+
+        #expect(throws: SharedLayoutError.editorOutsidePane(pane: 1, path: "README.md")) {
+            try SharedLayout(exportingProject: source, named: name, root: root, home: home)
+        }
+    }
+
+    @Test func editorOutsidePaneHasItsMessage() {
+        let error = SharedLayoutError.editorOutsidePane(pane: 1, path: "README.md")
+
+        #expect(error.message(.spanish) == "el archivo del editor del panel 1 no está en su carpeta: README.md")
+        #expect(error.message(.english) == "pane 1’s editor file isn’t in its folder: README.md")
+    }
+
+    @Test func argumentsInsideTheRepoBecomeRelativeToThePane() throws {
+        let source = snapshot([
+            pane(root, relaunch: [root + "/scripts/dev.sh", "--config=" + root + "/x"]),
+            pane(root + "/web", relaunch: ["node", root + "/web/server.js", root + "/shared/a.json", root]),
+        ])
+
+        let layout = try SharedLayout(exportingProject: source, named: name, root: root, home: home)
+
+        // Only whole-argument paths are made relative; one inside an option keeps the `~` of F7.
+        #expect(layout.panes[0].command == ["./scripts/dev.sh", "--config=~/dev/rizaria/x"])
+        #expect(layout.panes[1].command == ["node", "./server.js", "../shared/a.json", ".."])
+    }
+
+    @Test func systemPathsStayAsTheyAre() throws {
+        let source = snapshot([pane(root, relaunch: ["/usr/bin/env", "make"])])
+
+        let layout = try SharedLayout(exportingProject: source, named: name, root: root, home: home)
+
+        #expect(layout.panes[0].command == ["/usr/bin/env", "make"])
+    }
+}

@@ -195,3 +195,49 @@ extension String {
         count > 1 && hasSuffix(suffix) ? String(dropLast(suffix.count)) : self
     }
 }
+
+@MainActor
+@Suite("FileProjectFiles, review 1 (F8.5)")
+struct FileProjectFilesLinkTests {
+    private let files = FileProjectFiles()
+
+    private func repo() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "smalti-project-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url.appending(path: ".smalti"), withIntermediateDirectories: true)
+        return url
+    }
+
+    private func root(_ url: URL) -> String {
+        let path = url.path(percentEncoded: false)
+        return path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
+
+    @Test func aLinkedFileIsNotRead() throws {
+        let repo = try repo()
+        defer { try? FileManager.default.removeItem(at: repo) }
+        let big = repo.appending(path: "big.json")
+        try Data(count: SharedLayout.maximumBytes * 4).write(to: big)
+        try FileManager.default.createSymbolicLink(
+            at: repo.appending(path: ".smalti/layout.json"), withDestinationURL: big)
+
+        #expect(throws: ProjectFileError.notRegularFile(root: root(repo))) { try files.layout(at: root(repo)) }
+    }
+
+    @Test func aLinkToAnEndlessDeviceIsNotRead() throws {
+        let repo = try repo()
+        defer { try? FileManager.default.removeItem(at: repo) }
+        try FileManager.default.createSymbolicLink(
+            at: repo.appending(path: ".smalti/layout.json"), withDestinationURL: URL(filePath: "/dev/zero"))
+
+        #expect(throws: ProjectFileError.notRegularFile(root: root(repo))) { try files.layout(at: root(repo)) }
+    }
+
+    @Test func aFolderInPlaceOfTheFileIsNotRead() throws {
+        let repo = try repo()
+        defer { try? FileManager.default.removeItem(at: repo) }
+        try FileManager.default.createDirectory(
+            at: repo.appending(path: ".smalti/layout.json"), withIntermediateDirectories: true)
+
+        #expect(throws: ProjectFileError.notRegularFile(root: root(repo))) { try files.layout(at: root(repo)) }
+    }
+}

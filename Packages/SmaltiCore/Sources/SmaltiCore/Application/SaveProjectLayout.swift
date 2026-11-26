@@ -32,7 +32,7 @@ public struct SaveProjectLayout {
     private let clock: @Sendable () -> Date
 
     public init(
-        files: any ProjectFiles, records: any ProjectRecords, harnesses: HarnessRegistry = HarnessRegistry([]),
+        files: any ProjectFiles, records: any ProjectRecords, harnesses: HarnessRegistry,
         home: String, clock: @escaping @Sendable () -> Date
     ) {
         self.files = files
@@ -46,8 +46,8 @@ public struct SaveProjectLayout {
     public func root(of workspace: Workspace, focusedDirectory: String) -> String {
         if let project = workspace.project { return project }
         let directory = files.realPath(focusedDirectory)
-        if let discovered = ProjectDiscovery(files: files, home: home).root(containing: directory) { return discovered }
-        return nearestRepository(from: directory) ?? directory
+        let discovery = ProjectDiscovery(files: files, home: home)
+        return discovery.root(containing: directory) ?? discovery.nearestRepository(from: directory) ?? directory
     }
 
     public func prepare(_ workspace: Workspace, focusedDirectory: String) throws(ProjectSaveError) -> ProjectSaveStep {
@@ -57,8 +57,8 @@ public struct SaveProjectLayout {
         let layout: SharedLayout
         do {
             layout = try SharedLayout(
-                exportingProject: WorkspaceSnapshot(workspace, scrollbackLines: [:]), named: name, root: root,
-                home: home)
+                exportingProject: resolved(WorkspaceSnapshot(workspace, scrollbackLines: [:])), named: name,
+                root: root, home: home)
         } catch { throw .layout(error) }
         let pending = PendingProjectSave(
             root: root, name: name, layout: layout,
@@ -81,14 +81,19 @@ public struct SaveProjectLayout {
         return pending.name
     }
 
-    private func nearestRepository(from directory: String) -> String? {
-        var folder = directory
-        for _ in 0..<ProjectDiscovery.maximumLevels where folder != "/" && folder != home {
-            if files.isRepositoryRoot(folder) { return folder }
-            folder = URL(filePath: folder).deletingLastPathComponent().path(percentEncoded: false)
-            if folder.count > 1, folder.hasSuffix("/") { folder.removeLast() }
-        }
-        return nil
+    /// The panes' folders and editor files as real paths, so a pane reached through a link (`/tmp` is
+    /// `/private/tmp`) is inside the real root (review 1).
+    private func resolved(_ snapshot: WorkspaceSnapshot) -> WorkspaceSnapshot {
+        WorkspaceSnapshot(
+            name: snapshot.name, rootDirectory: snapshot.rootDirectory, layout: snapshot.layout, tree: snapshot.tree,
+            focusedIndex: snapshot.focusedIndex,
+            panes: snapshot.panes.map { pane in
+                PaneSnapshot(
+                    id: pane.id, workingDirectory: files.realPath(pane.workingDirectory), title: pane.title,
+                    processName: pane.processName, scrollbackLines: pane.scrollbackLines,
+                    commandCount: pane.commandCount, relaunch: pane.relaunch, agent: pane.agent,
+                    editor: pane.editor.map { EditorPosition(file: files.realPath($0.file), line: $0.line) })
+            }, project: snapshot.project)
     }
 
     private func existingName(at root: String, exists: Bool) -> LayoutName? {

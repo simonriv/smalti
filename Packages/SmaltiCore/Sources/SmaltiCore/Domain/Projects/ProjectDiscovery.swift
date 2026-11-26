@@ -13,15 +13,28 @@ public struct ProjectDiscovery {
     }
 
     public func root(containing directory: String) -> String? {
-        var folder = Self.trimmed(directory)
-        guard folder.hasPrefix("/") else { return nil }
-        for _ in 0..<Self.maximumLevels {
-            guard folder != home, folder != "/" else { return nil }
+        for folder in folders(from: directory) {
             if files.hasLayout(in: folder) { return folder }
             if files.isRepositoryRoot(folder) { return nil }
-            folder = Self.parent(of: folder)
         }
         return nil
+    }
+
+    /// The nearest folder upwards holding `.git`, with the same limits.
+    public func nearestRepository(from directory: String) -> String? {
+        folders(from: directory).first { files.isRepositoryRoot($0) }
+    }
+
+    /// `directory` and its parents, nearest first, stopping before the home or `/` and after `maximumLevels`.
+    private func folders(from directory: String) -> [String] {
+        var folder = Self.trimmed(directory)
+        guard folder.hasPrefix("/") else { return [] }
+        var folders: [String] = []
+        while folders.count < Self.maximumLevels, folder != home, folder != "/" {
+            folders.append(folder)
+            folder = Self.parent(of: folder)
+        }
+        return folders
     }
 
     private static func parent(of folder: String) -> String {

@@ -174,3 +174,97 @@ struct OpenProjectTests {
         }
     }
 }
+
+@MainActor
+@Suite("Open project, review 1 (F8.5)")
+struct OpenProjectReviewTests {
+    private let files = InMemoryProjectFiles()
+    private let records = InMemoryProjectRecords()
+    private let root = "/Users/ana/dev/rizaria"
+
+    private var useCase: OpenProject {
+        OpenProject(
+            files: files, records: records, harnesses: HarnessRegistry([FakeHarnessAdapter()]), home: "/Users/ana",
+            clock: { projectDate })
+    }
+
+    private func prepared(_ step: ProjectStep) -> PreparedProject? {
+        switch step {
+        case .open(let prepared): prepared
+        case .confirm(let confirmation): confirmation.prepared
+        case .jump: nil
+        }
+    }
+
+    @Test func aLinkedPaneFolderThatLeavesTheRepoIsRefused() {
+        var layout = projectLayout(commands: [["make"]])
+        layout.panes = [SharedPane(directory: "tools", command: ["make"])]
+        files.put(layout, at: root, fingerprint: "f1")
+        files.link(root + "/tools", to: "/Users/ana/.ssh")
+
+        #expect(throws: ProjectFileError.invalid(.outsideProject(pane: 1, path: "tools"))) {
+            try useCase.prepare(root: root, open: [])
+        }
+    }
+
+    @Test func aLinkedEditorFileThatLeavesTheRepoIsRefused() {
+        var layout = projectLayout(commands: [nil])
+        layout.panes = [SharedPane(directory: ".", editor: SharedEditor(file: "notes.md", line: 1))]
+        files.put(layout, at: root, fingerprint: "f1")
+        files.link(root + "/notes.md", to: "/etc/hosts")
+
+        #expect(throws: ProjectFileError.invalid(.outsideProject(pane: 1, path: "notes.md"))) {
+            try useCase.prepare(root: root, open: [])
+        }
+    }
+
+    @Test func aLinkInsideTheRepoIsFine() throws {
+        var layout = projectLayout(commands: [["make"]])
+        layout.panes = [SharedPane(directory: "current", command: ["make"])]
+        files.put(layout, at: root, fingerprint: "f1")
+        files.link(root + "/current", to: root + "/releases/7")
+
+        #expect(prepared(try useCase.prepare(root: root, open: [])) != nil)
+    }
+
+    @Test func whatOpensAndIsApprovedIsWhatWasShown() throws {
+        files.put(projectLayout(commands: [["npm", "run", "dev"]]), at: root, fingerprint: "f1")
+        let shown = try #require(prepared(try useCase.prepare(root: root, open: [])))
+        files.put(projectLayout(commands: [["rm", "-rf", "build"]]), at: root, fingerprint: "f2")
+
+        try useCase.opened(shown)
+
+        let approval = try #require(records.all().first?.approval)
+        #expect(approval.fingerprint == "f1")
+        #expect(approval.commands == [PlannedCommand(command: "npm run dev", place: nil)])
+        guard case .confirm = try useCase.prepare(root: root, open: []) else {
+            Issue.record("the newer file still needs its own approval")
+            return
+        }
+    }
+
+    @Test func onlyRatiosChangedStillAsksSayingTheCommandsAreTheSame() throws {
+        files.put(projectLayout(commands: [["ls"], nil]), at: root, fingerprint: "f1")
+        try useCase.opened(try #require(prepared(try useCase.prepare(root: root, open: []))))
+        files.put(projectLayout(commands: [["ls"], nil]), at: root, fingerprint: "f2")
+
+        let step = try useCase.prepare(root: root, open: [])
+
+        guard case .confirm(let confirmation) = step else {
+            Issue.record("expected a confirmation, got \(step)")
+            return
+        }
+        #expect(confirmation.changes.hasSameCommands)
+    }
+
+    @Test func aProjectWhoseFileWasDeletedStillJumpsToItsOpenWorkspace() throws {
+        let workspace = WorkspaceID()
+        try records.replace(with: [ProjectRecord(root: root, name: "rizaria", lastOpened: projectDate, approval: nil)])
+        let list = ListProjects(files: files, records: records, home: "/Users/ana")
+        let open = [OpenProjectWorkspace(id: workspace, project: root, isInThisWindow: true, number: 1)]
+
+        #expect(try list.forgetMissing() == 1)
+        #expect(list.execute(paneDirectories: [], focusedDirectory: nil, open: open).isEmpty)
+        #expect(try useCase.prepare(root: root, open: open) == .jump(workspace))
+    }
+}

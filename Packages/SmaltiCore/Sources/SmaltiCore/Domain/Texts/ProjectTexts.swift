@@ -31,6 +31,7 @@ public struct ProjectTexts: Sendable, Equatable {
     public let saveFailed: TextTemplate
     public let missing: TextTemplate
     public let unreadable: TextTemplate
+    public let notRegularFile: TextTemplate
     public let unwritable: TextTemplate
     public let projects: String
 
@@ -57,6 +58,7 @@ public struct ProjectTexts: Sendable, Equatable {
         saved: "Layout del proyecto “{name}” guardado en .smalti/layout.json",
         saveFailed: "No se pudo guardar el layout del proyecto: {reason}",
         missing: "{root} ya no tiene .smalti/layout.json", unreadable: "no se pudo leer {root}: {reason}",
+        notRegularFile: "{root}/.smalti/layout.json no es un archivo normal (¿un enlace?)",
         unwritable: "no se pudo escribir {path}: {reason}", projects: "Proyectos")
 
     public static let english = ProjectTexts(
@@ -82,6 +84,7 @@ public struct ProjectTexts: Sendable, Equatable {
         saved: "Project layout “{name}” saved to .smalti/layout.json",
         saveFailed: "Couldn’t save the project layout: {reason}",
         missing: "{root} no longer has .smalti/layout.json", unreadable: "couldn’t read {root}: {reason}",
+        notRegularFile: "{root}/.smalti/layout.json isn’t a regular file (a link?)",
         unwritable: "couldn’t write {path}: {reason}", projects: "Projects")
 }
 
@@ -91,6 +94,7 @@ extension ProjectFileError {
         switch self {
         case .missing(let root): texts.missing(["root": root])
         case .unreadable(let root, let reason): texts.unreadable(["root": root, "reason": reason])
+        case .notRegularFile(let root): texts.notRegularFile(["root": root])
         case .invalid(let error): error.message(layout)
         case .unwritable(let path, let reason): texts.unwritable(["path": path, "reason": reason])
         }

@@ -67,6 +67,7 @@ public struct OpenProject {
         let file = try files.layout(at: root)
         let validated: ValidatedLayout
         do { validated = try file.layout.validatedAsProject() } catch { throw .invalid(error) }
+        try checkLinksStayInside(validated.layout, root: root)
         let prepared = Self.prepared(
             validated, root: root, fingerprint: file.fingerprint, home: home, harnesses: harnesses)
         let approval = RecentProjects(records: records.all()).record(at: root)?.approval
@@ -94,6 +95,27 @@ public struct OpenProject {
         try record(root: root, name: name, approval: nil)
     }
 
+    /// A folder or editor file that is a link (or under one) leaving the repo would run or open outside it while the
+    /// confirmation shows a path inside (review 1).
+    private func checkLinksStayInside(_ layout: SharedLayout, root: String) throws(ProjectFileError) {
+        for (index, pane) in layout.panes.enumerated() {
+            let directory = Self.joined(root, pane.directory)
+            var paths = [(pane.directory, directory)]
+            if let editor = pane.editor { paths.append((editor.file, Self.joined(directory, editor.file))) }
+            for (written, path) in paths where !Self.isInside(files.realPath(path), root: root) {
+                throw .invalid(.outsideProject(pane: index + 1, path: written))
+            }
+        }
+    }
+
+    private static func joined(_ base: String, _ relative: String) -> String {
+        relative == "." ? base : base + "/" + relative
+    }
+
+    private static func isInside(_ path: String, root: String) -> Bool {
+        path == root || path.hasPrefix(root + "/")
+    }
+
     private func record(root: String, name: String, approval: ProjectApproval?) throws(ProjectFileError) {
         let recents = RecentProjects(records: records.all()).opening(
             root: root, name: name, at: clock(), approval: approval)
@@ -111,9 +133,4 @@ public struct OpenProject {
             root: root, name: validated.name, snapshot: snapshot, fingerprint: fingerprint,
             commands: PlannedCommands.of(validated.layout, root: root, home: home, harnesses: harnesses))
     }
-}
-
-/// A path as the projects show it: `~` for this home.
-public enum ProjectPath {
-    public static func display(_ path: String, home: String) -> String { PortablePaths(home: home).portable(path) }
 }

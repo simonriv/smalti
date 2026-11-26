@@ -5,6 +5,8 @@ public enum ProjectFileError: Error, Equatable, Sendable {
     /// The repo no longer has `.smalti/layout.json`.
     case missing(root: String)
     case unreadable(root: String, reason: String)
+    /// A link, a folder or a device where the file should be: never followed (review 1).
+    case notRegularFile(root: String)
     case invalid(SharedLayoutError)
     case unwritable(path: String, reason: String)
 }

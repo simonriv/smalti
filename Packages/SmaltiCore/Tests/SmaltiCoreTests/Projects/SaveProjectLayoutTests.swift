@@ -11,7 +11,8 @@ struct SaveProjectLayoutTests {
     private let home = "/Users/ana"
 
     private var useCase: SaveProjectLayout {
-        SaveProjectLayout(files: files, records: records, home: home, clock: { projectDate })
+        SaveProjectLayout(
+            files: files, records: records, harnesses: HarnessRegistry([]), home: home, clock: { projectDate })
     }
 
     private func workspace(_ directories: [String], project: String? = nil, relaunch: [String]? = nil) throws
@@ -53,7 +54,8 @@ struct SaveProjectLayoutTests {
 
     @Test func otherwiseTheNearestRepository() throws {
         let files = InMemoryProjectFiles(repositoryRoots: ["/p/repo"])
-        let useCase = SaveProjectLayout(files: files, records: records, home: home, clock: { projectDate })
+        let useCase = SaveProjectLayout(
+            files: files, records: records, harnesses: HarnessRegistry([]), home: home, clock: { projectDate })
 
         let step = try useCase.prepare(try workspace(["/p/repo/a/b"]), focusedDirectory: "/p/repo/a/b")
 
@@ -114,5 +116,49 @@ struct ProjectLayoutNameTests {
     @Test func theFallbackIsAValidName() throws {
         #expect(try LayoutName(LayoutName.project.rawValue) == .project)
         #expect(LayoutName.project.rawValue == "project")
+    }
+}
+
+@MainActor
+@Suite("Save project layout, review 1 (F8.5)")
+struct SaveProjectLayoutReviewTests {
+    private let files = InMemoryProjectFiles()
+    private let records = InMemoryProjectRecords()
+
+    private var useCase: SaveProjectLayout {
+        SaveProjectLayout(
+            files: files, records: records, harnesses: HarnessRegistry([FakeHarnessAdapter()]), home: "/Users/ana",
+            clock: { projectDate })
+    }
+
+    private func pending(_ step: ProjectSaveStep) -> PendingProjectSave {
+        switch step {
+        case .write(let pending), .confirmReplace(let pending): pending
+        }
+    }
+
+    @Test func aPaneReachedThroughALinkIsInsideTheRepo() throws {
+        files.link("/tmp/r", to: "/private/tmp/r")
+        files.link("/tmp/r/api", to: "/private/tmp/r/api")
+        var workspace = Workspace.empty(
+            name: "r", rootDirectory: try WorkingDirectory(path: "/tmp/r"), layout: DwindleLayout())
+        workspace = workspace.adding(Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp/r")))
+        workspace = workspace.adding(Pane(id: PaneID(), workingDirectory: try WorkingDirectory(path: "/tmp/r/api")))
+
+        let step = try useCase.prepare(workspace.markingProject("/private/tmp/r"), focusedDirectory: "/tmp/r")
+
+        #expect(pending(step).layout.panes.map(\.directory) == [".", "api"])
+    }
+}
+
+@Suite("Project discovery, nearest repository (F8.5)")
+struct NearestRepositoryTests {
+    @Test func climbsToTheNearestGitFolderButNeverTheHome() {
+        let files = InMemoryProjectFiles(repositoryRoots: ["/p/repo", "/Users/ana"])
+        let discovery = ProjectDiscovery(files: files, home: "/Users/ana")
+
+        #expect(discovery.nearestRepository(from: "/p/repo/a/b") == "/p/repo")
+        #expect(discovery.nearestRepository(from: "/Users/ana/notes") == nil)
+        #expect(discovery.nearestRepository(from: "/q/x") == nil)
     }
 }

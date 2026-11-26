@@ -73,3 +73,57 @@ struct ProjectWorkspaceTests {
         #expect(plan.workspaces.first?.project == "/p/app")
     }
 }
+
+@MainActor
+@Suite("Project workspace opening (F8.5)")
+struct ProjectWorkspaceOpeningTests {
+    private let layouts = InMemoryNamedLayouts()
+
+    private var restore: RestoreNamedLayout {
+        RestoreNamedLayout(
+            layouts: layouts,
+            restore: RestoreSession(
+                .init(
+                    engine: FakeTerminalEngine(), transcripts: InMemorySessionArchive(), harnesses: HarnessRegistry([]),
+                    environment: PaneEnvironment(
+                        version: "2", files: PaneFileLocator(stateDirectory: URL(filePath: "/s"))),
+                    shell: .custom("/bin/zsh -f"), clock: { projectDate }, texts: .spanish)))
+    }
+
+    private func snapshot(project: String?) -> WorkspaceSnapshot {
+        WorkspaceSnapshot(
+            name: "app", rootDirectory: "/tmp", layout: "dwindle", tree: .leaf(index: 0), focusedIndex: 0,
+            panes: [
+                PaneSnapshot(
+                    id: UUID(), workingDirectory: "/tmp", title: nil, processName: nil, scrollbackLines: 0,
+                    commandCount: 0, relaunch: nil, agent: nil)
+            ], project: project)
+    }
+
+    private func set() throws -> WorkspaceSet {
+        WorkspaceSet(
+            first: Workspace.empty(
+                name: "w", rootDirectory: try WorkingDirectory(path: "/tmp"), layout: DwindleLayout()))
+    }
+
+    @Test func openingAProjectMarksItsWorkspace() throws {
+        var workspaces = try set()
+
+        _ = restore.open(
+            project: snapshot(project: "/p/app"), into: &workspaces, home: try WorkingDirectory(path: "/tmp"))
+
+        #expect(workspaces.workspaces.count == 2)
+        #expect(workspaces.active.project == "/p/app")
+        #expect(workspaces.active.name == "app")
+    }
+
+    @Test func aSavedLayoutNeverOpensAsAProject() throws {
+        var workspaces = try set()
+        let name = try LayoutName("app")
+        try layouts.save(snapshot(project: "/p/app"), as: name)
+
+        _ = try restore.execute(name, into: &workspaces, home: try WorkingDirectory(path: "/tmp"))
+
+        #expect(workspaces.active.project == nil)
+    }
+}

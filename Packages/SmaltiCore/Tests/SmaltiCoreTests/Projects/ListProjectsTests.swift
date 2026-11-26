@@ -33,15 +33,13 @@ struct ListProjectsTests {
         try records.replace(with: [record("/p/a", "a", at: 1), record("/p/gone", "gone", at: 2)])
         let writesBefore = records.writes
 
-        let listed = useCase.execute(paneDirectories: [], focusedDirectory: nil, open: [])
-        #expect(listed.map(\.name) == ["a"])
-        #expect(records.writes == writesBefore, "listing never writes")
-
         let removed = try useCase.forgetMissing()
+        let listed = useCase.execute(paneDirectories: [], focusedDirectory: nil, open: [])
 
         #expect(removed == 1)
+        #expect(listed.map(\.name) == ["a"])
         #expect(records.all().map(\.root) == ["/p/a"])
-        #expect(records.writes == writesBefore + 1)
+        #expect(records.writes == writesBefore + 1, "listing itself never writes")
     }
 
     @Test func forgettingNothingWritesNothing() throws {
