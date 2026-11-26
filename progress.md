@@ -488,15 +488,16 @@
 - [x] Plan `docs/plans/F8.5-proyectos.md`, aprobado de antemano (2026-11-26)
 
 ### Tareas
-- [ ] T1 · Formato de proyecto
-- [ ] T2 · Tipos, puertos, fakes y descubrimiento
-- [ ] T3 · Recientes, cambios y textos
-- [ ] T4 · Casos de uso y workspace del proyecto
-- [ ] T5 · Adaptador de archivos y estado
-- [ ] Revisión intermedia 1
-- [ ] T6 · Comandos, atajo, ayuda y menú
-- [ ] T7 · Selector, confirmación y apertura en la app
-- [ ] T8 · XCUITest
-- [ ] T9 · Web y documentos
-- [ ] Revisión intermedia 2
-- [ ] Revisión final, mutación, mediciones, capturas, checklist, release y despliegue
+- [x] T1 · Formato de proyecto
+- [x] T2 · Tipos, puertos, fakes y descubrimiento
+- [x] T3 · Recientes, cambios y textos
+- [x] T4 · Casos de uso y workspace del proyecto
+- [x] T5 · Adaptador de archivos y estado
+- [x] Revisión intermedia 1
+- [x] T6 · Comandos, atajo, ayuda y menú
+- [x] T7 · Selector, confirmación y apertura en la app
+- [x] T8 · XCUITest
+- [x] T9 · Web y documentos
+- [x] Revisión intermedia 2
+- [x] Revisión final (2 importantes y 6 menores corregidos), mutación de cierre 98,7 %, mediciones, capturas y checklist (`docs/specs/F8.5-checklist.md`)
+- [ ] Release 0.8.5 y despliegue

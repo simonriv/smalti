@@ -530,34 +530,31 @@ final class DesignCaptureTests: SmaltiUITestCase {
         for repo in repos where FileManager.default.fileExists(atPath: repo.path(percentEncoded: false)) {
             throw XCTSkip("\(repo.path(percentEncoded: false)) already exists")
         }
-        defer { repos.forEach { try? FileManager.default.removeItem(at: $0) } }
-        for repo in repos {
-            for folder in [".git", "web", ".smalti"] {
-                try FileManager.default.createDirectory(
-                    at: repo.appending(path: folder), withIntermediateDirectories: true)
-            }
-        }
+        // The runner is sandboxed: the repos are made (and removed) by the pane's shell, as F8's servers.
         let rizaria =
             #"{"smaltiLayout":1,"name":"rizaria","root":".","layout":"columns","focused":0,"panes":["#
             + #"{"directory":"web","command":["npm","run","dev"]},{"directory":".","command":["claude","--continue"]},"#
             + #"{"directory":".","command":["docker","compose","up","db"]},{"directory":"web","command":["npm","test"]}]}"#
-        try Data(rizaria.utf8).write(to: repos[0].appending(path: ".smalti/layout.json"))
-        for (repo, name) in zip(repos.dropFirst(), ["acme", "notes"]) {
-            let json =
-                #"{"smaltiLayout":1,"name":""# + name + #"","root":".","layout":"dwindle","panes":[{"directory":"."}]}"#
-            try Data(json.utf8).write(to: repo.appending(path: ".smalti/layout.json"))
+        let shellOnly = { (name: String) in
+            #"{"smaltiLayout":1,"name":""# + name + #"","root":".","layout":"dwindle","panes":[{"directory":"."}]}"#
         }
+        let make =
+            "mkdir -p /tmp/rizaria/.git /tmp/rizaria/web /tmp/rizaria/.smalti /tmp/acme/.git /tmp/acme/.smalti "
+            + "/tmp/notes/.git /tmp/notes/.smalti && printf '%s' '\(rizaria)' > /tmp/rizaria/.smalti/layout.json && "
+            + "printf '%s' '\(shellOnly("acme"))' > /tmp/acme/.smalti/layout.json && "
+            + "printf '%s' '\(shellOnly("notes"))' > /tmp/notes/.smalti/layout.json && cd /tmp/rizaria/web"
         for language in ["en", "es"] {
             let app = XCUIApplication.isolatedSmaltiWithIntegration(language: language)
             try seedCaptureProjects(in: app)
             launch(app)
+            // The repos exist before ⌘K first opens: it forgets recents whose file is gone.
+            app.run(make)
+            Thread.sleep(forTimeInterval: 1.5)
             openPalette()
             app.typeText(language == "en" ? "renameworkspace" : "renombrar")
             app.typeKey(.return, modifierFlags: [])
             app.typeText("scratch")
             app.typeKey(.return, modifierFlags: [])
-            app.run("cd /private/tmp/rizaria/web")
-            Thread.sleep(forTimeInterval: 1)
             app.typeKey("l", modifierFlags: .command)
 
             openPalette()
@@ -580,6 +577,8 @@ final class DesignCaptureTests: SmaltiUITestCase {
             try save(app.windows.firstMatch.screenshot(), as: "f85-confirm-\(language).png")
             app.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(app.element("smalti.projects.confirm").waitForNonExistence(timeout: 5))
+            app.run("cd / && rm -rf /tmp/rizaria /tmp/acme /tmp/notes")
+            Thread.sleep(forTimeInterval: 1)
             app.terminate()
         }
     }
