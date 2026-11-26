@@ -199,8 +199,11 @@ final class ProcessesController {
             ForceConfirmation.Content(
                 title: texts.confirmTitle(["name": row.name, "pid": String(row.pid)]),
                 body: texts.confirmBody(["seconds": seconds]),
-                command: [row.command, ProcessFormat.directory(row.record.workingDirectory, home: dependencies.home)]
-                    .joined(separator: " · ")))
+                command: [
+                    row.record.shortCommand,
+                    ProcessFormat.directory(row.record.workingDirectory, home: dependencies.home),
+                ]
+                .joined(separator: " · ")))
     }
 
     private func notify(_ outcome: StopOutcome, about row: ProcessRow) {

@@ -470,9 +470,9 @@
 - [x] T7 · `DarwinProcessControl` y el motor
 - [x] Revisión intermedia 1 (0 críticos, 1 importante, 5 menores; corregidos) + mutación incremental (105 mutantes, 93,8 %; 5 sobrevivientes muertos y verificados a mano)
 #### Bloque 3 · App
-- [ ] T8 · Superposición, refresco y teclado
-- [ ] T9 · Detener, confirmar, prioridad, avisos e idioma
-- [ ] T10 · Documentos y web
+- [x] T8 · Superposición, refresco y teclado
+- [x] T9 · Detener, confirmar, prioridad, avisos e idioma
+- [x] T10 · Documentos y web
 - [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
 #### Bloque 4 · Cierre
 - [ ] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase

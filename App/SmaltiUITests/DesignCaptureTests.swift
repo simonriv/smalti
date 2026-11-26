@@ -462,6 +462,54 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    /// F8: processes (tree), ports and the confirmation to force, in both languages, for the web and the PR. Two
+    /// neutral servers in /tmp, on loopback; the second ignores SIGTERM (inherited by `exec`), so forcing applies.
+    /// The filter keeps the person's own processes out of the picture.
+    func testCaptureF8ProcessesAndPorts() throws {
+        for language in ["en", "es"] {
+            let app = XCUIApplication.isolatedSmalti(language: language)
+            app.launchArguments += ["-SmaltiStopGraceSeconds", "1"]
+            launch(app)
+            openPalette()
+            app.typeText(language == "en" ? "renameworkspace" : "renombrar")
+            app.typeKey(.return, modifierFlags: [])
+            app.typeText("acme")
+            app.typeKey(.return, modifierFlags: [])
+            app.run("mkdir -p /tmp/acme-web && cd /tmp/acme-web && python3 -m http.server 8710 --bind 127.0.0.1")
+            app.typeKey("d", modifierFlags: .command)
+            waitForPaneCount(2)
+            Thread.sleep(forTimeInterval: 1)
+            app.run(
+                #"mkdir -p /tmp/acme-api && cd /tmp/acme-api && printf "%s\n" "import http.server, signal" "#
+                    + #""signal.signal(signal.SIGTERM, signal.SIG_IGN)" "#
+                    + #""http.server.test(port=8711, bind='127.0.0.1')" > server.py && python3 server.py"#)
+            Thread.sleep(forTimeInterval: 2)
+
+            openProcesses()
+            app.typeKey("t", modifierFlags: .command)
+            filter("acme")
+            Thread.sleep(forTimeInterval: 3)
+            try save(app.windows.firstMatch.screenshot(), as: "f8-processes-\(language).png")
+
+            app.typeKey("u", modifierFlags: [.command, .shift])
+            app.typeKey(.escape, modifierFlags: [])
+            filter("acme")
+            Thread.sleep(forTimeInterval: 3)
+            try save(app.windows.firstMatch.screenshot(), as: "f8-ports-\(language).png")
+
+            app.typeKey(.downArrow, modifierFlags: [])
+            app.typeKey(.delete, modifierFlags: .command)
+            Thread.sleep(forTimeInterval: 3)
+            app.typeKey(.delete, modifierFlags: .command)
+            XCTAssertTrue(app.element("smalti.processes.confirm").waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 0.5)
+            try save(app.windows.firstMatch.screenshot(), as: "f8-force-\(language).png")
+            app.typeKey(.return, modifierFlags: [])
+            Thread.sleep(forTimeInterval: 1)
+            app.terminate()
+        }
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

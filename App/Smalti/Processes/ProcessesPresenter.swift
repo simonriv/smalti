@@ -89,7 +89,8 @@ struct ProcessesPresenter {
     private func processRow(_ row: ProcessRow, _ input: ProcessTableInput) -> ProcessesRowModel {
         let pane = row.pane.flatMap { input.paneNames[$0] }
         let content = ProcessCellContent(
-            prefix: row.treePrefix, name: row.name, detail: row.command, tag: tag(row.verdict),
+            prefix: row.treePrefix, name: row.name,
+            detail: Self.arguments(row).isEmpty ? row.command : Self.arguments(row), tag: tag(row.verdict),
             hint: row.state == .unresponsive ? texts.unresponsiveHint : nil, dot: nil, isContext: row.isContext)
         return ProcessesRowModel(
             id: Self.id(of: row),
@@ -285,7 +286,7 @@ struct ProcessesPresenter {
             memory: ObservatoryFormat.memory(used: totals.memory, total: totals.memoryTotal),
             panesFraction: Double(totals.paneMemory) / total, restFraction: Double(rest) / total,
             memoryNote: texts.panesSplit([
-                "panes": ObservatoryFormat.gigabyteNumber(totals.paneMemory), "rest": ObservatoryFormat.gigabytes(rest),
+                "panes": ObservatoryFormat.gigabytes(totals.paneMemory), "rest": ObservatoryFormat.gigabytes(rest),
             ]),
             footnote: texts.hiddenNote(["hidden": String(totals.hidden), "seconds": String(Self.refreshSeconds)]))
     }

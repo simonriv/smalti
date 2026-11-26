@@ -28,6 +28,13 @@ extension ProcessRecord {
         return String(last)
     }
 
+    /// What a row shows: the program's name and its arguments (`Python server.py`), without argv[0]'s path; argv[0]
+    /// alone (`-zsh`) when there is nothing after it.
+    public var shortCommand: String {
+        guard arguments.count > 1 else { return command }
+        return ([displayName] + arguments.dropFirst()).joined(separator: " ")
+    }
+
     /// The command line, or the name when the arguments cannot be read.
     public var command: String {
         arguments.isEmpty ? displayName : arguments.joined(separator: " ")

@@ -205,7 +205,8 @@ final class ProcessesRowView: NSView {
                 theme: theme), tokens.commandGap)
         let detail = ObservatoryText.number(
             content.detail, .init(size: tokens.commandFontSize, color: theme.text.secondary), theme: theme)
-        detail.setContentCompressionResistancePriority(.init(1), for: .horizontal)
+        // Above `fittingSize`'s level (50), so the command shows and only truncates.
+        detail.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         add(detail, tokens.tagGap)
         if let tag = content.tag { add(ProtectedTag(tag, theme: theme), tokens.commandGap) }
         if let hint = content.hint {

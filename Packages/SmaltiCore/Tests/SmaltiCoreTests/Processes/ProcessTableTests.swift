@@ -143,6 +143,17 @@ struct ProcessTableTests {
         #expect(ProcessState.of(run: run, cpu: cpu, phase: phase) == state)
     }
 
+    /// The row's command: the program's name and what follows it, never a long argv[0] path.
+    @Test func shortCommandIsTheNameAndTheArguments() {
+        let python = F.record(
+            9, name: "Python", executable: "/Applications/Xcode.app/Contents/MacOS/Python",
+            arguments: ["/Applications/Xcode.app/Contents/MacOS/Python", "server.py"])
+
+        #expect(python.shortCommand == "Python server.py")
+        #expect(F.record(9, name: "zsh", arguments: ["-zsh"]).shortCommand == "-zsh")
+        #expect(F.record(9, name: "postgres").shortCommand == "postgres")
+    }
+
     @Test func displayNameComesFromTheExecutable() {
         let record = F.record(
             9, name: "ControlCe",
