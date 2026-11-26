@@ -448,3 +448,32 @@
 #### Bloque 4 · Cierre
 - [x] T13 · Verificación, capturas y checklist
 - [x] T14 · 0.7.7, release, web y actualización real (PRs #51–#52; release `v0.7.7` por el pipeline, appcast smalti-web #12 y cask homebrew-tap #4; web smalti-web #11; el diario 0.7.6 → 0.7.7 por Sparkle, sin Gatekeeper y con la sesión intacta)
+
+## F8 · Puertos y procesos
+
+### Spec
+- [x] Maqueta (`docs/specs/F8-assets/mockup.html`, capturas en/es); Simón dejó el diseño a criterio de Claude
+- [x] Aprobada (2026-11-25, `docs/specs/F8-puertos-procesos.md`): libproc + `sysctl` (2–8 ms con 657 procesos, igual que lsof sin sudo), solo procesos propios, atribución por terminal del panel, identidad PID + inicio, SIGTERM → 3 s → confirmación → SIGKILL, *nice* solo hacia abajo; Simón aprobó de antemano spec, plan, recomendaciones, merges, release y despliegue
+
+### Plan
+- [x] Plan de implementación (`docs/plans/F8-puertos-procesos.md`)
+
+### Tareas
+#### Bloque 1 · Dominio
+- [ ] T1 · Tipos, CPU y puertos de salida
+- [ ] T2 · Atribución a paneles, política de detener y prioridad
+- [ ] T3 · Tablas de procesos y de puertos
+- [ ] T4 · Detener, bajar prioridad y observar
+- [ ] T5 · Textos, comandos, atajos y motor
+#### Bloque 2 · Adaptadores
+- [ ] T6 · `DarwinProcessesAdapter`: lectura
+- [ ] T7 · `DarwinProcessControl` y el motor
+- [ ] Revisión intermedia 1 + mutación incremental
+#### Bloque 3 · App
+- [ ] T8 · Superposición, refresco y teclado
+- [ ] T9 · Detener, confirmar, prioridad, avisos e idioma
+- [ ] T10 · Documentos y web
+- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+#### Bloque 4 · Cierre
+- [ ] T11 · Mediciones, capturas, checklist, revisión final y mutación de la fase
+- [ ] T12 · 0.8.0, PRs, release y despliegue

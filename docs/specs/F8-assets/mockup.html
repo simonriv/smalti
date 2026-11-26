@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Procesos y puertos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<!--
+  Maqueta de F8 (Puertos y procesos), en la línea de Observatorio.dc.html y con los tokens de docs/design/README.md.
+  Tableros: ?view=processes|ports|confirm&lang=es|en. Las capturas salen con Chrome sin interfaz (ver la spec F8).
+-->
+<style>
+  :root{--accent:#7aa2f7;--ring:#7aa2f780;--glow:#7aa2f722;--text:#d7dae0;--title:#e6e9ef;--muted:#8b919c;--soft:#aeb3bd;
+        --green:#9ece6a;--amber:#e0af68;--red:#f7768e;--stopped:#6b717c;--cyan:#7dcfff;--purple:#bb9af7;
+        --panel:rgba(6,7,10,0.34);--line:rgba(255,255,255,0.06)}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text)}
+  .num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+  .kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:var(--soft);background:rgba(255,255,255,0.04);white-space:nowrap}
+  .cell{padding:0 10px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .desk{width:1440px;height:900px;position:relative;overflow:hidden;background-color:#0b0d12;
+    background-image:radial-gradient(circle at 16% 20%,#284766 0,rgba(40,71,102,0) 38%),radial-gradient(circle at 84% 80%,#563663 0,rgba(86,54,99,0) 42%),radial-gradient(circle at 72% 12%,#1d5a55 0,rgba(29,90,85,0) 34%),radial-gradient(circle at 30% 92%,#5a4a2a 0,rgba(90,74,42,0) 30%)}
+  .win{position:absolute;left:56px;top:40px;width:1328px;height:820px;border-radius:16px;border:1px solid rgba(255,255,255,0.09);box-shadow:0 30px 90px rgba(0,0,0,0.5);
+    background:rgba(13,15,21,0.72);backdrop-filter:blur(28px) saturate(150%);display:flex;flex-direction:column;overflow:hidden}
+  .top{height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .chip{height:26px;padding:0 10px;border-radius:7px;border:1px solid transparent;color:#9aa0ab;font:500 12px Inter,sans-serif;display:flex;align-items:center;gap:7px}
+  .chip.on{border-color:var(--ring);background:var(--glow);color:var(--title)}
+  .chip.outline{border-color:rgba(255,255,255,0.08);color:#c3c7cf}
+  .chip .kbd{padding:1px 5px;font-size:10px}
+  .sep{width:1px;height:18px;background:rgba(255,255,255,0.08)}
+  .filter{height:26px;width:210px;border-radius:7px;border:1px solid rgba(255,255,255,0.10);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:7px;padding:0 9px;font-size:12px;color:var(--title)}
+  .filter .caret{width:1px;height:14px;background:var(--accent)}
+  .body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px;padding:14px}
+  .card{border-radius:11px;background:var(--panel);border:1px solid var(--line)}
+  .table{overflow:hidden;display:flex;flex-direction:column;min-height:0}
+  .head,.row{display:grid;align-items:center}
+  .head{height:34px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+  .row{height:36px;font-size:12.5px;border-top:1px solid rgba(255,255,255,0.04)}
+  .row.first{border-top:none}
+  .row.sel{background:var(--glow);box-shadow:inset 2px 0 0 var(--accent)}
+  .row.dim{color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block}
+  .dot.working{background:var(--green)}.dot.waiting{background:var(--amber)}.dot.error{background:var(--red)}
+  .dot.idle{border:1.5px solid var(--stopped);box-sizing:border-box}
+  .state{display:flex;align-items:center;gap:7px}
+  .bar{width:46px;height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden;flex:none}
+  .bar span{display:block;height:100%;background:var(--accent)}
+  .tree{color:#4d535e;font-family:'JetBrains Mono',monospace;white-space:pre}
+  .lock{font-size:10.5px;color:var(--muted);border:1px solid rgba(255,255,255,0.10);border-radius:4px;padding:0 4px;margin-left:6px}
+  .kv{display:grid;grid-template-columns:96px minmax(0,1fr);row-gap:7px;font-size:12px}
+  .kv dt{color:var(--muted)}.kv dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .act{display:flex;align-items:center;gap:10px;font-size:12px;height:24px}
+  .act .kbd{min-width:34px;text-align:center}
+  .foot{height:30px;flex:none;display:flex;align-items:center;gap:16px;padding:0 18px;border-top:1px solid rgba(255,255,255,0.05);font-size:11.5px;color:var(--muted)}
+  .foot span{display:flex;align-items:center;gap:6px}
+  .confirm{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);width:520px;border-radius:12px;background:rgba(18,20,27,0.92);
+    border:1px solid rgba(224,175,104,0.55);box-shadow:0 18px 50px rgba(0,0,0,0.55);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .shade{position:absolute;inset:0;background:rgba(4,5,8,0.28)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const params = new URLSearchParams(location.search);
+const view = params.get('view') || 'processes';
+const lang = params.get('lang') || 'es';
+document.documentElement.lang = lang;
+
+const T = {
+  es: {
+    title: 'Procesos', subtitle: 'lo que corre y escucha en esta máquina',
+    tabProcesses: 'Procesos', tabPorts: 'Puertos', tree: 'Árbol', sortCPU: 'CPU ↓', sortPort: 'Puerto ↑',
+    filterProcesses: 'node', filterPorts: 'filtrar',
+    hProcesses: ['Estado', 'Proceso', 'Panel', 'CPU', 'Memoria', 'PID'],
+    hPorts: ['Puerto', 'Protocolo', 'Dirección', 'Proceso', 'PID', 'Directorio', 'Panel'],
+    working: 'activo', idle: 'en reposo', unresponsive: 'sin responder', zombie: 'zombi', protected: 'protegido',
+    local: 'solo local', all: 'todas',
+    detailProcess: 'Proceso · node', command: 'Comando', directory: 'Directorio', pane: 'Panel', parent: 'Padre',
+    started: 'Inicio', listens: 'Escucha', priority: 'Prioridad', threads: 'Hilos',
+    startedValue: 'hace 42 min', priorityValue: 'normal (0)', goPane: '↵ ir',
+    stop: 'Detener', lower: 'Bajar prioridad', jump: 'Ir al panel web · 2',
+    yours: 'Tus procesos', cpu: 'CPU', memory: 'Memoria', memoryValue: '7.4 / 16 GB',
+    memoryNote: 'paneles de Smalti 1.3 · resto 6.1 GB',
+    note: 'Solo tus procesos: 243 de otros usuarios o del sistema no se pueden leer sin sudo. Se actualiza cada 2 s mientras esta vista está abierta.',
+    detailPort: 'Puerto 5173 · TCP', bound: 'Escucha en', boundValue: '127.0.0.1 y ::1 · solo esta Mac',
+    process: 'Proceso', stopPort: 'Detener node (1060)',
+    summary: 'Resumen', summaryValue: '8 puertos', summaryOpen: '2 abiertos a la red',
+    summaryNote: '«Todas» significa que otros equipos de tu red pueden conectarse. La lista es la de lsof -iTCP -sTCP:LISTEN y los UDP sin conexión, solo de tus procesos.',
+    keys: [['↑↓', 'elegir'], ['↵', 'ir al panel'], ['⌘⌫', 'detener'], ['⌘⇧↓', 'bajar prioridad'], ['⌘T', 'árbol'], ['⌘⇧S', 'ordenar'], ['esc', 'cerrar']],
+    keysPorts: [['↑↓', 'elegir'], ['↵', 'ir al panel'], ['⌘⌫', 'detener'], ['⌘⇧S', 'ordenar'], ['⌘⇧M', 'procesos'], ['esc', 'cerrar']],
+    confirmTitle: '¿Forzar el cierre de python3 (50112)?',
+    confirmBody: 'No respondió a «Detener» en 3 s. Forzarlo (SIGKILL) lo termina sin dejarle guardar nada.',
+    confirmKeys: [['↵', 'forzar'], ['esc', 'cancelar']],
+    unresponsiveHint: '⌘⌫ para forzar',
+  },
+  en: {
+    title: 'Processes', subtitle: 'what runs and listens on this Mac',
+    tabProcesses: 'Processes', tabPorts: 'Ports', tree: 'Tree', sortCPU: 'CPU ↓', sortPort: 'Port ↑',
+    filterProcesses: 'node', filterPorts: 'filter',
+    hProcesses: ['Status', 'Process', 'Pane', 'CPU', 'Memory', 'PID'],
+    hPorts: ['Port', 'Protocol', 'Address', 'Process', 'PID', 'Directory', 'Pane'],
+    working: 'active', idle: 'idle', unresponsive: 'not responding', zombie: 'zombie', protected: 'protected',
+    local: 'local only', all: 'all',
+    detailProcess: 'Process · node', command: 'Command', directory: 'Directory', pane: 'Pane', parent: 'Parent',
+    started: 'Started', listens: 'Listens', priority: 'Priority', threads: 'Threads',
+    startedValue: '42 min ago', priorityValue: 'normal (0)', goPane: '↵ go',
+    stop: 'Stop', lower: 'Lower Priority', jump: 'Go to pane web · 2',
+    yours: 'Your processes', cpu: 'CPU', memory: 'Memory', memoryValue: '7.4 / 16 GB',
+    memoryNote: 'Smalti panes 1.3 · rest 6.1 GB',
+    note: 'Only your processes: 243 belonging to other users or the system cannot be read without sudo. Refreshes every 2 s while this view is open.',
+    detailPort: 'Port 5173 · TCP', bound: 'Listens on', boundValue: '127.0.0.1 and ::1 · this Mac only',
+    process: 'Process', stopPort: 'Stop node (1060)',
+    summary: 'Summary', summaryValue: '8 ports', summaryOpen: '2 open to the network',
+    summaryNote: '“All” means other computers on your network can connect. The list is lsof -iTCP -sTCP:LISTEN plus unconnected UDP, only for your processes.',
+    keys: [['↑↓', 'choose'], ['↵', 'go to pane'], ['⌘⌫', 'stop'], ['⌘⇧↓', 'lower priority'], ['⌘T', 'tree'], ['⌘⇧S', 'sort'], ['esc', 'close']],
+    keysPorts: [['↑↓', 'choose'], ['↵', 'go to pane'], ['⌘⌫', 'stop'], ['⌘⇧S', 'sort'], ['⌘⇧M', 'processes'], ['esc', 'close']],
+    confirmTitle: 'Force python3 (50112) to quit?',
+    confirmBody: 'It did not respond to “Stop” within 3 s. Forcing it (SIGKILL) ends it without letting it save anything.',
+    confirmKeys: [['↵', 'force'], ['esc', 'cancel']],
+    unresponsiveHint: '⌘⌫ to force',
+  },
+}[lang];
+
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const kbd = k => `<span class="kbd">${esc(k)}</span>`;
+const stateCell = (s) => {
+  const label = {working: T.working, idle: T.idle, waiting: T.unresponsive, error: T.zombie}[s];
+  const color = {working: 'var(--green)', idle: 'var(--muted)', waiting: 'var(--amber)', error: 'var(--red)'}[s];
+  return `<span class="cell state" style="color:${color}"><span class="dot ${s}"></span>${label}</span>`;
+};
+
+function topBar(active) {
+  const isProc = active === 'processes';
+  return `<div class="top">
+    <span style="font-weight:600;font-size:13px;color:var(--title)">${T.title}</span>
+    <span style="font-size:12px;color:var(--muted)">${T.subtitle}</span>
+    <span style="flex:1"></span>
+    <span class="chip ${isProc ? 'on' : ''}">${T.tabProcesses} ${kbd('⌘⇧M')}</span>
+    <span class="chip ${isProc ? '' : 'on'}">${T.tabPorts} ${kbd('⌘⇧U')}</span>
+    <span class="sep"></span>
+    <span class="filter"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="#8b919c" stroke-width="1.3"/><line x1="7.7" y1="7.7" x2="11" y2="11" stroke="#8b919c" stroke-width="1.3"/></svg>
+      <span style="color:#5f6672">${T.filterPorts}</span></span>
+    <span class="chip outline">${isProc ? T.sortCPU : T.sortPort}</span>
+    ${isProc ? `<span class="chip outline" style="border-color:var(--ring);color:var(--title)">${T.tree}</span>` : ''}
+    ${kbd('esc')}
+  </div>`;
+}
+
+function foot(keys) {
+  return `<div class="foot">${keys.map(([k, v]) => `<span>${kbd(k)}${esc(v)}</span>`).join('')}</div>`;
+}
+
+const PCOLS = '128px minmax(0,1fr) 120px 118px 86px 70px';
+const processes = [
+  {s: 'idle', depth: 0, guide: '', name: 'zsh', cmd: '-zsh', pane: 'web · 2', cpu: 0.0, mem: '6.1 MB', pid: 1022, lock: true},
+  {s: 'idle', depth: 1, guide: '└─ ', name: 'npm', cmd: 'npm run dev', pane: 'web · 2', cpu: 0.1, mem: '58 MB', pid: 1041},
+  {s: 'working', depth: 2, guide: '   └─ ', name: 'node', cmd: 'node_modules/.bin/vite --port 5173', pane: 'web · 2', cpu: 14.2, mem: '412 MB', pid: 1060, sel: true},
+  {s: 'idle', depth: 0, guide: '', name: 'zsh', cmd: '-zsh', pane: 'api · 1', cpu: 0.0, mem: '5.8 MB', pid: 988, lock: true},
+  {s: 'working', depth: 1, guide: '├─ ', name: 'node', cmd: 'claude --continue', pane: 'api · 1', cpu: 38.5, mem: '612 MB', pid: 48213},
+  {s: 'working', depth: 2, guide: '│  └─ ', name: 'node', cmd: 'mcp-server-filesystem ~/dev/acme', pane: 'api · 1', cpu: 2.1, mem: '96 MB', pid: 48290},
+  {s: 'waiting', depth: 1, guide: '└─ ', name: 'python3', cmd: 'python3 -m http.server 8000', pane: 'api · 1', cpu: 0.0, mem: '22 MB', pid: 50112, hint: true},
+  {s: 'working', depth: 0, guide: '', name: 'node', cmd: 'next-server (v15.4)', pane: 'site · 1', cpu: 3.4, mem: '288 MB', pid: 2231},
+  {s: 'idle', depth: 0, guide: '', name: 'node', cmd: 'node scripts/watch.mjs', pane: '—', cpu: 0.0, mem: '41 MB', pid: 3307},
+];
+
+function processRows() {
+  return processes.map((p, i) => {
+    const bar = Math.min(100, p.cpu * 2);
+    const cpuColor = p.cpu >= 0.5 ? '' : 'color:var(--muted)';
+    return `<div class="row ${i === 0 ? 'first' : ''} ${p.sel ? 'sel' : ''}" style="grid-template-columns:${PCOLS}">
+      ${stateCell(p.s)}
+      <span class="cell"><span class="tree">${esc(p.guide)}</span><span style="color:var(--title);font-weight:500">${esc(p.name)}</span>
+        <span class="mono" style="color:var(--muted);font-size:11.5px;margin-left:8px">${esc(p.cmd)}</span>${p.lock ? `<span class="lock">${T.protected}</span>` : ''}${p.hint ? `<span style="color:var(--amber);font-size:11.5px;margin-left:8px">${T.unresponsiveHint}</span>` : ''}</span>
+      <span class="cell" style="color:${p.pane === '—' ? 'var(--muted)' : 'var(--soft)'}">${esc(p.pane)}</span>
+      <span class="cell" style="display:flex;align-items:center;gap:8px"><span class="bar"><span style="width:${bar}%"></span></span><span class="num" style="${cpuColor}">${p.cpu.toFixed(1)}%</span></span>
+      <span class="cell num">${esc(p.mem)}</span>
+      <span class="cell num" style="color:var(--muted)">${p.pid}</span>
+    </div>`;
+  }).join('');
+}
+
+function processesBody() {
+  return `<div class="body">
+    <div class="card table">
+      <div class="head" style="grid-template-columns:${PCOLS}">${T.hProcesses.map((h, i) => `<span class="cell">${h}${i === 3 ? ' ↓' : ''}</span>`).join('')}</div>
+      ${processRows()}
+    </div>
+    <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:12px">
+        <p class="lbl">${T.detailProcess}</p>
+        <div class="mono" style="font-size:11.5px;line-height:1.55;color:var(--text);background:rgba(0,0,0,0.18);border-radius:7px;padding:8px 10px;word-break:break-all">node /Users/ana/dev/acme/web/node_modules/.bin/vite --port 5173</div>
+        <dl class="kv" style="margin:0">
+          <dt>${T.directory}</dt><dd class="mono" style="font-size:11.5px">~/dev/acme/web</dd>
+          <dt>${T.pane}</dt><dd>web · 2 <span style="color:var(--muted)">· ${T.goPane}</span></dd>
+          <dt>${T.parent}</dt><dd>npm <span class="num" style="color:var(--muted)">1041</span></dd>
+          <dt>${T.started}</dt><dd>${T.startedValue}</dd>
+          <dt>${T.listens}</dt><dd class="num">127.0.0.1:5173 <span style="color:var(--muted)">TCP</span></dd>
+          <dt>${T.priority}</dt><dd>${T.priorityValue}</dd>
+          <dt>${T.threads}</dt><dd class="num">11</dd>
+        </dl>
+        <div style="height:1px;background:rgba(255,255,255,0.05)"></div>
+        <div class="act">${kbd('⌘⌫')}<span>${T.stop}</span></div>
+        <div class="act" style="margin-top:-6px">${kbd('⌘⇧↓')}<span>${T.lower}</span></div>
+        <div class="act" style="margin-top:-6px">${kbd('↵')}<span>${T.jump}</span></div>
+      </div>
+      <div class="card" style="flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:14px">
+        <p class="lbl">${T.yours} · 312</p>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span>${T.cpu}</span><span class="num">61%</span></div>
+          <svg viewBox="0 0 300 34" width="100%" height="34" aria-hidden="true"><polyline points="0,26 30,24 60,20 90,22 120,14 150,18 180,10 210,16 240,20 270,18 300,12" fill="none" stroke="#7dcfff" stroke-width="1.4"/></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span>${T.memory}</span><span class="num">${T.memoryValue}</span></div>
+          <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.07);display:flex;overflow:hidden"><span style="width:8%;background:#7aa2f7"></span><span style="width:38%;background:#6b717c"></span></div>
+          <p style="margin:0;font-size:11px;color:var(--muted)">${T.memoryNote}</p>
+        </div>
+        <div style="flex:1"></div>
+        <p style="margin:0;font-size:11px;color:var(--muted);line-height:1.5">${T.note}</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+const OCOLS = '84px 84px 104px minmax(0,1fr) 70px minmax(0,1fr) 96px';
+const ports = [
+  {port: 5173, proto: 'TCP', addr: 'local', s: 'working', name: 'node', cmd: 'vite --port 5173', pid: 1060, dir: '~/dev/acme/web', pane: 'web · 2', sel: true},
+  {port: 3000, proto: 'TCP', addr: 'all', s: 'working', name: 'node', cmd: 'next-server', pid: 2231, dir: '~/dev/acme/site', pane: 'site · 1'},
+  {port: 8000, proto: 'TCP', addr: 'local', s: 'waiting', name: 'python3', cmd: '-m http.server 8000', pid: 50112, dir: '~/dev/acme/api', pane: 'api · 1'},
+  {port: 5432, proto: 'TCP', addr: 'local', s: 'idle', name: 'postgres', cmd: '-D /opt/homebrew/var/postgresql@17', pid: 866, dir: '/opt/homebrew/var/postgresql@17', pane: '—'},
+  {port: 11434, proto: 'TCP', addr: 'local', s: 'idle', name: 'ollama', cmd: 'serve', pid: 1290, dir: '~', pane: '—'},
+  {port: 62467, proto: 'TCP', addr: 'local', s: 'working', name: 'node', cmd: 'claude --continue', pid: 48213, dir: '~/dev/acme/api', pane: 'api · 1'},
+  {port: 41234, proto: 'UDP', addr: 'local', s: 'idle', name: 'node', cmd: 'scripts/watch.mjs', pid: 3307, dir: '~/dev/acme/web', pane: '—'},
+  {port: 7000, proto: 'TCP', addr: 'all', s: 'idle', name: 'ControlCenter', cmd: '', pid: 659, dir: '/', pane: '—', lock: true},
+];
+
+function portRows() {
+  return ports.map((p, i) => `<div class="row ${i === 0 ? 'first' : ''} ${p.sel ? 'sel' : ''}" style="grid-template-columns:${OCOLS}">
+      <span class="cell num" style="color:var(--title);font-weight:500">${p.port}</span>
+      <span class="cell num" style="color:var(--soft)">${p.proto}</span>
+      <span class="cell" style="color:${p.addr === 'all' ? 'var(--title)' : 'var(--muted)'}">${p.addr === 'all' ? T.all : T.local}</span>
+      <span class="cell" style="display:flex;align-items:center;gap:7px"><span class="dot ${p.s}"></span><span style="color:var(--title);font-weight:500">${esc(p.name)}</span><span class="mono" style="color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis">${esc(p.cmd)}</span>${p.lock ? `<span class="lock">${T.protected}</span>` : ''}</span>
+      <span class="cell num" style="color:var(--muted)">${p.pid}</span>
+      <span class="cell mono" style="font-size:11.5px;color:var(--soft)">${esc(p.dir)}</span>
+      <span class="cell" style="color:${p.pane === '—' ? 'var(--muted)' : 'var(--soft)'}">${esc(p.pane)}</span>
+    </div>`).join('');
+}
+
+function portsBody() {
+  return `<div class="body">
+    <div class="card table">
+      <div class="head" style="grid-template-columns:${OCOLS}">${T.hPorts.map((h, i) => `<span class="cell">${h}${i === 0 ? ' ↑' : ''}</span>`).join('')}</div>
+      ${portRows()}
+    </div>
+    <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:12px">
+        <p class="lbl">${T.detailPort}</p>
+        <dl class="kv" style="margin:0">
+          <dt>${T.bound}</dt><dd>${T.boundValue}</dd>
+          <dt>${T.process}</dt><dd><span class="dot working" style="margin-right:6px"></span>node <span class="num" style="color:var(--muted)">1060</span></dd>
+          <dt>${T.command}</dt><dd class="mono" style="font-size:11.5px">vite --port 5173</dd>
+          <dt>${T.directory}</dt><dd class="mono" style="font-size:11.5px">~/dev/acme/web</dd>
+          <dt>${T.pane}</dt><dd>web · 2 <span style="color:var(--muted)">· ${T.goPane}</span></dd>
+          <dt>${T.started}</dt><dd>${T.startedValue}</dd>
+        </dl>
+        <div style="height:1px;background:rgba(255,255,255,0.05)"></div>
+        <div class="act">${kbd('⌘⌫')}<span>${T.stopPort}</span></div>
+        <div class="act" style="margin-top:-6px">${kbd('↵')}<span>${T.jump}</span></div>
+      </div>
+      <div class="card" style="flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+        <p class="lbl">${T.summary}</p>
+        <p class="num" style="margin:0;font-size:26px;color:var(--title)">${T.summaryValue}</p>
+        <p style="margin:0;font-size:11.5px;color:var(--muted)">${T.summaryOpen}</p>
+        <div style="flex:1"></div>
+        <p style="margin:0;font-size:11px;color:var(--muted);line-height:1.5">${T.summaryNote}</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function confirmCard() {
+  return `<div class="shade"></div><div class="confirm" role="alertdialog">
+    <div style="display:flex;align-items:center;gap:8px"><span class="dot waiting"></span><span style="font-weight:600;font-size:13px;color:var(--title)">${T.confirmTitle}</span></div>
+    <p style="margin:0;font-size:12px;color:var(--soft);line-height:1.5">${T.confirmBody}</p>
+    <p class="mono" style="margin:0;font-size:11.5px;color:var(--muted)">python3 -m http.server 8000 · ~/dev/acme/api</p>
+    <div style="display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:2px">${T.confirmKeys.map(([k, v]) => `<span style="display:flex;gap:6px;align-items:center">${kbd(k)}${v}</span>`).join('')}</div>
+  </div>`;
+}
+
+const isPorts = view === 'ports';
+document.getElementById('root').innerHTML = `<div class="desk"><div class="win">
+  ${topBar(isPorts ? 'ports' : 'processes')}
+  ${isPorts ? portsBody() : processesBody()}
+  ${foot(isPorts ? T.keysPorts : T.keys)}
+  ${view === 'confirm' ? confirmCard() : ''}
+</div></div>`;
+</script>
+</body>
+</html>

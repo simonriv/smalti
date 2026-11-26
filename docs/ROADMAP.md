@@ -199,8 +199,9 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
   - Panel de puertos en uso: puerto, protocolo, proceso, PID, directorio y, si lo lanzó un panel de Smalti, ese panel; detener un proceso (SIGTERM y, si no responde, SIGKILL con confirmación) y saltar al panel que lo lanzó.
   - Vista de procesos nativa, un htop más bonito: CPU, memoria, árbol de procesos, filtro y orden, con el mismo estado codificado del resto de la app; detener y priorizar desde ahí.
   - Todo con atajo y en ⌘K, sin botones fijos.
-- **Criterio de cierre:** por definir en su spec. Como mínimo, la lista de puertos coincide con `lsof -iTCP -sTCP:LISTEN -nP` en una prueba con puertos abiertos a propósito, y detener nunca toca procesos de otro usuario ni el propio Smalti.
-- **Diseño:** no hay tablero. La fase empieza con su maqueta para aprobar, en la línea del Observatorio.
+- **Spec:** `docs/specs/F8-puertos-procesos.md`.
+- **Criterio de cierre:** C1–C11 de la spec: la lista de puertos coincide con lsof (TCP en escucha y UDP sin conexión) en una prueba con oyentes efímeros; detener nunca toca procesos de otro usuario, el propio Smalti, el shell de un panel ni los del sistema; SIGKILL solo tras confirmación y si SIGTERM no bastó; sin coste en reposo (refresco solo con la vista abierta, GPU y CPU en reposo sin empeorar respecto de F7.7); inglés y español completos.
+- **Diseño:** sin tablero; maqueta `docs/specs/F8-assets/mockup.html`, en la línea del Observatorio.
 - **Dependencias:** F3 (puerto `SystemMetrics`, sin sudo) y F2 (relación panel ↔ proceso).
 
 ## F8.5 · Proyectos

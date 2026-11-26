@@ -65,3 +65,7 @@ Ningún tablero cubre la línea coloreada. Su referencia es `docs/specs/F5.6-ass
 
 - `Observatorio.dc.html`: con telemetría de Claude Code recibida, el detalle añade bajo la línea de compactación, con su mismo estilo, «Telemetría · desde 10:42 · 42 peticiones · mediana 1,4 s · 2 errores de API · $3.12 según Claude Code», y el pie dice «hooks, transcripts y telemetría de Claude Code». Si la telemetría está configurada fuera de Smalti, el pie lo dice.
 - `Paleta.dc.html`: el grupo «Workspaces y sesiones» añade «Exportar layout “<nombre>”…» tras cada «Restaurar layout» e «Importar layout…»; la confirmación y los paneles de archivo son los del sistema.
+
+## Puertos y procesos (F8)
+
+Ningún tablero los dibuja. La referencia es la maqueta `docs/specs/F8-assets/mockup.html` (`?view=processes|ports|confirm&lang=es|en`; capturas `mockup-*-{es,en}.png`), compuesta con el fondo, la franja superior, las tarjetas, las tablas y los chips de `Observatorio.dc.html` y la tarjeta de aprobación de F7.5 (en ámbar) para confirmar «Forzar». Atajos ⌘⇧M y ⌘⇧U; textos en inglés del glosario de la spec F8.
