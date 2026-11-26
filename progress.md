@@ -524,12 +524,12 @@
 #### Bloque 2 · Adaptadores
 - [x] T6 · `ClaudeTimeline`
 - [x] T7 · `CodexTimeline`
-- [ ] Revisión intermedia 1 + mutación
+- [x] Revisión intermedia 1 + mutación
 #### Bloque 3 · App
-- [ ] T8 · Panel lateral, composición y teclado
-- [ ] T9 · Desplegar, copiar, búsqueda, respaldo, avisos e idioma
-- [ ] T10 · Documentos y web
-- [ ] Revisión intermedia 2 + regresión + mutación
+- [x] T8 · Panel lateral, composición y teclado
+- [x] T9 · Desplegar, copiar, búsqueda, respaldo, avisos e idioma
+- [x] T10 · Documentos y web
+- [x] Revisión intermedia 2 + regresión + mutación
 #### Bloque 4 · Cierre
-- [ ] T11 · Mediciones, capturas, checklist, revisión final
+- [x] T11 · Mediciones, capturas, checklist, revisión final
 - [ ] T12 · 0.9.0, PRs, release y despliegue
