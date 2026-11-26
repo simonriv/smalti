@@ -13,9 +13,12 @@ final class SummaryCardsView: NSStackView {
     private let theme: Theme
     private var cards: [Card] = []
 
-    private static let titles = ["Sesiones activas", "Tokens entrada", "Tokens salida", "Equivalente API"]
+    private static let titles = [
+        String(localized: "Active sessions"), String(localized: "Input tokens"), String(localized: "Output tokens"),
+        String(localized: "API equivalent"),
+    ]
     private static let identifiers = ["sessions", "input", "output", "cost"]
-    static let reading = "leyendo transcripts…"
+    static let reading = String(localized: "reading transcripts…")
 
     init(theme: Theme) {
         self.theme = theme
@@ -87,9 +90,9 @@ final class SummaryCardsView: NSStackView {
         let text = ObservatoryTexts.sessions(summary, copy: .current)
         let note = NSMutableAttributedString(attributedString: plain(text))
         let tones: [(String, RGBAColor)] = [
-            ("\(summary.working) trabajando", theme.agent.working),
-            ("\(summary.waiting) esperando", theme.agent.waiting),
-            ("\(summary.failed) error", theme.agent.failed),
+            (String(localized: "\(summary.working) working"), theme.agent.working),
+            (String(localized: "\(summary.waiting) waiting"), theme.agent.waiting),
+            (String(localized: "\(summary.failed) error"), theme.agent.failed),
         ]
         for (part, color) in tones {
             let range = (text as NSString).range(of: part)

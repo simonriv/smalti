@@ -33,6 +33,9 @@ public struct ObservatoryCopy: Sendable, Equatable {
     public let compaction: TextTemplate
     public let compactionFreed: TextTemplate
     public let transcriptsUnreadable: TextTemplate
+    /// The harness chips' "Todas" and "Locales".
+    public let allHarnesses: String
+    public let localModels: String
     public let cannotListen: TextTemplate
     public let telemetry: TelemetryCopy
     public let time: TimeTexts
@@ -57,7 +60,8 @@ public struct ObservatoryCopy: Sendable, Equatable {
         onDisk: "en disco", downloaded: "descargado {ago}", todayTokens: "hoy {count} tokens", todayPending: "hoy …",
         activity: "Actividad · {label}", noCompactions: "Sin compactaciones", compaction: "Compactación {ago}",
         compactionFreed: "Compactación {ago} · liberó {percent}% del contexto",
-        transcriptsUnreadable: "No se pudieron leer los transcripts de {path}: {reason}",
+        transcriptsUnreadable: "No se pudieron leer los transcripts de {path}: {reason}", allHarnesses: "Todas",
+        localModels: "Locales",
         cannotListen: "{operation} falló (errno {errno})", telemetry: .spanish, time: .spanish)
 
     public static let english = ObservatoryCopy(
@@ -80,7 +84,8 @@ public struct ObservatoryCopy: Sendable, Equatable {
         onDisk: "on disk", downloaded: "downloaded {ago}", todayTokens: "today {count} tokens", todayPending: "today …",
         activity: "Activity · {label}", noCompactions: "No compactions", compaction: "Compacted {ago}",
         compactionFreed: "Compacted {ago} · freed {percent}% of the context",
-        transcriptsUnreadable: "Couldn’t read the transcripts in {path}: {reason}",
+        transcriptsUnreadable: "Couldn’t read the transcripts in {path}: {reason}", allHarnesses: "All",
+        localModels: "Local",
         cannotListen: "{operation} failed (errno {errno})", telemetry: .english, time: .english)
 }
 

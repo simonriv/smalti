@@ -98,7 +98,7 @@ final class PaneGridView: NSView {
             }
             container.apply(theme, isFocused: pane == workspace.focusedPane, header: header)
             container.showApproval(approvalContent(state, pane: pane, workspace: workspace.name))
-            container.setAccessibilityLabel(workspace.index(of: pane).map { "Panel \($0)" })
+            container.setAccessibilityLabel(workspace.index(of: pane).map { String(localized: "Pane \($0)") })
         }
     }
 

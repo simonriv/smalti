@@ -128,10 +128,11 @@ final class ObservatoryView: NSView {
     private func layoutStrip(_ body: NSView) {
         let tokens = theme.observatory
         let title = ObservatoryText.label(
-            "Observatorio",
+            String(localized: "Observatory"),
             .init(size: tokens.stripTitleSize, color: theme.text.title, weight: tokens.stripTitleWeight), theme: theme)
         let subtitle = ObservatoryText.label(
-            "agentes y modelos en esta máquina", .init(size: tokens.stripSubtitleSize, color: theme.text.secondary),
+            String(localized: "agents and models on this machine"),
+            .init(size: tokens.stripSubtitleSize, color: theme.text.secondary),
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
@@ -258,7 +259,7 @@ private final class FilterChips: NSStackView {
         let tokens = theme.observatoryFilter
         spacing = tokens.chipGap
         for filter in ObservatoryFilter.allCases {
-            let button = NSButton(title: filter.title, target: self, action: #selector(clicked(_:)))
+            let button = NSButton(title: filter.title(.current), target: self, action: #selector(clicked(_:)))
             button.isBordered = false
             button.wantsLayer = true
             button.layer?.cornerRadius = tokens.chipRadius
@@ -286,7 +287,7 @@ private final class FilterChips: NSStackView {
         for (filter, button) in buttons {
             let isChosen = filter == chosen
             button.attributedTitle = NSAttributedString(
-                string: filter.title,
+                string: filter.title(.current),
                 attributes: [
                     .font: theme.interfaceFont(size: tokens.pillFontSize, weight: tokens.pillWeight),
                     .foregroundColor: (isChosen ? chips.chosenText : chips.inactiveText).nsColor,

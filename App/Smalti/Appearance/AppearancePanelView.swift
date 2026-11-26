@@ -28,29 +28,33 @@ final class AppearancePanelView: NSView {
     var onEdit: ((AppearanceEdit) -> Void)?
     var onClose: (() -> Void)?
 
-    private let title = NSTextField(labelWithString: "Apariencia")
+    private let title = NSTextField(labelWithString: String(localized: "Appearance"))
     private let savedIn = NSTextField(labelWithString: "")
-    private let labels = ["Tema", "Vidrio", "Paleta ANSI", "Botones de ventana"].map {
+    private let labels = [
+        String(localized: "Theme"), String(localized: "Glass"), String(localized: "ANSI Palette"),
+        String(localized: "Window Buttons"),
+    ].map {
         NSTextField(labelWithString: $0)
     }
     private let cards = ThemeID.allCases.map { ThemeCardView(id: $0) }
-    private let opacityTitle = NSTextField(labelWithString: "Opacidad del fondo")
+    private let opacityTitle = NSTextField(labelWithString: String(localized: "Background opacity"))
     private let opacityValue = NSTextField(labelWithString: "")
     private let opacity = PanelSlider(
         identifier: "smalti.appearance.opacity",
         range: AppearancePanelView.percent(AppearanceSettings.glassOpacityRange))
-    private let blurTitle = NSTextField(labelWithString: "Desenfoque")
+    private let blurTitle = NSTextField(labelWithString: String(localized: "Blur"))
     private let blurValue = NSTextField(labelWithString: "")
     private let blur = PanelSlider(identifier: "smalti.appearance.blur", range: AppearanceSettings.blurRange)
-    private let legibilityTitle = NSTextField(labelWithString: "Proteger legibilidad")
+    private let legibilityTitle = NSTextField(labelWithString: String(localized: "Protect legibility"))
     private let legibilityNote = NSTextField(
-        labelWithString: "Sube la opacidad bajo el texto si el contraste cae de 4.5:1")
+        labelWithString: String(localized: "Raises the opacity under the text if the contrast drops below 4.5:1"))
     private let legibility = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let swatches = (0..<16).map { SwatchView(index: $0) }
     private let adjusted = NSTextField(labelWithString: "")
     private let segmentContainer = NSView()
     private let segments: [(WindowButtons, SegmentView)] = [
-        (.hidden, "Ocultos"), (.hover, "Al pasar el cursor"), (.visible, "Visibles"),
+        (.hidden, String(localized: "Hidden")), (.hover, String(localized: "On hover")),
+        (.visible, String(localized: "Visible")),
     ].map { mode, title in
         (
             mode,
@@ -59,7 +63,9 @@ final class AppearancePanelView: NSView {
                 inset: Theme.obsidian.appearancePanel.segmentLabelInset)
         )
     }
-    private let footerLabels = ["Fuente", "Espacio", "Radio"].map { NSTextField(labelWithString: $0) }
+    private let footerLabels = [String(localized: "Font"), String(localized: "Gap"), String(localized: "Radius")].map {
+        NSTextField(labelWithString: $0)
+    }
     private let fontFamily = NSPopUpButton()
     private let fontSize = StepperValueView(
         identifier: "smalti.appearance.fontSize", range: AppearanceSettings.fontSizeRange,

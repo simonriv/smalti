@@ -297,7 +297,8 @@ final class WindowComposition {
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
         window.strip.onCursor = { [weak window] isInside in window?.buttons?.cursorOnStrip(isInside) }
         window.buttons?.onShow = { [weak window] faded in
-            window?.strip.setAccessibilityValue(faded ? "botones con fundido" : "botones sin fundido")
+            window?.strip.setAccessibilityValue(
+                faded ? String(localized: "buttons with fade") : String(localized: "buttons without fade"))
         }
         window.onCloseRequest = { [weak self] in
             guard let self else { return }
@@ -505,7 +506,8 @@ final class WindowComposition {
     private func labelTerminals(_ workspace: Workspace) {
         for (index, pane) in workspace.panes.enumerated() {
             services.engine.view(for: pane.id)?.setAccessibilityLabel(
-                "Terminal, panel \(index + 1), \(pane.headerName.isEmpty ? "shell" : pane.headerName)")
+                String(localized: "Terminal, pane \(index + 1), \(pane.headerName.isEmpty ? "shell" : pane.headerName)")
+            )
         }
     }
 

@@ -19,7 +19,7 @@ final class LocalModelsView: NSView {
     }
 
     func show(_ figures: LocalModelsFigures) {
-        let caption = ObservatoryText.caption("Modelos locales · Ollama", theme: theme)
+        let caption = ObservatoryText.caption(String(localized: "Local models · Ollama"), theme: theme)
         switch figures {
         case .message(let text):
             content.setViews(
@@ -103,7 +103,7 @@ final class SystemView: NSView {
         self.theme = theme
         card = ObservatoryCard(theme: theme, spacing: theme.observatory.spacing.system, height: .fill)
         let tokens = theme.observatory
-        title = ObservatoryText.caption("Sistema", theme: theme)
+        title = ObservatoryText.caption(String(localized: "System"), theme: theme)
         cpuValue = ObservatoryText.number(
             "", .init(size: tokens.systemRowSize, color: theme.text.primary), theme: theme)
         gpuValue = ObservatoryText.number(
@@ -119,7 +119,7 @@ final class SystemView: NSView {
         footnote.lineBreakMode = .byWordWrapping
         footnote.maximumNumberOfLines = 0
         footnote.preferredMaxLayoutWidth = tokens.sideColumnWidth - tokens.cardPaddingHorizontal * 2
-        let memory = group([line("Memoria unificada", value: memoryValue), memoryBar, split])
+        let memory = group([line(String(localized: "Unified memory"), value: memoryValue), memoryBar, split])
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .vertical)
         content.setViews(

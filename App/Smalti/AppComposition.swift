@@ -1216,7 +1216,7 @@ final class AppComposition {
     private func fail(_ error: TerminalEngineError) {
         logger.error("terminal engine failed: \(String(describing: error), privacy: .public)")
         let alert = NSAlert()
-        alert.messageText = "Smalti no pudo iniciar la terminal"
+        alert.messageText = String(localized: "Smalti couldn’t start the terminal")
         alert.informativeText = EngineErrorText.describe(error)
         alert.runModal()
         NSApp.terminate(nil)

@@ -34,8 +34,8 @@ final class RestoreView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityIdentifier("smalti.restore")
-        layoutsOnly.title = "Solo layouts"
-        startClean.title = "Empezar limpio"
+        layoutsOnly.title = String(localized: "Layouts only")
+        startClean.title = String(localized: "Start fresh")
         primary.onClick = { [weak self] in self?.onAction?(.restore) }
         layoutsOnly.onClick = { [weak self] in self?.onAction?(.layoutsOnly) }
         startClean.onClick = { [weak self] in self?.onAction?(.startClean) }
@@ -67,7 +67,10 @@ final class RestoreView: NSView {
         for row in rows {
             row.render(isChecked: state.checked.contains(row.id), isHighlighted: row.id == state.highlighted)
         }
-        primary.title = "Restaurar \(state.restoreCount) \(state.restoreCount == 1 ? "panel" : "paneles")"
+        primary.title =
+            state.restoreCount == 1
+            ? String(localized: "Restore \(state.restoreCount) pane")
+            : String(localized: "Restore \(state.restoreCount) panes")
         always.state = state.alwaysRestore ? .on : .off
     }
 
@@ -81,11 +84,13 @@ final class RestoreView: NSView {
         let tokens = theme.resume
         let header = NSStackView(views: [
             label(
-                "Retomar donde quedaste", size: tokens.titleFontSize, weight: tokens.titleWeight,
+                String(localized: "Pick up where you left off"), size: tokens.titleFontSize, weight: tokens.titleWeight,
                 color: theme.text.title),
             wrapping(
-                "Cerraste \(closedAt). Los shells vuelven con su historial y salida; los agentes se relanzan con su "
-                    + "propio comando de reanudación.", size: tokens.subtitleFontSize, color: tokens.subtitleText),
+                String(
+                    localized:
+                        "You closed \(closedAt). Shells come back with their history and output; agents relaunch with their own resume command."
+                ), size: tokens.subtitleFontSize, color: tokens.subtitleText),
         ])
         header.orientation = .vertical
         header.alignment = .leading
@@ -171,7 +176,7 @@ final class RestoreView: NSView {
 
     private func footer() -> NSView {
         let tokens = theme.resume
-        let hint = label("Siempre restaurar", size: tokens.hintFontSize, color: theme.text.secondary)
+        let hint = label(String(localized: "Always restore"), size: tokens.hintFontSize, color: theme.text.secondary)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let stack = NSStackView(views: [

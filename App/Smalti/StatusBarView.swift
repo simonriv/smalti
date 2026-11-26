@@ -70,7 +70,7 @@ final class StatusBarView: NSView {
         link.stringValue = state.hoveredLink ?? ""
         link.setAccessibilityValue(link.stringValue)
         label.isHidden = state.hoveredLink != nil
-        secure.stringValue = state.isSecureInput ? "Entrada segura" : ""
+        secure.stringValue = state.isSecureInput ? String(localized: "Secure input") : ""
         secure.setAccessibilityValue(secure.stringValue)
         showFigures(state.observatory?.statusFigures)
         needsDisplay = true

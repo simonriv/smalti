@@ -15,8 +15,8 @@ final class ApprovalCardView: NSView {
     private let footer = NSStackView()
     private let approveKey: KbdView
     private let rejectKey: KbdView
-    private let approveLabel = NSTextField(labelWithString: "aprobar")
-    private let rejectLabel = NSTextField(labelWithString: "rechazar")
+    private let approveLabel = NSTextField(labelWithString: String(localized: "approve"))
+    private let rejectLabel = NSTextField(labelWithString: String(localized: "reject"))
     private let expires = NSTextField(labelWithString: "")
     private let tokens: ApprovalCardTokens
     /// The theme it was styled with: a card shown after a theme change is built again.
@@ -111,7 +111,7 @@ final class ApprovalCardView: NSView {
         // Review 2: the same command keeps its text view, so its scroll and selection survive every refresh.
         guard !isSameCommand else { return }
         let subjectOfCard = content.approval.subject
-        title.stringValue = "Espera tu aprobación · \(content.workspace)"
+        title.stringValue = String(localized: "Waiting for your approval · \(content.workspace)")
         subject.attributedStringValue = subjectText(subjectOfCard)
         command.string = subjectOfCard.command
         command.setAccessibilityValue(subjectOfCard.command)
@@ -127,9 +127,13 @@ final class ApprovalCardView: NSView {
         var bold = regular
         bold[.font] = theme.interfaceFont(size: tokens.bodyFontSize, weight: 700)
         bold[.foregroundColor] = tokens.emphasis.nsColor
-        let text = NSMutableAttributedString(
-            string: "\(subject.headline?.rule ?? "comando") contra ", attributes: regular)
-        text.append(NSAttributedString(string: subject.environment.label(.current), attributes: bold))
+        // «{rule} contra {environment}» from the catalog, with only the environment in bold.
+        let texts = GuardTexts.current
+        let around = texts.against.raw.components(separatedBy: "{environment}")
+        let lead = TextTemplate(around.first ?? "")(["rule": subject.headline?.rule ?? texts.command])
+        let text = NSMutableAttributedString(string: lead, attributes: regular)
+        text.append(NSAttributedString(string: subject.environment.label(texts), attributes: bold))
+        text.append(NSAttributedString(string: around.dropFirst().joined(), attributes: regular))
         let detail = [subject.environment.host, subject.environment.detail(.current)].compactMap { $0 }.joined(
             separator: " · ")
         if !detail.isEmpty { text.append(NSAttributedString(string: " · \(detail)", attributes: regular)) }

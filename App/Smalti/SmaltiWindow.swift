@@ -163,7 +163,8 @@ final class WindowContentView: NSView {
     func apply(_ tokens: WindowTokens, blur: GlassBlur) {
         paint(tokens)
         let opacity = layer?.backgroundColor?.alpha ?? 0
-        glassDescription = "vidrio \(String(format: "%.2f", opacity)) · desenfoque \(blur.description)"
+        let opacityText = String(format: "%.2f", opacity)
+        glassDescription = String(localized: "glass \(opacityText) · blur \(blur.description)")
         describe()
     }
 
@@ -171,14 +172,14 @@ final class WindowContentView: NSView {
 
     /// "vidrio 0.62 · desenfoque 28", plus " · pantalla completa" while in full screen (tests tell it from zoom).
     private func describe() {
-        setAccessibilityValue(glassDescription + (isFullScreen ? " · pantalla completa" : ""))
+        setAccessibilityValue(glassDescription + (isFullScreen ? String(localized: " · full screen") : ""))
     }
 
     /// F4.5: square and borderless in full screen; the tokens again when it leaves.
     func showsFullScreenChrome(_ isFullScreen: Bool) {
         self.isFullScreen = isFullScreen
         if let tokens = paintedTokens { paint(tokens) }
-        setAccessibilityHelp(isFullScreen ? "pantalla completa" : nil)
+        setAccessibilityHelp(isFullScreen ? String(localized: "full screen") : nil)
         describe()
     }
 
@@ -243,7 +244,7 @@ extension GlassBlur {
     fileprivate var description: String {
         switch self {
         case .exact(let radius): "\(radius)"
-        case .systemMaterial: "del sistema"
+        case .systemMaterial: String(localized: "system")
         }
     }
 }

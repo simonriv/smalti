@@ -104,8 +104,8 @@ final class LayoutSharing {
         alert.messageText = ImportTexts.confirmationTitle(preview.name, texts: .current)
         alert.informativeText = ImportTexts.confirmationBody(preview, texts: .current)
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Importar")
-        let cancel = alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: String(localized: "Import"))
+        let cancel = alert.addButton(withTitle: String(localized: "Cancel"))
         cancel.keyEquivalent = "\u{1b}"
         alert.beginSheetModal(for: window) { response in answer(response == .alertFirstButtonReturn) }
     }

@@ -185,7 +185,7 @@ private final class AddWorkspaceButton: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityIdentifier("smalti.newWorkspace")
-        setAccessibilityLabel("Nuevo workspace")
+        setAccessibilityLabel(String(localized: "New workspace"))
     }
 
     @available(*, unavailable, message: "Built in code only")

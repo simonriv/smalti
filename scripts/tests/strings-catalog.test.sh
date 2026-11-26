@@ -41,13 +41,16 @@ find "$root/App/Smalti" -name '*.swift' -print0 > "$work/sources"
 xargs -0 xcrun xcstringstool extract --modern-localizable-strings --SwiftUI --output-format xcstrings \
   --output-directory "$work/extracted" < "$work/sources" > "$work/extract.log" 2>&1
 python3 - "$catalog" "$work/extracted" > "$work/b.txt" <<'PY'
-import json, os, sys
-known = set(json.load(open(sys.argv[1], encoding="utf-8")).get("strings", {}))
+import json, os, re, sys
+# Without the compiler, xcstringstool writes %arg where the type decides %@ or %lld: compare without specifiers.
+spec = re.compile(r"%(?:\d+\$)?(?:arg|@|lld|ld|d|f|\.\d+f)")
+normal = lambda key: spec.sub("%", key)
+known = {normal(key) for key in json.load(open(sys.argv[1], encoding="utf-8")).get("strings", {})}
 missing = []
 for name in sorted(os.listdir(sys.argv[2])) if os.path.isdir(sys.argv[2]) else []:
     if name.endswith(".xcstrings"):
         for key in json.load(open(os.path.join(sys.argv[2], name), encoding="utf-8")).get("strings", {}):
-            if key not in known:
+            if normal(key) not in known:
                 missing.append(repr(key))
 print("\n".join(sorted(set(missing))))
 sys.exit(1 if missing else 0)

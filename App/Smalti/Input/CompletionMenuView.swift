@@ -5,7 +5,7 @@ import SmaltiCore
 /// color), the selected one on the accent's selection glow, and the help line underneath.
 @MainActor
 final class CompletionMenuView: NSView {
-    static let help = "Tab completar · → aceptar sugerencia · ⌃R historial"
+    static let help = String(localized: "Tab complete · → accept suggestion · ⌃R history")
 
     private let theme: Theme
     private var rows: [NSView] = []

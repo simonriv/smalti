@@ -30,18 +30,21 @@ final class PromptStudioView: NSView {
     var onEdit: ((PromptStudioEdit) -> Void)?
 
     private let title = NSTextField(labelWithString: "Prompt")
-    private let subtitle = NSTextField(labelWithString: "vista previa en tres situaciones reales")
+    private let subtitle = NSTextField(labelWithString: String(localized: "preview in three real situations"))
     private let previewBox = NSView()
     private let previewStack = NSStackView()
     private let templates = PromptTemplate.allCases.map { TemplateCardView(template: $0) }
-    private let apply = PanelButtonView(identifier: "smalti.studio.apply", label: "Aplicar a todos los paneles")
-    private let applyLabel = NSTextField(labelWithString: "Aplicar a todos los paneles")
-    private let export = PanelButtonView(identifier: "smalti.studio.export", label: "Exportar como starship.toml")
-    private let exportLabel = NSTextField(labelWithString: "Exportar como starship.toml")
-    private let exportNote = NSTextField(labelWithString: "para usar el mismo prompt por SSH o en otra terminal")
+    private let apply = PanelButtonView(
+        identifier: "smalti.studio.apply", label: String(localized: "Apply to All Panes"))
+    private let applyLabel = NSTextField(labelWithString: String(localized: "Apply to All Panes"))
+    private let export = PanelButtonView(
+        identifier: "smalti.studio.export", label: String(localized: "Export as starship.toml"))
+    private let exportLabel = NSTextField(labelWithString: String(localized: "Export as starship.toml"))
+    private let exportNote = NSTextField(
+        labelWithString: String(localized: "to use the same prompt over SSH or in another terminal"))
     private let aside = NSView()
     private let modulesNote = NSTextField(
-        labelWithString: "Arrastra para ordenar. Cada uno aparece solo cuando aplica.")
+        labelWithString: String(localized: "Drag to reorder. Each one appears only when it applies."))
     private let moduleStack = NSStackView()
     private let iconSegments = PromptIcons.allCases.map {
         SegmentView(
@@ -54,10 +57,13 @@ final class PromptStudioView: NSView {
             identifier: "smalti.studio.symbol.\($0.rawValue)", title: $0.rawValue,
             inset: Theme.obsidian.appearancePanel.segmentLabelInset)
     }
-    private let layoutChoice = PanelButtonView(identifier: "smalti.studio.layout", label: "Disposición")
+    private let layoutChoice = PanelButtonView(identifier: "smalti.studio.layout", label: String(localized: "Layout"))
     private let layoutLabel = NSTextField(labelWithString: "")
     private let shellPrompt = NSButton(checkboxWithTitle: PromptCopy.current.shellPrompt, target: nil, action: nil)
-    private let labels = ["Plantillas", "Módulos", "Iconos", "Símbolo", "Disposición"].map {
+    private let labels = [
+        String(localized: "Templates"), String(localized: "Modules"), String(localized: "Icons"),
+        String(localized: "Symbol"), String(localized: "Layout"),
+    ].map {
         NSTextField(labelWithString: $0)
     }
     private var theme: Theme

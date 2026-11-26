@@ -4,7 +4,7 @@ import SmaltiCore
 /// Hint for a workspace with no panes, centred in the pane area (decided by Simón, 2026-11-22): "Workspace vacío"
 /// and, below, "⌘D nuevo panel · ⌘K comandos" with the shortcuts drawn as `kbd`. No buttons, as everywhere else.
 final class EmptyWorkspaceView: NSView {
-    private let title = NSTextField(labelWithString: "Workspace vacío")
+    private let title = NSTextField(labelWithString: String(localized: "Empty workspace"))
     private let newPaneKey: KbdView
     private let paletteKey: KbdView
     private let stack = NSStackView()
@@ -18,8 +18,8 @@ final class EmptyWorkspaceView: NSView {
         title.font = font
         title.textColor = color
         let shortcuts = NSStackView(views: [
-            newPaneKey, Self.label(" nuevo panel · ", font: font, color: color),
-            paletteKey, Self.label(" comandos", font: font, color: color),
+            newPaneKey, Self.label(String(localized: " new pane · "), font: font, color: color),
+            paletteKey, Self.label(String(localized: " commands"), font: font, color: color),
         ])
         shortcuts.spacing = 0
         stack.orientation = .vertical
@@ -35,7 +35,7 @@ final class EmptyWorkspaceView: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.staticText)
         setAccessibilityIdentifier("smalti.emptyWorkspace")
-        setAccessibilityLabel("Workspace vacío")
+        setAccessibilityLabel(String(localized: "Empty workspace"))
     }
 
     @available(*, unavailable, message: "Built in code only")

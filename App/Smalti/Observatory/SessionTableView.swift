@@ -13,7 +13,9 @@ final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate
     var onSelect: ((String) -> Void)?
 
     private static let headers = [
-        "Estado", "Sesión", "Agente · modelo", "Vida", "Entrada", "Salida", "Contexto", "Err", "PID",
+        String(localized: "State"), String(localized: "Session"), String(localized: "Agent · model"),
+        String(localized: "Age"), String(localized: "Input"), String(localized: "Output"), String(localized: "Context"),
+        "Err", "PID",
     ]
     private static let rowIdentifier = NSUserInterfaceItemIdentifier("observatory.row")
 

@@ -69,7 +69,7 @@ final class PreviewCardView: NSView {
     func appear(isMotionReduced: Bool) {
         // Only for UI tests that stand in for "Reducir movimiento"; VoiceOver never hears it otherwise.
         if UserDefaults.standard.object(forKey: Motion.reduceMotionKey) != nil {
-            setAccessibilityValue(isMotionReduced ? "sin fundido" : "con fundido")
+            setAccessibilityValue(isMotionReduced ? String(localized: "no fade") : String(localized: "with fade"))
         }
         guard !isMotionReduced else {
             alphaValue = 1

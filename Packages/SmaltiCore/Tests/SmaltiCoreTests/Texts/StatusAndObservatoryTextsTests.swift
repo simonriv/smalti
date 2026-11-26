@@ -70,3 +70,12 @@ struct StatusAndObservatoryTextsTests {
                 == "on Thu 19 at 09:12")
     }
 }
+
+/// F7.7 (found by the UI walk): the Observatory's harness chips.
+@Suite("Observatory filter titles")
+struct ObservatoryFilterTitleTests {
+    @Test func chipsInBothLanguages() {
+        #expect(ObservatoryFilter.allCases.map { $0.title(.spanish) } == ["Todas", "Claude Code", "OpenCode", "Locales"])
+        #expect(ObservatoryFilter.allCases.map { $0.title(.english) } == ["All", "Claude Code", "OpenCode", "Local"])
+    }
+}
