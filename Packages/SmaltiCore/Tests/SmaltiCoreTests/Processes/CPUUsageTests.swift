@@ -15,6 +15,14 @@ struct CPUUsageTests {
         #expect(usage[ProcessIdentity(pid: 10, startedAt: F.start)] == 50)
     }
 
+    /// Mutation 1: the delta, not the sum, of two non-zero CPU times.
+    @Test func percentIsTheDifferenceOfCPUTimes() {
+        let before = F.sample([F.record(10, cpuTime: 4 * F.second)], at: 10)
+        let after = F.sample([F.record(10, cpuTime: 5 * F.second)], at: 12)
+
+        #expect(CPUUsage.percentages(previous: before, current: after)[ProcessIdentity(pid: 10, startedAt: F.start)] == 50)
+    }
+
     @Test func moreThanOneCoreGoesOverAHundred() {
         let before = F.sample([F.record(10, cpuTime: 0)], at: 10)
         let after = F.sample([F.record(10, cpuTime: 3 * F.second)], at: 12)

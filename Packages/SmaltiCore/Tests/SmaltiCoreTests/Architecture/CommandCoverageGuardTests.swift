@@ -47,8 +47,7 @@ struct CommandCoverageGuardTests {
     }
 
     /// Commands of a phase in progress whose app action lands in a later task; empty between phases.
-    /// F8: wired in the app by T8 of the plan.
-    static let pendingInApp: Set<CommandID> = Set(CommandID.processes)
+    static let pendingInApp: Set<CommandID> = []
 
     private static func isFamily(_ command: CommandID) -> Bool {
         let raw = command.rawValue

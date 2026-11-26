@@ -63,6 +63,28 @@ struct PortTableTests {
         #expect(rows(order: .process).map(\.port) == [3000, 3000, 5173, 5432, 9000])
     }
 
+    /// Mutation 1: by process name even when the ports say otherwise, and a listener without a process last even on
+    /// a lower port.
+    @Test func orderByProcessFollowsNamesNotPorts() throws {
+        let alpha = F.record(10, name: "alpha")
+        let beta = F.record(11, name: "beta")
+        let input = ProcessTableInput(
+            sample: F.sample([alpha, beta]), cpu: [:],
+            attribution: PaneAttribution(records: [alpha, beta], foregroundGroups: [:]), policy: StopPolicy(ownPID: 1),
+            paneNames: [:], phases: [:])
+        let sockets = [
+            ListeningSocket(pid: 99, transport: .tcp, port: 1000, address: "127.0.0.1"),
+            ListeningSocket(pid: 11, transport: .tcp, port: 3000, address: "127.0.0.1"),
+            ListeningSocket(pid: 10, transport: .tcp, port: 9000, address: "127.0.0.1"),
+        ]
+
+        let rows = PortTable.rows(
+            sockets: sockets, context: PortContext(processes: ProcessTable.rowsByPID(input), paneNames: [:]),
+            query: PortQuery(filter: "", order: .process))
+
+        #expect(rows.map(\.pid) == [10, 11, 99])
+    }
+
     @Test func orderByPanePutsPanelessLast() {
         #expect(rows(order: .pane).first?.port == 5173)
     }

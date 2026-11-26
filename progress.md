@@ -468,7 +468,7 @@
 #### Bloque 2 · Adaptadores
 - [x] T6 · `DarwinProcessesAdapter`: lectura
 - [x] T7 · `DarwinProcessControl` y el motor
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] Revisión intermedia 1 (0 críticos, 1 importante, 5 menores; corregidos) + mutación incremental (105 mutantes, 93,8 %; 5 sobrevivientes muertos y verificados a mano)
 #### Bloque 3 · App
 - [ ] T8 · Superposición, refresco y teclado
 - [ ] T9 · Detener, confirmar, prioridad, avisos e idioma

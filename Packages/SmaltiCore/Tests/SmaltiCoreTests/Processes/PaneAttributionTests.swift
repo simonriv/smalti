@@ -77,6 +77,15 @@ struct PaneAttributionTests {
         #expect(!attribution.isPaneRoot(501))
     }
 
+    /// Mutation 1: a pane process whose parent record is missing (it ended between reads) counts as the top: the safe
+    /// side is to protect it.
+    @Test func unknownParentCountsAsThePaneTop() {
+        let orphan = F.record(600, parent: 599, name: "zsh", terminal: 7)
+        let attribution = PaneAttribution(records: records + [orphan], foregroundGroups: [pane: 102])
+
+        #expect(attribution.isPaneRoot(600))
+    }
+
     @Test func loginItselfIsNotAPaneProcess() {
         let attribution = PaneAttribution(records: records, foregroundGroups: [pane: 104])
 

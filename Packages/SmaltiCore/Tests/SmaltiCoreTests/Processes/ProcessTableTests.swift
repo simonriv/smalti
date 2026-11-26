@@ -70,6 +70,12 @@ struct ProcessTableTests {
         #expect(PortOrder.pane.next == .port)
     }
 
+    /// Mutation 1: outside the tree nothing is dimmed as context.
+    @Test func flatRowsAreNeverContext() {
+        #expect(rows().allSatisfy { !$0.isContext })
+        #expect(rows(filter: "vite").allSatisfy { !$0.isContext })
+    }
+
     @Test func treeNestsChildrenUnderParentsWithGuides() {
         let tree = rows(tree: true)
 
