@@ -8,10 +8,12 @@ public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
     public let tree: SnapshotTree?
     public let focusedIndex: Int?
     public let panes: [PaneSnapshot]
+    /// F8.5: the project's repo when the workspace is one; absent in files saved before F8.5.
+    public let project: String?
 
     public init(
         name: String, rootDirectory: String, layout: String, tree: SnapshotTree?, focusedIndex: Int?,
-        panes: [PaneSnapshot]
+        panes: [PaneSnapshot], project: String? = nil
     ) {
         self.name = name
         self.rootDirectory = rootDirectory
@@ -19,6 +21,7 @@ public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
         self.tree = tree
         self.focusedIndex = focusedIndex
         self.panes = panes
+        self.project = project
     }
 
     init(_ workspace: Workspace, scrollbackLines: [PaneID: Int], editors: [PaneID: EditorPosition] = [:]) {
@@ -31,6 +34,7 @@ public struct WorkspaceSnapshot: Codable, Equatable, Sendable {
         panes = workspace.panes.map {
             PaneSnapshot($0, scrollbackLines: scrollbackLines[$0.id] ?? 0, editor: editors[$0.id])
         }
+        project = workspace.project
     }
 }
 

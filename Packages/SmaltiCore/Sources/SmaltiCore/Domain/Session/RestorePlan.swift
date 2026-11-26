@@ -46,11 +46,14 @@ public struct PlannedWorkspace: Equatable, Sendable {
     public let tree: SnapshotTree?
     public let focusedIndex: Int?
     public let panes: [PlannedPane]
+    /// F8.5: the project's repo when the workspace is one.
+    public let project: String?
 
     public init(
         name: String, rootDirectory: String, layout: LayoutID, tree: SnapshotTree?, focusedIndex: Int?,
-        panes: [PlannedPane]
+        panes: [PlannedPane], project: String? = nil
     ) {
+        self.project = project
         self.name = name
         self.rootDirectory = rootDirectory
         self.layout = layout
@@ -91,7 +94,7 @@ public struct RestorePlan: Equatable, Sendable {
             name: workspace.name, rootDirectory: workspace.rootDirectory, layout: LayoutID(rawValue: workspace.layout),
             tree: isComplete ? workspace.tree : nil,
             focusedIndex: kept.firstIndex { $0.offset == workspace.focusedIndex } ?? 0,
-            panes: kept.map { plan($0.element, mode: mode) })
+            panes: kept.map { plan($0.element, mode: mode) }, project: workspace.project)
     }
 
     private static func plan(_ pane: PaneSnapshot, mode: RestoreMode) -> PlannedPane {

@@ -92,7 +92,8 @@ public struct RestoreSession {
         guard !opened.isEmpty else { return (nil, failures) }
         let workspaceRoot = unreachable.contains(root) ? home : root
         let layout = LayoutCatalog.standard.strategyOrDefault(for: planned.layout)
-        let empty = Workspace.empty(name: planned.name, rootDirectory: workspaceRoot, layout: layout)
+        let blank = Workspace.empty(name: planned.name, rootDirectory: workspaceRoot, layout: layout)
+        let empty = planned.project.map { blank.markingProject($0) } ?? blank
         let workspace = opened.reduce(empty) { $0.adding($1.pane) }
         return (arrange(workspace, as: planned, opened: opened), failures)
     }
