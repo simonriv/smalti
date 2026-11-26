@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 94B308E204A0832409E16986 /* UserNotificationsAdapter */; };
 		DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */; };
+		F8A0C0DE00000000000000A1 /* DarwinProcessesAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = F8A0C0DE00000000000000A2 /* DarwinProcessesAdapter */; };
 		49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 7C2E287A90F14917779861A7 /* OllamaAdapter */; };
 		8062C966C3D66A43ECAEB51E /* ProjectContextAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = 8F3B0D5E1EABA0FBE4D170CF /* ProjectContextAdapter */; };
 		F4D2D5A35AE3666A94268DBA /* FigCompletionAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = C8F4A6EAB33C8C39D16E5810 /* FigCompletionAdapter */; };
@@ -59,6 +60,7 @@
 				81911E9F850FCC77A703B5EE /* TOMLConfigAdapter in Frameworks */,
 				FBF8E3040318613E5839F856 /* UserNotificationsAdapter in Frameworks */,
 				DC4CA9171144C354162D2F0A /* DarwinMetricsAdapter in Frameworks */,
+				F8A0C0DE00000000000000A1 /* DarwinProcessesAdapter in Frameworks */,
 				49D6DC143999883D45218252 /* OllamaAdapter in Frameworks */,
 				8062C966C3D66A43ECAEB51E /* ProjectContextAdapter in Frameworks */,
 				F4D2D5A35AE3666A94268DBA /* FigCompletionAdapter in Frameworks */,
@@ -134,6 +136,7 @@
 				1E459BDF48CDA2647BCB555D /* TOMLConfigAdapter */,
 				94B308E204A0832409E16986 /* UserNotificationsAdapter */,
 				5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */,
+				F8A0C0DE00000000000000A2 /* DarwinProcessesAdapter */,
 				7C2E287A90F14917779861A7 /* OllamaAdapter */,
 				8F3B0D5E1EABA0FBE4D170CF /* ProjectContextAdapter */,
 				C8F4A6EAB33C8C39D16E5810 /* FigCompletionAdapter */,
@@ -210,6 +213,7 @@
 				B4BECF2FE38220DAE2E49AE8 /* XCLocalSwiftPackageReference "../Packages/TOMLConfigAdapter" */,
 				B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */,
 				CEF936168A22DB49BFDBAC7E /* XCLocalSwiftPackageReference "../Packages/DarwinMetricsAdapter" */,
+				F8A0C0DE00000000000000A3 /* XCLocalSwiftPackageReference "../Packages/DarwinProcessesAdapter" */,
 				884BB93075592D7EAABE6AD1 /* XCLocalSwiftPackageReference "../Packages/OllamaAdapter" */,
 				062B03E7C0A004ECA2172731 /* XCLocalSwiftPackageReference "../Packages/ProjectContextAdapter" */,
 				EA096ECCA1EE54F339305520 /* XCLocalSwiftPackageReference "../Packages/FigCompletionAdapter" */,
@@ -513,6 +517,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/DarwinMetricsAdapter;
 		};
+		F8A0C0DE00000000000000A3 /* XCLocalSwiftPackageReference "../Packages/DarwinProcessesAdapter" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/DarwinProcessesAdapter;
+		};
 		B667FE12F1539FDD530C8EA7 /* XCLocalSwiftPackageReference "../Packages/UserNotificationsAdapter" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/UserNotificationsAdapter;
@@ -595,6 +603,10 @@
 		5EAD9AB9A6519C0FDF14648F /* DarwinMetricsAdapter */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DarwinMetricsAdapter;
+		};
+		F8A0C0DE00000000000000A2 /* DarwinProcessesAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DarwinProcessesAdapter;
 		};
 		94B308E204A0832409E16986 /* UserNotificationsAdapter */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -28,6 +28,20 @@ struct WindowServices {
     /// F5.5: the image files the preview reads and the panes' last commands.
     let imageFiles: any ImageFiles
     let lastCommand: (PaneID) async -> String?
+    /// F8: the processes and ports views' use cases (one set per window) and the names of every window's panes.
+    let processes: ProcessesServices
+}
+
+/// F8: what a window's processes and ports views need from the app.
+@MainActor
+struct ProcessesServices {
+    let make: () -> ProcessesController.Dependencies
+    let grace: Duration
+    let paneNames: () -> [PaneID: String]
+    /// The group leading each pane's terminal now, in every window.
+    let foregroundGroups: () -> [PaneID: Int32]
+    /// Shows the pane in whichever window holds it; false when no window does any more.
+    let showPane: (PaneID) -> Bool
 }
 
 /// One window and everything drawn in it: its tiling controller, palette, observatory overlay, resume screen and
@@ -40,6 +54,8 @@ final class WindowComposition {
     private let services: WindowServices
     private var palette: CommandPaletteController?
     private var observatoryScreen: ObservatoryController?
+    /// F8: ⌘⇧M and ⌘⇧U, the processes and ports views over the window.
+    private var processesScreen: ProcessesController?
     private var help: HelpController?
     /// F6: ⌘⇧O, the session search card.
     private var sessions: SessionSearchController?
@@ -139,7 +155,8 @@ final class WindowComposition {
 
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
-        palette?.isOpen == true || observatoryScreen?.isOpen == true || hasHistoryPaletteOpen
+        palette?.isOpen == true || observatoryScreen?.isOpen == true || processesScreen?.isOpen == true
+            || hasHistoryPaletteOpen
             || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
             || welcome?.isOpen == true
     }
@@ -233,6 +250,7 @@ final class WindowComposition {
 
     func dismissObservatory() {
         observatoryScreen?.dismiss()
+        processesScreen?.dismiss()
     }
 
     func show(_ frame: ObservatoryFrame) {
@@ -410,7 +428,9 @@ final class WindowComposition {
         }
         let screen = makeObservatoryScreen()
         observatoryScreen = screen
-        controller.onViewCommand = { [weak self, weak palette, weak screen] command in
+        let processes = makeProcessesScreen()
+        processesScreen = processes
+        controller.onViewCommand = { [weak self, weak palette, weak screen, weak processes] command in
             guard let self, let palette else { return }
             let theme = controller.theme
             switch command {
@@ -441,6 +461,13 @@ final class WindowComposition {
             case .harnessSearch:
                 closeOverlays(keeping: .sessions)
                 self.sessions?.toggle(theme: theme)
+            case .processesToggle, .portsToggle:
+                closeOverlays()
+                processes?.toggle(command == .portsToggle ? .ports : .processes, theme: theme)
+            // From ⌘K or the menu with the view closed, they open it first.
+            case .processesStop, .processesLowerPriority, .processesTree, .processesSort:
+                if processes?.isOpen != true { closeOverlays() }
+                processes?.perform(command, theme: theme)
             default: break
             }
         }
@@ -464,6 +491,24 @@ final class WindowComposition {
                     self?.services.observatoryOpenChanged()
                     if isOpen { self?.services.completionMenu()?.close() }
                 }))
+    }
+
+    /// ⌘⇧M / ⌘⇧U: the processes and ports views over the window; ↵ on a pane's row shows that pane, in whichever
+    /// window holds it.
+    private func makeProcessesScreen() -> ProcessesController {
+        let processes = services.processes
+        return ProcessesController(
+            window: window, dependencies: processes.make(),
+            actions: .init(
+                setTilingHidden: { [weak self] hidden in self?.setTilingHidden(hidden) },
+                didClose: { [weak self] pane in
+                    guard let self else { return }
+                    if pane.map(processes.showPane) != true { focusKeyboard(on: controller.set.active.focusedPane) }
+                },
+                foregroundGroups: processes.foregroundGroups,
+                paneNames: processes.paneNames,
+                keymap: { [weak self] in self?.controller.config.keys ?? .standard }),
+            grace: processes.grace)
     }
 
     private func connectKeyboard() {
@@ -521,7 +566,10 @@ final class WindowComposition {
         if observatoryScreen?.isOpen == true {
             return KeyContext(allowing: [.observatoryToggle, .observatoryPeriod, .observatoryFilter])
         }
-        return KeyContext(passingThrough: [.observatoryPeriod, .observatoryFilter])
+        // F8: the view owns the keyboard (typing filters); only its own chords act.
+        if processesScreen?.isOpen == true { return KeyContext(allowing: Set(CommandID.processes)) }
+        return KeyContext(
+            passingThrough: Set([CommandID.observatoryPeriod, .observatoryFilter]).union(CommandID.processesContextual))
     }
 
     /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).

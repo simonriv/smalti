@@ -110,6 +110,43 @@ final class LocalizationTests: SmaltiUITestCase {
         XCTAssertTrue(offenders.isEmpty, "Spanish in the English Observatory: " + offenders.joined(separator: " | "))
     }
 
+    /// F8 (C5): the processes and ports views, the tree, a notice and the confirmation to force, in English.
+    func testEnglishProcessesAndPortsHaveNoSpanish() throws {
+        let english = XCUIApplication.isolatedSmalti(language: "en")
+        english.launchArguments += ["-SmaltiStopGraceSeconds", "1"]
+        launch(english)
+        let listener = try PaneListener(outputFile: outputFile, ignoringTerm: true)
+        let listening = start(listener)
+        defer { listener.end(listening.pid) }
+
+        openProcesses()
+        collect("processes")
+        app.typeKey("t", modifierFlags: .command)
+        filter(String(listening.pid))
+        XCTAssertTrue(app.element("smalti.processes.row.\(listening.pid)").waitForExistence(timeout: 10))
+        collect("processes tree")
+        app.typeKey(.upArrow, modifierFlags: [])
+        app.typeKey(.delete, modifierFlags: .command)
+        waitUntil { !self.notice().isEmpty }
+        collect("protected notice")
+
+        app.typeKey("u", modifierFlags: [.command, .shift])
+        app.typeKey(.escape, modifierFlags: [])
+        filter(String(listening.port))
+        let row = app.element("smalti.ports.row.\(listening.pid).tcp.\(listening.port)")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        collect("ports")
+        app.typeKey(.delete, modifierFlags: .command)
+        waitUntil { row.label.contains("not responding") }
+        app.typeKey(.delete, modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.processes.confirm").waitForExistence(timeout: 5))
+        collect("force confirmation")
+        app.typeKey(.escape, modifierFlags: [])
+
+        XCTAssertTrue(
+            offenders.isEmpty, "Spanish in the English processes views: " + offenders.joined(separator: " | "))
+    }
+
     func testEnglishResumeScreenHasNoSpanish() {
         let english = XCUIApplication.isolatedSmalti(language: "en")
         SessionState.seed(

@@ -420,6 +420,8 @@ final class TilingController {
     private static let viewCommands: Set<CommandID> = [
         .paletteOpen, .workspaceRename, .observatoryToggle, .observatoryPeriod, .historySearch, .helpShow,
         .searchOpen, .searchNext, .searchPrevious, .previewQuickLook, .harnessSearch, .observatoryFilter,
+        // F8: the processes and ports views.
+        .processesToggle, .portsToggle, .processesStop, .processesLowerPriority, .processesTree, .processesSort,
     ]
 
     private func action(for command: CommandID) -> (() -> Void)? {

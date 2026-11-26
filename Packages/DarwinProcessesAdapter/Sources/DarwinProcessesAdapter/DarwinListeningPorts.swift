@@ -69,19 +69,20 @@ public struct DarwinListeningPorts: ListeningPorts {
 
     private static func text(_ address: in_sockinfo) -> String? {
         if address.insi_vflag & ipv6Flag != 0 {
-            var value = address.insi_laddr.ina_6
-            return presentation(AF_INET6, &value, length: INET6_ADDRSTRLEN)
+            var value: in6_addr = address.insi_laddr.ina_6
+            return presentation(AF_INET6, bytes: &value, length: INET6_ADDRSTRLEN)
         }
         if address.insi_vflag & ipv4Flag != 0 {
-            var value = address.insi_laddr.ina_46.i46a_addr4
-            return presentation(AF_INET, &value, length: INET_ADDRSTRLEN)
+            var value: in_addr = address.insi_laddr.ina_46.i46a_addr4
+            return presentation(AF_INET, bytes: &value, length: INET_ADDRSTRLEN)
         }
         return nil
     }
 
-    private static func presentation<Address>(_ family: Int32, _ address: inout Address, length: Int32) -> String? {
+    /// `inet_ntop` over a plain C address struct (`in_addr`, `in6_addr`: bytes only, no references).
+    private static func presentation(_ family: Int32, bytes: UnsafeRawPointer, length: Int32) -> String? {
         var buffer = [CChar](repeating: 0, count: Int(length))
-        guard inet_ntop(family, &address, &buffer, socklen_t(length)) != nil else { return nil }
+        guard inet_ntop(family, bytes, &buffer, socklen_t(length)) != nil else { return nil }
         return String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 }
