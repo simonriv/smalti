@@ -75,10 +75,12 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    for (session, file) in try located(under: root, limit: .max) {
+                    // Each session is read (head) only when the search reaches it, and hits go out as they are found.
+                    for file in list.candidates(under: root) {
                         guard !Task.isCancelled else { break }
+                        guard let session = list.session(file, under: root) else { continue }
                         let ref = Self.ref(session.id, in: file.deletingLastPathComponent())
-                        for hit in try scan(ref, session: session, needle: query.needle) { continuation.yield(hit) }
+                        try scan(ref, session: session, needle: query.needle) { continuation.yield($0) }
                     }
                     continuation.finish()
                 } catch {
@@ -161,8 +163,9 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
         return .subagentLink(agentID: agent, toolID: tool)
     }
 
-    private func scan(_ ref: TranscriptSessionRef, session: HarnessSession, needle: [UInt8]) throws -> [TranscriptHit] {
-        var hits: [TranscriptHit] = []
+    private func scan(
+        _ ref: TranscriptSessionRef, session: HarnessSession, needle: [UInt8], hit: (TranscriptHit) -> Void
+    ) throws {
         for (file, scope) in [(URL(filePath: ref.file), EntryScope.main)] + subagentFiles(of: ref) {
             guard let identity = JSONLFileIdentity.of(file) else { continue }
             let translator = ClaudeTimelineTranslator(
@@ -171,12 +174,11 @@ public struct ClaudeTimeline: SessionTranscripts, ProjectTranscripts {
                 autoreleasepool {
                     for item in translator.translate(line, at: at) {
                         guard let text = item.text else { continue }
-                        hits.append(TranscriptHit(session: session, entry: item.entry, text: text))
+                        hit(TranscriptHit(session: session, entry: item.entry, text: text))
                     }
                 }
             }
         }
-        return hits
     }
 
     private static func translated(_ error: JSONLReadError) -> TranscriptReadError {

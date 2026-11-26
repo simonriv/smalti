@@ -23,17 +23,7 @@ func footprint() -> UInt64 {
     return result == 0 ? info.ri_phys_footprint : 0
 }
 
-let query = TimelineQuery(arguments[3])
-let start = clock.now
-var first: Duration?
-var matches = 0
-for try await hit in adapter.search(query, under: arguments[2]) {
-    guard SearchResults.confirm(hit, query: query, policy: VerbatimText()) != nil else { continue }
-    if first == nil { first = clock.now - start }
-    matches += 1
-}
-let whole = clock.now - start
-
+// C7 and C8 first, on a fresh process: the read of the session with its rows, and what it adds to the footprint.
 let before = footprint()
 let readStart = clock.now
 let ref = try await adapter.locate(sessionID: arguments[4])
@@ -44,6 +34,19 @@ let rows = TimelineRows.rows(
 let readTime = clock.now - readStart
 let size = (try? FileManager.default.attributesOfItem(atPath: ref.file)[.size] as? NSNumber)?.intValue ?? 0
 let added = Int64(footprint()) - Int64(before)
+
+// C5: as the app searches, it stops reading once SearchResults.cap matches are confirmed.
+let query = TimelineQuery(arguments[3])
+let start = clock.now
+var first: Duration?
+var matches = 0
+for try await hit in adapter.search(query, under: arguments[2]) {
+    guard SearchResults.confirm(hit, query: query, policy: VerbatimText()) != nil else { continue }
+    if first == nil { first = clock.now - start }
+    matches += 1
+    if matches >= SearchResults.cap { break }
+}
+let whole = clock.now - start
 
 func ms(_ duration: Duration?) -> String {
     guard let duration else { return "-" }

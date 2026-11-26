@@ -37,6 +37,19 @@ struct ClaudeSessionList {
         guard files.fileExists(atPath: self.root.path) else {
             throw .storeMissing(harness: harness, path: self.root.path)
         }
+        var found: [(session: HarnessSession, file: URL)] = []
+        for file in candidates(under: root) {
+            guard found.count < limit else { break }
+            guard let session = session(file, under: root) else { continue }
+            found.append((session, file))
+        }
+        return found
+    }
+
+    /// The transcripts of the folders `root` and the ones under it may live in, newest first, unread (the search
+    /// reads each one's head only when it reaches it: the first results do not wait for the whole list).
+    func candidates(under root: String) -> [URL] {
+        let files = FileManager.default
         let name = Self.projectFolder(for: root)
         let folders = ((try? files.contentsOfDirectory(at: self.root, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.lastPathComponent == name || $0.lastPathComponent.hasPrefix(name + "-") }
@@ -44,15 +57,15 @@ struct ClaudeSessionList {
             ((try? files.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
                 .filter { $0.pathExtension == "jsonl" }
         }
-        var found: [(session: HarnessSession, file: URL)] = []
-        for file in transcripts.map({ ($0, Self.modified($0)) }).sorted(by: { $0.1 > $1.1 }).map(\.0) {
-            guard found.count < limit else { break }
-            guard let session = autoreleasepool(invoking: { session(file) }),
-                session.directory == root || session.directory.hasPrefix(root.hasSuffix("/") ? root : root + "/")
-            else { continue }
-            found.append((session, file))
-        }
-        return found
+        return transcripts.map { ($0, Self.modified($0)) }.sorted { $0.1 > $1.1 }.map(\.0)
+    }
+
+    /// The session of `file` when its directory is `root` or under it.
+    func session(_ file: URL, under root: String) -> HarnessSession? {
+        guard let session = autoreleasepool(invoking: { session(file) }),
+            session.directory == root || session.directory.hasPrefix(root.hasSuffix("/") ? root : root + "/")
+        else { return nil }
+        return session
     }
 
     /// Claude Code (2.1) names a project's folder `cwd.replace(/[^a-zA-Z0-9]/g, "-")`: every UTF-16 unit that is not
