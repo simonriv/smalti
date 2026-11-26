@@ -68,7 +68,7 @@ public enum ProjectCard {
             } ?? texts.firstTime
         return ProjectCardContent(
             title: texts.openTitle(["name": confirmation.prepared.name.rawValue]), body: body,
-            lines: changes.lines.map(line), extra: extra(changes, context: context),
+            lines: changes.lines.map(line), extra: extra(confirmation, context: context),
             note: texts.source(["root": ProjectPath.display(confirmation.prepared.root, home: context.home)]),
             confirmLabel: texts.openAndRun, cancelLabel: texts.cancel)
     }
@@ -95,7 +95,20 @@ public enum ProjectCard {
         return ProjectCardLine(sign: sign, command: line.command.command, place: line.command.place, kind: line.kind)
     }
 
-    private static func extra(_ changes: ProjectChanges, context: OpeningContext) -> String? {
+    /// What changed besides the commands, and what Smalti degrades in the file, one per line.
+    private static func extra(_ confirmation: ProjectConfirmation, context: OpeningContext) -> String? {
+        let warnings = confirmation.warnings.map { warning -> String in
+            switch warning {
+            case .unknownHarness(let pane, let name):
+                context.session.unknownHarness(["pane": String(pane), "name": name])
+            case .unknownLayout(let layout): context.session.unknownLayout(["layout": layout])
+            }
+        }
+        let lines = [changed(confirmation.changes, context: context)].compactMap { $0 } + warnings
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private static func changed(_ changes: ProjectChanges, context: OpeningContext) -> String? {
         if let arrangement = changes.arrangement {
             let name = { (layout: String) in context.layoutNames[LayoutID(rawValue: layout)] ?? layout }
             return context.texts.arrangementChanged([

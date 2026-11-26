@@ -23,6 +23,19 @@ public final class FileProjectFiles: ProjectFiles {
             atPath: URL(filePath: directory).appending(path: ".git").path(percentEncoded: false))
     }
 
+    public func folderExists(_ path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue
+    }
+
+    /// `.smalti` must be a real folder of the repo (or not exist yet): a link would read or write elsewhere.
+    private static func checkFolder(of root: String) throws(ProjectFileError) {
+        let folder = URL(filePath: root).appending(path: folderName).path(percentEncoded: false)
+        var status = stat()
+        guard lstat(folder, &status) == 0 else { return }
+        guard status.st_mode & S_IFMT == S_IFDIR else { throw .notRegularFile(root: root) }
+    }
+
     public func realPath(_ path: String) -> String {
         guard let resolved = realpath(path, nil) else { return path }
         defer { free(resolved) }
@@ -32,6 +45,7 @@ public final class FileProjectFiles: ProjectFiles {
     /// Reads at most one byte past the limit from a regular file opened without following links, so neither a link
     /// to a huge file or a device nor a file growing meanwhile can make it read without end (review 1).
     public func layout(at root: String) throws(ProjectFileError) -> ProjectLayoutFile {
+        try Self.checkFolder(of: root)
         let data = try Self.boundedContents(of: file(at: root).path(percentEncoded: false), root: root)
         guard data.count <= SharedLayout.maximumBytes else { throw .invalid(.tooLarge(bytes: data.count)) }
         let layout: SharedLayout
@@ -60,6 +74,7 @@ public final class FileProjectFiles: ProjectFiles {
     }
 
     public func write(_ layout: SharedLayout, to root: String) throws(ProjectFileError) -> String {
+        try Self.checkFolder(of: root)
         let target = file(at: root)
         do {
             let data = try SharedLayoutJSON.encoded(layout)

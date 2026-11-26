@@ -33,6 +33,8 @@ public struct SessionTexts: Sendable, Equatable {
     public let unavailable: TextTemplate
     public let cannotFork: TextTemplate
     public let paneFailed: TextTemplate
+    /// F8.5: a project's pane whose folder is gone opens a shell elsewhere and runs nothing.
+    public let notRunMissingFolder: TextTemplate
     public let noAdapter: TextTemplate
     public let allHarnesses: String
     public let noSessions: String
@@ -73,6 +75,7 @@ public struct SessionTexts: Sendable, Equatable {
         folderMissing: "La carpeta de la sesión ya no existe: {path}",
         unavailable: "{harness} no está disponible en este Mac", cannotFork: "{harness} no permite bifurcar sesiones",
         paneFailed: "{directory}: no se pudo abrir el panel ({error})",
+        notRunMissingFolder: "{command} no se ejecutó: falta la carpeta {directory}",
         noAdapter: "{harness}: harness sin adaptador, no se reanuda {session}", allHarnesses: "Todas",
         noSessions: "No hay sesiones de agentes en este Mac", noMatches: "Sin sesiones que coincidan",
         readFailed: "No se pudo leer {harness}: {reason}", storeMissing: "no existe {path}",
@@ -104,6 +107,7 @@ public struct SessionTexts: Sendable, Equatable {
         folderMissing: "The session’s folder no longer exists: {path}",
         unavailable: "{harness} isn’t available on this Mac",
         cannotFork: "{harness} can’t fork sessions", paneFailed: "{directory}: couldn’t open the pane ({error})",
+        notRunMissingFolder: "{command} didn’t run: the folder {directory} is missing",
         noAdapter: "{harness}: no adapter for this harness, {session} isn’t resumed", allHarnesses: "All",
         noSessions: "No agent sessions on this Mac", noMatches: "No matching sessions",
         readFailed: "Couldn’t read {harness}: {reason}", storeMissing: "{path} doesn’t exist",

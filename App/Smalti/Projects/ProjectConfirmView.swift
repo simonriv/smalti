@@ -86,12 +86,31 @@ final class ProjectConfirmView: NSView {
 
     private func commands(_ lines: [ProjectCardLine]) -> NSView {
         let tokens = theme.projects
-        let box = NSStackView(views: lines.map(commandRow))
-        box.orientation = .vertical
-        box.alignment = .width
-        box.spacing = 0
-        box.edgeInsets = NSEdgeInsets(
+        let list = NSStackView(views: lines.map(commandRow))
+        list.orientation = .vertical
+        list.alignment = .width
+        list.spacing = 0
+        list.edgeInsets = NSEdgeInsets(
             top: tokens.commandsPadding, left: 0, bottom: tokens.commandsPadding, right: 0)
+        // Final review: every command shows whole (it wraps); a long list scrolls past `commandsMaximumHeight`.
+        let width = tokens.confirmWidth - 2 * tokens.padding
+        list.translatesAutoresizingMaskIntoConstraints = false
+        list.widthAnchor.constraint(equalToConstant: width).isActive = true
+        list.layoutSubtreeIfNeeded()
+        let document = FlippedStack()
+        document.translatesAutoresizingMaskIntoConstraints = false
+        document.addSubview(list)
+        OverlayBox.pin(list, to: document)
+        let box = NSScrollView()
+        box.documentView = document
+        box.drawsBackground = false
+        box.hasVerticalScroller = true
+        box.autohidesScrollers = true
+        box.scrollerStyle = .overlay
+        document.widthAnchor.constraint(equalTo: box.contentView.widthAnchor).isActive = true
+        box.heightAnchor.constraint(
+            equalToConstant: min(list.fittingSize.height, tokens.commandsMaximumHeight)
+        ).isActive = true
         box.wantsLayer = true
         box.layer?.cornerRadius = tokens.commandsRadius
         box.layer?.backgroundColor = tokens.commandsBackground.nsColor.cgColor
@@ -108,18 +127,25 @@ final class ProjectConfirmView: NSView {
         sign.font = font
         sign.textColor = signColor(line.kind).nsColor
         sign.widthAnchor.constraint(equalToConstant: tokens.signWidth).isActive = true
-        let command = NSTextField(labelWithAttributedString: commandText(line, font: font))
-        command.lineBreakMode = .byTruncatingTail
+        let command = NSTextField(wrappingLabelWithString: "")
+        command.attributedStringValue = commandText(line, font: font)
+        command.lineBreakMode = .byCharWrapping
         command.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let spacer = NSView()
-        spacer.setContentHuggingPriority(.init(1), for: .horizontal)
+        command.setContentHuggingPriority(.init(1), for: .horizontal)
+        command.setAccessibilityIdentifier("smalti.projects.commandText")
         let place = NSTextField(labelWithString: line.place ?? "")
         place.font = theme.monospacedFont(size: tokens.noteFontSize)
         place.textColor = theme.text.secondary.nsColor
-        let row = NSStackView(views: [sign, command, spacer, place])
-        row.spacing = 0
-        row.edgeInsets = NSEdgeInsets(top: 0, left: tokens.commandRowInset, bottom: 0, right: tokens.commandRowInset)
-        row.heightAnchor.constraint(equalToConstant: tokens.commandRowHeight).isActive = true
+        place.setContentCompressionResistancePriority(.required, for: .horizontal)
+        let row = NSStackView(views: [sign, command, place])
+        row.alignment = .firstBaseline
+        row.spacing = tokens.commandRowInset
+        let vertical = (tokens.commandRowHeight - tokens.commandFontSize * tokens.commandLineHeight) / 2
+        row.edgeInsets = NSEdgeInsets(
+            top: vertical, left: tokens.commandRowInset, bottom: vertical, right: tokens.commandRowInset)
+        command.preferredMaxLayoutWidth =
+            tokens.confirmWidth - 2 * tokens.padding - 3 * tokens.commandRowInset - tokens.signWidth
+            - place.fittingSize.width
         row.setAccessibilityElement(true)
         row.setAccessibilityRole(.staticText)
         row.setAccessibilityIdentifier("smalti.projects.command")
@@ -171,4 +197,9 @@ final class ProjectConfirmView: NSView {
         row.heightAnchor.constraint(equalToConstant: palette.footerHeight).isActive = true
         return row
     }
+}
+
+/// The commands' scroll document, laid out from the top.
+private final class FlippedStack: NSView {
+    override var isFlipped: Bool { true }
 }

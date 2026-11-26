@@ -113,9 +113,16 @@ public struct SaveProjectLayout {
                 PaneSnapshot(
                     id: pane.id, workingDirectory: files.realPath(pane.workingDirectory), title: pane.title,
                     processName: pane.processName, scrollbackLines: pane.scrollbackLines,
-                    commandCount: pane.commandCount, relaunch: pane.relaunch, agent: pane.agent,
+                    commandCount: pane.commandCount,
+                    relaunch: pane.relaunch.map { RelaunchCommand(arguments: $0.arguments.map(resolvedArgument)) },
+                    agent: pane.agent,
                     editor: pane.editor.map { EditorPosition(file: files.realPath($0.file), line: $0.line) })
             }, project: snapshot.project)
+    }
+
+    /// An absolute argument through a link (`/tmp/r/x.sh`) as its real path, so it is made relative to the repo.
+    private func resolvedArgument(_ argument: String) -> String {
+        argument.hasPrefix("/") ? files.realPath(argument) : argument
     }
 
     private func existingName(at root: String, exists: Bool) -> LayoutName? {

@@ -19,6 +19,7 @@ public final class InMemoryProjectFiles: ProjectFiles, @unchecked Sendable {
         var reads: [String] = []
         var writes: [(root: String, layout: SharedLayout)] = []
         var writeError: ProjectFileError?
+        var folders: Set<String>?
     }
 
     public init(layoutRoots: Set<String> = [], repositoryRoots: Set<String> = []) {
@@ -52,6 +53,16 @@ public final class InMemoryProjectFiles: ProjectFiles, @unchecked Sendable {
             $0.layoutRoots.remove(root)
             $0.files[root] = nil
         }
+    }
+
+    /// The folders that exist; `nil` (the default) means every folder does.
+    public var folders: Set<String>? {
+        get { state.withLock { $0.folders } }
+        set { state.withLock { $0.folders = newValue } }
+    }
+
+    public func folderExists(_ path: String) -> Bool {
+        state.withLock { $0.folders.map { $0.contains(path) } ?? true }
     }
 
     public func link(_ path: String, to real: String) { state.withLock { $0.links[path] = real } }

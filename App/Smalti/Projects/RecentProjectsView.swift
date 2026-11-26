@@ -13,10 +13,10 @@ final class RecentProjectsView: NSView {
     private let scroll = NSScrollView()
     private var scrollHeight: NSLayoutConstraint?
     private let texts = ProjectTexts.current
-    /// The chord of "Proyectos recientes…" in the keymap in effect: the footer's "next".
-    private let nextKey: String
+    /// The chord of "Proyectos recientes…" in the keymap in effect: the footer's "next" (none without a chord).
+    private let nextKey: String?
 
-    init(theme: Theme, nextKey: String) {
+    init(theme: Theme, nextKey: String?) {
         self.theme = theme
         self.nextKey = nextKey
         super.init(frame: .zero)
@@ -130,11 +130,12 @@ final class RecentProjectsView: NSView {
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let pitch = OverlayBox.footerLabel(texts.dropsOff, theme: theme)
-        let row = NSStackView(views: [
-            OverlayBox.hint("↑↓", texts.choose, theme: theme), OverlayBox.hint("↵", texts.openOrGo, theme: theme),
-            OverlayBox.hint(nextKey, texts.next, theme: theme), OverlayBox.hint("esc", texts.close, theme: theme),
-            spacer, pitch,
-        ])
+        let next = nextKey.map { [OverlayBox.hint($0, texts.next, theme: theme)] } ?? []
+        let row = NSStackView(
+            views: [
+                OverlayBox.hint("↑↓", texts.choose, theme: theme), OverlayBox.hint("↵", texts.openOrGo, theme: theme),
+            ]
+                + next + [OverlayBox.hint("esc", texts.close, theme: theme), spacer, pitch])
         row.spacing = palette.footerGap
         row.edgeInsets = NSEdgeInsets(top: 0, left: palette.fieldPadding, bottom: 0, right: palette.fieldPadding)
         row.heightAnchor.constraint(equalToConstant: palette.footerHeight).isActive = true

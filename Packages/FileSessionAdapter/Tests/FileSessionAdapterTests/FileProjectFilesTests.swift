@@ -241,3 +241,51 @@ struct FileProjectFilesLinkTests {
         #expect(throws: ProjectFileError.notRegularFile(root: root(repo))) { try files.layout(at: root(repo)) }
     }
 }
+
+@MainActor
+@Suite("FileProjectFiles, final review (F8.5)")
+struct FileProjectFilesFinalReviewTests {
+    private let files = FileProjectFiles()
+
+    private func folder() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "smalti-project-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    private func path(_ url: URL) -> String {
+        let path = url.path(percentEncoded: false)
+        return path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
+
+    @Test func aLinkedSmaltiFolderIsNeitherReadNorWritten() throws {
+        let base = try folder()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let repo = base.appending(path: "repo")
+        let elsewhere = base.appending(path: "elsewhere")
+        try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: elsewhere, withIntermediateDirectories: true)
+        try Data(#"{"smaltiLayout":1,"name":"a","root":".","layout":"dwindle","panes":[{"directory":"."}]}"#.utf8)
+            .write(to: elsewhere.appending(path: "layout.json"))
+        try FileManager.default.createSymbolicLink(at: repo.appending(path: ".smalti"), withDestinationURL: elsewhere)
+        let layout = SharedLayout(
+            smaltiLayout: 1, name: "a", root: ".", layout: "dwindle", focused: 0, tree: .leaf(index: 0),
+            panes: [SharedPane(directory: ".")])
+
+        #expect(throws: ProjectFileError.notRegularFile(root: path(repo))) { try files.layout(at: path(repo)) }
+        #expect(throws: ProjectFileError.notRegularFile(root: path(repo))) { try files.write(layout, to: path(repo)) }
+        #expect(
+            try Data(contentsOf: elsewhere.appending(path: "layout.json")).count > 0,
+            "the file outside the repo is untouched")
+    }
+
+    @Test func foldersExistOnlyWhenTheyAreFolders() throws {
+        let base = try folder()
+        defer { try? FileManager.default.removeItem(at: base) }
+        try Data("x".utf8).write(to: base.appending(path: "file"))
+
+        #expect(files.folderExists(path(base)))
+        #expect(!files.folderExists(path(base.appending(path: "file"))))
+        #expect(!files.folderExists(path(base.appending(path: "nothing"))))
+    }
+}

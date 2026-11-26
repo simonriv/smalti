@@ -31,7 +31,7 @@ final class ProjectsController: NSObject, NSTextFieldDelegate {
         guard let content = window.contentView else { return }
         let theme = look.theme
         keymap = look.keymap
-        let view = RecentProjectsView(theme: theme, nextKey: keymap.chord(for: .projectRecent)?.display ?? "")
+        let view = RecentProjectsView(theme: theme, nextKey: keymap.chord(for: .projectRecent)?.display)
         place(view, in: content, top: theme.palette.topOffset)
         view.field.delegate = self
         view.onClickRow = { [weak self] index in

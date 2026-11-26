@@ -45,7 +45,7 @@ public struct ProjectSelector: Equatable, Sendable {
         self.listings = listings
         self.context = context
         self.query = query
-        rows = Self.matching(listings, query: query).map { Self.row($0, context: context) }
+        rows = Self.matching(listings, query: query, home: context.home).map { Self.row($0, context: context) }
         self.selected = rows.indices.contains(selected) ? selected : 0
     }
 
@@ -71,12 +71,13 @@ public struct ProjectSelector: Equatable, Sendable {
         ProjectSelector(listings: listings, context: context, query: text, selected: 0)
     }
 
-    private static func matching(_ listings: [ProjectListing], query: String) -> [ProjectListing] {
+    private static func matching(_ listings: [ProjectListing], query: String, home: String) -> [ProjectListing] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return listings }
-        // The name matches loosely (letters in order); the path only as written, or every path would match.
+        // The name matches loosely (letters in order); the path only as shown (`~/…`), or every path would match.
         return listings.filter {
-            fuzzyScore(trimmed, in: $0.name) != nil || $0.root.localizedCaseInsensitiveContains(trimmed)
+            fuzzyScore(trimmed, in: $0.name) != nil
+                || ProjectPath.display($0.root, home: home).localizedCaseInsensitiveContains(trimmed)
         }
     }
 

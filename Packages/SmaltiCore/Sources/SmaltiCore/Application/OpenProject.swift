@@ -39,12 +39,17 @@ public struct PreparedProject: Equatable, Sendable {
 public struct ProjectConfirmation: Equatable, Sendable {
     public let prepared: PreparedProject
     public let changes: ProjectChanges
+    /// What Smalti degrades in the file (an unknown harness or layout): the card says it (final review).
+    public let warnings: [SharedLayoutWarning]
     /// When the user approved an earlier version of the file; `nil` the first time.
     public let approvedAt: Date?
 
-    public init(prepared: PreparedProject, changes: ProjectChanges, approvedAt: Date?) {
+    public init(
+        prepared: PreparedProject, changes: ProjectChanges, approvedAt: Date?, warnings: [SharedLayoutWarning] = []
+    ) {
         self.prepared = prepared
         self.changes = changes
+        self.warnings = warnings
         self.approvedAt = approvedAt
     }
 }
@@ -84,14 +89,20 @@ public struct OpenProject {
         let validated: ValidatedLayout
         do { validated = try file.layout.validatedAsProject() } catch { throw .invalid(error) }
         try checkLinksStayInside(validated.layout, root: root)
+        try checkFoldersExist(validated.layout, root: root)
         let prepared = Self.prepared(
             validated, root: root, fingerprint: file.fingerprint, home: home, harnesses: harnesses)
         let approval = RecentProjects(records: records.all()).record(at: root)?.approval
-        if prepared.commands.isEmpty || approval?.fingerprint == file.fingerprint { return .open(prepared) }
+        // Approved means these bytes and these commands as shown: a newer Smalti may run more from the same file.
+        let isApproved = approval?.fingerprint == file.fingerprint && approval?.commands == prepared.commands
+        let runsNothing = prepared.commands.isEmpty && validated.warnings.isEmpty
+        if isApproved || runsNothing { return .open(prepared) }
         let changes = ProjectChanges(
             approved: approval, current: prepared.commands, paneCount: prepared.snapshot.panes.count,
             layout: prepared.snapshot.layout)
-        return .confirm(ProjectConfirmation(prepared: prepared, changes: changes, approvedAt: approval?.approvedAt))
+        return .confirm(
+            ProjectConfirmation(
+                prepared: prepared, changes: changes, approvedAt: approval?.approvedAt, warnings: validated.warnings))
     }
 
     /// What approving a confirmation does now: the project may have been opened meanwhile from another window, and
@@ -126,6 +137,18 @@ public struct OpenProject {
             if let editor = pane.editor { paths.append((editor.file, Self.joined(directory, editor.file))) }
             for (written, path) in paths where !Self.isInside(files.realPath(path), root: root) {
                 throw .invalid(.outsideProject(pane: index + 1, path: written))
+            }
+        }
+    }
+
+    /// A command, agent or editor runs only in its own folder: one that does not exist is an error, never the root.
+    private func checkFoldersExist(_ layout: SharedLayout, root: String) throws(ProjectFileError) {
+        for (index, pane) in layout.panes.enumerated()
+        where pane.command != nil || pane.harness != nil
+            || pane.editor != nil
+        {
+            guard files.folderExists(Self.joined(root, pane.directory)) else {
+                throw .missingFolder(pane: index + 1, path: pane.directory)
             }
         }
     }

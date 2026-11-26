@@ -521,6 +521,91 @@ final class DesignCaptureTests: SmaltiUITestCase {
         }
     }
 
+    /// F8.5: ⌘K with the focused pane's project, the ⌘O selector and the confirmation of a changed layout, in both
+    /// languages. Neutral repos in /tmp (rizaria, acme, notes); the workspace is renamed so no home folder shows.
+    /// Nothing of the repos runs: the card is cancelled with esc.
+    func testCaptureF85Projects() throws {
+        let repos = ["rizaria", "acme", "notes"].map { URL(filePath: "/private/tmp").appending(path: $0) }
+        // Never remove a folder the capture did not create.
+        for repo in repos where FileManager.default.fileExists(atPath: repo.path(percentEncoded: false)) {
+            throw XCTSkip("\(repo.path(percentEncoded: false)) already exists")
+        }
+        defer { repos.forEach { try? FileManager.default.removeItem(at: $0) } }
+        for repo in repos {
+            for folder in [".git", "web", ".smalti"] {
+                try FileManager.default.createDirectory(
+                    at: repo.appending(path: folder), withIntermediateDirectories: true)
+            }
+        }
+        let rizaria =
+            #"{"smaltiLayout":1,"name":"rizaria","root":".","layout":"columns","focused":0,"panes":["#
+            + #"{"directory":"web","command":["npm","run","dev"]},{"directory":".","command":["claude","--continue"]},"#
+            + #"{"directory":".","command":["docker","compose","up","db"]},{"directory":"web","command":["npm","test"]}]}"#
+        try Data(rizaria.utf8).write(to: repos[0].appending(path: ".smalti/layout.json"))
+        for (repo, name) in zip(repos.dropFirst(), ["acme", "notes"]) {
+            let json =
+                #"{"smaltiLayout":1,"name":""# + name + #"","root":".","layout":"dwindle","panes":[{"directory":"."}]}"#
+            try Data(json.utf8).write(to: repo.appending(path: ".smalti/layout.json"))
+        }
+        for language in ["en", "es"] {
+            let app = XCUIApplication.isolatedSmaltiWithIntegration(language: language)
+            try seedCaptureProjects(in: app)
+            launch(app)
+            openPalette()
+            app.typeText(language == "en" ? "renameworkspace" : "renombrar")
+            app.typeKey(.return, modifierFlags: [])
+            app.typeText("scratch")
+            app.typeKey(.return, modifierFlags: [])
+            app.run("cd /private/tmp/rizaria/web")
+            Thread.sleep(forTimeInterval: 1)
+            app.typeKey("l", modifierFlags: .command)
+
+            openPalette()
+            app.typeText(language == "en" ? "project" : "proyecto")
+            Thread.sleep(forTimeInterval: 1)
+            try save(app.windows.firstMatch.screenshot(), as: "f85-palette-\(language).png")
+            app.typeKey(.escape, modifierFlags: [])
+
+            app.typeKey("o", modifierFlags: .command)
+            XCTAssertTrue(app.element("smalti.projects").waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 0.5)
+            try save(app.windows.firstMatch.screenshot(), as: "f85-recent-\(language).png")
+            app.typeKey(.escape, modifierFlags: [])
+
+            openPalette()
+            app.typeText(language == "en" ? "openprojectriz" : "abrirproyectoriz")
+            app.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(app.element("smalti.projects.confirm").waitForExistence(timeout: 5))
+            Thread.sleep(forTimeInterval: 0.5)
+            try save(app.windows.firstMatch.screenshot(), as: "f85-confirm-\(language).png")
+            app.typeKey(.escape, modifierFlags: [])
+            XCTAssertTrue(app.element("smalti.projects.confirm").waitForNonExistence(timeout: 5))
+            app.terminate()
+        }
+    }
+
+    /// Recent projects for the captures; rizaria approved once with other commands, so its card shows the change.
+    private func seedCaptureProjects(in app: XCUIApplication) throws {
+        let approved: [String: Any] = [
+            "fingerprint": "old", "approvedAt": "2026-11-24T15:00:00Z", "paneCount": 3, "layout": "dwindle",
+            "commands": [
+                ["command": "npm run dev", "place": "web"], ["command": "claude --continue"],
+                ["command": "nvim +42 src/reminder.ts"],
+            ],
+        ]
+        let records: [[String: Any]] = [
+            ["root": "/private/tmp/acme", "name": "acme", "lastOpened": "2026-11-26T09:00:00Z"],
+            [
+                "root": "/private/tmp/rizaria", "name": "rizaria", "lastOpened": "2026-11-26T07:00:00Z",
+                "approval": approved,
+            ],
+            ["root": "/private/tmp/notes", "name": "notes", "lastOpened": "2026-11-25T08:00:00Z"],
+        ]
+        try FileManager.default.createDirectory(at: app.stateDirectory, withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: ["version": 1, "projects": records])
+            .write(to: app.stateDirectory.appending(path: "projects.json"))
+    }
+
     private func save(_ screenshot: XCUIScreenshot, as name: String) throws {
         try screenshot.pngRepresentation.write(to: captures.appending(path: name))
     }

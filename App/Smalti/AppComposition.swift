@@ -209,7 +209,9 @@ final class AppComposition {
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false))
         projects = ProjectsCoordinator(
             files: FileProjectFiles(), records: FileProjectRecords(directory: state), harnesses: harnesses,
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            // Final review: a linked home is compared as the real paths the discovery climbs.
+            home: FileProjectFiles().realPath(
+                FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)),
             windows: { [weak self] in self?.compositions ?? [] })
         let captures = HarnessCaptures(registry: harnesses)
         self.captures = captures
@@ -636,12 +638,9 @@ final class AppComposition {
         var state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
         state.updates = UpdatesAvailability(updates)
         // F8.5 review 2: "Guardar layout del proyecto" is enabled only with a pane to save, as ⌘K offers it.
-        state.projects = front.flatMap { front in
-            projects.map {
-                CatalogProjects(
-                    listings: [], home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
-                    saveRoot: $0.saveRoot(for: front))
-            }
+        if let front, let projects, projects.canSave(in: front) {
+            // The menu shows no subtitle: the folder only enables the item.
+            state.projects = CatalogProjects(listings: [], home: "", saveRoot: "")
         }
         let commands = CommandCatalog.commands(
             for: state, keymap: controller.config.keys, layouts: .standard, texts: .current)

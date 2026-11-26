@@ -98,11 +98,10 @@ final class ProjectsCoordinator {
         }
     }
 
-    /// Where "Guardar layout del proyecto" writes from `composition`, for the menu (nothing is listed).
-    func saveRoot(for composition: WindowComposition) -> String? {
-        composition.controller.paneDirectories.focused.map {
-            saver.root(of: composition.controller.set.active, focusedDirectory: $0)
-        }
+    /// Whether "Guardar layout del proyecto" can act in `composition`, for the menu: a focused pane, without
+    /// reading the disk (the menu refreshes on every change; final review).
+    func canSave(in composition: WindowComposition) -> Bool {
+        composition.controller.paneDirectories.focused != nil
     }
 
     /// The project may have been opened meanwhile (another window): then it jumps instead (review 2).

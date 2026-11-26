@@ -32,6 +32,7 @@ public struct ProjectTexts: Sendable, Equatable {
     public let missing: TextTemplate
     public let unreadable: TextTemplate
     public let notRegularFile: TextTemplate
+    public let missingFolder: TextTemplate
     public let unwritable: TextTemplate
     public let projects: String
     public let listFailed: TextTemplate
@@ -61,6 +62,7 @@ public struct ProjectTexts: Sendable, Equatable {
         saveFailed: "No se pudo guardar el layout del proyecto: {reason}",
         missing: "{root} ya no tiene .smalti/layout.json", unreadable: "no se pudo leer {root}: {reason}",
         notRegularFile: "{root}/.smalti/layout.json no es un archivo normal (¿un enlace?)",
+        missingFolder: "falta la carpeta {path} del panel {pane}",
         unwritable: "no se pudo escribir {path}: {reason}", projects: "Proyectos",
         listFailed: "No se pudo actualizar la lista de proyectos: {reason}",
         openedNotRemembered: "Proyecto “{name}” abierto, pero no se pudo recordar la aprobación: {reason}")
@@ -89,6 +91,7 @@ public struct ProjectTexts: Sendable, Equatable {
         saveFailed: "Couldn’t save the project layout: {reason}",
         missing: "{root} no longer has .smalti/layout.json", unreadable: "couldn’t read {root}: {reason}",
         notRegularFile: "{root}/.smalti/layout.json isn’t a regular file (a link?)",
+        missingFolder: "pane {pane}’s folder {path} is missing",
         unwritable: "couldn’t write {path}: {reason}", projects: "Projects",
         listFailed: "Couldn’t update the projects list: {reason}",
         openedNotRemembered: "Project “{name}” opened, but its approval couldn’t be remembered: {reason}")
@@ -101,6 +104,7 @@ extension ProjectFileError {
         case .missing(let root): texts.missing(["root": root])
         case .unreadable(let root, let reason): texts.unreadable(["root": root, "reason": reason])
         case .notRegularFile(let root): texts.notRegularFile(["root": root])
+        case .missingFolder(let pane, let path): texts.missingFolder(["pane": String(pane), "path": path])
         case .invalid(let error): error.message(layout)
         case .unwritable(let path, let reason): texts.unwritable(["path": path, "reason": reason])
         }

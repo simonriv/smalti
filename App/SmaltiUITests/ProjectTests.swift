@@ -138,6 +138,40 @@ final class ProjectTests: SmaltiUITestCase {
         waitForPaneCount(1)
     }
 
+    /// Final review: a long command shows whole in the card (it wraps), so nothing runs that was not seen.
+    func testALongCommandShowsWhole() throws {
+        let tail = String(repeating: "a", count: 300) + "-END"
+        try writeProject([["echo", tail]])
+        try launchWithRecent()
+
+        openRecent()
+
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        let text = app.elements("smalti.projects.commandText").firstMatch
+        XCTAssertTrue(text.exists)
+        XCTAssertGreaterThan(text.frame.height, 40, "the command wraps instead of being cut")
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    /// Final review: a command whose folder is missing never runs elsewhere; the project does not open.
+    func testAMissingFolderRunsNothing() throws {
+        let json =
+            #"{"smaltiLayout":1,"name":"rizaria","root":".","layout":"dwindle","panes":[{"directory":"build","command":["touch",""#
+            + witness.path(percentEncoded: false) + #""]}]}"#
+        try FileManager.default.createDirectory(at: repo.appending(path: ".smalti"), withIntermediateDirectories: true)
+        try Data(json.utf8).write(to: repo.appending(path: ".smalti/layout.json"))
+        try launchWithRecent()
+
+        openRecent()
+
+        expect(
+            app.element("smalti.statusBar"),
+            value: "No se pudo abrir el proyecto: falta la carpeta build del panel 1")
+        XCTAssertFalse(card.exists)
+        XCTAssertFalse(waitForWitness(timeout: 2))
+        XCTAssertEqual(workspaceNames().count, 1)
+    }
+
     // MARK: C3, C4
 
     func testUnchangedOpensWithoutConfirmationAndChangedAsks() throws {

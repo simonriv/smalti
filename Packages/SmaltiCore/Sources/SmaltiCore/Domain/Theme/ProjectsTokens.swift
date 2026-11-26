@@ -20,6 +20,10 @@ public struct ProjectsTokens: Equatable, Sendable {
     public let commandsRadius = 9.0
     public let commandRowHeight = 28.0
     public let commandFontSize = 12.5
+    /// The commands' line height, in font sizes (rows of 28 pt for one line).
+    public let commandLineHeight = 1.3
+    /// Past this the commands scroll: every one still shows whole.
+    public let commandsMaximumHeight = 280.0
     public let signWidth = 22.0
     /// The commands' rows sit 12 pt in from the box (mockup `.cmd`).
     public let commandRowInset = 12.0
