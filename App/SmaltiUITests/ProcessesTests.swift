@@ -18,25 +18,49 @@ final class ProcessesTests: SmaltiUITestCase {
 
     private func row(_ pid: Int32) -> XCUIElement { app.element("smalti.processes.row.\(pid)") }
 
-    /// Starts the listener and shows only it in the view.
+    /// Starts the listener and shows only it in the view, filtered by its script's random name.
     private func showListener() -> Int32 {
         started = start(listener)
         let pid = started?.pid ?? 0
         openProcesses()
-        filter(String(pid))
+        filter(listener.marker)
         XCTAssertTrue(row(pid).waitForExistence(timeout: 10))
         return pid
     }
 
     func testListenerShowsWithItsPaneCommandAndDirectory() {
+        app.run("cd /tmp")
         let pid = showListener()
 
         XCTAssertTrue(row(pid).label.contains(" · 1"), row(pid).label)
-        let detail = app.element("smalti.processes.detail")
-        let value = detail.value as? String ?? ""
+        let value = app.element("smalti.processes.detail").value as? String ?? ""
         XCTAssertTrue(value.contains(listener.name), value)
-        XCTAssertTrue(value.contains("Directorio"), value)
-        XCTAssertEqual(app.element("smalti.processes.filter").value as? String, String(pid))
+        XCTAssertTrue(value.contains("Directorio /private/tmp"), value)
+        XCTAssertEqual(app.element("smalti.processes.filter").value as? String, listener.marker)
+    }
+
+    /// Review 2 (minor 3): arrows and function keys bring no characters to the filter.
+    func testSpecialKeysLeaveTheFilterAlone() {
+        openProcesses()
+        filter("zsh")
+
+        app.typeKey(.leftArrow, modifierFlags: [])
+        app.typeKey(.rightArrow, modifierFlags: [])
+        app.typeKey(.home, modifierFlags: [])
+
+        XCTAssertEqual(app.element("smalti.processes.filter").value as? String, "zsh")
+    }
+
+    /// Review 2 (minor 5): opening the processes view from the menu closes the Observatory instead of stacking.
+    func testMenuOpensProcessesOverTheObservatoryWithoutStacking() {
+        app.typeKey("a", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.observatory").waitForExistence(timeout: 5))
+
+        app.menuBars.menuBarItems["Ver"].click()
+        app.menuBars.menuItems["Procesos"].click()
+
+        XCTAssertTrue(app.element("smalti.processes").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("smalti.observatory").waitForNonExistence(timeout: 5))
     }
 
     func testFilterWithoutMatchSaysSo() {
@@ -62,6 +86,7 @@ final class ProcessesTests: SmaltiUITestCase {
         XCTAssertNotEqual(shell.identifier, "smalti.processes.row.\(pid)")
 
         app.typeKey(.upArrow, modifierFlags: [])
+        assertChosen(shell)
         app.typeKey(.delete, modifierFlags: .command)
 
         waitUntil { self.notice().contains("es el shell del panel") }
@@ -71,15 +96,17 @@ final class ProcessesTests: SmaltiUITestCase {
 
     func testSortCyclesTheOrder() {
         openProcesses()
-        XCTAssertEqual(app.element("smalti.processes.order").label, "CPU ↓")
+        let order = app.element("smalti.processes.order")
+        waitUntil { order.label == "CPU ↓" }
 
         app.typeKey("s", modifierFlags: [.command, .shift])
 
-        XCTAssertEqual(app.element("smalti.processes.order").label, "Memoria ↓")
+        waitUntil { order.label == "Memoria ↓" }
     }
 
     func testLowerPriorityRaisesNiceOneStep() {
         let pid = showListener()
+        assertChosen(row(pid))
 
         app.typeKey(.downArrow, modifierFlags: [.command, .shift])
 
@@ -89,6 +116,7 @@ final class ProcessesTests: SmaltiUITestCase {
 
     func testStopEndsAListenerThatQuits() {
         let pid = showListener()
+        assertChosen(row(pid))
 
         app.typeKey(.delete, modifierFlags: .command)
 
@@ -96,24 +124,34 @@ final class ProcessesTests: SmaltiUITestCase {
         XCTAssertTrue(row(pid).waitForNonExistence(timeout: 5))
     }
 
+    /// The listener runs in pane 1; pane 2 has the focus when the view opens; ↵ on the listener's row focuses pane 1.
     func testEnterGoesToItsPaneAndEscapeClearsThenCloses() {
-        let pid = showListener()
+        started = start(listener)
+        let pid = started?.pid ?? 0
+        app.typeKey("d", modifierFlags: .command)
+        waitForPaneCount(2)
+        let panes = app.elements("smalti.pane")
+        waitUntil { (panes.element(boundBy: 1).value as? String) == "focused" }
+        openProcesses()
+        filter(listener.marker)
+        XCTAssertTrue(row(pid).waitForExistence(timeout: 10))
         app.typeKey(.escape, modifierFlags: [])
         XCTAssertEqual(app.element("smalti.processes.filter").value as? String, "")
         XCTAssertTrue(app.element("smalti.processes").exists)
-        filter(String(pid))
-        XCTAssertTrue(row(pid).waitForExistence(timeout: 5))
+        filter(listener.marker)
+        assertChosen(row(pid))
 
         app.typeKey(.return, modifierFlags: [])
 
         XCTAssertTrue(app.element("smalti.processes").waitForNonExistence(timeout: 5))
+        waitUntil { (panes.element(boundBy: 0).value as? String) == "focused" }
         XCTAssertTrue(PaneListener.isAlive(pid))
     }
 
     func testShortcutClosesAndPortsShortcutSwitches() {
         openProcesses()
         app.typeKey("u", modifierFlags: [.command, .shift])
-        XCTAssertEqual(app.element("smalti.processes.mode.ports").value as? String, "selected")
+        waitUntil { (self.app.element("smalti.processes.mode.ports").value as? String) == "selected" }
 
         app.typeKey("u", modifierFlags: [.command, .shift])
 

@@ -35,20 +35,31 @@ public final class StopProcess {
         }
     }
 
+    /// The process waiting for the person to confirm forcing it, if any.
+    public var confirming: ProcessIdentity? {
+        requests.phases.first { $0.value == .confirming }?.key
+    }
+
+    /// The request is dropped before SIGKILL goes out, so a second ↵ meanwhile sends nothing (review 2, minor 1).
     public func confirm(_ process: ProcessIdentity) async -> StopOutcome {
         guard requests.phase(of: process) == .confirming else { return .waiting }
+        requests.forget(process)
         do {
             try await control.forceStop(process)
-            requests.forget(process)
             return .forced
         } catch {
-            if error == .gone { requests.forget(process) } else { requests.cancel(process) }
+            if error != .gone { requests.restoreUnresponsive(process) }
             return .failed(error)
         }
     }
 
     public func cancel(_ process: ProcessIdentity) {
         requests.cancel(process)
+    }
+
+    /// Closing the view: nothing stays armed to be forced (review 2, important 1).
+    public func cancelConfirmations() {
+        requests.cancelConfirmations()
     }
 
     /// After each refresh: forgets what ended and marks what outlived the grace period.

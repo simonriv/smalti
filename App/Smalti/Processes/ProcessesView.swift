@@ -33,14 +33,15 @@ final class ProcessesView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
 
-    init(theme: Theme) {
+    init(theme: Theme, keymap: Keymap) {
         self.theme = theme
-        strip = ProcessesStrip(theme: theme)
+        let keys = ProcessesKeys(keymap: keymap)
+        strip = ProcessesStrip(theme: theme, keys: keys)
         table = ProcessesTableView(theme: theme)
         detail = ProcessesDetailView(theme: theme)
         totals = ProcessesTotalsView(theme: theme)
         summary = PortsSummaryView(theme: theme)
-        footer = ProcessesFooter(theme: theme)
+        footer = ProcessesFooter(theme: theme, keys: keys)
         confirmation = ForceConfirmation(theme: theme)
         super.init(frame: .zero)
         layoutAll()
@@ -73,7 +74,8 @@ final class ProcessesView: NSView {
         }
         if event.keyCode == escapeKeyCode { return .close }
         if event.keyCode == deleteKeyCode { return .deleteBackward }
-        guard let characters = event.characters, !characters.isEmpty,
+        // ←, →, fn-⌫, Home, F1… carry private-use characters: no text for the filter (review 2, minor 3).
+        guard event.specialKey == nil, let characters = event.characters, !characters.isEmpty,
             characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) })
         else { return nil }
         return .text(characters)
@@ -201,13 +203,13 @@ private final class ProcessesStrip: NSView {
     private let tree: StripPill
     var onChooseMode: ((ProcessesController.Mode) -> Void)?
 
-    init(theme: Theme) {
+    init(theme: Theme, keys: ProcessesKeys) {
         self.theme = theme
         processesChip = ModeChip(
-            String(localized: "Processes"), keys: ProcessesKeys.chord(.processesToggle), theme: theme,
+            String(localized: "Processes"), keys: keys.chord(.processesToggle), theme: theme,
             identifier: "smalti.processes.mode.processes")
         portsChip = ModeChip(
-            String(localized: "Ports"), keys: ProcessesKeys.chord(.portsToggle), theme: theme,
+            String(localized: "Ports"), keys: keys.chord(.portsToggle), theme: theme,
             identifier: "smalti.processes.mode.ports")
         filter = FilterField(theme: theme)
         order = StripPill(theme: theme, identifier: "smalti.processes.order")
@@ -375,7 +377,11 @@ private final class FilterField: NSView {
         layer?.borderWidth = theme.chrome.hairlineWidth
         layer?.borderColor = tokens.filterBorder.nsColor.cgColor
         layer?.backgroundColor = tokens.filterBackground.nsColor.cgColor
-        let glass = MagnifierGlyph(color: theme.text.secondary)
+        // The session search's magnifier (F6), at the filter's size.
+        let glass = NSImageView(
+            image: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil) ?? NSImage())
+        glass.contentTintColor = theme.text.secondary.nsColor
+        glass.symbolConfiguration = .init(pointSize: tokens.filterGlyphSize, weight: .regular)
         let stack = NSStackView(views: [glass, text])
         stack.spacing = theme.processes.footerKeyGap
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -403,48 +409,17 @@ private final class FilterField: NSView {
     }
 }
 
-/// The 12 pt magnifier of the mockup's filter: a circle and its handle.
-@MainActor
-private final class MagnifierGlyph: NSView {
-    private let color: RGBAColor
-    private static let size = 12.0
-
-    init(color: RGBAColor) {
-        self.color = color
-        super.init(frame: .zero)
-        translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            widthAnchor.constraint(equalToConstant: Self.size), heightAnchor.constraint(equalToConstant: Self.size),
-        ])
-    }
-
-    @available(*, unavailable, message: "Built in code only")
-    required init?(coder: NSCoder) { nil }
-
-    override var isFlipped: Bool { true }
-
-    override func draw(_ dirtyRect: NSRect) {
-        color.nsColor.setStroke()
-        let circle = NSBezierPath(ovalIn: NSRect(x: 1.4, y: 1.4, width: 7.2, height: 7.2))
-        circle.lineWidth = 1.3
-        circle.stroke()
-        let handle = NSBezierPath()
-        handle.lineWidth = 1.3
-        handle.move(to: NSPoint(x: 7.7, y: 7.7))
-        handle.line(to: NSPoint(x: 11, y: 11))
-        handle.stroke()
-    }
-}
-
 /// The 30 pt footer: the keys of the shown view and, at its right, a notice for 4 s.
 @MainActor
 private final class ProcessesFooter: NSView {
     private let theme: Theme
+    private let hints: ProcessesKeys
     private let keys = NSStackView()
     private let notice: NSTextField
 
-    init(theme: Theme) {
+    init(theme: Theme, keys hints: ProcessesKeys) {
         self.theme = theme
+        self.hints = hints
         let tokens = theme.processes
         notice = ObservatoryText.label("", .init(size: tokens.footerFontSize, color: tokens.notice), theme: theme)
         super.init(frame: .zero)
@@ -473,7 +448,7 @@ private final class ProcessesFooter: NSView {
         guard mode != shownMode else { return }
         shownMode = mode
         keys.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for hint in ProcessesKeys.footer(for: mode) {
+        for hint in hints.footer(for: mode) {
             let label = ObservatoryText.label(
                 hint.title, .init(size: theme.processes.footerFontSize, color: theme.text.secondary), theme: theme)
             let pair = NSStackView(views: [KbdView(hint.keys, theme: theme), label])
@@ -491,10 +466,11 @@ private final class ProcessesFooter: NSView {
 
 /// The chords as the keymap in effect shows them, and the footer's hints for each view.
 @MainActor
-enum ProcessesKeys {
-    static var keymap: Keymap = .standard
+struct ProcessesKeys {
+    /// The keymap in effect: a chord rebound in the TOML shows rebound.
+    let keymap: Keymap
 
-    static func chord(_ command: CommandID) -> String {
+    func chord(_ command: CommandID) -> String {
         keymap.chord(for: command)?.display ?? ""
     }
 
@@ -503,7 +479,7 @@ enum ProcessesKeys {
         let title: String
     }
 
-    static func footer(for mode: ProcessesController.Mode) -> [Hint] {
+    func footer(for mode: ProcessesController.Mode) -> [Hint] {
         let choose = Hint(keys: "↑↓", title: String(localized: "choose"))
         let goToPane = Hint(keys: "↵", title: String(localized: "go to pane"))
         let stop = Hint(keys: chord(.processesStop), title: String(localized: "stop"))

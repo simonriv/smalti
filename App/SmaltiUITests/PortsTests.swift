@@ -24,7 +24,7 @@ final class PortsTests: SmaltiUITestCase {
         let listening = start(listener)
         started = listening
         openPorts()
-        filter(String(listening.port))
+        filter(listener.marker)
         XCTAssertTrue(row(listening).waitForExistence(timeout: 10))
         return listening
     }
@@ -41,10 +41,13 @@ final class PortsTests: SmaltiUITestCase {
         XCTAssertTrue(label.contains(" · 1"), label)
         let detail = app.element("smalti.processes.detail").value as? String ?? ""
         XCTAssertTrue(detail.contains("127.0.0.1"), detail)
+        XCTAssertTrue(detail.contains("Proceso Python \(listening.pid)"), detail)
+        XCTAssertTrue(detail.contains("Directorio "), detail)
     }
 
     func testForceOnlyAfterTermFailsAndConfirmation() {
         let listening = launchWithListener(ignoringTerm: true)
+        assertChosen(row(listening))
 
         app.typeKey(.delete, modifierFlags: .command)
         waitUntil { self.notice().contains("que termine") }
@@ -60,6 +63,7 @@ final class PortsTests: SmaltiUITestCase {
         XCTAssertTrue(card.waitForNonExistence(timeout: 5))
         XCTAssertTrue(PaneListener.isAlive(listening.pid))
 
+        assertChosen(row(listening))
         app.typeKey(.delete, modifierFlags: .command)
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         app.typeKey(.return, modifierFlags: [])

@@ -93,6 +93,49 @@ struct StopProcessTests {
         #expect(stop.requests.phase(of: node.identity) == nil)
     }
 
+    /// Review 2 (minor 1): a second ↵ while SIGKILL is on its way sends nothing more.
+    @Test func doubleConfirmForcesOnce() async {
+        let control = FakeProcessControl()
+        let stop = StopProcess(control: control, grace: grace)
+        _ = await stop.press(node, now: 5)
+        stop.tick(alive: [node.identity], now: 9)
+        _ = await stop.press(node, now: 9)
+
+        async let first = stop.confirm(node.identity)
+        async let second = stop.confirm(node.identity)
+        let outcomes = await [first, second]
+
+        #expect(await control.calls.filter { if case .forceStop = $0 { true } else { false } }.count == 1)
+        #expect(outcomes.contains(.forced))
+    }
+
+    /// Review 2 (important 1): closing the view drops every pending confirmation; what is confirming goes back to
+    /// unresponsive and nothing can be forced until it is asked again.
+    @Test func cancelAllConfirmationsDisarmsForcing() async {
+        let control = FakeProcessControl()
+        let stop = StopProcess(control: control, grace: grace)
+        _ = await stop.press(node, now: 5)
+        stop.tick(alive: [node.identity], now: 9)
+        _ = await stop.press(node, now: 9)
+
+        stop.cancelConfirmations()
+
+        #expect(stop.confirming == nil)
+        #expect(await stop.confirm(node.identity) == .waiting)
+        #expect(await control.calls == [.stop(node.identity)])
+    }
+
+    @Test func confirmingNamesTheProcessWaitingForConfirmation() async {
+        let stop = StopProcess(control: FakeProcessControl(), grace: grace)
+        _ = await stop.press(node, now: 5)
+        stop.tick(alive: [node.identity], now: 9)
+        #expect(stop.confirming == nil)
+
+        _ = await stop.press(node, now: 9)
+
+        #expect(stop.confirming == node.identity)
+    }
+
     @Test func confirmWithoutRequestDoesNothing() async {
         let control = FakeProcessControl()
         let stop = StopProcess(control: control, grace: grace)

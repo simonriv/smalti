@@ -96,11 +96,25 @@ struct ProcessFormatTests {
                 == "x ya no existe")
     }
 
+    /// Review 2 (minor 7): the same rule for both actions.
+    @Test func priorityFailuresAreErrorsExceptGone() {
+        #expect(ProcessFormat.isFailure(PriorityOutcome.failed(.refused(code: 1))))
+        #expect(!ProcessFormat.isFailure(PriorityOutcome.failed(.gone)))
+        #expect(!ProcessFormat.isFailure(PriorityOutcome.lowered(to: 5)))
+        #expect(!ProcessFormat.isFailure(PriorityOutcome.alreadyLowest))
+    }
+
+    /// Review 2 (minor 7): the CPU bar is full at half a core; most processes use a sliver of one.
+    @Test(arguments: [(Double?.none, 0.0), (0, 0), (25, 0.5), (50, 1), (180, 1), (-3, 0)])
+    func cpuBarFraction(value: Double?, fraction: Double) {
+        #expect(ProcessFormat.cpuBarFraction(value) == fraction)
+    }
+
     @Test func onlyRealFailuresAreErrors() {
-        #expect(ProcessFormat.isFailure(.failed(.refused(code: 1))))
-        #expect(ProcessFormat.isFailure(.failed(.notYours)))
-        #expect(!ProcessFormat.isFailure(.failed(.gone)))
-        #expect(!ProcessFormat.isFailure(.requested))
+        #expect(ProcessFormat.isFailure(StopOutcome.failed(.refused(code: 1))))
+        #expect(ProcessFormat.isFailure(StopOutcome.failed(.notYours)))
+        #expect(!ProcessFormat.isFailure(StopOutcome.failed(.gone)))
+        #expect(!ProcessFormat.isFailure(StopOutcome.requested))
     }
 
     @Test func everyStateAndReasonHasWords() {

@@ -41,7 +41,6 @@ struct KeyChordTranslatorTests {
         #expect(us.flatMap(Keymap.standard.command(for:)) == .fontIncrease)
     }
 
-    /// ⌘?: ⇧/ on US, ⇧' on Latin American; both arrive as "?" with ⇧.
     /// F8: ⌘⌫ stops the chosen process; backspace's character is a control code, so its key code names it.
     @Test func commandBackspaceStopsTheChosenProcess() {
         let chord = KeyChordTranslator.chord(keyCode: 51, characters: "\u{7F}", modifiers: [.command])
@@ -50,6 +49,7 @@ struct KeyChordTranslatorTests {
         #expect(chord.flatMap(Keymap.standard.command(for:)) == .processesStop)
     }
 
+    /// ⌘?: ⇧/ on US, ⇧' on Latin American; both arrive as "?" with ⇧.
     @Test func helpChordIsSameOnUSAndLatinAmerican() {
         let us = KeyChordTranslator.chord(keyCode: KeyCode.slash, characters: "?", modifiers: [.shift, .command])
         let latin = KeyChordTranslator.chord(keyCode: KeyCode.quote, characters: "?", modifiers: [.shift, .command])

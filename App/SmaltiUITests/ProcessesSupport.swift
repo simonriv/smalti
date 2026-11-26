@@ -22,6 +22,9 @@ struct PaneListener {
 
     var name: String { script.lastPathComponent }
 
+    /// The script name's random part: a filter that matches this listener and nothing of the person's.
+    var marker: String { String(name.dropFirst("smalti-f8-listener-".count).prefix(8)) }
+
     /// Started from the pane's shell, so the pane is its parent and its terminal.
     func command() -> String { "python3 \(script.path(percentEncoded: false))" }
 
@@ -101,4 +104,11 @@ extension SmaltiUITestCase {
     }
 
     func notice() -> String { app.element("smalti.processes.notice").value as? String ?? "" }
+
+    /// Before any ⌘⌫ or ⇧⌘↓: the chosen row must be the test's own process, never another one the filter let in.
+    func assertChosen(_ row: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(row.exists, "the test's row is not shown", file: file, line: line)
+        waitUntil(5) { (row.value as? String) == "selected" }
+        XCTAssertEqual(row.value as? String, "selected", "the chosen row is not the test's", file: file, line: line)
+    }
 }

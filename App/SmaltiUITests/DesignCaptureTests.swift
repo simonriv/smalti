@@ -497,14 +497,25 @@ final class DesignCaptureTests: SmaltiUITestCase {
             Thread.sleep(forTimeInterval: 3)
             try save(app.windows.firstMatch.screenshot(), as: "f8-ports-\(language).png")
 
+            // Only the capture's own server on 8711 (it bound that port) is ever stopped.
+            let api = app.descendants(matching: .any).matching(
+                NSPredicate(format: "identifier ENDSWITH '.tcp.8711'")
+            ).firstMatch
             app.typeKey(.downArrow, modifierFlags: [])
+            assertChosen(api)
             app.typeKey(.delete, modifierFlags: .command)
             Thread.sleep(forTimeInterval: 3)
+            assertChosen(api)
             app.typeKey(.delete, modifierFlags: .command)
             XCTAssertTrue(app.element("smalti.processes.confirm").waitForExistence(timeout: 5))
             Thread.sleep(forTimeInterval: 0.5)
             try save(app.windows.firstMatch.screenshot(), as: "f8-force-\(language).png")
             app.typeKey(.return, modifierFlags: [])
+            Thread.sleep(forTimeInterval: 1)
+            app.typeKey(.escape, modifierFlags: [])
+            app.typeKey(.escape, modifierFlags: [])
+            XCTAssertTrue(app.element("smalti.processes").waitForNonExistence(timeout: 5))
+            app.run("cd / && rm -rf /tmp/acme-web /tmp/acme-api")
             Thread.sleep(forTimeInterval: 1)
             app.terminate()
         }

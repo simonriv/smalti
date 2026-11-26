@@ -46,6 +46,16 @@ public struct StopRequests: Equatable, Sendable {
         phases[process] = .unresponsive
     }
 
+    /// Every confirmation is dropped: what was confirming is unresponsive again (closing the view).
+    public mutating func cancelConfirmations() {
+        for (process, phase) in phases where phase == .confirming { phases[process] = .unresponsive }
+    }
+
+    /// Back to unresponsive after forcing it failed for a reason other than it having ended.
+    mutating func restoreUnresponsive(_ process: ProcessIdentity) {
+        phases[process] = .unresponsive
+    }
+
     public mutating func forget(_ process: ProcessIdentity) {
         phases[process] = nil
     }

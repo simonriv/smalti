@@ -6,7 +6,7 @@ public struct ProcessesTokens: Equatable, Sendable {
     /// Estado · Proceso · Panel · CPU · Memoria · PID; nil shares the rest.
     public let processColumns: [Double?] = [128, nil, 120, 118, 86, 70]
     /// Puerto · Protocolo · Dirección · Proceso · PID · Directorio · Panel.
-    public let portColumns: [Double?] = [84, 84, 104, nil, 70, nil, 96]
+    public let portColumns: [Double?] = [84, 104, 104, nil, 70, nil, 96]
     public let cpuBarWidth = 46.0
     public let cpuBarGap = 8.0
     public let commandGap = 8.0
@@ -38,7 +38,10 @@ public struct ProcessesTokens: Equatable, Sendable {
     public let confirmGap = 8.0
     public let confirmTitleSize = 13.0
     public let confirmBodySize = 12.0
-    public let shadeAlpha = 0.28
+    public let actionGap = 10.0
+    public let summaryGap = 10.0
+    public let commandBlockLines = 4
+    public let filterGlyphSize = 12.0
     /// How long a notice (protected, gone, lowered) stays in the footer.
     public let noticeSeconds = 4.0
     /// CPU values kept for the "Your processes" line: two minutes at one refresh every 2 s.
@@ -55,6 +58,8 @@ public struct ProcessesTokens: Equatable, Sendable {
     public let restMemory: RGBAColor
     public let notice: RGBAColor
     public let failure: RGBAColor
+    /// The 28 % shade behind the confirmation to force.
+    public let shade: RGBAColor
 
     init(theme: Theme) {
         treeGuide = theme.agent.stopped
@@ -68,6 +73,7 @@ public struct ProcessesTokens: Equatable, Sendable {
         restMemory = theme.observatory.memoryRest
         notice = theme.text.secondary
         failure = theme.agent.failed
+        shade = RGBAColor(red: 0, green: 0, blue: 0, alpha: 0.28)
     }
 }
 

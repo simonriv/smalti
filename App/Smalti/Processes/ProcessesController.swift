@@ -2,10 +2,10 @@ import AppKit
 import Dispatch
 import SmaltiCore
 
-/// Primary adapter for ⌘⇧M and ⌘⇧U: the processes and ports views over the whole window. It samples only while
-/// open (spec F8, C4), keeps the filter, order, tree and selection, and turns keys and commands into the domain's
-/// use cases (`ObserveProcesses`, `StopProcess`, `LowerPriority`). It holds no rules: the tables, what can be
-/// stopped and the stop's phases come from the domain.
+/// Primary adapter for ⌘⇧M and ⌘⇧U: the processes and ports views over the whole window. It keeps the filter, order,
+/// tree and selection and turns keys and commands into the domain's use cases. It holds no rules: what is shown and
+/// stoppable, the stop's phases (and which process waits for confirmation) and when to sample (only while open,
+/// `ProcessesRefresher`, spec F8 C4) all come from the domain.
 @MainActor
 final class ProcessesController {
     enum Mode: Equatable {
@@ -13,7 +13,7 @@ final class ProcessesController {
     }
 
     struct Dependencies {
-        let observe: ObserveProcesses
+        let refresher: ProcessesRefresher
         let stop: StopProcess
         let lower: LowerPriority
         let policy: StopPolicy
@@ -29,17 +29,17 @@ final class ProcessesController {
         let keymap: () -> Keymap
     }
 
-    static let refreshInterval: Duration = .seconds(ProcessesPresenter.refreshSeconds)
-    /// The second sample, which gives CPU, comes a second after opening.
-    static let firstRefreshDelay: Duration = .seconds(1)
-    /// A first refresh right after asking a process to quit, so it disappears as soon as it does.
+    /// A refresh right after asking a process to quit, so it disappears as soon as it does.
     static let afterStopDelay: Duration = .milliseconds(400)
+    /// After the grace period, so "not responding" shows without waiting for the next 2 s refresh.
+    static let afterGraceMargin: Duration = .milliseconds(200)
 
     private let window: NSWindow
     private let dependencies: Dependencies
     private let actions: Actions
+    private let grace: Duration
     private var view: ProcessesView?
-    private var theme: Theme?
+    private var theme: Theme
     private(set) var mode = Mode.processes
     private var filter = ""
     private var processOrder = ProcessOrder.cpu
@@ -49,19 +49,17 @@ final class ProcessesController {
     private var snapshot: ProcessesSnapshot?
     private var output: ProcessesPresenter.Output?
     private var cpuHistory: [Double] = []
-    private var refreshLoop: Task<Void, Never>?
-    private var isRefreshing = false
     private var noticeTask: Task<Void, Never>?
-    private var confirming: ProcessIdentity?
-    private let grace: Duration
 
     var isOpen: Bool { view != nil }
+    private var confirming: ProcessIdentity? { dependencies.stop.confirming }
 
     init(window: NSWindow, dependencies: Dependencies, actions: Actions, grace: Duration) {
         self.window = window
         self.dependencies = dependencies
         self.actions = actions
         self.grace = grace
+        theme = .obsidian
     }
 
     // MARK: - Opening and closing
@@ -73,19 +71,19 @@ final class ProcessesController {
         choose(mode)
     }
 
-    /// Closes without moving the focus (another overlay or a notification takes it).
+    /// Closes without moving the focus (another overlay, closing the window or a notification takes it). Nothing
+    /// stays armed: no sampling, no confirmation to force, no rows of a past refresh (review 2, important 1).
     func dismiss() {
         guard let view else { return }
         self.view = nil
-        refreshLoop?.cancel()
-        refreshLoop = nil
+        dependencies.refresher.stop()
+        dependencies.stop.cancelConfirmations()
         noticeTask?.cancel()
-        confirming.map(dependencies.stop.cancel)
-        confirming = nil
-        dependencies.observe.reset()
         snapshot = nil
+        output = nil
+        selection = nil
         cpuHistory = []
-        fadeOut(view, duration: theme?.observatory.fadeDuration)
+        fadeOut(view)
         actions.setTilingHidden(false)
     }
 
@@ -93,7 +91,7 @@ final class ProcessesController {
         guard let content = window.contentView else { return }
         self.mode = mode
         self.theme = theme
-        let view = ProcessesView(theme: theme)
+        let view = ProcessesView(theme: theme, keymap: actions.keymap())
         view.frame = content.bounds
         view.autoresizingMask = [.width, .height]
         view.onKey = { [weak self] key in self?.handle(key) }
@@ -102,9 +100,11 @@ final class ProcessesController {
         self.view = view
         content.addSubview(view)
         actions.setTilingHidden(true)
-        fadeIn(view, duration: theme.observatory.fadeDuration)
+        fadeIn(view)
         window.makeFirstResponder(view)
-        startRefreshing()
+        dependencies.refresher.start(foregroundGroups: actions.foregroundGroups) { [weak self] snapshot in
+            self?.show(snapshot)
+        }
     }
 
     private func close(focusing pane: PaneID?) {
@@ -113,8 +113,9 @@ final class ProcessesController {
         actions.didClose(pane)
     }
 
+    /// Switching views keeps a confirmation from staying armed over rows it no longer belongs to (review 2, minor 2).
     private func choose(_ mode: Mode) {
-        guard mode != self.mode else { return }
+        guard mode != self.mode, confirming == nil else { return }
         self.mode = mode
         selection = nil
         render()
@@ -145,14 +146,14 @@ final class ProcessesController {
     private func stopSelected() async {
         guard let row = selectedProcess else { return }
         let outcome = await dependencies.stop.press(row, now: Self.now())
+        // Closed meanwhile (esc right after ⌘⌫): nothing may stay waiting to be forced.
+        guard isOpen else { return dependencies.stop.cancelConfirmations() }
         switch outcome {
-        case .confirming:
-            confirming = row.identity
-            showConfirmation(for: row)
+        case .confirming: showConfirmation(for: row)
         case .requested:
             notify(outcome, about: row)
             refresh(after: Self.afterStopDelay)
-            refresh(after: grace + .milliseconds(200))
+            refresh(after: grace + Self.afterGraceMargin)
         default: notify(outcome, about: row)
         }
         render()
@@ -161,9 +162,8 @@ final class ProcessesController {
     private func confirmForce() async {
         guard let identity = confirming else { return }
         let row = output?.processes.values.first { $0.identity == identity }
-        let outcome = await dependencies.stop.confirm(identity)
-        confirming = nil
         view?.showConfirmation(nil)
+        let outcome = await dependencies.stop.confirm(identity)
         if let row { notify(outcome, about: row) }
         refresh(after: Self.afterStopDelay)
         render()
@@ -172,7 +172,6 @@ final class ProcessesController {
     private func cancelForce() {
         guard let identity = confirming else { return }
         dependencies.stop.cancel(identity)
-        confirming = nil
         view?.showConfirmation(nil)
         render()
     }
@@ -180,11 +179,10 @@ final class ProcessesController {
     private func lowerSelected() async {
         guard mode == .processes, let row = selectedProcess else { return }
         let outcome = await dependencies.lower.lower(row)
-        let texts = ProcessTexts.current
-        let subject = NoticeSubject(name: row.name, closeKey: chord(.paneClose))
-        let isFailure: Bool
-        if case .failed(let error) = outcome { isFailure = error != .gone } else { isFailure = false }
-        show(notice: ProcessFormat.notice(outcome, for: subject, texts: texts), isFailure: isFailure)
+        guard isOpen else { return }
+        show(
+            notice: ProcessFormat.notice(outcome, for: subject(row), texts: .current),
+            isFailure: ProcessFormat.isFailure(outcome))
         refresh(after: Self.afterStopDelay)
     }
 
@@ -192,32 +190,33 @@ final class ProcessesController {
         selection.flatMap { output?.processes[$0] }
     }
 
+    private func subject(_ row: ProcessRow) -> NoticeSubject {
+        NoticeSubject(name: row.name, closeKey: chord(.paneClose))
+    }
+
     private func showConfirmation(for row: ProcessRow) {
         let texts = ProcessTexts.current
-        let seconds = String(grace.components.seconds)
         view?.showConfirmation(
             ForceConfirmation.Content(
                 title: texts.confirmTitle(["name": row.name, "pid": String(row.pid)]),
-                body: texts.confirmBody(["seconds": seconds]),
+                body: texts.confirmBody(["seconds": Self.seconds(grace)]),
                 command: [
                     row.record.shortCommand,
                     ProcessFormat.directory(row.record.workingDirectory, home: dependencies.home),
-                ]
-                .joined(separator: " · ")))
+                ].joined(separator: " · ")))
     }
 
     private func notify(_ outcome: StopOutcome, about row: ProcessRow) {
-        let subject = NoticeSubject(name: row.name, closeKey: chord(.paneClose))
-        guard let text = ProcessFormat.notice(outcome, for: subject, texts: .current) else { return }
+        guard let text = ProcessFormat.notice(outcome, for: subject(row), texts: .current) else { return }
         show(notice: text, isFailure: ProcessFormat.isFailure(outcome))
     }
 
     private func show(notice text: String, isFailure: Bool) {
         view?.showNotice(text, isFailure: isFailure)
         noticeTask?.cancel()
-        let seconds = theme?.processes.noticeSeconds ?? 4
+        let duration = Duration.seconds(theme.processes.noticeSeconds)
         noticeTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(seconds))
+            try? await Task.sleep(for: duration)
             guard !Task.isCancelled else { return }
             self?.view?.showNotice(nil, isFailure: false)
         }
@@ -273,48 +272,26 @@ final class ProcessesController {
 
     // MARK: - Refreshing
 
-    private func startRefreshing() {
-        refreshLoop?.cancel()
-        refreshLoop = Task { [weak self] in
-            await self?.refresh()
-            try? await Task.sleep(for: Self.firstRefreshDelay)
-            while !Task.isCancelled {
-                guard let self else { return }
-                await refresh()
-                try? await Task.sleep(for: Self.refreshInterval)
-            }
-        }
-    }
-
     private func refresh(after delay: Duration) {
         Task { [weak self] in
             try? await Task.sleep(for: delay)
-            await self?.refresh()
+            await self?.dependencies.refresher.refreshNow()
         }
     }
 
-    /// Never two at once; one asked for during another is dropped (the loop brings the next one).
-    private func refresh() async {
-        guard isOpen, !isRefreshing else { return }
-        isRefreshing = true
-        defer { isRefreshing = false }
-        let snapshot = await dependencies.observe.refresh(foregroundGroups: actions.foregroundGroups())
+    private func show(_ snapshot: ProcessesSnapshot) {
         guard isOpen else { return }
         self.snapshot = snapshot
         dependencies.stop.tick(alive: snapshot.alive, now: Self.now())
-        if let identity = confirming, !snapshot.alive.contains(identity) {
-            confirming = nil
-            view?.showConfirmation(nil)
-        }
+        if confirming == nil { view?.showConfirmation(nil) }
         if let cpu = snapshot.totals.cpu {
-            cpuHistory.append(cpu)
-            cpuHistory = Array(cpuHistory.suffix(theme?.processes.cpuHistoryLength ?? 60))
+            cpuHistory = Array((cpuHistory + [cpu]).suffix(theme.processes.cpuHistoryLength))
         }
         render()
     }
 
     private func render() {
-        guard let view, let snapshot, let theme else { return }
+        guard let view, let snapshot else { return }
         let presenter = ProcessesPresenter(
             texts: .current, tokens: theme.processes, home: dependencies.home, keymap: actions.keymap(), now: Date())
         let input = snapshot.input(
@@ -331,25 +308,32 @@ final class ProcessesController {
 
     private static func now() -> UInt64 { DispatchTime.now().uptimeNanoseconds }
 
+    /// "3", or "0.5" for a shortened grace in UI tests.
+    private static func seconds(_ duration: Duration) -> String {
+        let parts = duration.components
+        let value = Double(parts.seconds) + Double(parts.attoseconds) / 1e18
+        return value == value.rounded() ? String(Int(value)) : String(value)
+    }
+
     // MARK: - Motion
 
     /// The overlays' 150 ms fade, none with "Reducir movimiento".
-    private func fadeIn(_ view: NSView, duration: Double) {
+    private func fadeIn(_ view: NSView) {
         guard !Motion.isReduced else { return }
         view.alphaValue = 0
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
+            context.duration = theme.observatory.fadeDuration
             view.animator().alphaValue = 1
         }
     }
 
-    private func fadeOut(_ view: NSView, duration: Double?) {
-        guard let duration, !Motion.isReduced else {
+    private func fadeOut(_ view: NSView) {
+        guard !Motion.isReduced else {
             view.removeFromSuperview()
             return
         }
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
+            context.duration = theme.observatory.fadeDuration
             view.animator().alphaValue = 0
         } completionHandler: {
             view.removeFromSuperview()

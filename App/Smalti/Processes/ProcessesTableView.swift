@@ -220,8 +220,7 @@ final class ProcessesRowView: NSView {
     private func cpuCell(_ value: Double?) -> NSView {
         let tokens = theme.processes
         let bar = ContextBar()
-        // The bar fills at 50 %: most processes use a sliver of one core.
-        bar.show(fraction: min((value ?? 0) / 50, 1), fill: theme.accent, track: theme.header.contextBarTrack)
+        bar.show(fraction: ProcessFormat.cpuBarFraction(value), fill: theme.accent, track: theme.header.contextBarTrack)
         bar.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             bar.widthAnchor.constraint(equalToConstant: tokens.cpuBarWidth),

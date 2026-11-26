@@ -28,8 +28,6 @@ struct ProcessesPresenter {
     let keymap: Keymap
     let now: Date
 
-    static let refreshSeconds = 2
-
     func make(_ snapshot: ProcessesSnapshot, input: ProcessTableInput, state: State) -> Output {
         switch state.mode {
         case .processes: processes(snapshot, input: input, state: state)
@@ -288,7 +286,10 @@ struct ProcessesPresenter {
             memoryNote: texts.panesSplit([
                 "panes": ObservatoryFormat.gigabytes(totals.paneMemory), "rest": ObservatoryFormat.gigabytes(rest),
             ]),
-            footnote: texts.hiddenNote(["hidden": String(totals.hidden), "seconds": String(Self.refreshSeconds)]))
+            footnote: texts.hiddenNote([
+                "hidden": String(totals.hidden),
+                "seconds": String(ProcessesRefresher.Timing.standard.every.components.seconds),
+            ]))
     }
 
     // MARK: - Helpers

@@ -181,7 +181,7 @@ final class WindowComposition {
     /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
     /// single place to go when the top one closes (block 4 review).
     enum Overlay {
-        case palette, help, search, feedback, sessions, welcome
+        case palette, help, search, feedback, sessions, welcome, processes
     }
 
     func closeOverlays(keeping kept: Overlay? = nil) {
@@ -191,6 +191,8 @@ final class WindowComposition {
         if kept != .feedback { feedback?.close() }
         if kept != .sessions { sessions?.close() }
         if kept != .welcome { welcome?.close() }
+        // F8 review 2: closing the window (or opening another overlay) stops its sampling too.
+        if kept != .processes { processesScreen?.dismiss() }
     }
 
     /// ⌘, (spec F5): opens or closes the Appearance aside of this window.
@@ -435,11 +437,19 @@ final class WindowComposition {
             let theme = controller.theme
             switch command {
             case .workspaceRename: palette.beginRename(theme: theme)
-            case .observatoryToggle: screen?.toggle(theme: theme)
+            // F8 review 2: the observatory and the processes view never stack (the menu reaches both).
+            case .observatoryToggle:
+                processes?.dismiss()
+                screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
             // From ⌘K or the menu with the observatory closed, it opens it first.
             case .observatoryFilter:
-                if screen?.isOpen == true { screen?.cycleFilter() } else { screen?.toggle(theme: theme) }
+                if screen?.isOpen == true {
+                    screen?.cycleFilter()
+                } else {
+                    processes?.dismiss()
+                    screen?.toggle(theme: theme)
+                }
             case .historySearch:
                 if let pane = controller.set.active.focusedPane { services.openHistory(pane) }
             case .previewQuickLook:
@@ -462,11 +472,15 @@ final class WindowComposition {
                 closeOverlays(keeping: .sessions)
                 self.sessions?.toggle(theme: theme)
             case .processesToggle, .portsToggle:
-                closeOverlays()
+                closeOverlays(keeping: .processes)
+                screen?.dismiss()
                 processes?.toggle(command == .portsToggle ? .ports : .processes, theme: theme)
             // From ⌘K or the menu with the view closed, they open it first.
             case .processesStop, .processesLowerPriority, .processesTree, .processesSort:
-                if processes?.isOpen != true { closeOverlays() }
+                if processes?.isOpen != true {
+                    closeOverlays(keeping: .processes)
+                    screen?.dismiss()
+                }
                 processes?.perform(command, theme: theme)
             default: break
             }

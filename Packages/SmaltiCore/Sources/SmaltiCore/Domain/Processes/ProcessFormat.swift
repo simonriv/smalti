@@ -85,9 +85,22 @@ public enum ProcessFormat {
         }
     }
 
-    /// Notices that report a failure: the footer shows them in the error color.
+    /// Notices that report a failure: the footer shows them in the error color. A process that already ended is
+    /// no failure.
     public static func isFailure(_ outcome: StopOutcome) -> Bool {
         if case .failed(let error) = outcome { return error != .gone }
         return false
+    }
+
+    public static func isFailure(_ outcome: PriorityOutcome) -> Bool {
+        if case .failed(let error) = outcome { return error != .gone }
+        return false
+    }
+
+    /// The CPU bar is full at half a core: most processes use a sliver of one.
+    public static let cpuBarFull = 50.0
+
+    public static func cpuBarFraction(_ value: Double?) -> Double {
+        min(max((value ?? 0) / cpuBarFull, 0), 1)
     }
 }

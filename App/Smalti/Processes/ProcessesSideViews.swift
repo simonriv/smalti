@@ -53,7 +53,7 @@ final class ProcessesDetailView: NSView {
         let label = NSTextField(wrappingLabelWithString: command)
         label.font = theme.monospacedFont(size: tokens.commandFontSize)
         label.textColor = theme.text.primary.nsColor
-        label.maximumNumberOfLines = 4
+        label.maximumNumberOfLines = tokens.commandBlockLines
         label.lineBreakMode = .byCharWrapping
         label.preferredMaxLayoutWidth =
             theme.observatory.sideColumnWidth - 2
@@ -103,7 +103,7 @@ final class ProcessesDetailView: NSView {
         let title = ObservatoryText.label(
             action.title, .init(size: tokens.detailFontSize, color: theme.text.primary), theme: theme)
         let stack = NSStackView(views: [key, title])
-        stack.spacing = tokens.commandGap + 2
+        stack.spacing = tokens.actionGap
         stack.heightAnchor.constraint(equalToConstant: tokens.actionHeight).isActive = true
         return stack
     }
@@ -219,7 +219,7 @@ final class PortsSummaryView: NSView {
     init(theme: Theme) {
         self.theme = theme
         let tokens = theme.observatory
-        card = ObservatoryCard(theme: theme, spacing: tokens.spacing.cardStack + 4, height: .fill)
+        card = ObservatoryCard(theme: theme, spacing: theme.processes.summaryGap, height: .fill)
         total = ObservatoryText.number("", .init(size: tokens.valueSize, color: theme.text.title), theme: theme)
         open = ObservatoryText.label("", .init(size: tokens.noteSize, color: theme.text.secondary), theme: theme)
         footnote = ObservatoryText.label(
@@ -305,7 +305,7 @@ final class ForceConfirmation: NSView {
             "", .init(size: tokens.commandFontSize, color: theme.text.secondary), theme: theme)
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.black.withAlphaComponent(tokens.shadeAlpha).cgColor
+        layer?.backgroundColor = tokens.shade.nsColor.cgColor
         isHidden = true
         body.font = theme.interfaceFont(size: tokens.confirmBodySize)
         body.textColor = approval.emphasis.nsColor
@@ -372,6 +372,13 @@ final class ForceConfirmation: NSView {
         ObservatoryText.setText(command, content.command)
         card.setAccessibilityLabel(content.title)
         card.setAccessibilityValue(content.body)
+        // The card takes the keyboard: VoiceOver says what ↵ would do (review 2, minor 9).
+        NSAccessibility.post(
+            element: card, notification: .announcementRequested,
+            userInfo: [
+                .announcement: "\(content.title) \(content.body)",
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ])
     }
 
     /// Clicks on the shade do nothing: the keys decide.

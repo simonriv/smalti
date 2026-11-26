@@ -122,22 +122,30 @@ final class LocalizationTests: SmaltiUITestCase {
         openProcesses()
         collect("processes")
         app.typeKey("t", modifierFlags: .command)
-        filter(String(listening.pid))
+        filter(listener.marker)
         XCTAssertTrue(app.element("smalti.processes.row.\(listening.pid)").waitForExistence(timeout: 10))
         collect("processes tree")
         app.typeKey(.upArrow, modifierFlags: [])
+        // The pane's shell, protected: ⌘⌫ only shows why.
+        let shell = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'smalti.processes.row.'")
+        ).element(boundBy: 0)
+        assertChosen(shell)
+        XCTAssertTrue(shell.label.contains("zsh"), shell.label)
         app.typeKey(.delete, modifierFlags: .command)
         waitUntil { !self.notice().isEmpty }
         collect("protected notice")
 
         app.typeKey("u", modifierFlags: [.command, .shift])
         app.typeKey(.escape, modifierFlags: [])
-        filter(String(listening.port))
+        filter(listener.marker)
         let row = app.element("smalti.ports.row.\(listening.pid).tcp.\(listening.port)")
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         collect("ports")
+        assertChosen(row)
         app.typeKey(.delete, modifierFlags: .command)
         waitUntil { row.label.contains("not responding") }
+        assertChosen(row)
         app.typeKey(.delete, modifierFlags: .command)
         XCTAssertTrue(app.element("smalti.processes.confirm").waitForExistence(timeout: 5))
         collect("force confirmation")

@@ -850,7 +850,8 @@ final class AppComposition {
         return ProcessesServices(
             make: {
                 ProcessesController.Dependencies(
-                    observe: ObserveProcesses(processes: running, ports: ports),
+                    refresher: ProcessesRefresher(
+                        observe: ObserveProcesses(processes: running, ports: ports), timing: .standard),
                     stop: StopProcess(control: control, grace: Self.nanoseconds(grace)),
                     lower: LowerPriority(control: control), policy: policy, home: NSHomeDirectory())
             },
