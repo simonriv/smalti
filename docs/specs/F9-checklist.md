@@ -23,7 +23,7 @@ Spec: `docs/specs/F9-timeline.md` · Plan: `docs/plans/F9-timeline.md` · Fecha:
 | C9 | Inglés y español completos | ✅ `LocalizationTests/testEnglishTimelineHasNoSpanish` (sesión, herramienta desplegada, copia, búsqueda, sin coincidencias, vacío, respaldo y sin identificar); `TimelineTexts` en la auditoría; `strings-catalog.test.sh` |
 | C10 | Todo con atajo y en ⌘K | ✅ `TimelineCommandsTests` (contextos `.terminal` y `.besideTimeline`); XCUITest `testItsChordsBelongToTheTerminalWhileClosed`, exclusión con Observatorio y procesos |
 | C11 | Arquitectura y solo lectura | ✅ guarda de imports; `TranscriptReadOnlyGuardTests`; `network-surface.test.sh`; filas solo desde `TimelineRows` con la política (prueba espía) |
-| C12 | Release y actualización real | ver «Release» |
+| C12 | Release y actualización real | ✅ ver «Release» |
 
 ## GPU y CPU en reposo (C6)
 
@@ -54,3 +54,10 @@ En la segunda tanda, `develop` subió igual que F9 en cuanto pasó la primera co
 
 - Sesiones largas reales de Simón con subagentes en vivo y compactaciones mientras el timeline está abierto.
 - La sensación de seguir el foco con ⌘1…⌘9 en una jornada de trabajo.
+
+## Release
+
+- PR #63 (feature → develop) y #64 (develop → main); tag `v0.9.0` en main; pipeline `release.yml` en verde, con el DMG publicado.
+- Appcast (smalti-web #18): versión 900, `length` 19.659.491 igual al DMG. Cask (homebrew-tap #7): sha256 `6327b297…ec5d5`, igual al del DMG descargado. Integrados los dos.
+- Web (smalti-web #17): docs del timeline en/es con capturas, botón de GitHub e idioma arriba; `pnpm lint` y `pnpm build` en verde.
+- Smalti diario: «Buscar actualizaciones…» por System Events desde una sesión fuera de Smalti → Sparkle → 0.9.0 (900), relanzado sin aviso de Gatekeeper y sin atributo de cuarentena.

@@ -532,4 +532,4 @@
 - [x] Revisión intermedia 2 + regresión + mutación
 #### Bloque 4 · Cierre
 - [x] T11 · Mediciones, capturas, checklist, revisión final
-- [ ] T12 · 0.9.0, PRs, release y despliegue
+- [x] T12 · 0.9.0, PRs, release y despliegue
