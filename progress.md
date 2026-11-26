@@ -500,4 +500,5 @@
 - [x] T9 · Web y documentos
 - [x] Revisión intermedia 2
 - [x] Revisión final (2 importantes y 6 menores corregidos), mutación de cierre 98,7 %, mediciones, capturas y checklist (`docs/specs/F8.5-checklist.md`)
-- [ ] Release 0.8.5 y despliegue
+- [x] Release 0.8.5 (#59, #60, tag `v0.8.5`, appcast #16, cask #6, docs web #15) y el diario actualizado por Sparkle (2026-11-26)
+- [x] F8.5 cerrado (2026-11-26)
