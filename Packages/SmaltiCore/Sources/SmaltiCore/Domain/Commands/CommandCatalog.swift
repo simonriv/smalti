@@ -256,6 +256,7 @@ public enum CommandCatalog {
         var commands = [
             CommandID.agentJump, .observatoryToggle, .observatoryFilter, .harnessSearch,
         ].map { context.titled($0, group: .workspaces) }
+        commands += CommandID.timeline.map { context.titled($0, group: .workspaces) }
         commands += CommandID.processes.map { context.titled($0, group: .workspaces) }
         commands += [CommandID.workspaceNew, .workspaceRename, .layoutImport].map {
             context.titled($0, group: .workspaces)

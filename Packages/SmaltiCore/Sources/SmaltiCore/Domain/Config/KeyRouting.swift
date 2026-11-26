@@ -43,7 +43,9 @@ public struct KeyContext: Equatable, Sendable {
     /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys,
     /// among them ⌘⌫ and ⌘⇧↓ (F8: the processes view's chords only act inside that view).
     public static func overlay(allowing: Set<CommandID>) -> KeyContext {
-        KeyContext(allowing: allowing, passingThrough: textEditing.union(CommandID.processesContextual))
+        KeyContext(
+            allowing: allowing,
+            passingThrough: textEditing.union(CommandID.processesContextual).union(CommandID.timelineContextual))
     }
 }
 

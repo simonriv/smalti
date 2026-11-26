@@ -186,6 +186,7 @@ private struct Builder {
         ]
         return [
             item(.paletteOpen), item(.observatoryToggle), item(.observatoryFilter), item(.harnessSearch),
+            item(.timelineToggle), item(.timelineSearch), item(.timelineCopyCall),
             item(.layoutImport),
             .separator,
         ] + CommandID.processes.map { item($0) } + [

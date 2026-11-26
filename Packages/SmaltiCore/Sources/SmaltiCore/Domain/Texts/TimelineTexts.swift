@@ -18,7 +18,7 @@ public struct TimelineTexts: Sendable, Equatable {
     public let projectScope: TextTemplate
     public let matches: PluralText
     public let inSessions: PluralText
-    public let searching: TextTemplate
+    public let searching: String
     public let capped: TextTemplate
     public let noMatch: TextTemplate
     public let thisPane: String
@@ -50,7 +50,7 @@ public struct TimelineTexts: Sendable, Equatable {
         copied: "Copiado · {size}", projectScope: "Proyecto · {name}",
         matches: PluralText(one: "{count} coincidencia", other: "{count} coincidencias"),
         inSessions: PluralText(one: "en {count} sesión", other: "en {count} sesiones"),
-        searching: "Buscando… {done} de {total} sesiones", capped: "se muestran las primeras {count}",
+        searching: "Buscando…", capped: "se muestran las primeras {count}",
         noMatch: "Nada coincide con «{query}» en este proyecto", thisPane: "este panel", openIn: "abierta en {pane}",
         closed: "cerrada · {when}", noAgentTitle: "Este panel no tiene un agente",
         noAgentBody:
@@ -77,7 +77,7 @@ public struct TimelineTexts: Sendable, Equatable {
         copied: "Copied · {size}", projectScope: "Project · {name}",
         matches: PluralText(one: "{count} match", other: "{count} matches"),
         inSessions: PluralText(one: "in {count} session", other: "in {count} sessions"),
-        searching: "Searching… {done} of {total} sessions", capped: "showing the first {count}",
+        searching: "Searching…", capped: "showing the first {count}",
         noMatch: "Nothing matches “{query}” in this project", thisPane: "this pane", openIn: "open in {pane}",
         closed: "closed · {when}", noAgentTitle: "This pane has no agent",
         noAgentBody:
