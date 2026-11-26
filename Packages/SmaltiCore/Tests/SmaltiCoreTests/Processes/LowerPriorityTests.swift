@@ -31,7 +31,9 @@ struct LowerPriorityTests {
     @Test func protectedDoesNotCall() async {
         let control = FakeProcessControl()
 
-        #expect(await LowerPriority(control: control).lower(row(nice: 0, verdict: .protected(.system))) == .protected(.system))
+        #expect(
+            await LowerPriority(control: control).lower(row(nice: 0, verdict: .protected(.system)))
+                == .protected(.system))
         #expect(await control.calls.isEmpty)
     }
 

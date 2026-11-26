@@ -15,7 +15,8 @@ struct ProcessTableTests {
             F.record(
                 104, parent: 103, name: "node", terminal: 7, arguments: ["node", "vite", "--port", "5173"],
                 directory: "/Users/ana/dev/acme/web", memory: 412),
-            F.record(105, parent: 102, name: "python3", terminal: 7, arguments: ["python3", "-m", "http.server"], memory: 22),
+            F.record(
+                105, parent: 102, name: "python3", terminal: 7, arguments: ["python3", "-m", "http.server"], memory: 22),
             F.record(300, parent: 1, name: "node", arguments: ["node", "watch.mjs"], memory: 41),
             F.record(400, parent: 1, name: "postgres", directory: "/opt/homebrew/var/postgres", memory: 40),
         ]
@@ -137,7 +138,9 @@ struct ProcessTableTests {
     }
 
     @Test func displayNameComesFromTheExecutable() {
-        let record = F.record(9, name: "ControlCe", executable: "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter")
+        let record = F.record(
+            9, name: "ControlCe",
+            executable: "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter")
 
         #expect(record.displayName == "ControlCenter")
         #expect(F.record(9, name: "zsh").displayName == "zsh")

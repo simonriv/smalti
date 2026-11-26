@@ -49,24 +49,26 @@ final class Child {
     /// Listens on TCP 127.0.0.1 and ::1 and on UDP 127.0.0.1, all on ephemeral ports, prints the three ports and
     /// sleeps. With `ignoringTerm`, SIGTERM does nothing.
     static func listener(ignoringTerm: Bool = false) throws -> Child {
-        try Child(python: """
-            import socket, time, signal
-            \(ignoringTerm ? "signal.signal(signal.SIGTERM, signal.SIG_IGN)" : "")
-            a = socket.socket(socket.AF_INET, socket.SOCK_STREAM); a.bind(("127.0.0.1", 0)); a.listen()
-            b = socket.socket(socket.AF_INET6, socket.SOCK_STREAM); b.bind(("::1", 0)); b.listen()
-            c = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); c.bind(("127.0.0.1", 0))
-            print(a.getsockname()[1]); print(b.getsockname()[1]); print(c.getsockname()[1])
-            time.sleep(600)
-            """)
+        try Child(
+            python: """
+                import socket, time, signal
+                \(ignoringTerm ? "signal.signal(signal.SIGTERM, signal.SIG_IGN)" : "")
+                a = socket.socket(socket.AF_INET, socket.SOCK_STREAM); a.bind(("127.0.0.1", 0)); a.listen()
+                b = socket.socket(socket.AF_INET6, socket.SOCK_STREAM); b.bind(("::1", 0)); b.listen()
+                c = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); c.bind(("127.0.0.1", 0))
+                print(a.getsockname()[1]); print(b.getsockname()[1]); print(c.getsockname()[1])
+                time.sleep(600)
+                """)
     }
 
     static func sleeper(ignoringTerm: Bool = false, directory: URL? = nil) throws -> Child {
-        let child = try Child(python: """
-            import time, signal
-            \(ignoringTerm ? "signal.signal(signal.SIGTERM, signal.SIG_IGN)" : "")
-            print("ready")
-            time.sleep(600)
-            """, directory: directory)
+        let child = try Child(
+            python: """
+                import time, signal
+                \(ignoringTerm ? "signal.signal(signal.SIGTERM, signal.SIG_IGN)" : "")
+                print("ready")
+                time.sleep(600)
+                """, directory: directory)
         _ = try child.waitForLines(1)
         return child
     }

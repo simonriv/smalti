@@ -43,7 +43,8 @@ public struct MenuTexts: Sendable, Equatable {
         titles: [
             .paneNew: "New Pane", .paneClose: "Close Pane", .workspaceNew: "New Workspace",
             .workspaceClose: "Close Workspace", .configReload: "Reload Configuration",
-            .historySearch: "Search History", .paletteOpen: "Command Palette", .observatoryToggle: "Observatory", .processesToggle: "Processes",
+            .historySearch: "Search History", .paletteOpen: "Command Palette", .observatoryToggle: "Observatory",
+            .processesToggle: "Processes",
             .portsToggle: "Ports",
             .panesEqualize: "Equalize Panes", .agentJump: "Go to the Waiting Agent",
             .workspaceRename: "Rename Workspace…", .guardApprove: "Approve Waiting Command",

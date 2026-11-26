@@ -53,7 +53,10 @@ struct PortTableTests {
     }
 
     @Test func orderByPortThenTransport() {
-        #expect(rows().map { "\($0.port)/\($0.transport.rawValue)" } == ["3000/TCP", "3000/UDP", "5173/TCP", "5432/TCP", "9000/TCP"])
+        #expect(
+            rows().map { "\($0.port)/\($0.transport.rawValue)" } == [
+                "3000/TCP", "3000/UDP", "5173/TCP", "5432/TCP", "9000/TCP",
+            ])
     }
 
     @Test func orderByProcessPutsUnknownLast() {
@@ -79,6 +82,8 @@ struct PortTableTests {
     }
 
     @Test func noSocketsNoRows() {
-        #expect(PortTable.rows(sockets: [], processes: [:], paneNames: [:], query: PortQuery(filter: "", order: .port)).isEmpty)
+        #expect(
+            PortTable.rows(sockets: [], processes: [:], paneNames: [:], query: PortQuery(filter: "", order: .port))
+                .isEmpty)
     }
 }

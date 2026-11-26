@@ -82,13 +82,15 @@ public struct ProcessTexts: Sendable, Equatable {
         requested: "Asked {name} to quit", waiting: "Waiting for {name} to quit…",
         forced: "Forced {name} to quit", lowered: "{name} now has {level} priority",
         alreadyLowest: "{name} already has the lowest priority", gone: "{name} no longer exists",
-        notYours: "{name} isn’t yours: nothing was touched", refused: "The system refused to act on {name} (error {code})",
+        notYours: "{name} isn’t yours: nothing was touched",
+        refused: "The system refused to act on {name} (error {code})",
         unresponsiveHint: "⌘⌫ to force",
         priorityLevels: [
             .high: "high ({nice})", .normal: "normal ({nice})", .low: "low ({nice})", .lowest: "very low ({nice})",
         ],
         confirmTitle: "Force {name} ({pid}) to quit?",
-        confirmBody: "It did not respond to “Stop” within {seconds} s. Forcing it (SIGKILL) ends it without letting it save anything.",
+        confirmBody:
+            "It did not respond to “Stop” within {seconds} s. Forcing it (SIGKILL) ends it without letting it save anything.",
         processes: PluralText(one: "{count} process", other: "{count} processes"),
         ports: PluralText(one: "{count} port", other: "{count} ports"),
         openToNetwork: PluralText(one: "{count} open to the network", other: "{count} open to the network"),

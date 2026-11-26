@@ -53,7 +53,8 @@ public enum ProcessFormat {
         }
     }
 
-    public static func notice(_ outcome: PriorityOutcome, name: String, texts: ProcessTexts, closeKey: String) -> String {
+    public static func notice(_ outcome: PriorityOutcome, name: String, texts: ProcessTexts, closeKey: String) -> String
+    {
         switch outcome {
         case .lowered(let nice): texts.lowered(["name": name, "level": priority(nice, texts: texts)])
         case .alreadyLowest: texts.alreadyLowest(["name": name])

@@ -36,16 +36,21 @@ struct ProcessCommandsTests {
     }
 
     @Test func helpHasAProcessesSection() {
-        let section = HelpCatalog.sections(keymap: .standard, texts: .english).first { $0.title == "Processes and Ports" }
+        let section = HelpCatalog.sections(keymap: .standard, texts: .english).first {
+            $0.title == "Processes and Ports"
+        }
 
-        #expect(section?.entries.map(\.title) == [
-            "Open Processes", "Open Ports in Use", "Stop the Selected Process", "Lower the Selected Process’s Priority",
-            "Show Processes as a Tree", "Change the Order of Processes and Ports",
-        ])
+        #expect(
+            section?.entries.map(\.title) == [
+                "Open Processes", "Open Ports in Use", "Stop the Selected Process",
+                "Lower the Selected Process’s Priority",
+                "Show Processes as a Tree", "Change the Order of Processes and Ports",
+            ])
     }
 
     @Test func contextualOnesAreTheFourInsideTheView() {
-        #expect(CommandID.processesContextual == [.processesStop, .processesLowerPriority, .processesTree, .processesSort])
+        #expect(
+            CommandID.processesContextual == [.processesStop, .processesLowerPriority, .processesTree, .processesSort])
     }
 
     @Test func allAreStandard() {

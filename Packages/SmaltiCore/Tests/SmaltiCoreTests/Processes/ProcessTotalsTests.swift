@@ -12,7 +12,9 @@ struct ProcessTotalsTests {
             F.record(102, parent: 101, terminal: 7, memory: 100),
             F.record(200, memory: 50),
         ]
-        let cpu = [ProcessIdentity(pid: 102, startedAt: F.start): 10.0, ProcessIdentity(pid: 200, startedAt: F.start): 2.5]
+        let cpu = [
+            ProcessIdentity(pid: 102, startedAt: F.start): 10.0, ProcessIdentity(pid: 200, startedAt: F.start): 2.5,
+        ]
         let attribution = PaneAttribution(records: records, foregroundGroups: [pane: 102])
 
         let totals = ProcessTotals.of(F.sample(records, hidden: 3), cpu: cpu, attribution: attribution)
@@ -26,7 +28,8 @@ struct ProcessTotalsTests {
     }
 
     @Test func noCPUYetIsNil() {
-        let totals = ProcessTotals.of(F.sample([F.record(1)]), cpu: [:], attribution: PaneAttribution(records: [], foregroundGroups: [:]))
+        let totals = ProcessTotals.of(
+            F.sample([F.record(1)]), cpu: [:], attribution: PaneAttribution(records: [], foregroundGroups: [:]))
 
         #expect(totals.cpu == nil)
     }

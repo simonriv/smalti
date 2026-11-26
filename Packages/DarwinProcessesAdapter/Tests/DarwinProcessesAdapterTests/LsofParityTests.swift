@@ -44,7 +44,9 @@ struct LsofParityTests {
             if ours == lsof { break }
             try await Task.sleep(for: .milliseconds(300))
         }
-        #expect(last.ours == last.lsof, "only ours: \(last.ours.subtracting(last.lsof)); only lsof: \(last.lsof.subtracting(last.ours))")
+        #expect(
+            last.ours == last.lsof,
+            "only ours: \(last.ours.subtracting(last.lsof)); only lsof: \(last.lsof.subtracting(last.ours))")
     }
 
     @Test func endedListenerIsGone() async throws {

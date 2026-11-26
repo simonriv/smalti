@@ -103,7 +103,10 @@ public enum ProcessTable {
     }
 
     static func fields(of row: ProcessRow, _ paneNames: [PaneID: String]) -> [String] {
-        [row.name, row.command, String(row.pid), row.record.workingDirectory ?? "", row.pane.flatMap { paneNames[$0] } ?? ""]
+        [
+            row.name, row.command, String(row.pid), row.record.workingDirectory ?? "",
+            row.pane.flatMap { paneNames[$0] } ?? "",
+        ]
     }
 
     private static func comparator(_ order: ProcessOrder) -> (ProcessRow, ProcessRow) -> Bool {

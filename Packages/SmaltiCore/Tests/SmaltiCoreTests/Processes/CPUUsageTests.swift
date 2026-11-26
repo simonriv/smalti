@@ -51,6 +51,7 @@ struct CPUUsageTests {
         let before = F.sample([F.record(10, cpuTime: F.second)], at: 10)
         let after = F.sample([F.record(10, cpuTime: 0)], at: 11)
 
-        #expect(CPUUsage.percentages(previous: before, current: after)[ProcessIdentity(pid: 10, startedAt: F.start)] == 0)
+        #expect(
+            CPUUsage.percentages(previous: before, current: after)[ProcessIdentity(pid: 10, startedAt: F.start)] == 0)
     }
 }
