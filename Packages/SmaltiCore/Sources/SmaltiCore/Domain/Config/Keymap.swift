@@ -85,6 +85,8 @@ public struct Keymap: Sendable, Equatable {
             (chord("t", .command), .processesTree),
             (chord("s", .shift, .command), .processesSort),
             (chord("o", .command), .projectRecent),
+            (chord("t", .shift, .command), .timelineToggle),
+            (chord("c", .shift, .command), .timelineCopyCall),
         ]
         entries += basicEntries
         for number in NumberedShortcuts.range {

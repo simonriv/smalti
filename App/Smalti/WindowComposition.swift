@@ -30,6 +30,23 @@ struct WindowServices {
     let lastCommand: (PaneID) async -> String?
     /// F8: the processes and ports views' use cases (one set per window) and the names of every window's panes.
     let processes: ProcessesServices
+    /// F9: the timeline's use cases (one set per window) and what it needs to know about every window's panes.
+    let timeline: TimelineServices
+}
+
+/// F9: what a window's timeline needs from the app.
+@MainActor
+struct TimelineServices {
+    let make: () -> TimelineController.Dependencies
+    /// The harnesses whose transcripts the timeline reads.
+    let readable: Set<HarnessID>
+    /// The project root of a workspace whose focused pane is in a directory (F8.5's rule).
+    let projectRoot: (Workspace, String) -> String
+    /// Sessions open in some pane of any window: session id → "<workspace> · <n>".
+    let livePanes: () -> [String: String]
+    /// Sessions open in some pane of any window: session id → the state of its agent.
+    let liveStates: () -> [String: AgentStateKind]
+    let paneNames: () -> [PaneID: String]
 }
 
 /// F8: what a window's processes and ports views need from the app.
@@ -56,6 +73,8 @@ final class WindowComposition {
     private var observatoryScreen: ObservatoryController?
     /// F8: ⌘⇧M and ⌘⇧U, the processes and ports views over the window.
     private var processesScreen: ProcessesController?
+    /// F9: ⇧⌘T, the timeline beside the panes.
+    private var timelineScreen: TimelineController?
     private var help: HelpController?
     /// F6: ⌘⇧O, the session search card.
     private var sessions: SessionSearchController?
@@ -212,6 +231,7 @@ final class WindowComposition {
                 return panel
             }()
         closeOverlays()
+        timelineScreen?.dismiss()
         panel.toggle()
     }
 
@@ -232,6 +252,7 @@ final class WindowComposition {
             }()
         closeOverlays()
         appearancePanel?.close()
+        timelineScreen?.dismiss()
         studio.toggle()
     }
 
@@ -256,6 +277,7 @@ final class WindowComposition {
     func dismissObservatory() {
         observatoryScreen?.dismiss()
         processesScreen?.dismiss()
+        timelineScreen?.dismiss()
     }
 
     func show(_ frame: ObservatoryFrame) {
@@ -323,6 +345,7 @@ final class WindowComposition {
             window.title = state.set.active.name
             labelTerminals(state.set.active)
             search?.follow(state.set)
+            timelineScreen?.follow()
             focusKeyboard(on: state.set.active.focusedPane)
             services.changed()
         }
@@ -331,7 +354,10 @@ final class WindowComposition {
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
         }
-        grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
+        grid.onPaneClicked = { [weak self, weak controller] pane in
+            self?.timelineScreen?.releaseKeyboard()
+            controller?.focus(pane)
+        }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
         window.strip.onCursor = { [weak window] isInside in window?.buttons?.cursorOnStrip(isInside) }
         window.buttons?.onShow = { [weak window] faded in
@@ -444,7 +470,9 @@ final class WindowComposition {
         observatoryScreen = screen
         let processes = makeProcessesScreen()
         processesScreen = processes
-        controller.onViewCommand = { [weak self, weak palette, weak screen, weak processes] command in
+        let timeline = makeTimelineScreen()
+        timelineScreen = timeline
+        controller.onViewCommand = { [weak self, weak palette, weak screen, weak processes, weak timeline] command in
             guard let self, let palette else { return }
             let theme = controller.theme
             switch command {
@@ -452,6 +480,7 @@ final class WindowComposition {
             // F8 review 2: the observatory and the processes view never stack (the menu reaches both).
             case .observatoryToggle:
                 processes?.dismiss()
+                timeline?.dismiss()
                 screen?.toggle(theme: theme)
             case .observatoryPeriod: screen?.cyclePeriod()
             // From ⌘K or the menu with the observatory closed, it opens it first.
@@ -460,6 +489,7 @@ final class WindowComposition {
                     screen?.cycleFilter()
                 } else {
                     processes?.dismiss()
+                    timeline?.dismiss()
                     screen?.toggle(theme: theme)
                 }
             case .historySearch:
@@ -469,6 +499,9 @@ final class WindowComposition {
             case .helpShow:
                 closeOverlays(keeping: .help)
                 self.help?.toggle(theme: theme)
+            // F9: with the timeline open, ⌘F searches the project's sessions.
+            case .searchOpen where timeline?.isOpen == true:
+                timeline?.openSearch(theme: theme)
             case .searchOpen:
                 closeOverlays(keeping: .search)
                 if let pane = controller.set.active.focusedPane { self.search?.open(on: pane, theme: theme) }
@@ -486,18 +519,79 @@ final class WindowComposition {
             case .processesToggle, .portsToggle:
                 closeOverlays(keeping: .processes)
                 screen?.dismiss()
+                timeline?.dismiss()
                 processes?.toggle(command == .portsToggle ? .ports : .processes, theme: theme)
             // From ⌘K or the menu with the view closed, they open it first.
             case .processesStop, .processesLowerPriority, .processesTree, .processesSort:
                 if processes?.isOpen != true {
                     closeOverlays(keeping: .processes)
                     screen?.dismiss()
+                    timeline?.dismiss()
                 }
                 processes?.perform(command, theme: theme)
+            // F9: the timeline never stacks with the observatory or the processes view.
+            case .timelineToggle, .timelineSearch, .timelineCopy, .timelineCopyCall:
+                if timeline?.isOpen != true {
+                    closeOverlays()
+                    screen?.dismiss()
+                    processes?.dismiss()
+                }
+                performTimeline(command, on: timeline, theme: theme)
             default: break
             }
         }
         self.palette = palette
+    }
+
+    private func performTimeline(_ command: CommandID, on timeline: TimelineController?, theme: Theme) {
+        switch command {
+        case .timelineToggle: timeline?.toggle(theme: theme)
+        case .timelineSearch: timeline?.openSearch(theme: theme)
+        // From ⌘K or the menu with the timeline closed, copying opens it first.
+        case .timelineCopy where timeline?.isOpen == true: timeline?.copySelected(.content)
+        case .timelineCopyCall where timeline?.isOpen == true: timeline?.copySelected(.call)
+        default: timeline?.toggle(theme: theme)
+        }
+    }
+
+    /// ⇧⌘T: the timeline of the focused pane's session, beside the panes (which keep running and stay visible).
+    private func makeTimelineScreen() -> TimelineController {
+        let services = services.timeline
+        return TimelineController(
+            window: window, dependencies: services.make(),
+            actions: .init(
+                target: { [weak self] in self?.timelineTarget(services) },
+                livePanes: services.livePanes,
+                liveDot: { [weak self] session in
+                    guard let self, let kind = services.liveStates()[session] else { return nil }
+                    return controller.theme.statusDot(for: kind)
+                },
+                didClose: { [weak self] in
+                    guard let self else { return }
+                    focusKeyboard(on: controller.set.active.focusedPane)
+                },
+                area: { [weak self] in self?.window.paneGrid },
+                toggleKeys: { [weak controller] in
+                    controller?.config.keys.chord(for: .timelineToggle)?.display ?? ""
+                }))
+    }
+
+    /// What the focused pane means for the timeline: its session, the project around it and how to name it.
+    private func timelineTarget(_ services: TimelineServices) -> TimelineController.Target? {
+        let workspace = controller.set.active
+        guard let id = workspace.focusedPane, let pane = workspace.panes.first(where: { $0.id == id }) else {
+            return nil
+        }
+        let process = pane.processName.map {
+            ForegroundProcess(name: $0, commandLine: pane.foregroundCommandLine, pid: pane.foregroundPID)
+        }
+        let running = process.flatMap { self.services.harnesses.adapter(detecting: $0)?.harness }
+        let directory = pane.workingDirectory.path
+        let focus = TimelineFocus(
+            resolution: TimelineTarget.resolve(pane: pane, running: running, readable: services.readable),
+            root: services.projectRoot(workspace, directory), pane: services.paneNames()[id] ?? "")
+        return TimelineController.Target(
+            focus: focus, directory: directory, agentDot: controller.theme.statusDot(for: pane.agent?.state.kind))
     }
 
     /// ⌘⇧A: the observatory over the window; the panes stay alive and get the focus back when it closes.
@@ -597,8 +691,11 @@ final class WindowComposition {
         }
         // F8: the view owns the keyboard (typing filters); only its own chords act.
         if processesScreen?.isOpen == true { return KeyContext(allowing: Set(CommandID.processes)) }
-        return KeyContext(
-            passingThrough: Set([CommandID.observatoryPeriod, .observatoryFilter]).union(CommandID.processesContextual))
+        // F9: beside the panes, every shortcut still acts (⌘1…⌘9 move the focus and the timeline follows); the
+        // text keys reach the focused view, so ⌘C copies the chosen item while the timeline has the keyboard.
+        // The timeline's text keys only while it has the keyboard: a pane with the keyboard keeps ⌘C, ⌘V and ⌘A.
+        if timelineScreen?.ownsFirstResponder == true { return .besideTimeline }
+        return .terminal
     }
 
     /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).
@@ -620,6 +717,18 @@ final class WindowComposition {
     /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
     /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
     func focusKeyboard(on pane: PaneID?) {
+        // F9 (review 2): beside the panes, the timeline keeps the keyboard while it is being used; a click on a pane
+        // gives it back to the panes, and then the focus moves the keyboard as usual.
+        // A click inside a terminal goes to its surface, not to the grid: a pane holding the keyboard means the
+        // panes have it (review 2, C3).
+        if let responder = window.firstResponder as? NSView, responder.isDescendant(of: window.paneGrid) {
+            timelineScreen?.releaseKeyboard()
+        }
+        if let timeline = timelineScreen, timeline.isOpen, timeline.hasKeyboard, !hasOverlayOpen,
+            appearancePanel?.ownsKeyboard != true, studio?.isOpen != true
+        {
+            return timeline.takeKeyboard()
+        }
         guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, studio?.isOpen != true, let pane,
             let view = services.engine.view(for: pane), window.firstResponder !== view
         else { return }

@@ -10,6 +10,7 @@ let package = Package(
     dependencies: [
         .package(path: "../SmaltiCore"),
         .package(path: "../SQLiteReader"),
+        .package(path: "../JSONLReader"),
     ],
     targets: [
         .target(
@@ -17,6 +18,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SmaltiCore", package: "SmaltiCore"),
                 .product(name: "SQLiteReader", package: "SQLiteReader"),
+                .product(name: "JSONLReader", package: "JSONLReader"),
             ]),
         .testTarget(
             name: "CodexHarnessAdapterTests",

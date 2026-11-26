@@ -84,6 +84,7 @@ struct MenuModelTests {
         #expect(
             menus[3].items.map(\.title) == [
                 "Paleta de comandos", "Observatorio", "Filtrar el Observatorio", "Buscar sesiones de agentes",
+                "Timeline", "Buscar en las sesiones del proyecto", "Copiar la llamada elegida",
                 "Importar layout…", "", "Procesos", "Puertos", "Detener el proceso elegido",
                 "Bajar la prioridad del proceso elegido", "Ver procesos en árbol",
                 "Cambiar el orden de procesos y puertos", "",

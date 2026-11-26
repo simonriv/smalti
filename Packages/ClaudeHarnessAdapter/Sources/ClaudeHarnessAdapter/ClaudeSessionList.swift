@@ -30,6 +30,44 @@ struct ClaudeSessionList {
         return files.compactMap(session)
     }
 
+    /// F9: the sessions whose directory is `root` or under it, newest first, with their transcript. Folders are picked
+    /// by their encoded name (`root`'s, or it followed by `-`) and confirmed by the `cwd` the transcript names.
+    func sessions(under root: String, limit: Int) throws(HarnessError) -> [(session: HarnessSession, file: URL)] {
+        let files = FileManager.default
+        guard files.fileExists(atPath: self.root.path) else {
+            throw .storeMissing(harness: harness, path: self.root.path)
+        }
+        var found: [(session: HarnessSession, file: URL)] = []
+        for file in candidates(under: root) {
+            guard found.count < limit else { break }
+            guard let session = session(file, under: root) else { continue }
+            found.append((session, file))
+        }
+        return found
+    }
+
+    /// The transcripts of the folders `root` and the ones under it may live in, newest first, unread (the search
+    /// reads each one's head only when it reaches it: the first results do not wait for the whole list).
+    func candidates(under root: String) -> [URL] {
+        let files = FileManager.default
+        let name = Self.projectFolder(for: root)
+        let folders = ((try? files.contentsOfDirectory(at: self.root, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent == name || $0.lastPathComponent.hasPrefix(name + "-") }
+        let transcripts = folders.flatMap { folder in
+            ((try? files.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+                .filter { $0.pathExtension == "jsonl" }
+        }
+        return transcripts.map { ($0, Self.modified($0)) }.sorted { $0.1 > $1.1 }.map(\.0)
+    }
+
+    /// The session of `file` when its directory is `root` or under it.
+    func session(_ file: URL, under root: String) -> HarnessSession? {
+        guard let session = autoreleasepool(invoking: { session(file) }),
+            session.directory == root || session.directory.hasPrefix(root.hasSuffix("/") ? root : root + "/")
+        else { return nil }
+        return session
+    }
+
     /// Claude Code (2.1) names a project's folder `cwd.replace(/[^a-zA-Z0-9]/g, "-")`: every UTF-16 unit that is not
     /// an ASCII letter or digit becomes `-`.
     static func projectFolder(for directory: String) -> String {
@@ -79,7 +117,7 @@ struct ClaudeSessionList {
         (try? FileManager.default.attributesOfItem(atPath: file.path))?[.creationDate] as? Date ?? .distantPast
     }
 
-    private func session(_ file: URL) -> HarnessSession? {
+    func session(_ file: URL) -> HarnessSession? {
         guard let head = Self.records(Self.read(file, head: Self.headBytes)),
             let directory = head.lazy.compactMap({ $0["cwd"] as? String }).first,
             let created = head.lazy.compactMap(Self.timestamp).first

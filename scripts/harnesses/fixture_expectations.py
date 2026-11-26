@@ -87,7 +87,7 @@ def claude(home):
     return sessions
 
 
-READERS = {"codex": codex, "antigravity": antigravity, "opencode": opencode, "claude": claude}
+READERS = {"codex": codex, "codex-timeline": codex, "antigravity": antigravity, "opencode": opencode, "claude": claude}
 
 
 def expectations(harness, home):

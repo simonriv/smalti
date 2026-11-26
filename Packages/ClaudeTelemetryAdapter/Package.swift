@@ -8,12 +8,16 @@ let package = Package(
         .library(name: "ClaudeTelemetryAdapter", targets: ["ClaudeTelemetryAdapter"])
     ],
     dependencies: [
-        .package(path: "../SmaltiCore")
+        .package(path: "../SmaltiCore"),
+        .package(path: "../JSONLReader"),
     ],
     targets: [
         .target(
             name: "ClaudeTelemetryAdapter",
-            dependencies: [.product(name: "SmaltiCore", package: "SmaltiCore")]),
+            dependencies: [
+                .product(name: "SmaltiCore", package: "SmaltiCore"),
+                .product(name: "JSONLReader", package: "JSONLReader"),
+            ]),
         .testTarget(
             name: "ClaudeTelemetryAdapterTests",
             dependencies: [
