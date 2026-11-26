@@ -134,12 +134,13 @@ public struct CodexTimeline: SessionTranscripts, ProjectTranscripts {
             rollout: resolved(rollout))
     }
 
-    /// The rollout's path; when the home moved (a copied `CODEX_HOME`), the same path under this home's `sessions`.
+    /// The rollout under this home's `sessions` when it is there (a copied or moved `CODEX_HOME` keeps the old
+    /// absolute path in its index), else the path the index stores.
     private func resolved(_ rollout: String) -> String {
-        guard !FileManager.default.fileExists(atPath: rollout), let range = rollout.range(of: Self.sessionsFolder)
-        else { return rollout }
-        return home.appending(path: "sessions").appending(path: String(rollout[range.upperBound...]))
+        guard let range = rollout.range(of: Self.sessionsFolder) else { return rollout }
+        let local = home.appending(path: "sessions").appending(path: String(rollout[range.upperBound...]))
             .path(percentEncoded: false)
+        return FileManager.default.fileExists(atPath: local) ? local : rollout
     }
 
     private func scan(_ thread: Thread, needle: [UInt8]) throws -> [TranscriptHit] {
