@@ -20,6 +20,8 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     /// The tree's leaves are not each pane exactly once.
     case invalidTree
     case invalidRoot(String)
+    /// F8.5: a project file (`.smalti/layout.json`) only opens folders and files inside its repo.
+    case outsideProject(pane: Int, path: String)
 
     public func message(_ texts: SharedLayoutErrorTexts) -> String {
         switch self {
@@ -41,6 +43,7 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
         case .invalidEditor(let pane): texts.invalidEditor(["pane": String(pane)])
         case .invalidTree: texts.invalidTree
         case .invalidRoot(let root): texts.invalidRoot(["root": root])
+        case .outsideProject(let pane, let path): texts.outsideProject(["pane": String(pane), "path": path])
         }
     }
 }
@@ -93,6 +96,8 @@ public struct SharedLayout: Codable, Equatable, Sendable {
     public static let maximumPanes = 9
     public static let maximumBytes = 262_144
     public static let fileExtension = "smalti-layout.json"
+    /// F8.5: the root of a project file, the folder that holds `.smalti/`.
+    public static let projectRoot = "."
 
     public var smaltiLayout: Int
     public var name: String
@@ -123,6 +128,36 @@ public struct SharedLayout: Codable, Equatable, Sendable {
             panes: snapshot.panes.map { Self.sharedPane($0, root: snapshot.rootDirectory, paths: paths) })
     }
 
+    /// F8.5: a project file for the repo at `root`: root `.`, every folder and editor file relative to it. A pane or
+    /// editor file outside the repo cannot be written (the file travels with the repo).
+    public init(exportingProject snapshot: WorkspaceSnapshot, named name: LayoutName, root: String, home: String)
+        throws(SharedLayoutError)
+    {
+        let paths = PortablePaths(home: home)
+        var panes: [SharedPane] = []
+        for (index, pane) in snapshot.panes.enumerated() {
+            guard let directory = PortablePaths.relative(pane.workingDirectory, to: root) else {
+                throw .outsideProject(pane: index + 1, path: paths.portable(pane.workingDirectory))
+            }
+            let editor = try pane.editor.map { position throws(SharedLayoutError) in
+                guard PortablePaths.relative(position.file, to: root) != nil else {
+                    throw .outsideProject(pane: index + 1, path: paths.portable(position.file))
+                }
+                return SharedEditor(
+                    file: PortablePaths.relative(position.file, to: pane.workingDirectory)
+                        ?? PortablePaths.relative(position.file, to: root) ?? position.file,
+                    line: position.line)
+            }
+            panes.append(
+                SharedPane(
+                    directory: directory, command: pane.relaunch?.arguments.map(paths.portableArgument),
+                    harness: pane.agent?.harness, editor: editor))
+        }
+        self.init(
+            smaltiLayout: Self.formatVersion, name: name.rawValue, root: Self.projectRoot, layout: snapshot.layout,
+            focused: snapshot.focusedIndex, tree: snapshot.tree, panes: panes)
+    }
+
     private static func sharedPane(_ pane: PaneSnapshot, root: String, paths: PortablePaths) -> SharedPane {
         let editor = pane.editor.map {
             SharedEditor(
@@ -138,6 +173,23 @@ public struct SharedLayout: Codable, Equatable, Sendable {
     public func resolvedRoot(home: String) -> String { PortablePaths(home: home).absolute(root, base: home) }
 
     public func validated() throws(SharedLayoutError) -> ValidatedLayout {
+        try validatedContents(isRootValid: root == "~" || root.hasPrefix("~/") || root.hasPrefix("/"))
+    }
+
+    /// F8.5: a `.smalti/layout.json`: root `.` and nothing outside the repo, besides every check of `validated()`.
+    public func validatedAsProject() throws(SharedLayoutError) -> ValidatedLayout {
+        let validated = try validatedContents(isRootValid: root == Self.projectRoot)
+        for (index, pane) in panes.enumerated() {
+            for path in [pane.directory] + (pane.editor.map { [$0.file] } ?? []) where Self.isOutside(path) {
+                throw .outsideProject(pane: index + 1, path: path)
+            }
+        }
+        return validated
+    }
+
+    private static func isOutside(_ path: String) -> Bool { path.hasPrefix("/") || path.hasPrefix("~") }
+
+    private func validatedContents(isRootValid: Bool) throws(SharedLayoutError) -> ValidatedLayout {
         switch FormatCompatibility.of(stored: smaltiLayout, current: Self.formatVersion) {
         case .current: break
         case .newer(let format): throw .newerFormat(format)
@@ -150,7 +202,7 @@ public struct SharedLayout: Codable, Equatable, Sendable {
             guard case .invalid(_, let reason) = error else { throw .invalidName(name, reason: "") }
             throw .invalidName(name, reason: reason)
         }
-        guard root == "~" || root.hasPrefix("~/") || root.hasPrefix("/") else { throw .invalidRoot(root) }
+        guard isRootValid else { throw .invalidRoot(root) }
         guard (1...Self.maximumPanes).contains(panes.count) else { throw .paneCount(panes.count) }
         if let tree {
             guard tree.leafCount == panes.count else { throw .treeMismatch(leaves: tree.leafCount, panes: panes.count) }
