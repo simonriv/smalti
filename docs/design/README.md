@@ -73,3 +73,7 @@ Ningún tablero los dibuja. La referencia es la maqueta `docs/specs/F8-assets/mo
 ## Proyectos (F8.5)
 
 Ningún tablero los dibuja. La referencia es la maqueta `docs/specs/F8.5-assets/mockup.html` (`?view=palette|recent|confirm|changed|replace&lang=es|en`; capturas `mockup-*-{es,en}.png`), compuesta con la caja de vidrio, las filas, los grupos y el pie de `Paleta.dc.html`, y el borde y el punto ámbar de la aprobación de F7.5 para la confirmación. Atajo ⌘O; textos en inglés del glosario de la spec F8.5.
+
+## Timeline (F9)
+
+Ningún tablero lo dibuja. La referencia es la maqueta `docs/specs/F9-assets/mockup.html` (`?view=session|search|empty|fallback|unidentified&lang=es|en`; capturas `mockup-*-{es,en}.png`): un panel de 480 pt a la derecha, sobre los paneles, con las tarjetas, chips y pie de `Observatorio.dc.html`, las filas de sesión de `Reanudar.dc.html` y el ámbar de «te espera» para el aviso de sesión sin identificar. Atajo ⇧⌘T; textos en inglés del glosario de la spec F9.

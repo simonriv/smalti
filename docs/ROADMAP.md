@@ -216,8 +216,9 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 - **Objetivo:** recuperar lo que un agente hizo aunque ya no se vea: Claude Code usa la pantalla alternativa y su historial no queda en el scrollback.
 - **Entregables:** panel lateral (con atajo y en ⌘K) que lee los transcripts y muestra los turnos con las herramientas plegadas, búsqueda en todas las sesiones del proyecto, copiar cualquier salida antigua y saltar a un turno. Adaptadores de Claude Code y Codex detrás de un puerto, reutilizando los lectores de F3 y F6.
-- **Criterio de cierre:** por definir en su spec; como mínimo, sobre los fixtures reales de F3 y F6, cada turno y cada resultado de herramienta del transcript aparece en el timeline y se copia íntegro.
-- **Diseño:** no hay tablero; empieza con maqueta para aprobar.
+- **Spec:** `docs/specs/F9-timeline.md` (maqueta en `docs/specs/F9-assets/`).
+- **Criterio de cierre:** sobre los fixtures reales de F3 y F6 (y uno nuevo de Codex con herramientas), cada turno y cada resultado de herramienta aparece en el timeline y se copia íntegro, byte a byte contra un oráculo independiente; el timeline es el de la sesión del panel enfocado; la búsqueda encuentra una sesión cerrada del proyecto y salta al turno (< 1,5 s en el proyecto mayor); sin coste en reposo; inglés y español completos (C1–C12 de la spec).
+- **Diseño:** no hay tablero; maqueta en `docs/specs/F9-assets/mockup.html`.
 - **Dependencias:** F3 (lector de transcripts) y F6 (fixtures y adaptadores de harness).
 
 ## F10 · Revisión con Neovim

@@ -1,0 +1,11 @@
+{
+  "harness": "codex-timeline",
+  "sessions": [
+    {
+      "id": "01a217ec-6769-7511-85da-e8c0c0fc852a",
+      "directory": "/private/tmp/smalti-fx/codex-timeline/work-a",
+      "title": "Run the shell command: ls",
+      "createdAt": "2026-11-26T12:54:58Z"
+    }
+  ]
+}

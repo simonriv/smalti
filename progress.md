@@ -502,3 +502,34 @@
 - [x] Revisión final (2 importantes y 6 menores corregidos), mutación de cierre 98,7 %, mediciones, capturas y checklist (`docs/specs/F8.5-checklist.md`)
 - [x] Release 0.8.5 (#59, #60, tag `v0.8.5`, appcast #16, cask #6, docs web #15) y el diario actualizado por Sparkle (2026-11-26)
 - [x] F8.5 cerrado (2026-11-26)
+
+## F9 · Timeline de la sesión
+
+### Spec
+- [x] Investigación previa: fuentes, panel ↔ sesión, coste (60 MB en 0,37 s), búsqueda (405 MB en 0,8 s), copiar y saltar, punto para F11 y atajo (2026-11-26)
+- [x] Fixture real nuevo de Codex con herramientas (`codex-timeline`, Ollama local) (2026-11-26)
+- [x] Maqueta (`docs/specs/F9-assets/mockup.html`) enviada a Simón (PARA 1); sin respuesta, se sigue con la recomendación (2026-11-26)
+- [x] Spec `docs/specs/F9-timeline.md`, aprobada de antemano (2026-11-26)
+
+### Plan
+- [x] Plan `docs/plans/F9-timeline.md`, aprobado de antemano (2026-11-26)
+
+### Tareas
+#### Bloque 1 · Base y dominio
+- [ ] T1 · Paquete `JSONLReader`
+- [ ] T2 · Oráculo y fixture de imagen
+- [ ] T3 · Entradas y pliegue en turnos
+- [ ] T4 · Filas, selección, panel ↔ sesión, búsqueda y política de texto
+- [ ] T5 · Puertos, fakes, casos de uso y comandos
+#### Bloque 2 · Adaptadores
+- [ ] T6 · `ClaudeTimeline`
+- [ ] T7 · `CodexTimeline`
+- [ ] Revisión intermedia 1 + mutación
+#### Bloque 3 · App
+- [ ] T8 · Panel lateral, composición y teclado
+- [ ] T9 · Desplegar, copiar, búsqueda, respaldo, avisos e idioma
+- [ ] T10 · Documentos y web
+- [ ] Revisión intermedia 2 + regresión + mutación
+#### Bloque 4 · Cierre
+- [ ] T11 · Mediciones, capturas, checklist, revisión final
+- [ ] T12 · 0.9.0, PRs, release y despliegue

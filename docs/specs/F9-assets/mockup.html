@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Timeline de la sesión</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<!--
+  Maqueta de F9 (Timeline de la sesión), en la línea de Observatorio.dc.html y Reanudar.dc.html, con los tokens de
+  docs/design/README.md. Tableros: ?view=session|search|empty|fallback|unidentified&lang=es|en. Capturas con Chrome sin interfaz.
+-->
+<style>
+  :root{--accent:#7aa2f7;--ring:#7aa2f780;--glow:#7aa2f722;--text:#d7dae0;--title:#e6e9ef;--muted:#8b919c;--soft:#aeb3bd;
+        --green:#9ece6a;--amber:#e0af68;--red:#f7768e;--stopped:#6b717c;--cyan:#7dcfff;--purple:#bb9af7;--ghost:#5f6672;
+        --panel:rgba(6,7,10,0.34);--line:rgba(255,255,255,0.06)}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text)}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+  .kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:var(--soft);background:rgba(255,255,255,0.04);white-space:nowrap}
+  .desk{width:1440px;height:900px;position:relative;overflow:hidden;background-color:#0b0d12;
+    background-image:radial-gradient(circle at 16% 20%,#284766 0,rgba(40,71,102,0) 38%),radial-gradient(circle at 84% 80%,#563663 0,rgba(86,54,99,0) 42%),radial-gradient(circle at 72% 12%,#1d5a55 0,rgba(29,90,85,0) 34%),radial-gradient(circle at 30% 92%,#5a4a2a 0,rgba(90,74,42,0) 30%)}
+  .win{position:absolute;left:56px;top:40px;width:1328px;height:820px;border-radius:16px;border:1px solid rgba(255,255,255,0.09);box-shadow:0 30px 90px rgba(0,0,0,0.5);
+    background:rgba(13,15,21,0.62);backdrop-filter:blur(28px) saturate(150%);display:flex;flex-direction:column;overflow:hidden}
+  .strip{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px 0 86px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px}
+  .ws{height:24px;padding:0 10px;border-radius:7px;display:flex;align-items:center;gap:7px;color:#9aa0ab}
+  .ws.on{background:rgba(255,255,255,0.06);color:var(--title)}
+  .area{flex:1;min-height:0;position:relative;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pane{border-radius:11px;background:var(--panel);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .pane.on{border-color:var(--ring);box-shadow:0 0 0 3px var(--glow)}
+  .phead{height:30px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:12px;color:var(--soft);border-bottom:1px solid rgba(255,255,255,0.05)}
+  .term{flex:1;padding:10px 14px;font:12.5px/1.62 'JetBrains Mono',monospace;color:#c0c4cc;white-space:pre;overflow:hidden}
+  .status{height:28px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid rgba(255,255,255,0.05);font-size:11.5px;color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block}
+  .dot.working{background:var(--green)}.dot.waiting{background:var(--amber)}.dot.error{background:var(--red)}
+  .dot.idle{border:1.5px solid var(--stopped);box-sizing:border-box}
+  /* Timeline */
+  .tl{position:absolute;top:10px;right:10px;bottom:10px;width:480px;border-radius:12px;background:rgba(15,17,23,0.90);
+      border:1px solid rgba(255,255,255,0.09);box-shadow:-18px 0 50px rgba(0,0,0,0.38);display:flex;flex-direction:column;overflow:hidden}
+  .tlhead{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px 0 14px;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .chip{height:24px;padding:0 8px;border-radius:7px;border:1px solid transparent;color:#9aa0ab;font:500 11.5px Inter,sans-serif;display:flex;align-items:center;gap:6px}
+  .chip.on{border-color:var(--ring);background:var(--glow);color:var(--title)}
+  .chip .kbd{padding:1px 4px;font-size:10px}
+  .sess{flex:none;padding:9px 14px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .list{flex:1;min-height:0;overflow:hidden;padding:6px 0}
+  .item{padding:7px 14px 7px 16px;position:relative;font-size:12.5px;line-height:1.5}
+  .item.sel{background:var(--glow);box-shadow:inset 2px 0 0 var(--accent)}
+  .who{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:3px}
+  .who .t{margin-left:auto;letter-spacing:0;text-transform:none;font-family:'JetBrains Mono',monospace;font-size:10.5px}
+  .prompt{color:var(--title);border-left:2px solid rgba(122,162,247,0.55);padding-left:9px}
+  .clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  .tool{display:flex;align-items:center;gap:8px;height:24px;font-size:12px}
+  .tool .chev{width:10px;color:var(--muted);font-size:10px}
+  .tool .name{font-family:'JetBrains Mono',monospace;color:var(--cyan);font-size:11.5px}
+  .tool .args{font-family:'JetBrains Mono',monospace;color:var(--soft);font-size:11.5px;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tool .st{font-size:11px;display:flex;align-items:center;gap:5px;flex:none}
+  .out{margin:4px 0 2px 18px;border-radius:7px;background:rgba(0,0,0,0.22);padding:7px 9px;font:11.5px/1.55 'JetBrains Mono',monospace;color:#c0c4cc;white-space:pre;overflow:hidden}
+  .out .lab{font-family:Inter,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  .more{font-family:Inter,sans-serif;font-size:11px;color:var(--muted);display:block;margin-top:4px}
+  .sub{margin-left:18px;border-left:1px solid rgba(255,255,255,0.08);padding-left:10px}
+  .divider{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:11px;color:var(--muted)}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:rgba(255,255,255,0.07)}
+  .foot{height:30px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-top:1px solid rgba(255,255,255,0.05);font-size:11px;color:var(--muted);white-space:nowrap}
+  .foot span{display:flex;align-items:center;gap:5px}
+  .notice{margin-left:auto;color:var(--soft)}
+  .field{height:26px;flex:1;border-radius:7px;border:1px solid var(--ring);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:7px;padding:0 9px;font-size:12px;color:var(--title)}
+  .field .caret{width:1px;height:14px;background:var(--accent)}
+  .group{padding:9px 14px 4px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--soft)}
+  .group .h{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .hit{padding:6px 14px 6px 16px;font-size:12px;line-height:1.5;display:flex;flex-direction:column;gap:1px}
+  .hit.sel{background:var(--glow);box-shadow:inset 2px 0 0 var(--accent)}
+  mark{background:rgba(122,162,247,0.28);color:var(--title);border-radius:3px;padding:0 1px}
+  .empty{flex:1;display:flex;flex-direction:column;gap:10px;padding:26px 22px}
+  .row{display:flex;align-items:center;gap:9px;height:34px;padding:0 10px;border-radius:7px;font-size:12px}
+  .row.sel{background:var(--glow);box-shadow:inset 2px 0 0 var(--accent)}
+  .banner{flex:none;margin:8px 12px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.035);padding:8px 10px;font-size:11.5px;color:var(--soft);line-height:1.5;display:flex;gap:8px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const params = new URLSearchParams(location.search);
+const view = params.get('view') || 'session';
+const lang = params.get('lang') || 'es';
+document.documentElement.lang = lang;
+
+const T = {
+  es: {
+    title: 'Timeline', session: 'Sesión', search: 'Buscar',
+    you: 'Tú', claude: 'Claude', codex: 'Codex', ago: 'hace 3 min',
+    sessLine: 'Claude Code · api · 1', sessTitle: 'Arregla la migración de pagos y corre las pruebas',
+    turns: '24 turnos · 61 herramientas · desde 10:42',
+    p1: 'Arregla la migración de pagos y corre las pruebas',
+    a1: 'La migración 0042 falla porque la columna <span class="mono">amount_cents</span> ya existe en la base de pruebas. La hago idempotente con <span class="mono">add column if not exists</span> y vuelvo a correr la suite.',
+    ok: 'listo', error: 'error · exit 1', errorShort: 'error', running: 'trabajando',
+    output: 'Salida', input: 'Llamada', moreLines: '… 212 líneas más · ⌘C copia la salida íntegra',
+    sub: 'revisa los otros usos de amount_cents', subTools: '3 herramientas',
+    compact: 'Conversación compactada · 168k → 22k tokens',
+    image: 'Imagen adjunta · captura.png',
+    p2: 'Ahora revisa que el reembolso parcial siga redondeando bien',
+    keys: [['↑↓', 'elegir'], ['→ ←', 'desplegar'], ['⌘C', 'copiar íntegro'], ['esc', 'cerrar']],
+    copied: 'Copiado · 18,4 KB',
+    query: 'reembolso parcial', scope: 'Proyecto · acme', scopeHint: '~/dev/acme y sus carpetas',
+    summary: '9 coincidencias en 4 sesiones', summaryDone: '412 MB leídos en 0,8 s',
+    g1: 'Arregla la migración de pagos…', g1meta: 'Claude Code · este panel · hace 3 min',
+    g2: 'Reembolsos con descuento', g2meta: 'Claude Code · cerrada · ayer 18:20',
+    g3: 'refactor del cálculo de impuestos', g3meta: 'Codex · cerrada · lun 24 nov',
+    h1: 'Ahora revisa que el <mark>reembolso parcial</mark> siga redondeando bien',
+    h2: 'El <mark>reembolso parcial</mark> usa <span class="mono">round_half_even</span>; con 3 decimales…',
+    h3: '<span class="mono">it("<mark>reembolso parcial</mark> de 0,01")</span> · 14 passed',
+    h4: '¿Por qué el <mark>reembolso parcial</mark> da un centavo menos?',
+    h5: 'El <mark>reembolso parcial</mark> se calcula antes del impuesto…',
+    searchKeys: [['↑↓', 'elegir'], ['↵', 'saltar al turno'], ['⌘C', 'copiar íntegro'], ['esc', 'volver']],
+    emptyTitle: 'Este panel no tiene un agente',
+    emptyBody: 'El timeline muestra los turnos de Claude Code o de Codex del panel enfocado. Ábrelos aquí o elige una sesión del proyecto.',
+    recent: 'Sesiones recientes · acme',
+    r1: 'Arregla la migración de pagos y corre las pruebas', r1m: 'Claude Code · api · 1 · hace 3 min',
+    r2: 'Reembolsos con descuento', r2m: 'Claude Code · ayer 18:20',
+    r3: 'refactor del cálculo de impuestos', r3m: 'Codex · lun 24 nov',
+    r4: 'sube la versión de stripe-node', r4m: 'Claude Code · dom 23 nov',
+    emptyKeys: [['↑↓', 'elegir'], ['↵', 'abrir'], ['⌘F', 'buscar'], ['esc', 'cerrar']],
+    fbTitle: 'Antigravity no deja un transcript que Smalti sepa leer',
+    fbBody: 'El timeline lee Claude Code y Codex. Lo de este panel sigue en su terminal; puedes abrir otra sesión del proyecto o buscar en todas con ⌘F.',
+    fbCodex: 'Smalti no sabe qué sesión de Codex escribe este panel (se abrió antes de Smalti). Mostrando la más reciente de <span class="mono">~/dev/acme/web</span>: puede no ser esta.',
+    fbSess: 'Codex · web · 2 · sin identificar',
+    fbTurns: '3 turnos · 5 herramientas · desde 11:05',
+    fbP: 'Añade un test para el webhook de reembolsos',
+    fbA: 'Añadí <span class="mono">webhook.refund.test.ts</span> con los tres casos (completo, parcial y duplicado).',
+    fbKeys: [['↑↓', 'elegir'], ['→ ←', 'desplegar'], ['⌘C', 'copiar íntegro'], ['⌘F', 'buscar'], ['esc', 'cerrar']],
+    wsA: 'acme', wsB: 'site', statusL: 'api · 1 · Claude Code trabajando', statusR: '⇧⌘T timeline',
+  },
+  en: {
+    title: 'Timeline', session: 'Session', search: 'Search',
+    you: 'You', claude: 'Claude', codex: 'Codex', ago: '3 min ago',
+    sessLine: 'Claude Code · api · 1', sessTitle: 'Fix the payments migration and run the tests',
+    turns: '24 turns · 61 tools · since 10:42',
+    p1: 'Fix the payments migration and run the tests',
+    a1: 'Migration 0042 fails because the <span class="mono">amount_cents</span> column already exists in the test database. I’ll make it idempotent with <span class="mono">add column if not exists</span> and run the suite again.',
+    ok: 'done', error: 'error · exit 1', errorShort: 'error', running: 'working',
+    output: 'Output', input: 'Call', moreLines: '… 212 more lines · ⌘C copies the whole output',
+    sub: 'check other uses of amount_cents', subTools: '3 tools',
+    compact: 'Conversation compacted · 168k → 22k tokens',
+    image: 'Attached image · screenshot.png',
+    p2: 'Now check that partial refunds still round correctly',
+    keys: [['↑↓', 'choose'], ['→ ←', 'expand'], ['⌘C', 'copy whole'], ['esc', 'close']],
+    copied: 'Copied · 18.4 KB',
+    query: 'partial refund', scope: 'Project · acme', scopeHint: '~/dev/acme and its folders',
+    summary: '9 matches in 4 sessions', summaryDone: '412 MB read in 0.8 s',
+    g1: 'Fix the payments migration…', g1meta: 'Claude Code · this pane · 3 min ago',
+    g2: 'Refunds with discounts', g2meta: 'Claude Code · closed · yesterday 6:20 PM',
+    g3: 'tax calculation refactor', g3meta: 'Codex · closed · Mon Nov 24',
+    h1: 'Now check that <mark>partial refund</mark>s still round correctly',
+    h2: 'The <mark>partial refund</mark> uses <span class="mono">round_half_even</span>; with 3 decimals…',
+    h3: '<span class="mono">it("<mark>partial refund</mark> of 0.01")</span> · 14 passed',
+    h4: 'Why is the <mark>partial refund</mark> one cent short?',
+    h5: 'The <mark>partial refund</mark> is computed before tax…',
+    searchKeys: [['↑↓', 'choose'], ['↵', 'jump to turn'], ['⌘C', 'copy whole'], ['esc', 'back']],
+    emptyTitle: 'This pane has no agent',
+    emptyBody: 'The timeline shows the Claude Code or Codex turns of the focused pane. Start one here or pick a session from this project.',
+    recent: 'Recent sessions · acme',
+    r1: 'Fix the payments migration and run the tests', r1m: 'Claude Code · api · 1 · 3 min ago',
+    r2: 'Refunds with discounts', r2m: 'Claude Code · yesterday 6:20 PM',
+    r3: 'tax calculation refactor', r3m: 'Codex · Mon Nov 24',
+    r4: 'bump stripe-node', r4m: 'Claude Code · Sun Nov 23',
+    emptyKeys: [['↑↓', 'choose'], ['↵', 'open'], ['⌘F', 'search'], ['esc', 'close']],
+    fbTitle: 'Antigravity leaves no transcript Smalti can read',
+    fbBody: 'The timeline reads Claude Code and Codex. This pane’s work is still in its terminal; you can open another session of this project or search them all with ⌘F.',
+    fbCodex: 'Smalti doesn’t know which Codex session this pane writes (it started before Smalti). Showing the latest one in <span class="mono">~/dev/acme/web</span>: it may not be this one.',
+    fbSess: 'Codex · web · 2 · unidentified',
+    fbTurns: '3 turns · 5 tools · since 11:05',
+    fbP: 'Add a test for the refunds webhook',
+    fbA: 'I added <span class="mono">webhook.refund.test.ts</span> with the three cases (full, partial and duplicate).',
+    fbKeys: [['↑↓', 'choose'], ['→ ←', 'expand'], ['⌘C', 'copy whole'], ['⌘F', 'search'], ['esc', 'close']],
+    wsA: 'acme', wsB: 'site', statusL: 'api · 1 · Claude Code working', statusR: '⇧⌘T timeline',
+  },
+}[lang];
+
+const kbd = k => `<span class="kbd">${k}</span>`;
+const foot = (keys, notice) => `<div class="foot">${keys.map(([k, v]) => `<span>${kbd(k)}${v}</span>`).join('')}${notice ? `<span class="notice">${notice}</span>` : ''}</div>`;
+const st = (kind, label) => {
+  const c = {ok: 'var(--muted)', error: 'var(--red)', running: 'var(--green)', denied: 'var(--red)'}[kind];
+  const d = {ok: '<span style="color:var(--green)">✓</span>', error: '<span class="dot error"></span>', running: '<span class="dot working"></span>', denied: '<span class="dot error"></span>'}[kind];
+  return `<span class="st" style="color:${c}">${d}${label}</span>`;
+};
+const tool = (open, name, args, kind, label, extra = '') => `<div class="tool"><span class="chev">${open ? '▾' : '▸'}</span><span class="name">${name}</span><span class="args">${args}</span>${st(kind, label)}</div>${extra}`;
+
+function header(active, focusField) {
+  return `<div class="tlhead">
+    <span style="font-weight:600;font-size:13px;color:var(--title)">${T.title}</span>
+    <span style="flex:1"></span>
+    <span class="chip ${active === 'session' ? 'on' : ''}">${T.session} ${kbd('⇧⌘T')}</span>
+    <span class="chip ${active === 'search' ? 'on' : ''}">${T.search} ${kbd('⌘F')}</span>
+    ${kbd('esc')}
+  </div>`;
+}
+
+function sessionInfo(line, title, turns, harnessDot = 'working') {
+  return `<div class="sess">
+    <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--soft)"><span class="dot ${harnessDot}"></span>${line}</div>
+    <div style="font-size:13px;color:var(--title);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+    <div class="num" style="font-size:10.5px;color:var(--muted)">${turns}</div>
+  </div>`;
+}
+
+function sessionPanel() {
+  const testOut = `<span class="lab">${T.output}</span>&gt; acme-api@2.4.0 test
+&gt; vitest run --reporter=dot
+
+ FAIL  db/migrations/0042_payments.test.ts
+   × applies on a database that already has amount_cents
+     error: column "amount_cents" of relation "payments"
+            already exists
+<span class="more">${T.moreLines}</span>`;
+  return `<div class="tl">${header('session')}
+    ${sessionInfo(T.sessLine, T.sessTitle, T.turns)}
+    <div class="list">
+      <div class="divider">${T.compact}</div>
+      <div class="item"><div class="who">${T.you}<span class="t">10:58</span></div><div class="prompt clamp" style="-webkit-line-clamp:3">${T.p1}</div></div>
+      <div class="item"><div class="who">${T.claude}<span class="t">10:58</span></div><div class="clamp" style="-webkit-line-clamp:4">${T.a1}</div></div>
+      <div class="item" style="padding-top:2px;padding-bottom:2px">${tool(false, 'Read', 'db/migrations/0042_payments.sql', 'ok', T.ok)}${tool(false, 'Edit', 'db/migrations/0042_payments.sql  +3 −1', 'ok', T.ok)}</div>
+      <div class="item sel" style="padding-top:2px">${tool(true, 'Bash', 'npm test -- db/migrations', 'error', T.error, `<div class="out">${testOut}</div>`)}</div>
+      <div class="item" style="padding-top:2px;padding-bottom:2px">${tool(true, 'Agent', T.sub, 'ok', T.subTools, `<div class="sub">${tool(false, 'Grep', 'amount_cents  src/', 'ok', T.ok)}${tool(false, 'Read', 'src/billing/refund.ts', 'ok', T.ok)}${tool(false, 'Bash', 'git log -S amount_cents --oneline', 'error', T.errorShort)}</div>`)}</div>
+      <div class="item"><div class="who">${T.you}<span class="t">11:02</span></div><div class="prompt clamp" style="-webkit-line-clamp:3">${T.p2}</div>
+        <div style="margin:5px 0 0 11px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px"><svg width="12" height="10" viewBox="0 0 12 10"><rect x=".5" y=".5" width="11" height="9" rx="1.5" fill="none" stroke="#8b919c"/><circle cx="4" cy="3.6" r="1" fill="#8b919c"/><path d="M1.5 8.5l3-3 2 2 1.5-1.5 2.5 2.5" fill="none" stroke="#8b919c"/></svg>${T.image}</div></div>
+      <div class="item" style="padding-top:2px">${tool(false, 'Bash', 'npm test -- refund', 'running', T.running)}</div>
+    </div>
+    ${foot(T.keys, T.copied)}
+  </div>`;
+}
+
+function searchPanel() {
+  const group = (title, meta, n) => `<div class="group"><span style="color:var(--title);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</span><span class="num" style="color:var(--muted);margin-left:auto;flex:none">${n}</span></div><div style="padding:0 14px 3px;font-size:10.5px;color:var(--muted)">${meta}</div>`;
+  const hit = (who, text, time, sel) => `<div class="hit ${sel ? 'sel' : ''}"><div class="who" style="margin:0">${who}<span class="t">${time}</span></div><div class="clamp" style="-webkit-line-clamp:2">${text}</div></div>`;
+  return `<div class="tl">${header('search')}
+    <div style="flex:none;padding:10px 12px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid rgba(255,255,255,0.05)">
+      <div class="field"><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="5" cy="5" r="3.6" fill="none" stroke="#8b919c" stroke-width="1.3"/><line x1="7.7" y1="7.7" x2="11" y2="11" stroke="#8b919c" stroke-width="1.3"/></svg>${T.query}<span class="caret"></span></div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)"><span style="color:var(--soft)">${T.scope}</span><span class="mono" style="font-size:10.5px">${T.scopeHint}</span><span style="margin-left:auto">${T.summary}</span></div>
+    </div>
+    <div class="list">
+      ${group(T.g1, T.g1meta, 2)}
+      ${hit(T.you, T.h1, '11:02', false)}
+      ${hit(T.claude, T.h2, '11:03', true)}
+      ${group(T.g2, T.g2meta, 4)}
+      ${hit('Bash', T.h3, '18:12', false)}
+      ${hit(T.you, T.h4, '18:01', false)}
+      ${group(T.g3, T.g3meta, 3)}
+      ${hit(T.codex, T.h5, '09:41', false)}
+    </div>
+    ${foot(T.searchKeys, T.summaryDone)}
+  </div>`;
+}
+
+function emptyPanel() {
+  const row = (title, meta, sel, dot) => `<div class="row ${sel ? 'sel' : ''}"><span class="dot ${dot}"></span><span style="color:var(--title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${title}</span><span style="color:var(--muted);font-size:11px;flex:none">${meta}</span></div>`;
+  return `<div class="tl">${header('session')}
+    <div class="empty">
+      <span class="dot idle" style="width:10px;height:10px"></span>
+      <div style="font-size:14px;font-weight:600;color:var(--title)">${T.emptyTitle}</div>
+      <div style="font-size:12px;color:var(--soft);line-height:1.55">${T.emptyBody}</div>
+      <p class="lbl" style="margin-top:14px">${T.recent}</p>
+      <div style="display:flex;flex-direction:column;gap:2px;margin:0 -10px">
+        ${row(T.r1, T.r1m, true, 'working')}
+        ${row(T.r2, T.r2m, false, 'idle')}
+        ${row(T.r3, T.r3m, false, 'idle')}
+        ${row(T.r4, T.r4m, false, 'idle')}
+      </div>
+    </div>
+    ${foot(T.emptyKeys)}
+  </div>`;
+}
+
+function recentRows() {
+  const row = (title, meta, sel, dot) => `<div class="row ${sel ? 'sel' : ''}"><span class="dot ${dot}"></span><span style="color:var(--title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${title}</span><span style="color:var(--muted);font-size:11px;flex:none">${meta}</span></div>`;
+  return `<p class="lbl" style="margin-top:14px">${T.recent}</p>
+      <div style="display:flex;flex-direction:column;gap:2px;margin:0 -10px">
+        ${row(T.r1, T.r1m, true, 'idle')}${row(T.r2, T.r2m, false, 'idle')}${row(T.r3, T.r3m, false, 'idle')}${row(T.r4, T.r4m, false, 'idle')}
+      </div>`;
+}
+
+function fallbackPanel() {
+  return `<div class="tl">${header('session')}
+    <div class="empty">
+      <span class="dot idle" style="width:10px;height:10px"></span>
+      <div style="font-size:14px;font-weight:600;color:var(--title)">${T.fbTitle}</div>
+      <div style="font-size:12px;color:var(--soft);line-height:1.55">${T.fbBody}</div>
+      ${recentRows()}
+    </div>
+    ${foot(T.emptyKeys)}
+  </div>`;
+}
+
+function unidentifiedPanel() {
+  return `<div class="tl">${header('session')}
+    <div class="banner"><span class="dot waiting" style="margin-top:5px"></span><span>${T.fbCodex}</span></div>
+    ${sessionInfo(T.fbSess, T.fbP, T.fbTurns, 'idle')}
+    <div class="list">
+      <div class="item"><div class="who">${T.you}<span class="t">11:05</span></div><div class="prompt">${T.fbP}</div></div>
+      <div class="item" style="padding-top:2px;padding-bottom:2px">${tool(false, 'shell', 'ls test/webhooks', 'ok', T.ok)}${tool(false, 'apply_patch', 'test/webhooks/webhook.refund.test.ts  +48', 'ok', T.ok)}</div>
+      <div class="item sel"><div class="who">${T.codex}<span class="t">11:07</span></div><div>${T.fbA}</div></div>
+    </div>
+    ${foot(T.fbKeys)}
+  </div>`;
+}
+
+const leftTerm = `<span style="color:#7aa2f7">~/dev/acme/api</span> <span style="color:#9ece6a">❯</span> claude --continue
+
+ <span style="color:#bb9af7">●</span> Corriendo las pruebas de refund…
+   <span style="color:#8b919c">⎿ npm test -- refund</span>
+
+ <span style="color:#8b919c">✻ Thinking… (esc para interrumpir)</span>`;
+const rightTerm = `<span style="color:#7aa2f7">~/dev/acme/web</span> <span style="color:#9ece6a">❯</span> npm run dev
+
+  VITE v6.2  ready in 412 ms
+  ➜  Local:   http://localhost:5173/`;
+
+const panel = {session: sessionPanel, search: searchPanel, empty: emptyPanel, fallback: fallbackPanel, unidentified: unidentifiedPanel}[view]();
+document.getElementById('root').innerHTML = `<div class="desk"><div class="win">
+  <div class="strip"><span class="ws on"><span class="dot working"></span>${T.wsA}</span><span class="ws"><span class="dot idle"></span>${T.wsB}</span></div>
+  <div class="area">
+    <div class="pane ${view === 'unidentified' ? '' : 'on'}"><div class="phead"><span class="dot ${view === 'empty' ? 'idle' : 'working'}"></span>api · 1 <span style="color:var(--muted)">${{empty: 'zsh', fallback: 'agy'}[view] || 'claude'}</span></div><div class="term">${view === 'empty' ? '<span style="color:#7aa2f7">~/dev/acme/api</span> <span style="color:#9ece6a">❯</span> ' : view === 'fallback' ? '<span style="color:#7aa2f7">~/dev/acme/api</span> <span style="color:#9ece6a">❯</span> agy' : leftTerm}</div></div>
+    <div class="pane ${view === 'unidentified' ? 'on' : ''}"><div class="phead"><span class="dot idle"></span>web · 2 <span style="color:var(--muted)">${view === 'unidentified' ? 'codex' : 'node'}</span></div><div class="term">${view === 'unidentified' ? '<span style="color:#7aa2f7">~/dev/acme/web</span> <span style="color:#9ece6a">❯</span> codex' : rightTerm}</div></div>
+    ${panel}
+  </div>
+  <div class="status"><span>${view === 'empty' ? 'api · 1 · zsh' : view === 'fallback' ? 'api · 1 · Antigravity' : T.statusL}</span><span style="margin-left:auto">${T.statusR}</span></div>
+</div></div>`;
+</script>
+</body>
+</html>
