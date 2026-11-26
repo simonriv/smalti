@@ -84,4 +84,12 @@ struct ProjectDiscoveryTests {
         #expect(discovery.root(containing: "dev") == nil)
         #expect(files.looked.isEmpty)
     }
+
+    @Test func aHomeWrittenWithATrailingSlashIsStillNeverLookedAt() {
+        let files = InMemoryProjectFiles(layoutRoots: ["/Users/ana"])
+        let discovery = ProjectDiscovery(files: files, home: "/Users/ana/")
+
+        #expect(discovery.root(containing: "/Users/ana/notes") == nil)
+        #expect(!files.looked.contains("/Users/ana"))
+    }
 }
