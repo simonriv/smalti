@@ -104,6 +104,8 @@ final class TilingController {
     var onConfirmClose: ((CloseQuestion, _ proceed: @escaping () -> Void) -> Void)?
     /// F8.5: the projects ⌘K offers in this window; the app reads them across windows.
     var projectCatalog: (() -> CatalogProjects?)?
+    /// What ⌘K offers about projects while it is open: read once when it opens (review 2).
+    private var projectsOffered: CatalogProjects?
 
     /// What `onAppCommand` receives: they act on several windows or on the window itself.
     static let appCommands: Set<CommandID> = [
@@ -291,7 +293,7 @@ final class TilingController {
         state.pendingApprovals = deps.agents.guards?.entries() ?? []
         state.secretsProject = secretsProjectState()
         state.updates = UpdatesAvailability(deps.updates)
-        state.projects = projectCatalog?()
+        state.projects = projectsOffered
         return state
     }
 
@@ -949,8 +951,14 @@ extension TilingController {
         return (set.workspaces.flatMap(\.panes).map(\.workingDirectory.path), focused)
     }
 
-    /// Opens the project as a new workspace, the way a saved layout opens. False when no pane could open.
-    func openProject(_ prepared: PreparedProject) -> Bool {
+    /// ⌘K opened (reads the projects once) or closed (forgets them).
+    func refreshProjectCatalog(isOpen: Bool) {
+        projectsOffered = isOpen ? projectCatalog?() : nil
+    }
+
+    /// Opens the project as a new workspace, the way a saved layout opens: whether it opened and whether a pane
+    /// already reported a problem in the status bar (the caller must not cover it).
+    func openProject(_ prepared: PreparedProject) -> (isOpened: Bool, hasReported: Bool) {
         let before = set.workspaces.count
         let outcome = RestoreNamedLayout(layouts: deps.namedLayouts, restore: restoreSession).open(
             project: prepared.snapshot, into: &set, home: deps.home)
@@ -958,7 +966,8 @@ extension TilingController {
         if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
         reportRestoreFailures(outcome.failures)
         publish()
-        return set.workspaces.count > before
+        let hasReported = !outcome.skippedLiveSessions.isEmpty || !outcome.failures.isEmpty
+        return (set.workspaces.count > before, hasReported)
     }
 
     /// Shows `workspace` when this window has it.

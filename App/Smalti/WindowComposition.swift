@@ -375,6 +375,8 @@ final class WindowComposition {
             if isOpen { services.completionMenu()?.close() }
             // F5.6: the integration may have changed outside Smalti; a new state rebuilds the open list.
             if isOpen { controller.refreshIntegrationState() }
+            // F8.5 review 2: the projects are read once per opening, never per keystroke.
+            controller.refreshProjectCatalog(isOpen: isOpen)
         }
         // F5.6: a new Claude integration state rebuilds the open palette's list.
         observers.append(
@@ -576,8 +578,9 @@ final class WindowComposition {
         }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
         if feedback?.isOpen == true || welcome?.isOpen == true { return KeyContext(allowing: []) }
-        // F8.5: the selector and the cards own the keyboard; ⌘O is the selector's own "next".
-        if projects?.isOpen == true { return .overlay(allowing: []) }
+        // F8.5: the selector and the cards own the keyboard (⌘O is the selector's own "next"); the approval keys
+        // still decide, as over the help or the search (review 2).
+        if projects?.isOpen == true { return .overlay(allowing: [.guardApprove, .guardReject]) }
         if search?.isOpen == true {
             return .overlay(allowing: [
                 .searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow, .guardApprove, .guardReject,

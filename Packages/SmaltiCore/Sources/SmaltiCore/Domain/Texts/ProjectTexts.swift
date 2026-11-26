@@ -34,6 +34,8 @@ public struct ProjectTexts: Sendable, Equatable {
     public let notRegularFile: TextTemplate
     public let unwritable: TextTemplate
     public let projects: String
+    public let listFailed: TextTemplate
+    public let openedNotRemembered: TextTemplate
 
     public static let spanish = ProjectTexts(
         openTitle: "¿Abrir el proyecto “{name}”?",
@@ -59,7 +61,9 @@ public struct ProjectTexts: Sendable, Equatable {
         saveFailed: "No se pudo guardar el layout del proyecto: {reason}",
         missing: "{root} ya no tiene .smalti/layout.json", unreadable: "no se pudo leer {root}: {reason}",
         notRegularFile: "{root}/.smalti/layout.json no es un archivo normal (¿un enlace?)",
-        unwritable: "no se pudo escribir {path}: {reason}", projects: "Proyectos")
+        unwritable: "no se pudo escribir {path}: {reason}", projects: "Proyectos",
+        listFailed: "No se pudo actualizar la lista de proyectos: {reason}",
+        openedNotRemembered: "Proyecto “{name}” abierto, pero no se pudo recordar la aprobación: {reason}")
 
     public static let english = ProjectTexts(
         openTitle: "Open the project “{name}”?",
@@ -85,7 +89,9 @@ public struct ProjectTexts: Sendable, Equatable {
         saveFailed: "Couldn’t save the project layout: {reason}",
         missing: "{root} no longer has .smalti/layout.json", unreadable: "couldn’t read {root}: {reason}",
         notRegularFile: "{root}/.smalti/layout.json isn’t a regular file (a link?)",
-        unwritable: "couldn’t write {path}: {reason}", projects: "Projects")
+        unwritable: "couldn’t write {path}: {reason}", projects: "Projects",
+        listFailed: "Couldn’t update the projects list: {reason}",
+        openedNotRemembered: "Project “{name}” opened, but its approval couldn’t be remembered: {reason}")
 }
 
 extension ProjectFileError {

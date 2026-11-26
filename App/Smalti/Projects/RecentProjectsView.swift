@@ -10,10 +10,15 @@ final class RecentProjectsView: NSView {
     var onClickRow: ((Int) -> Void)?
     private let theme: Theme
     private let list = NSStackView()
+    private let scroll = NSScrollView()
+    private var scrollHeight: NSLayoutConstraint?
     private let texts = ProjectTexts.current
+    /// The chord of "Proyectos recientes…" in the keymap in effect: the footer's "next".
+    private let nextKey: String
 
-    init(theme: Theme) {
+    init(theme: Theme, nextKey: String) {
         self.theme = theme
+        self.nextKey = nextKey
         super.init(frame: .zero)
         OverlayBox.decorate(self, around: content(), theme: theme)
         setAccessibilityElement(true)
@@ -34,15 +39,34 @@ final class RecentProjectsView: NSView {
         list.arrangedSubviews.forEach { $0.removeFromSuperview() }
         guard !selector.rows.isEmpty else {
             list.addArrangedSubview(empty(selector.emptyText))
+            fitList(rows: 0)
             return
         }
         list.addArrangedSubview(
             CommandGroupLabel(text: texts.projects, theme: theme, identifier: "smalti.paletteGroup"))
+        var selected: NSView?
         for (index, row) in selector.rows.enumerated() {
             let view = ProjectRowView(row, isSelected: index == selector.selected, theme: theme)
             view.onClick = { [weak self] in self?.onClickRow?(index) }
             list.addArrangedSubview(view)
+            if index == selector.selected { selected = view }
         }
+        fitList(rows: selector.rows.count)
+        if let selected { selected.scrollToVisible(selected.bounds) }
+    }
+
+    /// Review 2: the list grows up to `visibleRows` rows and scrolls the rest, so 20 recents fit any window.
+    private func fitList(rows: Int) {
+        let tokens = theme.projects
+        let palette = theme.palette
+        let padding = palette.listPaddingTop + palette.listPaddingBottom
+        guard rows > 0 else {
+            scrollHeight?.constant = padding + (list.arrangedSubviews.first?.fittingSize.height ?? 0)
+            return
+        }
+        let group = CommandGroupLabel(text: texts.projects, theme: theme, identifier: "").fittingSize.height
+        scrollHeight?.constant = padding + group + Double(min(rows, tokens.visibleRows)) * tokens.rowHeight
+        layoutSubtreeIfNeeded()
     }
 
     private func content() -> NSView {
@@ -53,8 +77,22 @@ final class RecentProjectsView: NSView {
         list.edgeInsets = NSEdgeInsets(
             top: palette.listPaddingTop, left: palette.listPaddingHorizontal, bottom: palette.listPaddingBottom,
             right: palette.listPaddingHorizontal)
+        let document = FlippedView()
+        list.translatesAutoresizingMaskIntoConstraints = false
+        document.addSubview(list)
+        document.translatesAutoresizingMaskIntoConstraints = false
+        OverlayBox.pin(list, to: document)
+        scroll.documentView = document
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.scrollerStyle = .overlay
+        document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
+        let height = scroll.heightAnchor.constraint(equalToConstant: 0)
+        height.isActive = true
+        scrollHeight = height
         let stack = NSStackView(views: [
-            fieldRow(), OverlayBox.separator(theme: theme), list, OverlayBox.separator(theme: theme), footer(),
+            fieldRow(), OverlayBox.separator(theme: theme), scroll, OverlayBox.separator(theme: theme), footer(),
         ])
         stack.orientation = .vertical
         stack.spacing = 0
@@ -94,7 +132,7 @@ final class RecentProjectsView: NSView {
         let pitch = OverlayBox.footerLabel(texts.dropsOff, theme: theme)
         let row = NSStackView(views: [
             OverlayBox.hint("↑↓", texts.choose, theme: theme), OverlayBox.hint("↵", texts.openOrGo, theme: theme),
-            OverlayBox.hint("⌘O", texts.next, theme: theme), OverlayBox.hint("esc", texts.close, theme: theme),
+            OverlayBox.hint(nextKey, texts.next, theme: theme), OverlayBox.hint("esc", texts.close, theme: theme),
             spacer, pitch,
         ])
         row.spacing = palette.footerGap
@@ -134,7 +172,7 @@ private final class ProjectRowView: NSView {
         name.font = theme.interfaceFont(size: palette.rowFontSize)
         name.textColor = theme.text.title.nsColor
         let path = NSTextField(labelWithString: row.path)
-        path.font = NSFont.monospacedSystemFont(ofSize: theme.projects.pathFontSize, weight: .regular)
+        path.font = theme.monospacedFont(size: theme.projects.pathFontSize)
         path.textColor = theme.text.secondary.nsColor
         path.lineBreakMode = .byTruncatingMiddle
         path.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -178,4 +216,9 @@ private final class ProjectRowView: NSView {
         onClick?()
         return true
     }
+}
+
+/// Lays the selector's list out from the top, as a scroll view's document.
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
 }

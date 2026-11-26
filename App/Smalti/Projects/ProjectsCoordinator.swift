@@ -49,7 +49,8 @@ final class ProjectsCoordinator {
             listings: listings(for: composition), activeProject: composition.controller.set.active.project,
             context: .init(home: home, now: Date(), texts: .current, time: .current))
         composition.closeOverlays(keeping: .projects)
-        composition.projects?.showRecents(selector, theme: composition.controller.theme) { [weak self] root in
+        let look = (theme: composition.controller.theme, keymap: composition.controller.config.keys)
+        composition.projects?.showRecents(selector, look: look) { [weak self] root in
             self?.open(root, from: composition)
         }
     }
@@ -72,7 +73,7 @@ final class ProjectsCoordinator {
                     layoutNames: CommandTexts.current.layoutNames))
             composition.closeOverlays(keeping: .projects)
             composition.projects?.confirm(card, theme: composition.controller.theme) { [weak self] in
-                self?.run(confirmation.prepared, in: composition)
+                self?.approve(confirmation.prepared, root: root, from: composition)
             }
         }
     }
@@ -97,9 +98,25 @@ final class ProjectsCoordinator {
         }
     }
 
+    /// Where "Guardar layout del proyecto" writes from `composition`, for the menu (nothing is listed).
+    func saveRoot(for composition: WindowComposition) -> String? {
+        composition.controller.paneDirectories.focused.map {
+            saver.root(of: composition.controller.set.active, focusedDirectory: $0)
+        }
+    }
+
+    /// The project may have been opened meanwhile (another window): then it jumps instead (review 2).
+    private func approve(_ prepared: PreparedProject, root: String, from composition: WindowComposition) {
+        switch opener.approved(prepared, open: openWorkspaces(from: composition)) {
+        case .jump(let workspace): jump(to: workspace, root: root, from: composition)
+        case .open(let prepared): run(prepared, in: composition)
+        case .confirm: break
+        }
+    }
+
     private func listings(for composition: WindowComposition) -> [ProjectListing] {
         do { try list.forgetMissing() } catch {
-            report(.openFailed, error.message(.current, layout: .current), in: composition)
+            report(.listFailed, error.message(.current, layout: .current), in: composition)
         }
         let directories = composition.controller.paneDirectories
         return list.execute(
@@ -120,13 +137,19 @@ final class ProjectsCoordinator {
     }
 
     private func run(_ prepared: PreparedProject, in composition: WindowComposition) {
-        guard composition.controller.openProject(prepared) else { return }
+        let opening = composition.controller.openProject(prepared)
+        guard opening.isOpened else { return }
+        let texts = ProjectTexts.current
+        let name = prepared.name.rawValue
         do { try opener.opened(prepared) } catch {
-            report(.openFailed, error.message(.current, layout: .current), in: composition)
+            let reason = error.message(.current, layout: .current)
+            composition.controller.report(
+                StatusMessage(text: texts.openedNotRemembered(["name": name, "reason": reason]), isTransient: true))
             return
         }
-        composition.controller.report(
-            StatusMessage(text: ProjectTexts.current.opened(["name": prepared.name.rawValue]), isTransient: true))
+        // A pane that failed already said so in the status bar: "abierto" must not cover it (review 2).
+        guard !opening.hasReported else { return }
+        composition.controller.report(StatusMessage(text: texts.opened(["name": name]), isTransient: true))
     }
 
     private func write(_ pending: PendingProjectSave, in composition: WindowComposition) {
@@ -135,16 +158,26 @@ final class ProjectsCoordinator {
             report(.saveFailed, error.message(.current, layout: .current), in: composition)
             return
         }
-        composition.controller.markActiveProject(pending.root)
+        let controller = composition.controller
+        if SaveProjectLayout.marks(
+            pending.root, active: controller.set.active.id, open: openWorkspaces(from: composition))
+        {
+            controller.markActiveProject(pending.root)
+        }
         composition.controller.report(
             StatusMessage(text: ProjectTexts.current.saved(["name": name.rawValue]), isTransient: true))
     }
 
-    private enum Failure { case openFailed, saveFailed }
+    private enum Failure { case openFailed, saveFailed, listFailed }
 
     private func report(_ failure: Failure, _ reason: String, in composition: WindowComposition) {
         let texts = ProjectTexts.current
-        let template = failure == .openFailed ? texts.openFailed : texts.saveFailed
+        let template =
+            switch failure {
+            case .openFailed: texts.openFailed
+            case .saveFailed: texts.saveFailed
+            case .listFailed: texts.listFailed
+            }
         composition.controller.report(StatusMessage(text: template(["reason": reason]), isTransient: true))
     }
 }

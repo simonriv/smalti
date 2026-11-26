@@ -21,6 +21,10 @@ public struct ProjectsTokens: Equatable, Sendable {
     public let commandRowHeight = 28.0
     public let commandFontSize = 12.5
     public let signWidth = 22.0
+    /// The commands' rows sit 12 pt in from the box (mockup `.cmd`).
+    public let commandRowInset = 12.0
+    /// The selector shows this many rows and scrolls the rest (20 recents would not fit a small window).
+    public let visibleRows = 8
     public let confirmBorder: RGBAColor
     public let commandsBackground: RGBAColor
     /// The red line through a removed command.
@@ -31,7 +35,7 @@ public struct ProjectsTokens: Equatable, Sendable {
         confirmBorder = theme.agent.waiting.withAlpha(0.55)
         commandsBackground = RGBAColor(red: 0, green: 0, blue: 0, alpha: 0.22)
         removedStrike = theme.agent.failed.withAlpha(0.6)
-        shade = RGBAColor(red: 0, green: 0, blue: 0, alpha: 0.28)
+        shade = RGBAColor(red: 4, green: 5, blue: 8, alpha: 0.28)
     }
 }
 

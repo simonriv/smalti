@@ -94,6 +94,12 @@ public struct OpenProject {
         return .confirm(ProjectConfirmation(prepared: prepared, changes: changes, approvedAt: approval?.approvedAt))
     }
 
+    /// What approving a confirmation does now: the project may have been opened meanwhile from another window, and
+    /// then it jumps there instead of running its commands a second time (review 2).
+    public func approved(_ prepared: PreparedProject, open: [OpenProjectWorkspace]) -> ProjectStep {
+        open.first { $0.project == prepared.root }.map { .jump($0.id) } ?? .open(prepared)
+    }
+
     /// The prepared project opened: it goes first among the recents, with this file approved.
     public func opened(_ prepared: PreparedProject) throws(ProjectFileError) {
         let now = clock()

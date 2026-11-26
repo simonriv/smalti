@@ -635,6 +635,14 @@ final class AppComposition {
         guard let controller else { return .empty }
         var state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
         state.updates = UpdatesAvailability(updates)
+        // F8.5 review 2: "Guardar layout del proyecto" is enabled only with a pane to save, as ⌘K offers it.
+        state.projects = front.flatMap { front in
+            projects.map {
+                CatalogProjects(
+                    listings: [], home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+                    saveRoot: $0.saveRoot(for: front))
+            }
+        }
         let commands = CommandCatalog.commands(
             for: state, keymap: controller.config.keys, layouts: .standard, texts: .current)
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.

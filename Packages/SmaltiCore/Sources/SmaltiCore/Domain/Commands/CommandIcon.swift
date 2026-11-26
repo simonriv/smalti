@@ -46,4 +46,16 @@ public struct CommandIcon: Hashable, Sendable {
     public static let recentProjects = CommandIcon(
         frame: Rect(x: 2.4, y: 2.4, width: 11.2, height: 11.2), frameRadius: 5.6,
         strokes: [[Point(x: 8, y: 5), Point(x: 8, y: 8.2), Point(x: 10.2, y: 9.6)]])
+
+    /// F8.5: a floppy disk, for "Guardar layout del proyecto" (the mockup's save icon).
+    public static let saveProject = CommandIcon(
+        frame: nil, frameRadius: 0,
+        strokes: [
+            [
+                Point(x: 3, y: 2.5), Point(x: 11, y: 2.5), Point(x: 13.5, y: 5), Point(x: 13.5, y: 13.5),
+                Point(x: 3, y: 13.5), Point(x: 3, y: 2.5),
+            ],
+            [Point(x: 5.5, y: 2.5), Point(x: 5.5, y: 6), Point(x: 10.5, y: 6), Point(x: 10.5, y: 2.5)],
+            [Point(x: 5.5, y: 13.5), Point(x: 5.5, y: 9.5), Point(x: 10.5, y: 9.5), Point(x: 10.5, y: 13.5)],
+        ])
 }

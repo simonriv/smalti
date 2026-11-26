@@ -6,7 +6,8 @@ import SmaltiCore
 @MainActor
 enum OverlayBox {
     /// Puts `stack` inside the box on `host`. Call `updateShadow` from the host's `layout()`.
-    static func decorate(_ host: NSView, around stack: NSView, theme: Theme) {
+    /// `border` replaces the box's hairline color (F8.5: the amber of a decision).
+    static func decorate(_ host: NSView, around stack: NSView, theme: Theme, border: RGBAColor? = nil) {
         let palette = theme.palette
         host.wantsLayer = true
         host.layer?.shadowColor = NSColor.black.cgColor
@@ -25,7 +26,7 @@ enum OverlayBox {
         content.wantsLayer = true
         content.layer?.cornerRadius = palette.cornerRadius
         content.layer?.borderWidth = theme.chrome.hairlineWidth
-        content.layer?.borderColor = palette.border.nsColor.cgColor
+        content.layer?.borderColor = (border ?? palette.border).nsColor.cgColor
         content.layer?.backgroundColor = palette.background.nsColor.cgColor
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)

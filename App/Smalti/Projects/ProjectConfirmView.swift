@@ -13,7 +13,7 @@ final class ProjectConfirmView: NSView {
     init(_ card: ProjectCardContent, theme: Theme) {
         self.theme = theme
         super.init(frame: .zero)
-        OverlayBox.decorate(self, around: content(card), theme: theme)
+        OverlayBox.decorate(self, around: content(card), theme: theme, border: theme.projects.confirmBorder)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
         setAccessibilityLabel(card.title)
@@ -28,8 +28,6 @@ final class ProjectConfirmView: NSView {
     override func layout() {
         super.layout()
         OverlayBox.updateShadow(of: self, theme: theme)
-        // The amber frame of a decision (F7.5), over the box's hairline.
-        subviews.last?.layer?.borderColor = theme.projects.confirmBorder.nsColor.cgColor
     }
 
     /// Key codes, the same on every layout.
@@ -40,7 +38,9 @@ final class ProjectConfirmView: NSView {
 
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case let code where Key.returns.contains(code): onConfirm?()
+        // Review 2: a held ↩ auto-repeats into the card from ⌘K or ⌘O; only a fresh press confirms.
+        case let code where Key.returns.contains(code):
+            if ConfirmationKey.confirms(isRepeat: event.isARepeat) { onConfirm?() }
         case Key.escape: onCancel?()
         default: super.keyDown(with: event)
         }
@@ -103,7 +103,7 @@ final class ProjectConfirmView: NSView {
 
     private func commandRow(_ line: ProjectCardLine) -> NSView {
         let tokens = theme.projects
-        let font = NSFont.monospacedSystemFont(ofSize: tokens.commandFontSize, weight: .regular)
+        let font = theme.monospacedFont(size: tokens.commandFontSize)
         let sign = NSTextField(labelWithString: line.sign)
         sign.font = font
         sign.textColor = signColor(line.kind).nsColor
@@ -114,12 +114,11 @@ final class ProjectConfirmView: NSView {
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let place = NSTextField(labelWithString: line.place ?? "")
-        place.font = NSFont.monospacedSystemFont(ofSize: tokens.noteFontSize, weight: .regular)
+        place.font = theme.monospacedFont(size: tokens.noteFontSize)
         place.textColor = theme.text.secondary.nsColor
         let row = NSStackView(views: [sign, command, spacer, place])
         row.spacing = 0
-        row.edgeInsets = NSEdgeInsets(
-            top: 0, left: tokens.commandsPadding * 1.5, bottom: 0, right: tokens.commandsPadding * 1.5)
+        row.edgeInsets = NSEdgeInsets(top: 0, left: tokens.commandRowInset, bottom: 0, right: tokens.commandRowInset)
         row.heightAnchor.constraint(equalToConstant: tokens.commandRowHeight).isActive = true
         row.setAccessibilityElement(true)
         row.setAccessibilityRole(.staticText)

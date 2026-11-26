@@ -59,6 +59,11 @@ public struct SaveProjectLayout {
         self.clock = clock
     }
 
+    /// Whether saving makes the active workspace the project's: not when another workspace already is (review 2).
+    public static func marks(_ root: String, active: WorkspaceID, open: [OpenProjectWorkspace]) -> Bool {
+        !open.contains { $0.project == root && $0.id != active }
+    }
+
     /// The repo the active workspace would be saved to.
     public func root(of workspace: Workspace, focusedDirectory: String) -> String {
         if let project = workspace.project { return project }

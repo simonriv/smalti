@@ -45,13 +45,29 @@ final class ProjectTests: SmaltiUITestCase {
 
     private var witnessCommand: [String] { ["touch", witness.path(percentEncoded: false)] }
 
-    /// Makes the repo a recent project of the isolated app, as if it had been opened before (never approved).
-    private func seedRecent(in app: XCUIApplication) throws {
-        let record: [String: Any] = ["root": root, "name": "rizaria", "lastOpened": "2026-11-25T10:00:00Z"]
+    /// Makes the repo (and `others`, newer first after it) recent projects of the isolated app, never approved.
+    private func seedRecent(in app: XCUIApplication, others: [(root: String, name: String)] = []) throws {
+        let records: [[String: Any]] =
+            [["root": root, "name": "rizaria", "lastOpened": "2026-11-25T10:00:00Z"]]
+            + others.map { ["root": $0.root, "name": $0.name, "lastOpened": "2026-11-24T10:00:00Z"] }
         let state = app.stateDirectory
         try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
-        try JSONSerialization.data(withJSONObject: ["version": 1, "projects": [record]])
+        try JSONSerialization.data(withJSONObject: ["version": 1, "projects": records])
             .write(to: state.appending(path: "projects.json"))
+    }
+
+    /// A second repo next to the first, with only a shell.
+    private func secondProject(_ name: String) throws -> String {
+        let other = repo.deletingLastPathComponent().appending(path: name)
+        try FileManager.default.createDirectory(at: other.appending(path: ".smalti"), withIntermediateDirectories: true)
+        let json = #"{"smaltiLayout":1,"name":"\#(name)","root":".","layout":"dwindle","panes":[{"directory":"."}]}"#
+        try Data(json.utf8).write(to: other.appending(path: ".smalti/layout.json"))
+        return other.path(percentEncoded: false).trimmingTrailingSlash
+    }
+
+    private func selectedRow() -> String? {
+        app.elements("smalti.projects.row").allElementsBoundByIndex.first { ($0.value as? String) == "selected" }?
+            .label
     }
 
     private func launchWithRecent() throws {
@@ -168,6 +184,59 @@ final class ProjectTests: SmaltiUITestCase {
         XCTAssertFalse(waitForWitness(timeout: 2), "jumping runs nothing")
     }
 
+    // MARK: The selector (review 2)
+
+    func testCommandOMovesToTheNextAndTypingFilters() throws {
+        try writeProject([nil])
+        let app = XCUIApplication.isolatedSmalti()
+        try seedRecent(in: app, others: [(try secondProject("acme"), "acme")])
+        launch(app)
+
+        app.typeKey("o", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.projects").waitForExistence(timeout: 5))
+        XCTAssertEqual(selectedRow(), "rizaria")
+        app.typeKey("o", modifierFlags: .command)
+        XCTAssertEqual(selectedRow(), "acme", "⌘O inside the selector moves to the next project")
+
+        app.typeText("acm")
+        XCTAssertEqual(app.elements("smalti.projects.row").count, 1)
+        app.typeText("zzz")
+        XCTAssertTrue(app.element("smalti.projects.empty").waitForExistence(timeout: 5))
+        XCTAssertEqual(app.element("smalti.projects.empty").value as? String, "Ningún proyecto coincide con «acmzzz»")
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    func testClickingARowOpensIt() throws {
+        try writeProject([nil])
+        try launchWithRecent()
+        app.typeKey("o", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.projects").waitForExistence(timeout: 5))
+
+        app.elements("smalti.projects.row").firstMatch.click()
+
+        XCTAssertTrue(app.element("smalti.projects").waitForNonExistence(timeout: 5))
+        XCTAssertEqual(workspaceNames().count, 2)
+    }
+
+    func testJumpsToTheProjectInAnotherWindow() throws {
+        try writeProject([nil])
+        try launchWithRecent()
+        openRecent()
+        XCTAssertEqual(workspaceNames().count, 2)
+        app.typeKey("n", modifierFlags: .command)
+        let two = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 2"), object: app.windows)
+        XCTAssertEqual(XCTWaiter().wait(for: [two], timeout: 10), .completed)
+
+        openRecent()
+
+        XCTAssertEqual(app.windows.count, 2, "jumping opens no window")
+        let front = app.windows.element(boundBy: 0)
+        let chip = front.descendants(matching: .any).matching(identifier: "smalti.workspace")
+            .matching(NSPredicate(format: "label == %@", "rizaria")).firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 5), "the project's window comes to the front")
+        XCTAssertEqual(chip.value as? String, "active")
+    }
+
     // MARK: C5
 
     func testRecentsSurviveRelaunchAndDropMissing() throws {
@@ -216,6 +285,27 @@ final class ProjectTests: SmaltiUITestCase {
         XCTAssertTrue(
             app.elements("smalti.paletteRow").matching(NSPredicate(format: "label == %@", "Abrir proyecto “rizaria”"))
                 .firstMatch.waitForExistence(timeout: 5))
+        let subtitle = app.staticTexts.matching(NSPredicate(format: "value CONTAINS %@", "· en este panel")).firstMatch
+        XCTAssertTrue(subtitle.exists, "C7: the row says it is the focused pane's project")
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    /// Review 2: ⌘K reads the projects once when it opens, not on every key typed.
+    func testThePaletteReadsProjectsOncePerOpening() throws {
+        launchInRepo(root, endingWith: "rizaria")
+        openPalette()
+        try writeProject([nil])
+        app.typeText("proyecto")
+        let row = app.elements("smalti.paletteRow").matching(
+            NSPredicate(format: "label == %@", "Abrir proyecto “rizaria”")
+        ).firstMatch
+        XCTAssertFalse(row.waitForExistence(timeout: 2), "typing does not search the disk again")
+        app.typeKey(.escape, modifierFlags: [])
+
+        openPalette()
+        app.typeText("proyecto")
+
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "the next opening finds it")
         app.typeKey(.escape, modifierFlags: [])
     }
 

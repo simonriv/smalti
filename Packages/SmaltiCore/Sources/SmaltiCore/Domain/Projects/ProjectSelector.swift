@@ -74,7 +74,10 @@ public struct ProjectSelector: Equatable, Sendable {
     private static func matching(_ listings: [ProjectListing], query: String) -> [ProjectListing] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return listings }
-        return listings.filter { fuzzyScore(trimmed, in: $0.name) != nil || fuzzyScore(trimmed, in: $0.root) != nil }
+        // The name matches loosely (letters in order); the path only as written, or every path would match.
+        return listings.filter {
+            fuzzyScore(trimmed, in: $0.name) != nil || $0.root.localizedCaseInsensitiveContains(trimmed)
+        }
     }
 
     private static func row(_ listing: ProjectListing, context: Context) -> ProjectSelectorRow {
@@ -84,7 +87,10 @@ public struct ProjectSelector: Equatable, Sendable {
     }
 
     private static func detail(_ listing: ProjectListing, context: Context) -> String {
-        if let open = listing.openIn { return context.texts.openBadge(["number": String(open.number)]) }
+        if let open = listing.openIn {
+            return open.isInThisWindow
+                ? context.texts.openBadge(["number": String(open.number)]) : context.texts.openInAnotherWindow
+        }
         if let opened = listing.lastOpened {
             return ElapsedPhrase.text(since: opened, now: context.now, texts: context.time)
         }

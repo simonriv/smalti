@@ -1,4 +1,5 @@
 import AppKit
+import GhosttyAdapter
 import SmaltiCore
 
 /// Primary adapter for the projects' overlays in one window (F8.5): the ⌘O selector and the confirmation card. Typing
@@ -17,15 +18,20 @@ final class ProjectsController: NSObject, NSTextFieldDelegate {
     private var outsideClicks: Any?
     /// ⌘O is the selector's while it is open: the keymap would reopen it.
     private var selectorKeys: Any?
+    private var keymap = Keymap.standard
 
     init(window: SmaltiWindow) {
         self.window = window
     }
 
-    func showRecents(_ selector: ProjectSelector, theme: Theme, choose: @escaping (String) -> Void) {
+    func showRecents(
+        _ selector: ProjectSelector, look: (theme: Theme, keymap: Keymap), choose: @escaping (String) -> Void
+    ) {
         close()
         guard let content = window.contentView else { return }
-        let view = RecentProjectsView(theme: theme)
+        let theme = look.theme
+        keymap = look.keymap
+        let view = RecentProjectsView(theme: theme, nextKey: keymap.chord(for: .projectRecent)?.display ?? "")
         place(view, in: content, top: theme.palette.topOffset)
         view.field.delegate = self
         view.onClickRow = { [weak self] index in
@@ -112,11 +118,11 @@ final class ProjectsController: NSObject, NSTextFieldDelegate {
         choose(root)
     }
 
-    /// ⌘O moves to the next project while the selector is open, in this window only.
+    /// The chord of "Proyectos recientes…" (⌘O unless the TOML changed it) moves to the next project while the
+    /// selector is open, in this window only; read like the KeyRouter reads it (review 2: Caps Lock, rebinding).
     private func handleSelectorKey(_ event: NSEvent) -> Bool {
-        guard recents != nil, event.window === window,
-            event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-            event.charactersIgnoringModifiers?.lowercased() == "o"
+        guard recents != nil, event.window === window, let chord = KeyChordTranslator.chord(from: event),
+            keymap.command(for: chord) == .projectRecent
         else { return false }
         update { $0.moving(by: 1) }
         return true
@@ -138,7 +144,9 @@ final class ProjectsController: NSObject, NSTextFieldDelegate {
         switch selector {
         case #selector(NSResponder.moveUp(_:)): update { $0.moving(by: -1) }
         case #selector(NSResponder.moveDown(_:)): update { $0.moving(by: 1) }
-        case #selector(NSResponder.insertNewline(_:)): chooseSelected()
+        // Review 2: a held ↩ from ⌘K must not choose (and then confirm) a project by itself.
+        case #selector(NSResponder.insertNewline(_:)):
+            if ConfirmationKey.confirms(isRepeat: NSApp.currentEvent?.isARepeat ?? false) { chooseSelected() }
         case #selector(NSResponder.cancelOperation(_:)): close()
         default: return false
         }

@@ -110,7 +110,8 @@ public enum CommandCatalog {
                 subtitle: projectSubtitle(listing, home: projects?.home ?? "", texts: texts.projects),
                 group: .projects, shortcut: nil, isCurrent: false, icon: .projectFolder)
         }
-        let recent = context.command(.projectRecent, texts.titles[.projectRecent] ?? "", group: .projects)
+        let recent = context.command(
+            .projectRecent, texts.titles[.projectRecent] ?? "", group: .projects, icon: .recentProjects)
         return rows + [recent]
     }
 
@@ -134,7 +135,7 @@ public enum CommandCatalog {
         return context.command(
             .projectSave, texts.titles[.projectSave] ?? "",
             subtitle: texts.saveProjectSubtitle(["root": ProjectPath.display(root, home: projects.home)]),
-            group: .workspaces)
+            group: .workspaces, icon: .saveProject)
     }
 
     /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
@@ -176,10 +177,12 @@ public enum CommandCatalog {
 
         var paneCount: Int { workspaces.active.panes.count }
 
-        func command(_ id: CommandID, _ title: String, subtitle: String? = nil, group: CommandGroup) -> Command {
+        func command(
+            _ id: CommandID, _ title: String, subtitle: String? = nil, group: CommandGroup, icon: CommandIcon? = nil
+        ) -> Command {
             Command(
                 id: id, title: title, subtitle: subtitle, group: group, shortcut: keymap.chord(for: id),
-                isCurrent: false)
+                isCurrent: false, icon: icon)
         }
 
         func titled(_ id: CommandID, group: CommandGroup) -> Command {
