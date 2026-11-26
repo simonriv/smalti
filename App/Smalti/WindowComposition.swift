@@ -49,6 +49,7 @@ final class WindowComposition {
     private var studio: PromptStudioController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
+    private var welcome: WelcomeController?
     /// F5.5: the image preview card over this window's panes.
     private(set) var preview: PreviewCoordinator?
     private var restoreScreen: RestoreController?
@@ -140,6 +141,15 @@ final class WindowComposition {
     var hasOverlayOpen: Bool {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || hasHistoryPaletteOpen
             || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
+            || welcome?.isOpen == true
+    }
+
+    /// F7.7: the welcome card in this window.
+    func showWelcome(actions: WelcomeActions) {
+        closeOverlays(keeping: .welcome)
+        welcome?.open(
+            theme: controller.theme, keymap: controller.config.keys,
+            currentTheme: controller.config.appearance.theme, actions: actions)
     }
 
     /// "Reportar un problema o una idea" in this window; `submit` gets the kind and whether to save the logs.
@@ -151,7 +161,7 @@ final class WindowComposition {
     /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
     /// single place to go when the top one closes (block 4 review).
     enum Overlay {
-        case palette, help, search, feedback, sessions
+        case palette, help, search, feedback, sessions, welcome
     }
 
     func closeOverlays(keeping kept: Overlay? = nil) {
@@ -160,6 +170,7 @@ final class WindowComposition {
         if kept != .search { search?.dismiss() }
         if kept != .feedback { feedback?.close() }
         if kept != .sessions { sessions?.close() }
+        if kept != .welcome { welcome?.close() }
     }
 
     /// ⌘, (spec F5): opens or closes the Appearance aside of this window.
@@ -374,6 +385,13 @@ final class WindowComposition {
             if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
         }
         self.feedback = feedback
+        let welcome = WelcomeController(window: window)
+        welcome.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+        }
+        self.welcome = welcome
         preview = PreviewCoordinator(
             window: window, controller: controller,
             dependencies: .init(
@@ -484,7 +502,7 @@ final class WindowComposition {
             return .panel(allowing: [.promptStudio, .promptApply, .promptExport, .paletteOpen, .helpShow])
         }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
-        if feedback?.isOpen == true { return KeyContext(allowing: []) }
+        if feedback?.isOpen == true || welcome?.isOpen == true { return KeyContext(allowing: []) }
         if search?.isOpen == true {
             return .overlay(allowing: [
                 .searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow, .guardApprove, .guardReject,

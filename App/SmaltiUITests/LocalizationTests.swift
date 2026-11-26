@@ -80,6 +80,11 @@ final class LocalizationTests: SmaltiUITestCase {
         collect("session search")
         close()
 
+        runFromPalette("Welcome to Smalti")
+        XCTAssertTrue(app.element("smalti.welcome").waitForExistence(timeout: 5))
+        collect("welcome")
+        close()
+
         runFromPalette("About Smalti")
         XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 10))
         collect("about")

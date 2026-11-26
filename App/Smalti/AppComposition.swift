@@ -28,6 +28,8 @@ final class AppComposition {
     private var runtime: GhosttyRuntime?
     /// F5: the one Appearance document every window's panel edits.
     private var appearance: AppearanceSession?
+    /// F7.7: whether the welcome card was seen, next to the session in this build's state directory.
+    private var welcomeRecord: FileWelcomeRecord?
     /// F5 "Solo símbolo": a pane's prompt context for its header (from `RenderPrompt`).
     private var promptHeader: ((PaneID) -> String?)?
     private var engine: GhosttyTerminalEngine?
@@ -176,6 +178,7 @@ final class AppComposition {
         let runtime = try makeRuntime(
             terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let state = startup.settings.stateDirectory
+        welcomeRecord = FileWelcomeRecord(directory: state)
         let engine = GhosttyTerminalEngine(
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
             userZdotdir: startup.settings.userZdotdir ?? ProcessInfo.processInfo.environment["ZDOTDIR"])
@@ -248,7 +251,8 @@ final class AppComposition {
         installMenus(engine)
         // The receiver started before any window existed: its first status reaches the bar now.
         if let claudeTelemetry { telemetryChanged(claudeTelemetry) }
-        switch LoadLastSession(archive: archive, preferences: archive).execute() {
+        let choice = LoadLastSession(archive: archive, preferences: archive).execute()
+        switch choice {
         case .startFresh:
             controller.start()
         case .startFreshAfterUnreadable(let reason):
@@ -267,6 +271,41 @@ final class AppComposition {
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
         if !composition.isAskingToRestore { beginSaving(keepingPreviousSession: false) }
+        let isFresh = if case .startFresh = choice { true } else { false }
+        offerWelcome(in: composition, hasSavedSession: !isFresh)
+    }
+
+    // MARK: - Welcome (F7.7)
+
+    /// The card opens only on a fresh install; someone who already used Smalti (a saved session) is marked as done.
+    private func offerWelcome(in composition: WindowComposition, hasSavedSession: Bool) {
+        guard let welcomeRecord else { return }
+        let show = ShowWelcome(record: welcomeRecord)
+        Task { [weak self, weak composition] in
+            guard await show.shouldShowAtLaunch(hasSavedSession: hasSavedSession), let self, let composition else {
+                return
+            }
+            composition.showWelcome(actions: welcomeActions(for: composition))
+        }
+    }
+
+    private func welcomeActions(for composition: WindowComposition) -> WelcomeActions {
+        let record = welcomeRecord
+        return WelcomeActions(
+            states: { [weak composition] in composition?.controller.catalogState().integrations ?? [:] },
+            install: { [weak composition] id in composition?.controller.perform(id.installCommand) },
+            selectTheme: { [weak self] theme in self?.appearance?.selectTheme(theme) },
+            markDone: {
+                guard let record else { return }
+                Task {
+                    do {
+                        try await record.markDone()
+                    } catch {
+                        Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
+                            .error("could not mark the welcome card as seen: \(String(describing: error))")
+                    }
+                }
+            })
     }
 
     // MARK: - Appearance (F5)
@@ -392,6 +431,8 @@ final class AppComposition {
             mainMenu?.refresh()
         case .helpDocs: URLOpener.open(SmaltiLinks.documentation(for: .current))
         case .appSupport: URLOpener.open(SmaltiLinks.support(for: .current))
+        case .helpPrivacy: URLOpener.open(SmaltiLinks.privacy(for: .current))
+        case .helpWelcome: composition.showWelcome(actions: welcomeActions(for: composition))
         case .feedbackReport:
             composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
                 self?.report(kind, includingLogs: includesLogs)
@@ -942,6 +983,7 @@ final class AppComposition {
     /// ones.
     private func startInput(on socket: URL, settings: InputSettings, startup: Startup, engine: GhosttyTerminalEngine) {
         let state = startup.settings.stateDirectory
+        welcomeRecord = FileWelcomeRecord(directory: state)
         let specs = FigSpecs(
             user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
             runner: GeneratorRunner(timeout: settings.generatorTimeout))

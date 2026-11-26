@@ -75,7 +75,8 @@ struct StatusAndObservatoryTextsTests {
 @Suite("Observatory filter titles")
 struct ObservatoryFilterTitleTests {
     @Test func chipsInBothLanguages() {
-        #expect(ObservatoryFilter.allCases.map { $0.title(.spanish) } == ["Todas", "Claude Code", "OpenCode", "Locales"])
+        #expect(
+            ObservatoryFilter.allCases.map { $0.title(.spanish) } == ["Todas", "Claude Code", "OpenCode", "Locales"])
         #expect(ObservatoryFilter.allCases.map { $0.title(.english) } == ["All", "Claude Code", "OpenCode", "Local"])
     }
 }

@@ -160,3 +160,18 @@ struct InPaletteHintTests {
         #expect(entries.first { $0.command == .agentJump }?.keys == "en ⌘P")
     }
 }
+
+/// F7.7: the welcome card reuses the feedback box's and the palette's tokens; only its width is its own (560 pt).
+@Suite("Welcome tokens")
+struct WelcomeTokensTests {
+    @Test func obsidianWelcomeComesFromTheExistingTokens() {
+        let theme = Theme.obsidian
+
+        #expect(theme.welcome.width == 560)
+        #expect(theme.welcome.padding == theme.feedback.padding)
+        #expect(theme.welcome.titleFontSize == theme.feedback.titleFontSize)
+        #expect(theme.welcome.rowHeight == theme.feedback.choiceHeight)
+        #expect(theme.welcome.lineGap == theme.feedback.lineGap)
+        #expect(theme.welcome.topOffset == theme.feedback.topOffset)
+    }
+}

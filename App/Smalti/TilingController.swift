@@ -108,7 +108,8 @@ final class TilingController {
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
         .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
-        .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport,
+        .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport, .helpWelcome,
+        .helpPrivacy,
     ]
 
     private let deps: Dependencies

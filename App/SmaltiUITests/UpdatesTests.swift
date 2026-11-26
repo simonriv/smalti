@@ -145,21 +145,34 @@ final class UpdatesTests: SmaltiUITestCase {
         app.typeKey(.escape, modifierFlags: [])
     }
 
-    func testDocumentationAndSupportOpenTheWeb() throws {
-        let openLog = outputFile.appendingPathExtension("opened")
-        let app = XCUIApplication.isolatedSmalti()
+    /// F7.7: documentation, support and privacy open in the interface's language.
+    private func openedLinks(language: String, commands: [String]) throws -> [String] {
+        let openLog = outputFile.appendingPathExtension("opened-\(language)")
+        let app = XCUIApplication.isolatedSmalti(language: language)
         app.launchArguments += ["-SmaltiOpenLog", openLog.path(percentEncoded: false)]
         launch(app)
-
-        run("abrir la documentación")
-        run("apoyar smalti")
-
+        commands.forEach(run)
         let opened = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in
-                ((try? String(contentsOf: openLog, encoding: .utf8)) ?? "").split(separator: "\n").count >= 2
+                ((try? String(contentsOf: openLog, encoding: .utf8)) ?? "").split(separator: "\n").count
+                    >= commands.count
             }, object: nil)
         XCTAssertEqual(XCTWaiter().wait(for: [opened], timeout: 10), .completed)
-        let lines = try String(contentsOf: openLog, encoding: .utf8).split(separator: "\n").map(String.init)
-        XCTAssertEqual(lines, ["https://smalti.sh/es/docs", "https://smalti.sh/es#apoyar"])
+        return try String(contentsOf: openLog, encoding: .utf8).split(separator: "\n").map(String.init)
+    }
+
+    func testDocumentationSupportAndPrivacyOpenTheSpanishWeb() throws {
+        let lines = try openedLinks(
+            language: "es", commands: ["abrir la documentación", "apoyar smalti", "política de privacidad"])
+
+        XCTAssertEqual(
+            lines, ["https://smalti.sh/es/docs", "https://smalti.sh/es#apoyar", "https://smalti.sh/es/privacy"])
+    }
+
+    func testDocumentationSupportAndPrivacyOpenTheEnglishWeb() throws {
+        let lines = try openedLinks(
+            language: "en", commands: ["open the documentation", "support smalti", "privacy policy"])
+
+        XCTAssertEqual(lines, ["https://smalti.sh/docs", "https://smalti.sh/#support", "https://smalti.sh/privacy"])
     }
 }
