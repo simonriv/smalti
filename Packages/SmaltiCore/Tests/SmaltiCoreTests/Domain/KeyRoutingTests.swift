@@ -18,6 +18,17 @@ struct KeyRoutingTests {
                 == .perform(.promptStudio))
     }
 
+    /// F8 final review: ⌘⌫ (delete to the line's start) and ⌘⇧↓ (select to the end) keep editing an overlay's text
+    /// field; they are the processes view's chords only inside that view.
+    @Test(arguments: ["cmd+backspace", "cmd+shift+down", "cmd+t", "cmd+shift+s"])
+    func overlayTextFieldsKeepTheProcessesChords(text: String) throws {
+        let context = KeyContext.overlay(allowing: [.paletteOpen])
+
+        #expect(
+            KeyRouting.decide(KeyPress(try chord(text), isRepeat: false), keymap: .standard, context: context)
+                == .passThrough)
+    }
+
     @Test func boundChordPerformsItsCommand() throws {
         let decision = KeyRouting.decide(KeyPress(try chord("cmd+d"), isRepeat: false), keymap: .standard)
 

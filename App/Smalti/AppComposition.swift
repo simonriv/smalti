@@ -4,6 +4,7 @@ import ClaudeHarnessAdapter
 import CodexHarnessAdapter
 import ClaudeTelemetryAdapter
 import DarwinMetricsAdapter
+import DarwinProcessesAdapter
 import DiagnosticsAdapter
 import FigCompletionAdapter
 import FileSessionAdapter
@@ -834,7 +835,56 @@ final class AppComposition {
             observatoryOpenChanged: { [weak self] in self?.observatoryOpenChanged() },
             secureInputRequested: { [weak self] isOn, pane in self?.secureInputRequested(isOn, in: pane) },
             imageFiles: ImageIOImageFiles(),
-            lastCommand: { [weak self] pane in await self?.input?.lastCommand(in: pane) })
+            lastCommand: { [weak self] pane in await self?.input?.lastCommand(in: pane) },
+            processes: processesServices(engine))
+    }
+
+    /// F8: the processes and ports views read and act through these adapters only while a view is open; each window
+    /// gets its own use cases (its own previous sample and stop requests).
+    private func processesServices(_ engine: GhosttyTerminalEngine) -> ProcessesServices {
+        let running = DarwinRunningProcesses()
+        let ports = DarwinListeningPorts()
+        let control = DarwinProcessControl()
+        let grace = Self.stopGrace
+        let policy = StopPolicy(ownPID: ProcessInfo.processInfo.processIdentifier)
+        return ProcessesServices(
+            make: {
+                ProcessesController.Dependencies(
+                    refresher: ProcessesRefresher(
+                        observe: ObserveProcesses(processes: running, ports: ports), timing: .standard),
+                    stop: StopProcess(control: control, grace: Self.nanoseconds(grace)),
+                    lower: LowerPriority(control: control), policy: policy, home: NSHomeDirectory())
+            },
+            grace: grace,
+            paneNames: { [weak self] in self?.windowSet().map { PaneNames.of($0, texts: .current) } ?? [:] },
+            foregroundGroups: { [weak self] in
+                let panes = self?.windowSet()?.allPanes ?? []
+                return Dictionary(
+                    panes.compactMap { pane in engine.foregroundGroup(of: pane.id).map { (pane.id, $0) } }
+                ) { first, _ in first }
+            },
+            showPane: { [weak self] pane in
+                guard let owner = self?.composition(containing: pane), owner.controller.activate(pane) else {
+                    return false
+                }
+                owner.window.makeKeyAndOrderFront(nil)
+                return true
+            })
+    }
+
+    /// F8: how long a process has to quit after "Stop" before forcing is offered; `-SmaltiStopGraceSeconds` shortens
+    /// it in UI tests (Debug only).
+    private static var stopGrace: Duration {
+        #if DEBUG
+            let override = UserDefaults.standard.double(forKey: "SmaltiStopGraceSeconds")
+            if override > 0 { return .milliseconds(Int(override * 1000)) }
+        #endif
+        return .seconds(3)
+    }
+
+    private static func nanoseconds(_ duration: Duration) -> UInt64 {
+        let parts = duration.components
+        return UInt64(max(parts.seconds, 0)) * 1_000_000_000 + UInt64(max(parts.attoseconds, 0) / 1_000_000_000)
     }
 
     /// A second instance of this build (its socket was taken) never saves: it would overwrite the first one's

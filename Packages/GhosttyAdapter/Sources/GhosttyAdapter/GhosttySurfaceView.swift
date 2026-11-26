@@ -162,6 +162,15 @@ final class GhosttySurfaceView: NSView {
             name: name, commandLine: ProcessArguments.of(pid: pid), pid: pid, startedAt: ProcessStart.of(pid: pid))
     }
 
+    /// F8: the foreground group's leader as libghostty reports it, even when it cannot be named.
+    var foregroundGroup: Int32? {
+        // 0 means libghostty has no pid (no PTY yet, or the child is gone).
+        guard let surface, let pid = pid_t(exactly: ghostty_surface_foreground_pid(surface)), pid > 0 else {
+            return nil
+        }
+        return pid
+    }
+
     private func refreshForegroundProcess() {
         guard let surface else { return }
         // 0 means libghostty has no pid (no PTY yet, or the child is gone).
