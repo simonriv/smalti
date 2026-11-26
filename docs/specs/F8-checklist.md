@@ -29,7 +29,7 @@
 | C8 | ✅ | `ProcessCommandsTests` (atajos de la spec, ninguno con ⌥ solo, los seis en ⌘K y la ayuda), `MenuModelTests`, `KeyChordTranslatorTests` (⌘⌫), `KeyRoutingTests` (los contextuales no se roban a los campos de texto). Enmienda 8: con la vista cerrada, el menú desactiva los cuatro contextuales. |
 | C9 | ✅ | Guarda de imports de SmaltiCore. `ProcessesGuardTests`: solo el adaptador lista procesos, lee sockets, cambia prioridades y manda SIGTERM/SIGKILL o una señal literal. `network-surface.test.sh` 2/2 sin cambios. |
 | C10 | ✅ | `SampleCostTests`: procesos + puertos con ~650 procesos, p95 de 20 muestras 13–16 ms (< 50 ms). |
-| C11 | ⏳ | Release 0.8.0 y actualización del diario: ver abajo. |
+| C11 | ✅ | Release `v0.8.0` por el pipeline (DMG firmado con EdDSA, sha256 del cask igual al del DMG publicado). Appcast en smalti-web (#14) con la build 800 servida por smalti.sh; cask en homebrew-tap (#5); docs en smalti-web (#13). El Smalti diario 0.7.7 estaba en «Retomar donde quedaste», donde «Buscar actualizaciones…» está desactivado por diseño: se restauró la sesión (3 workspaces) y se lanzó la comprobación por System Events desde una sesión de Ghostty. Ventana de Sparkle en español con las notas de 0.8.0, «Instalar actualización» y luego «Instalar y volver a abrir». Quedó en 0.8.0 (800), en `/Applications` (sin traslado), sin atributo de cuarentena y sin aviso de Gatekeeper; «Retomar donde quedaste» mostró los mismos 3 workspaces. |
 
 **C4, reposo con la vista cerrada** (`measure-gpu-idle.sh 5`, Debug, misma máquina y misma sesión, F7.7 en un worktree de `origin/develop`):
 
