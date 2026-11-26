@@ -429,22 +429,22 @@
 
 ### Tareas
 #### Bloque 1 · Dominio
-- [ ] T1 · Base del catálogo
-- [ ] T2 · ⌘K, menús, ayuda, integraciones y enlaces
-- [ ] T3 · Observatorio, telemetría, tiempos y barra de estado
-- [ ] T4 · Guardas, cierre, sesiones, layouts, búsqueda y vista previa
-- [ ] T5 · Prompt, Apariencia, plantilla de config, problemas tipados y `option_as_meta`
-- [ ] T6 · Bienvenida en el dominio
+- [x] T1 · Base del catálogo
+- [x] T2 · ⌘K, menús, ayuda, integraciones y enlaces
+- [x] T3 · Observatorio, telemetría, tiempos y barra de estado
+- [x] T4 · Guardas, cierre, sesiones, layouts, búsqueda y vista previa
+- [x] T5 · Prompt, Apariencia, plantilla de config, problemas tipados y `option_as_meta`
+- [x] T6 · Bienvenida en el dominio
 #### Bloque 2 · Adaptadores
-- [ ] T7 · Problemas tipados en adaptadores y `option_as_meta`
-- [ ] T8 · Marca de bienvenida, Neovim con lazy.nvim y CLI
-- [ ] Revisión intermedia 1 + mutación incremental
+- [x] T7 · Problemas tipados en adaptadores y `option_as_meta`
+- [x] T8 · Marca de bienvenida, Neovim con lazy.nvim y CLI
+- [x] Revisión intermedia 1 (0 críticos, 2 importantes, 8 menores; corregidos) + mutación 1 (871 mutantes, 99,1 %; 6 sobrevivientes muertos)
 #### Bloque 3 · App, CLI y repositorio
-- [ ] T9 · Base de localización en la app
-- [ ] T10 · Vistas localizadas y recorrido en inglés
-- [ ] T11 · Bienvenida y privacidad en la app
-- [ ] T12 · Release, guarda de red y documentos
-- [ ] Revisión intermedia 2 + regresión de UI + mutación incremental
+- [x] T9 · Base de localización en la app
+- [x] T10 · Vistas localizadas y recorrido en inglés
+- [x] T11 · Bienvenida y privacidad en la app
+- [x] T12 · Release, guarda de red y documentos
+- [x] Revisión intermedia 2 (0 críticos, 3 importantes, 10 menores; corregidos) + regresión de UI de las clases afectadas (33/33) + mutación 2 (solo líneas cambiadas: 3 mutantes, 1 sobreviviente muerto). Revisión final y mutación de cierre omitidas por decisión de Simón
 #### Bloque 4 · Cierre
-- [ ] T13 · Verificación, capturas y checklist
+- [x] T13 · Verificación, capturas y checklist
 - [ ] T14 · 0.7.7, release, web y actualización real
