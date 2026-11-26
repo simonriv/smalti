@@ -25,6 +25,19 @@ public struct Timeline: Equatable, Sendable {
 
     public var startedAt: Date? { entries.lazy.compactMap(\.at).first }
 
+    /// The tools an item sits under (a subagent's), outermost first: what to expand so a jump shows it.
+    public func ancestors(of id: TimelineItemID) -> [TimelineItemID] {
+        Self.path(to: id, in: turns.flatMap(\.items)) ?? []
+    }
+
+    private static func path(to id: TimelineItemID, in items: [TimelineItem]) -> [TimelineItemID]? {
+        for item in items {
+            if item.id == id { return [] }
+            if let below = path(to: id, in: item.children) { return [item.id] + below }
+        }
+        return nil
+    }
+
     public func item(_ id: TimelineItemID) -> TimelineItem? {
         Self.find(id, in: turns.flatMap(\.items))
     }

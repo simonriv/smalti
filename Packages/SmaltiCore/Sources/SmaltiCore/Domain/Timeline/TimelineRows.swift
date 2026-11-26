@@ -87,7 +87,13 @@ public enum TimelineRows {
         private func toolRows(_ tool: ToolItem, depth: Int, parent: TimelineItemID?) -> [TimelineRow] {
             let isOpen = expanded.contains(tool.id)
             let shownText = tool.result?.output ?? tool.call
-            let lines = shownText.map { $0.excerpt.split(separator: "\n", omittingEmptySubsequences: false) } ?? []
+            // By scalar: "\r\n" is one Character, and would hide a PTY output's lines (final review, M1).
+            let lines =
+                shownText.map {
+                    $0.excerpt.unicodeScalars.split(separator: "\n", omittingEmptySubsequences: false).map {
+                        String(String.UnicodeScalarView($0)).trimmingCharacters(in: ["\r"])
+                    }
+                } ?? []
             let visible = lines.prefix(TimelineRows.expandedLines).joined(separator: "\n")
             let row = TimelineRow(
                 id: tool.id, depth: depth, kind: .tool, who: tool.name, time: tool.at.map(time), text: "",

@@ -29,9 +29,9 @@ final class TimelineView: NSView, NSTextFieldDelegate {
 
     override var acceptsFirstResponder: Bool { true }
 
-    init(theme: Theme) {
+    init(theme: Theme, toggleKeys: String) {
         self.theme = theme
-        header = TimelineHeader(theme: theme)
+        header = TimelineHeader(theme: theme, toggleKeys: toggleKeys)
         list = TimelineListView(theme: theme)
         footer = TimelineFooter(theme: theme)
         super.init(frame: .zero)
@@ -84,6 +84,7 @@ final class TimelineView: NSView, NSTextFieldDelegate {
         ]
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
+        stack.distribution = .fill
         stack.spacing = 0
         stack.alignment = .leading
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -215,9 +216,9 @@ private final class TimelineHeader: NSView {
     private let session: TimelineChip
     private let search: TimelineChip
 
-    init(theme: Theme) {
+    init(theme: Theme, toggleKeys: String) {
         session = TimelineChip(
-            String(localized: "Session"), keys: "⇧⌘T", theme: theme, identifier: "smalti.timeline.chip.session")
+            String(localized: "Session"), keys: toggleKeys, theme: theme, identifier: "smalti.timeline.chip.session")
         search = TimelineChip(
             String(localized: "Search"), keys: "⌘F", theme: theme, identifier: "smalti.timeline.chip.search")
         super.init(frame: .zero)
@@ -280,6 +281,7 @@ private final class TimelineChip: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.staticText)
         setAccessibilityLabel(text)
+        setAccessibilityValue(keys)
         setAccessibilityIdentifier(identifier)
         isOn = false
     }

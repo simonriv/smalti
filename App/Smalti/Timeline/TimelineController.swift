@@ -29,6 +29,8 @@ final class TimelineController {
         let didClose: () -> Void
         /// The panes' area: the timeline sits on its right, pinned to it by constraints.
         let area: () -> NSView?
+        /// The chord that opens the timeline, as the keymap has it (final review, M5).
+        let toggleKeys: () -> String
     }
 
     private let window: NSWindow
@@ -85,7 +87,7 @@ final class TimelineController {
     private func open(theme: Theme) {
         guard let content = window.contentView, let area = actions.area() else { return }
         self.theme = theme
-        let view = TimelineView(theme: theme)
+        let view = TimelineView(theme: theme, toggleKeys: actions.toggleKeys())
         view.onKey = { [weak self] key in self?.handle(key) }
         view.onCopy = { [weak self] in self?.copySelected(.content) }
         view.onQuery = { [weak self] text in self?.queryChanged(text) }
@@ -173,7 +175,11 @@ final class TimelineController {
         pendingJump = nil
         expanded = []
         selection = TimelineSelection()
-        Task { await dependencies.show.show(next.focus.resolution, root: next.focus.root) }
+        // Started on the main actor: a close that comes first leaves it nothing to do (final review, M3).
+        Task { [weak self] in
+            guard let self, isOpen else { return }
+            await dependencies.show.show(next.focus.resolution, root: next.focus.root)
+        }
         render()
     }
 
@@ -181,9 +187,11 @@ final class TimelineController {
         sessionVersion += 1
         switch dependencies.show.state {
         case .session:
-            if let jump = pendingJump {
+            if let jump = pendingJump, case .session(let session) = dependencies.show.state {
                 pendingJump = nil
                 selection = TimelineSelection(selected: jump.id)
+                // A turn inside a subagent shows only with every tool above it open (final review, I1).
+                expanded.formUnion(session.timeline.ancestors(of: jump.id))
                 if jump.expand { expanded.insert(jump.id) }
             }
         case .loading, .closed: break
@@ -276,7 +284,9 @@ final class TimelineController {
 
     private func queryChanged(_ text: String) {
         listIndex = nil
-        dependencies.search.update(query: text, root: target?.focus.root ?? NSHomeDirectory())
+        // Without a focused pane there is no project: never the whole ~/.claude (final review, M4).
+        guard let root = target?.focus.root else { return dependencies.search.clear() }
+        dependencies.search.update(query: text, root: root)
     }
 
     private var hits: [SearchMatch] { dependencies.search.results.groups.flatMap(\.matches) }
@@ -297,6 +307,7 @@ final class TimelineController {
             shown.ref.sessionID == hit.session.id
         {
             selection = TimelineSelection(selected: id)
+            expanded.formUnion(shown.timeline.ancestors(of: id))
             if TimelineJump.isOutput(hit.entry) { expanded.insert(id) }
             return choose(.session)
         }
@@ -312,7 +323,10 @@ final class TimelineController {
         expanded = []
         selection = TimelineSelection()
         listIndex = nil
-        Task { await dependencies.show.open(session) }
+        Task { [weak self] in
+            guard let self, isOpen else { return }
+            await dependencies.show.open(session)
+        }
         render()
     }
 
@@ -392,7 +406,9 @@ final class TimelineController {
     private func loadingScreen(_ texts: TimelineTexts) -> TimelineScreen {
         let loading = TimelineScreen(
             mode: .session, body: .loading(texts.loading), selected: nil, keys: TimelinePresenter.sessionKeys())
-        guard let shown = lastScreen, shown.mode == .session, loadingTask == nil else { return lastScreen ?? loading }
+        // Leaving the search for another session shows "Reading…" at once (final review, M2).
+        guard let shown = lastScreen, shown.mode == .session else { return loading }
+        guard loadingTask == nil else { return shown }
         loadingTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(Int(self?.tokens.loadingDelayMilliseconds ?? 0)))
             guard let self else { return }

@@ -50,7 +50,7 @@ Coding agents are great at working in parallel and terrible at telling you what 
 
 - Free and open source (MIT). macOS 27 or later, on Apple silicon only.
 - The interface is in English or Spanish, following your Mac's language (System Settings → General → Language & Region, also per app).
-- Its only network request is the update check on smalti.sh: no accounts, no telemetry sent anywhere.
+- It only goes online to check for updates on smalti.sh and download them from GitHub: no accounts, no telemetry sent anywhere.
 
 ## Install
 

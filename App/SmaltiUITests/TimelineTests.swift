@@ -175,6 +175,54 @@ final class TimelineTests: SmaltiUITestCase {
         expect(terminal(0), toContain: "vuelta-al-panel\n")
     }
 
+    // MARK: - C7 and C8
+
+    /// A synthetic Claude transcript of about 60 MB in this launch's Claude home: 3,000 tools with 20 KB outputs.
+    private func installLargeSession(_ id: String, root: String) throws {
+        let folder = app.claudeHome.appending(path: "projects").appending(path: TimelineFixture.claudeFolder(for: root))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let output = String(repeating: "línea de salida larga 0123456789\n", count: 600)
+        var text = ""
+        for turn in 0..<3_000 {
+            let base = #"{"sessionId":"\#(id)","cwd":"\#(root)","timestamp":"2026-11-26T10:00:00.000Z","#
+            text += base + #""type":"user","message":{"role":"user","content":"prompt \#(turn)"}}"# + "\n"
+            text +=
+                base
+                + #""type":"assistant","message":{"id":"m\#(turn)","role":"assistant","content":[{"type":"tool_use","id":"t\#(turn)","name":"Bash","input":{"command":"seq \#(turn)"}}]}}"#
+                + "\n"
+            let escaped = output.replacingOccurrences(of: "\n", with: "\\n")
+            text +=
+                base
+                + #""type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t\#(turn)","content":"\#(escaped)"}]}}"#
+                + "\n"
+        }
+        try Data(text.utf8).write(to: folder.appending(path: "\(id).jsonl"))
+    }
+
+    /// C7: a 60 MB session never freezes the app: ⇧⌘T closes the timeline while it reads. (C8 is measured by
+    /// TimelineBench: XCUITest's accessibility snapshots make the table build every row and would measure that.)
+    func testALargeSessionNeverFreezesTheApp() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        let root = try TimelineFixture.root(for: app)
+        let id = "5e1f0000-0000-4000-8000-0000000000aa"
+        SessionState.seed(
+            [
+                .init(
+                    name: "acme", root: root, layout: "columns",
+                    panes: [.init(directory: root, agentSessionID: id), .init(directory: root)])
+            ], alwaysRestore: true, in: app)
+        self.app = app
+        try installLargeSession(id, root: root)
+        launch(app, shells: 2)
+
+        app.typeKey("1", modifierFlags: .command)
+        openTimeline()
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.element("smalti.timeline").waitForNonExistence(timeout: 2), "the app answered while reading")
+        openTimeline()
+        expectTitle("prompt 0", timeout: 20)
+    }
+
     // MARK: - Review 2
 
     /// C1: with the timeline closed, ⇧⌘C and ⌘F are the terminal's.
@@ -246,6 +294,62 @@ final class TimelineTests: SmaltiUITestCase {
         expectTitle("fixture prompt B")
         XCTAssertTrue(chosenItem.waitForExistence(timeout: 5))
         XCTAssertTrue(chosenItem.label.contains("vacío"), chosenItem.label)
+    }
+
+    /// Final review (I1): a hit inside a subagent opens the Agent call above it and lands on the turn.
+    func testAHitInsideASubagentOpensItsCall() throws {
+        let app = XCUIApplication.isolatedSmalti()
+        let root = try TimelineFixture.root(for: app)
+        let id = "5e1f0000-0000-4000-8000-0000000000bb"
+        SessionState.seed(
+            [.init(name: "acme", root: root, layout: "columns", panes: [.init(directory: root, agentSessionID: id)])],
+            alwaysRestore: true, in: app)
+        self.app = app
+        let folder = app.claudeHome.appending(path: "projects").appending(path: TimelineFixture.claudeFolder(for: root))
+        let agents = folder.appending(path: "\(id)/subagents")
+        try FileManager.default.createDirectory(at: agents, withIntermediateDirectories: true)
+        let base = #"{"sessionId":"\#(id)","cwd":"\#(root)","timestamp":"2026-11-26T10:00:00.000Z","#
+        let main = [
+            base + #""type":"user","message":{"role":"user","content":"host prompt"}}"#,
+            base
+                + #""type":"assistant","message":{"id":"m1","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Agent","input":{"description":"look"}}]}}"#,
+            base
+                + #""type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"done"}]}}"#,
+        ]
+        let agent = [
+            base + #""isSidechain":true,"type":"user","message":{"role":"user","content":"look around"}}"#,
+            base
+                + #""isSidechain":true,"type":"assistant","message":{"id":"m2","role":"assistant","content":[{"type":"text","text":"found a zafiro"}]}}"#,
+        ]
+        try Data((main.joined(separator: "\n") + "\n").utf8).write(to: folder.appending(path: "\(id).jsonl"))
+        try Data((agent.joined(separator: "\n") + "\n").utf8).write(to: agents.appending(path: "agent-a1.jsonl"))
+        try Data(#"{"toolUseId":"t1"}"#.utf8).write(to: agents.appending(path: "agent-a1.meta.json"))
+        launch(app, shells: 1)
+        app.typeKey("1", modifierFlags: .command)
+        openTimeline()
+        expectTitle("host prompt")
+
+        app.typeKey("f", modifierFlags: .command)
+        app.typeText("zafiro")
+        XCTAssertTrue(app.element("smalti.timeline.hit.1").waitForExistence(timeout: 10))
+        press(.downArrow)
+        press(.return)
+
+        XCTAssertTrue(chosenItem.waitForExistence(timeout: 5), "the subagent's turn is chosen")
+        XCTAssertTrue(chosenItem.label.contains("zafiro"), chosenItem.label)
+    }
+
+    /// Final review (M5): the header's chord comes from the keymap, so a rebinding shows where it opens.
+    func testTheHeaderShowsTheRemappedChord() {
+        let app = XCUIApplication.isolatedSmalti(config: "[keys]\n\"ctrl+cmd+t\" = \"timeline.toggle\"\n")
+        self.app = app
+        launch(app, shells: 1)
+
+        app.typeKey("t", modifierFlags: [.command, .control])
+
+        let chip = app.element("smalti.timeline.chip.session")
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertEqual(chip.value as? String, "⌃⌘T")
     }
 
     func testTheObservatoryAndTheTimelineNeverStack() throws {

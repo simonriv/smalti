@@ -570,7 +570,10 @@ final class WindowComposition {
                     guard let self else { return }
                     focusKeyboard(on: controller.set.active.focusedPane)
                 },
-                area: { [weak self] in self?.window.paneGrid }))
+                area: { [weak self] in self?.window.paneGrid },
+                toggleKeys: { [weak controller] in
+                    controller?.config.keys.chord(for: .timelineToggle)?.display ?? ""
+                }))
     }
 
     /// What the focused pane means for the timeline: its session, the project around it and how to name it.

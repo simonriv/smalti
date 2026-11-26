@@ -152,6 +152,20 @@ struct TimelineTests {
         #expect(timeline.startedAt == nil)
     }
 
+    /// Final review (I1): a jump into a subagent opens every tool above it.
+    @Test func aSubagentItemKnowsTheToolsAboveIt() {
+        let agent = EntryScope.subagent("a8")
+        let timeline = Timeline().appending([
+            F.prompt("p", at: 1), F.call("t", "Agent", [:], at: 2),
+            F.call("s1", "Bash", ["command": "ls"], at: 4, scope: agent),
+            F.entry(.subagentLink(agentID: "a8", toolID: "t")),
+        ])
+
+        #expect(timeline.ancestors(of: .tool("s1")) == [.tool("t")])
+        #expect(timeline.ancestors(of: .tool("t")).isEmpty)
+        #expect(timeline.ancestors(of: TimelineItemID(rawValue: "nope")).isEmpty)
+    }
+
     @Test func itemsAreFoundByID() throws {
         let timeline = Timeline().appending(F.workB)
         let first = try #require(timeline.turns.first?.items.first)

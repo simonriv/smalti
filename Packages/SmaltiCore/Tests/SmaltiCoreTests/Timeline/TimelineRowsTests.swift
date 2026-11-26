@@ -50,6 +50,19 @@ struct TimelineRowsTests {
         #expect(all.allSatisfy { !$0.isTruncated })
     }
 
+    /// Final review (M1): Windows line ends count as line ends.
+    @Test func crlfOutputsSplitIntoLines() throws {
+        let output = (1...14).map { "l\($0)" }.joined(separator: "\r\n")
+        let timeline = Timeline().appending([
+            F.prompt("p", at: 1), F.call("t", "Bash", [:], at: 2), F.result("t", output, at: 3),
+        ])
+
+        let tool = try #require(rows(timeline, expanded: [TimelineItemID(rawValue: "tool:t")]).last)
+
+        #expect(tool.expandedText?.split(separator: "\n").count == 12)
+        #expect(tool.moreLines == 2)
+    }
+
     @Test func anExpandedOutputKeepsItsBlankLines() throws {
         let timeline = Timeline().appending([
             F.prompt("p", at: 1), F.call("t", "Bash", [:], at: 2), F.result("t", "uno\n\ndos", at: 3),
