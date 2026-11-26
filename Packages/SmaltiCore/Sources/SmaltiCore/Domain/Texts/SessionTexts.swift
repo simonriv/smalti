@@ -21,6 +21,7 @@ public struct SessionTexts: Sendable, Equatable {
     public let unreadable: TextTemplate
     public let unwritable: TextTemplate
     public let layoutErrors: SharedLayoutErrorTexts
+    public let terminal: TerminalTexts
     public let located: TextTemplate
     public let importTitle: TextTemplate
     public let opensOnlyShells: String
@@ -63,7 +64,8 @@ public struct SessionTexts: Sendable, Equatable {
         keptNewer:
             "La sesión la guardó una versión más nueva de Smalti (formato {version}): esta no la abre ni la sobrescribe",
         archiveNotFound: "{name}: no se encontró", unreadable: "no se pudo leer {path} ({reason})",
-        unwritable: "no se pudo escribir {path} ({reason})", layoutErrors: .spanish, located: "{command} en {place}",
+        unwritable: "no se pudo escribir {path} ({reason})", layoutErrors: .spanish, terminal: .spanish,
+        located: "{command} en {place}",
         importTitle: "¿Importar el layout “{name}”?", opensOnlyShells: "Al abrirlo solo abrirá shells.",
         willRun: "Al abrirlo ejecutará: {commands}", folderPrompt: "Elige la carpeta de “{name}” en este Mac",
         unknownHarness: "El panel {pane} usa un harness desconocido ({name}): se abrirá como shell.",
@@ -93,7 +95,8 @@ public struct SessionTexts: Sendable, Equatable {
         keptNewer: "A newer Smalti saved the session (format {version}): this one neither opens nor overwrites it",
         archiveNotFound: "{name}: not found",
         unreadable: "couldn’t read {path} ({reason})", unwritable: "couldn’t write {path} ({reason})",
-        layoutErrors: .english, located: "{command} in {place}", importTitle: "Import the layout “{name}”?",
+        layoutErrors: .english, terminal: .english, located: "{command} in {place}",
+        importTitle: "Import the layout “{name}”?",
         opensOnlyShells: "Opening it will only open shells.", willRun: "Opening it will run: {commands}",
         folderPrompt: "Choose the folder for “{name}” on this Mac",
         unknownHarness: "Pane {pane} uses an unknown harness ({name}): it will open as a shell.",

@@ -54,6 +54,7 @@ public struct HelpTexts: Sendable, Equatable {
             "Nada sale de tu Mac salvo la comprobación de actualizaciones (el appcast de smalti.sh).",
             "La telemetría de Claude Code se recibe en 127.0.0.1 y no sale de tu Mac.",
             "Ollama se consulta en 127.0.0.1 y las sesiones de otros agentes solo se leen.",
+            "Si instalas claudecode.nvim, lazy.nvim lo descarga de GitHub la próxima vez que abras Neovim.",
             "Reportar un problema abre GitHub en tu navegador: nada se envía hasta que lo publicas.",
         ],
         commands: .spanish)
@@ -87,6 +88,7 @@ public struct HelpTexts: Sendable, Equatable {
             "Nothing leaves your Mac except the update check (smalti.sh’s appcast).",
             "Claude Code’s telemetry is received on 127.0.0.1 and never leaves your Mac.",
             "Ollama is asked on 127.0.0.1, and other agents’ sessions are only read.",
+            "If you install claudecode.nvim, lazy.nvim downloads it from GitHub the next time you open Neovim.",
             "Reporting a problem opens GitHub in your browser: nothing is sent until you post it.",
         ],
         commands: .english)

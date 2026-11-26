@@ -35,6 +35,8 @@ public struct TerminalTexts: Sendable, Equatable {
     public let imageUsage: [String]
     public let automaticUpdatesOn: String
     public let automaticUpdatesOff: String
+    public let directoryMissing: String
+    public let homeNotAbsolute: String
 
     public static let spanish = TerminalTexts(
         closePane: "¿Cerrar el panel?",
@@ -61,7 +63,8 @@ public struct TerminalTexts: Sendable, Equatable {
             "Muestra las imágenes en una cuadrícula de miniaturas (sin argumentos, las de la carpeta actual).",
             "Fuera de una terminal escribe solo los nombres y los tamaños.",
         ], automaticUpdatesOn: "Actualizaciones automáticas activadas",
-        automaticUpdatesOff: "Actualizaciones automáticas desactivadas")
+        automaticUpdatesOff: "Actualizaciones automáticas desactivadas", directoryMissing: "la carpeta no existe",
+        homeNotAbsolute: "la carpeta de inicio no es una ruta absoluta")
 
     public static let english = TerminalTexts(
         closePane: "Close the pane?",
@@ -88,5 +91,29 @@ public struct TerminalTexts: Sendable, Equatable {
             "Shows the images in a grid of thumbnails (with no arguments, those of the current folder).",
             "Outside a terminal it writes only the names and sizes.",
         ], automaticUpdatesOn: "Automatic updates turned on",
-        automaticUpdatesOff: "Automatic updates turned off")
+        automaticUpdatesOff: "Automatic updates turned off", directoryMissing: "the folder doesn’t exist",
+        homeNotAbsolute: "the home folder isn’t an absolute path")
+
+    /// The engine's error for the startup alert and the status bar.
+    public func describe(_ error: TerminalEngineError) -> String {
+        switch error {
+        case .engineStartFailed(let reason): reason
+        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
+        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(describe(reason))"
+        }
+    }
+
+    /// Only why, for a line that already names the folder (restoring a pane).
+    public func reason(_ error: TerminalEngineError) -> String {
+        guard case .surfaceCreationFailed(_, let failure) = error else { return describe(error) }
+        return describe(failure)
+    }
+
+    private func describe(_ failure: SurfaceFailure) -> String {
+        switch failure {
+        case .directoryMissing: directoryMissing
+        case .homeNotAbsolute: homeNotAbsolute
+        case .engine(let diagnostic): diagnostic
+        }
+    }
 }

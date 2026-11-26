@@ -9,6 +9,7 @@ public final class ClaudecodeNvimInstaller: HarnessIntegration {
     /// File content, not interface: earlier Smalti versions wrote it, so it stays as it is (strings-catalog: keep).
     public static let marker = "-- Instalado por Smalti"  // strings-catalog: keep
     static let relativePath = "lua/plugins/smalti-claudecode.lua"
+    // strings-catalog: keep (file content, like the marker)
     static let contents = """
         \(marker): claudecode.nvim para aprobar los diffs de Claude Code (⌘K › Desinstalar claudecode.nvim lo quita).
         return {

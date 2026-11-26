@@ -9,6 +9,12 @@ struct TextTemplateTests {
         #expect(approve(["quote": "ls", "workspace": "web"]) == "Aprobar “ls” en web")
     }
 
+    @Test func placeholderNamesTakeDigitsAndUnderscores() {
+        let template: TextTemplate = "{first_name} {n2}"
+
+        #expect(template(["first_name": "Ada", "n2": "2"]) == "Ada 2")
+    }
+
     @Test func listsItsPlaceholders() {
         #expect(approve.placeholders == ["quote", "workspace"])
     }

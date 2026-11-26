@@ -40,7 +40,9 @@ final class WelcomeView: NSView {
     func show(_ state: WelcomeState, installing: Set<WelcomeRow>) {
         for (row, view) in rows {
             let status = installing.contains(row) ? texts.installing : state.status(of: row, texts: texts)
-            view.show(status: status, isSelected: row == state.selected, isFailed: false)
+            view.show(
+                status: status, isSelected: row == state.selected,
+                isFailed: !installing.contains(row) && state.isFailed(row))
         }
     }
 

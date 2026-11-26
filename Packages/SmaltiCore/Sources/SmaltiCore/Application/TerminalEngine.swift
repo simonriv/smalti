@@ -32,5 +32,13 @@ public protocol TerminalEngine: AnyObject {
 public enum TerminalEngineError: Error, Equatable, Sendable {
     case engineStartFailed(reason: String)
     case configurationInvalid(diagnostics: [String])
-    case surfaceCreationFailed(workingDirectory: String, reason: String)
+    case surfaceCreationFailed(workingDirectory: String, reason: SurfaceFailure)
+}
+
+/// Why a pane could not open: the cases a person can act on are typed (and shown in the interface's language);
+/// the engine's own diagnostics stay as it wrote them.
+public enum SurfaceFailure: Equatable, Sendable {
+    case directoryMissing
+    case homeNotAbsolute
+    case engine(String)
 }

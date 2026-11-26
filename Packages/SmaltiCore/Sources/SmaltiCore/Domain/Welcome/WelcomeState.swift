@@ -22,6 +22,7 @@ public struct WelcomeState: Equatable, Sendable {
     public var neovim: IntegrationState
     public private(set) var theme: ThemeID
     public let originalTheme: ThemeID
+    private var failures: [WelcomeRow: String] = [:]
 
     public init(claude: IntegrationState, neovim: IntegrationState, theme: ThemeID) {
         self.claude = claude
@@ -50,6 +51,20 @@ public struct WelcomeState: Equatable, Sendable {
         return state == .notInstalled || state == .outdated
     }
 
+    /// Space on the row again: the last failure is cleared.
+    public mutating func installStarted(_ row: WelcomeRow) {
+        failures[row] = nil
+    }
+
+    /// The install did not work: the row says why, in red, until space tries again.
+    public mutating func installFailed(_ row: WelcomeRow, reason: String) {
+        failures[row] = reason
+    }
+
+    public func isFailed(_ row: WelcomeRow) -> Bool {
+        failures[row] != nil
+    }
+
     public func integration(_ row: WelcomeRow) -> IntegrationState? {
         switch row {
         case .claude: claude
@@ -66,9 +81,15 @@ public struct WelcomeState: Equatable, Sendable {
         WelcomeOutcome(theme: theme == originalTheme ? nil : originalTheme, marksDone: true)
     }
 
+    /// Closed some other way (the window, another overlay): the theme goes back, nothing is marked.
+    public func dismiss() -> WelcomeOutcome {
+        WelcomeOutcome(theme: skip().theme, marksDone: false)
+    }
+
     /// The text right of a row.
     public func status(of row: WelcomeRow, texts: WelcomeTexts) -> String {
-        switch row {
+        if let failure = failures[row] { return failure }
+        return switch row {
         case .theme: "‹ \(theme.displayName(texts.appearance)) ›"
         case .claude: integrationStatus(claude, unknown: texts.claudeUnavailable, texts: texts)
         case .neovim: integrationStatus(neovim, unknown: texts.neovimNotDetected, texts: texts)

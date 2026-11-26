@@ -175,10 +175,6 @@ struct StatusMessage: Equatable {
 /// Human text for engine errors, shared by the startup alert and the status bar.
 enum EngineErrorText {
     static func describe(_ error: TerminalEngineError) -> String {
-        switch error {
-        case .engineStartFailed(let reason): reason
-        case .configurationInvalid(let diagnostics): diagnostics.joined(separator: "\n")
-        case .surfaceCreationFailed(let directory, let reason): "\(directory): \(reason)"
-        }
+        TerminalTexts.current.describe(error)
     }
 }

@@ -93,6 +93,39 @@ struct WelcomeStateTests {
         #expect(!state().canInstall(.theme))
     }
 
+    @Test func aFailedInstallShowsItsReason() {
+        var welcome = state()
+        welcome.installFailed(.claude, reason: "No se encontró `claude`")
+
+        #expect(welcome.status(of: .claude, texts: .spanish) == "No se encontró `claude`")
+        #expect(welcome.isFailed(.claude))
+        #expect(!welcome.isFailed(.neovim))
+    }
+
+    @Test func anotherInstallClearsTheFailure() {
+        var welcome = state()
+        welcome.installFailed(.claude, reason: "boom")
+        welcome.installStarted(.claude)
+
+        #expect(!welcome.isFailed(.claude))
+        #expect(welcome.status(of: .claude, texts: .spanish) == "espacio: instalar")
+    }
+
+    @Test func aFailedInstallCanBeTriedAgain() {
+        var welcome = state()
+        welcome.installFailed(.claude, reason: "boom")
+
+        #expect(welcome.canInstall(.claude))
+    }
+
+    @Test func dismissRestoresTheThemeWithoutMarking() {
+        var welcome = state()
+        welcome.cycleTheme(1)
+
+        #expect(welcome.dismiss() == WelcomeOutcome(theme: .obsidiana, marksDone: false))
+        #expect(state().dismiss() == WelcomeOutcome(theme: nil, marksDone: false))
+    }
+
     @Test func rowStatusTexts() {
         var welcome = state()
         welcome.claude = .installed

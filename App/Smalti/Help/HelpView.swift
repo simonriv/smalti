@@ -189,7 +189,7 @@ final class HelpRowView: NSView {
         heightAnchor.constraint(equalToConstant: theme.help.rowHeight).isActive = true
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityLabel("\(entry.title), \(entry.keys)")
+        setAccessibilityLabel(entry.keys.isEmpty ? entry.title : "\(entry.title), \(entry.keys)")
         setAccessibilityIdentifier("smalti.helpRow")
     }
 

@@ -21,6 +21,30 @@ struct ImageGridTests {
         #expect(grid.rows.map(\.cells.count) == [5, 5, 2])
     }
 
+    @Test func theSameLayoutIsEqual() {
+        #expect(ImageGrid.layout(images(3), skipped: 1, in: wide) == ImageGrid.layout(images(3), skipped: 1, in: wide))
+    }
+
+    @Test func gridsDifferInTheirRows() {
+        let landscape = ImageGrid.layout([image("a", 1440, 900)], skipped: 0, in: wide)
+        let portrait = ImageGrid.layout([image("a", 900, 1440)], skipped: 0, in: wide)
+
+        #expect(landscape.columnsPerRow == portrait.columnsPerRow)
+        #expect(landscape != portrait)
+    }
+
+    @Test func gridsDifferInTheirColumns() {
+        let five = ImageGrid.layout([image("a")], skipped: 0, in: wide)
+        let two = ImageGrid.layout([image("a")], skipped: 0, in: CellMetrics(columns: 26, cellWidth: 8, cellHeight: 16))
+
+        #expect(five.rows == two.rows)
+        #expect(five != two)
+    }
+
+    @Test func gridsDifferInTheirCounts() {
+        #expect(ImageGrid.layout(images(2), skipped: 0, in: wide) != ImageGrid.layout(images(2), skipped: 1, in: wide))
+    }
+
     @Test func narrowTerminalGivesOneColumn() {
         let grid = ImageGrid.layout(images(3), skipped: 0, in: CellMetrics(columns: 10, cellWidth: 8, cellHeight: 16))
 

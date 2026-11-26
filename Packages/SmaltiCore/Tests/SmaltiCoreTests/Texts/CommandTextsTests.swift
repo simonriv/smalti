@@ -101,6 +101,11 @@ struct CommandTextsTests {
         #expect(sections.flatMap(\.entries).filter { SpanishMarkers.looksSpanish($0.title) }.isEmpty)
     }
 
+    @Test func privacyNamesWhatTheNeovimPluginDownloads() {
+        #expect(HelpTexts.spanish.privacyLines.contains { $0.contains("lazy.nvim") && $0.contains("GitHub") })
+        #expect(HelpTexts.english.privacyLines.contains { $0.contains("lazy.nvim") && $0.contains("GitHub") })
+    }
+
     @Test func spanishPrivacySection() {
         #expect(HelpCatalog.sections(keymap: .standard, texts: .spanish).last?.title == "Privacidad")
     }

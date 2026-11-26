@@ -55,7 +55,7 @@ struct WorkspaceCommandsTests {
     @Test mutating func createWorkspaceFailureLeavesSetUnchanged() throws {
         _ = try openInActive()
         let before = set
-        engine.failure = .surfaceCreationFailed(workingDirectory: "/tmp", reason: "x")
+        engine.failure = .surfaceCreationFailed(workingDirectory: "/tmp", reason: .engine("x"))
 
         #expect(throws: OpenPaneError.self) {
             try creator().execute(create(roomy), in: &set)

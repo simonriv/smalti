@@ -6,13 +6,14 @@ import SmaltiCore
 @MainActor
 struct WelcomeActions {
     let states: () -> [IntegrationID: IntegrationState]
-    let install: (IntegrationID) -> Void
+    let install: (IntegrationID, @escaping @MainActor (IntegrationOutcome) -> Void) -> Void
     let selectTheme: (ThemeID) -> Void
     let markDone: () -> Void
 }
 
 /// Primary adapter for the welcome card (spec F7.7): keeps its `WelcomeState`, runs the integrations' installs with
 /// the palette's own commands and paints the theme live; ↩ keeps the theme, esc puts the original back, both mark it.
+/// Closed any other way (the window, another overlay) it puts the theme back and marks nothing.
 @MainActor
 final class WelcomeController {
     var onOpenChange: ((Bool) -> Void)?
@@ -24,6 +25,9 @@ final class WelcomeController {
     private var installing = Set<WelcomeRow>()
     private var refresh: Timer?
     private var stateObserver: NSObjectProtocol?
+    private var outsideClicks: Any?
+    private var theme: Theme?
+    private var keymap = Keymap.standard
 
     /// While an install runs, the states are read again this often until they change (or the limit passes).
     private static let refreshInterval: TimeInterval = 0.5
@@ -40,6 +44,34 @@ final class WelcomeController {
             claude: states[.claudePlugin] ?? .unknown, neovim: states[.claudecodeNvim] ?? .unknown,
             theme: currentTheme)
         self.actions = actions
+        self.keymap = keymap
+        let view = mount(theme: theme, in: content)
+        isOpen = true
+        // The integrations are checked in the background at launch: the card follows their states as they arrive.
+        stateObserver = NotificationCenter.default.addObserver(
+            forName: .claudeIntegrationChanged, object: nil, queue: .main
+        ) { [weak self] _ in MainActor.assumeIsolated { self?.followStates() } }
+        watchOutsideClicks()
+        fadeIn(view, duration: theme.observatory.fadeDuration)
+        onOpenChange?(true)
+    }
+
+    /// The theme changed under the card (its own ←→ preview): it is built again in the new colors.
+    func restyle(_ theme: Theme) {
+        guard isOpen, theme != self.theme, let content = window.contentView else { return }
+        view?.removeFromSuperview()
+        mount(theme: theme, in: content)
+    }
+
+    /// Closed by something other than its keys (the window, another overlay): the theme goes back, nothing marked.
+    func close() {
+        guard let state, let actions else { return tearDown() }
+        if let theme = state.dismiss().theme { actions.selectTheme(theme) }
+        tearDown()
+    }
+
+    @discardableResult
+    private func mount(theme: Theme, in content: NSView) -> WelcomeView {
         let view = WelcomeView(theme: theme, texts: .current, keymap: keymap)
         view.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(view, positioned: .above, relativeTo: nil)
@@ -50,25 +82,40 @@ final class WelcomeController {
         ])
         wire(view)
         self.view = view
-        isOpen = true
-        // The integrations are checked in the background at launch: the card follows their states as they arrive.
-        stateObserver = NotificationCenter.default.addObserver(
-            forName: .claudeIntegrationChanged, object: nil, queue: .main
-        ) { [weak self] _ in MainActor.assumeIsolated { self?.followStates() } }
+        self.theme = theme
         render()
         window.makeFirstResponder(view)
-        fadeIn(view, duration: theme.observatory.fadeDuration)
-        onOpenChange?(true)
+        return view
     }
 
-    func close() {
+    /// A click elsewhere in the window (a pane behind) still lands, but the keyboard comes back to the card: its
+    /// keys are the only way out of it.
+    private func watchOutsideClicks() {
+        outsideClicks = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            MainActor.assumeIsolated { self?.refocusAfter(event) }
+            return event
+        }
+    }
+
+    private func refocusAfter(_ event: NSEvent) {
+        guard event.window === window else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let view, isOpen, window.firstResponder !== view else { return }
+            window.makeFirstResponder(view)
+        }
+    }
+
+    private func tearDown() {
         guard isOpen else { return }
+        outsideClicks.map(NSEvent.removeMonitor)
+        outsideClicks = nil
         refresh?.invalidate()
         refresh = nil
         stateObserver.map(NotificationCenter.default.removeObserver)
         stateObserver = nil
         view?.removeFromSuperview()
         view = nil
+        theme = nil
         state = nil
         installing = []
         isOpen = false
@@ -77,7 +124,8 @@ final class WelcomeController {
 
     private func wire(_ view: WelcomeView) {
         view.onMove = { [weak self] step in self?.update { $0.move(step) } }
-        view.onChoose = { [weak self] row in
+        view.onChoose = { [weak self, weak view] row in
+            if let view { self?.window.makeFirstResponder(view) }
             self?.update { state in
                 let rows = WelcomeRow.allCases
                 state.move((rows.firstIndex(of: row) ?? 0) - (rows.firstIndex(of: state.selected) ?? 0))
@@ -106,10 +154,18 @@ final class WelcomeController {
         guard let state, state.canInstall(state.selected), !installing.contains(state.selected),
             let id = Self.integration(state.selected)
         else { return }
-        installing.insert(state.selected)
-        render()
-        actions?.install(id)
+        let row = state.selected
+        installing.insert(row)
+        update { $0.installStarted(row) }
+        actions?.install(id) { [weak self] outcome in self?.installFinished(row, outcome) }
         watchStates(remaining: Self.refreshLimit)
+    }
+
+    /// A failed install says why in red right away; a finished one waits for its new state (`reread`).
+    private func installFinished(_ row: WelcomeRow, _ outcome: IntegrationOutcome) {
+        guard case .failed(let reason) = outcome, installing.contains(row) else { return }
+        installing.remove(row)
+        update { $0.installFailed(row, reason: reason) }
     }
 
     /// Reads the integrations again until no install is pending (each one changes its state when done).
@@ -150,7 +206,7 @@ final class WelcomeController {
         let result = outcome(state)
         if let theme = result.theme { actions.selectTheme(theme) }
         if result.marksDone { actions.markDone() }
-        close()
+        tearDown()
     }
 
     /// The overlays' fade (at most 150 ms); none with "Reducir movimiento".

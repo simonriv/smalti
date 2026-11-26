@@ -189,7 +189,8 @@ struct RestoreSessionTests {
 
         let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
 
-        #expect(result.failures.first?.contains("no such directory") == true)
+        #expect(
+            result.failures.first == "/Users/s/dev/solen: no se pudo abrir el panel (la carpeta no existe)")
     }
 
     @Test func restoreUsesTheConfiguredShell() {

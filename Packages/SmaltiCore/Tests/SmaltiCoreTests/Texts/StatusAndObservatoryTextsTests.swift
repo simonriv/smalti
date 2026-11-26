@@ -5,6 +5,24 @@ import Testing
 
 @Suite("Status and observatory texts")
 struct StatusAndObservatoryTextsTests {
+    @Test func engineSurfaceFailuresAreLocalized() {
+        let missing = TerminalEngineError.surfaceCreationFailed(workingDirectory: "/x", reason: .directoryMissing)
+        let home = TerminalEngineError.surfaceCreationFailed(workingDirectory: "~", reason: .homeNotAbsolute)
+
+        #expect(TerminalTexts.spanish.describe(missing) == "/x: la carpeta no existe")
+        #expect(TerminalTexts.english.describe(missing) == "/x: the folder doesn’t exist")
+        #expect(TerminalTexts.english.describe(home) == "~: the home folder isn’t an absolute path")
+    }
+
+    @Test func engineDiagnosticsStayAsTheEngineWroteThem() {
+        let failure = TerminalEngineError.surfaceCreationFailed(
+            workingDirectory: "/x", reason: .engine("ghostty_surface_new returned null"))
+
+        #expect(TerminalTexts.spanish.describe(failure) == "/x: ghostty_surface_new returned null")
+        #expect(TerminalTexts.spanish.describe(.configurationInvalid(diagnostics: ["a", "b"])) == "a\nb")
+        #expect(TerminalTexts.spanish.describe(.engineStartFailed(reason: "boom")) == "boom")
+    }
+
     @Test func catalogsHaveBothLanguages() {
         #expect(TextCatalogAudit.problems(spanish: ObservatoryCopy.spanish, english: ObservatoryCopy.english).isEmpty)
         #expect(TextCatalogAudit.problems(spanish: StatusTexts.spanish, english: StatusTexts.english).isEmpty)

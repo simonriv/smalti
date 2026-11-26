@@ -20,7 +20,7 @@ public final class FakeTerminalEngine: TerminalEngine {
         if let failure { throw failure }
         let path = spec.workingDirectory.path
         if failingDirectories.contains(path) {
-            throw .surfaceCreationFailed(workingDirectory: path, reason: "no such directory")
+            throw .surfaceCreationFailed(workingDirectory: path, reason: .directoryMissing)
         }
         openedSpecs.append(spec)
         openedIDs.append(pane)

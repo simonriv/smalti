@@ -4,12 +4,16 @@
   catalog.py sync                 add the keys the compiler extracted in the last build (build/…/*.stringsdata)
   catalog.py translate MAP.json   set the Spanish of each key ({"english key": "texto"}) and mark both translated
   catalog.py missing              list keys without a Spanish translation
+  catalog.py check                exit 1 listing compiled keys (exact, with their specifiers) not in the catalog;
+                                  exit 2 when the app has not been built
 """
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CATALOG = os.path.join(ROOT, "App/Smalti/Localizable.xcstrings")
@@ -26,15 +30,41 @@ def save(data):
         handle.write("\n")
 
 
-def sync():
+def stringsdata():
     pattern = os.path.join(ROOT, "build/Build/Intermediates.noindex/**/Smalti.build/**/*.stringsdata")
-    files = sorted(glob.glob(pattern, recursive=True))
-    if not files:
-        sys.exit("no .stringsdata: build the app first")
-    command = ["xcrun", "xcstringstool", "sync", CATALOG]
+    return sorted(glob.glob(pattern, recursive=True))
+
+
+def sync_into(catalog, files):
+    command = ["xcrun", "xcstringstool", "sync", catalog]
     for path in files:
         command += ["--stringsdata", path]
     subprocess.run(command, check=True)
+
+
+def sync():
+    files = stringsdata()
+    if not files:
+        sys.exit("no .stringsdata: build the app first")
+    sync_into(CATALOG, files)
+
+
+def check():
+    """The compiler's keys are exact (%@ vs %lld): a key whose interpolation type changed is missing at run time."""
+    files = stringsdata()
+    if not files:
+        print("no .stringsdata: build the app first")
+        sys.exit(2)
+    with tempfile.TemporaryDirectory() as work:
+        copy = os.path.join(work, "Localizable.xcstrings")
+        shutil.copy(CATALOG, copy)
+        sync_into(copy, files)
+        with open(copy, encoding="utf-8") as handle:
+            synced = json.load(handle).get("strings", {})
+    known = load().get("strings", {})
+    new = sorted(key for key in synced if key not in known)
+    print("\n".join(repr(key) for key in new))
+    sys.exit(1 if new else 0)
 
 
 def translate(mapping_path):
@@ -66,5 +96,7 @@ if __name__ == "__main__":
         translate(sys.argv[2])
     elif action == "missing":
         missing()
+    elif action == "check":
+        check()
     else:
         sys.exit(__doc__)

@@ -60,7 +60,7 @@ public struct OpenPane {
     private func open(_ id: PaneID, _ request: OpenPaneRequest, candidates: [WorkingDirectory])
         throws(OpenPaneError) -> WorkingDirectory
     {
-        var lastError = TerminalEngineError.surfaceCreationFailed(workingDirectory: "", reason: "no directory")
+        var lastError = TerminalEngineError.surfaceCreationFailed(workingDirectory: "", reason: .directoryMissing)
         var tried: Set<WorkingDirectory> = []
         for directory in candidates where tried.insert(directory).inserted {
             let spec = TerminalSessionSpec(

@@ -285,15 +285,27 @@ final class AppComposition {
             guard await show.shouldShowAtLaunch(hasSavedSession: hasSavedSession), let self, let composition else {
                 return
             }
-            composition.showWelcome(actions: welcomeActions(for: composition))
+            composition.showWelcome(actions: welcomeActions(for: composition, marking: welcomeRecord))
         }
     }
 
-    private func welcomeActions(for composition: WindowComposition) -> WelcomeActions {
-        let record = welcomeRecord
-        return WelcomeActions(
+    /// Opened from ⌘K or the help: one card for the app (the window that has it comes forward), and closing it
+    /// marks nothing (spec F7.7).
+    private func showWelcomeByHand(in composition: WindowComposition) {
+        if let open = compositions.first(where: \.hasWelcomeOpen) {
+            open.window.makeKeyAndOrderFront(nil)
+            return
+        }
+        composition.showWelcome(actions: welcomeActions(for: composition, marking: nil))
+    }
+
+    /// `record` is where finishing or skipping marks the card seen; nil when it was opened by hand.
+    private func welcomeActions(for composition: WindowComposition, marking record: FileWelcomeRecord?)
+        -> WelcomeActions
+    {
+        WelcomeActions(
             states: { [weak composition] in composition?.controller.catalogState().integrations ?? [:] },
-            install: { [weak composition] id in composition?.controller.perform(id.installCommand) },
+            install: { [weak composition] id, done in composition?.controller.installIntegration(id, then: done) },
             selectTheme: { [weak self] theme in self?.appearance?.selectTheme(theme) },
             markDone: {
                 guard let record else { return }
@@ -432,7 +444,7 @@ final class AppComposition {
         case .helpDocs: URLOpener.open(SmaltiLinks.documentation(for: .current))
         case .appSupport: URLOpener.open(SmaltiLinks.support(for: .current))
         case .helpPrivacy: URLOpener.open(SmaltiLinks.privacy(for: .current))
-        case .helpWelcome: composition.showWelcome(actions: welcomeActions(for: composition))
+        case .helpWelcome: showWelcomeByHand(in: composition)
         case .feedbackReport:
             composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
                 self?.report(kind, includingLogs: includesLogs)
@@ -983,7 +995,6 @@ final class AppComposition {
     /// ones.
     private func startInput(on socket: URL, settings: InputSettings, startup: Startup, engine: GhosttyTerminalEngine) {
         let state = startup.settings.stateDirectory
-        welcomeRecord = FileWelcomeRecord(directory: state)
         let specs = FigSpecs(
             user: startup.settings.configFile.deletingLastPathComponent().appending(path: "completions"),
             runner: GeneratorRunner(timeout: settings.generatorTimeout))
@@ -1215,6 +1226,8 @@ final class AppComposition {
     func saveForQuit() async {
         // F7.5: every waiting command is denied before the socket closes; nobody would approve it.
         approvals?.stop()
+        // F7.7 review 2: an open welcome card puts its previewed theme back (quitting skips `close`'s overlays).
+        compositions.forEach { $0.closeOverlays() }
         // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
         appearance?.saveIfPending()
         secureInput.releaseAll()
@@ -1251,7 +1264,7 @@ final class AppComposition {
         do {
             return try WorkingDirectory(path: path)
         } catch {
-            throw .surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute")
+            throw .surfaceCreationFailed(workingDirectory: path, reason: .homeNotAbsolute)
         }
     }
 

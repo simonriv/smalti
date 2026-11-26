@@ -141,6 +141,28 @@ struct AgentUseCaseTests {
         #expect(await integration.installState == .installed)
     }
 
+    @Test func installOutcomeSaysWhetherItWorked() async {
+        let working = FakeHarnessIntegration()
+        let failing = FakeHarnessIntegration()
+        failing.failure = .harnessMissing(binary: "claude")
+
+        #expect(
+            await InstallClaudeIntegration(integration: working, texts: .english).run()
+                == .done("Claude Code integration installed"))
+        #expect(
+            await InstallClaudeIntegration(integration: failing, texts: .spanish).run()
+                == .failed("No se encontró `claude` en el PATH del shell de inicio"))
+    }
+
+    @Test func uninstallOutcomeSaysWhetherItWorked() async {
+        let failing = FakeHarnessIntegration()
+        failing.failure = .harnessMissing(binary: "claude")
+
+        #expect(
+            await UninstallClaudeIntegration(integration: failing, texts: .spanish).run()
+                == .failed("No se encontró `claude` en el PATH del shell de inicio"))
+    }
+
     @Test func installReportsMissingClaude() async {
         let integration = FakeHarnessIntegration()
         integration.failure = .harnessMissing(binary: "claude")

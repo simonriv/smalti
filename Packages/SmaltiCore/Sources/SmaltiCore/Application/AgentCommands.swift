@@ -75,6 +75,18 @@ public struct ActivatePane {
 }
 
 /// "Instalar integración con Claude Code": the status bar line it ends with.
+/// What installing or uninstalling an integration left, with the line the status bar shows.
+public enum IntegrationOutcome: Equatable, Sendable {
+    case done(String)
+    case failed(String)
+
+    public var text: String {
+        switch self {
+        case .done(let text), .failed(let text): text
+        }
+    }
+}
+
 @MainActor
 public struct InstallClaudeIntegration {
     private let integration: any HarnessIntegration
@@ -88,11 +100,16 @@ public struct InstallClaudeIntegration {
     }
 
     public func execute() async -> String {
+        await run().text
+    }
+
+    /// The same as `execute`, saying whether it worked (the welcome card paints a failure in red).
+    public func run() async -> IntegrationOutcome {
         do {
             try await integration.install()
-            return texts.installed[id] ?? ""
+            return .done(texts.installed[id] ?? "")
         } catch {
-            return IntegrationErrorText.describe(error, texts: texts)
+            return .failed(IntegrationErrorText.describe(error, texts: texts))
         }
     }
 }
@@ -110,11 +127,15 @@ public struct UninstallClaudeIntegration {
     }
 
     public func execute() async -> String {
+        await run().text
+    }
+
+    public func run() async -> IntegrationOutcome {
         do {
             try await integration.uninstall()
-            return texts.uninstalled[id] ?? ""
+            return .done(texts.uninstalled[id] ?? "")
         } catch {
-            return IntegrationErrorText.describe(error, texts: texts)
+            return .failed(IntegrationErrorText.describe(error, texts: texts))
         }
     }
 }

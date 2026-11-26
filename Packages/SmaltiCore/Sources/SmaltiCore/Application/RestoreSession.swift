@@ -122,7 +122,8 @@ public struct RestoreSession {
             ? nil : PaneRestoration(scrollback: scrollback, restoresHistory: planned.restoresHistory, savedAt: savedAt)
         let saved = try? WorkingDirectory(path: planned.workingDirectory)
         var unreachable: Set<WorkingDirectory> = []
-        var lastError = "invalid directory"
+        var lastError = deps.texts.terminal.reason(
+            .surfaceCreationFailed(workingDirectory: planned.workingDirectory, reason: .directoryMissing))
         for directory in ([saved].compactMap { $0 } + fallbacks) where !unreachable.contains(directory) {
             let spec = TerminalSessionSpec(
                 workingDirectory: directory, command: deps.shell, environment: deps.environment.variables(for: id),
@@ -133,7 +134,7 @@ public struct RestoreSession {
                 return (start.binding.map(pane.binding) ?? pane, start.failures, unreachable)
             } catch {
                 unreachable.insert(directory)
-                lastError = String(describing: error)
+                lastError = deps.texts.terminal.reason(error)
             }
         }
         let failure = deps.texts.paneFailed(["directory": planned.workingDirectory, "error": lastError])

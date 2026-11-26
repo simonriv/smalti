@@ -255,13 +255,26 @@ final class TilingController {
     }
 
     private func runIntegration(_ id: IntegrationID, _ command: IntegrationCommand.Type) {
+        runIntegration(id, command) { _ in }
+    }
+
+    /// F7.7: the welcome card's install, which also wants to know whether it worked.
+    func installIntegration(_ id: IntegrationID, then done: @escaping @MainActor (IntegrationOutcome) -> Void) {
+        runIntegration(id, InstallClaudeIntegration.self, then: done)
+    }
+
+    private func runIntegration(
+        _ id: IntegrationID, _ command: IntegrationCommand.Type,
+        then done: @escaping @MainActor (IntegrationOutcome) -> Void
+    ) {
         guard let status = deps.agents.integrations[id] else { return }
         let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration, id: id, texts: .current).execute()
-            self?.report(.integration(line))
+            let outcome = await command.init(integration: integration, id: id, texts: .current).run()
+            self?.report(.integration(outcome.text))
             status.refresh(forced: true)
+            done(outcome)
         }
     }
 
@@ -869,7 +882,7 @@ final class TilingController {
 @MainActor
 protocol IntegrationCommand {
     init(integration: any HarnessIntegration, id: IntegrationID, texts: IntegrationTexts)
-    func execute() async -> String
+    func run() async -> IntegrationOutcome
 }
 
 extension InstallClaudeIntegration: IntegrationCommand {}

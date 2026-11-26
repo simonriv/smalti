@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 /// F7.7: no UI test depends on the Mac's language. Every launch goes through `isolatedSmalti`, which passes
-/// `-AppleLanguages` explicitly; a bare `XCUIApplication()` elsewhere would inherit the system's language.
+/// `-AppleLanguages` explicitly; an `XCUIApplication(…)` elsewhere would inherit the system's language.
 @Suite("UI test language guard")
 struct UITestLanguageGuardTests {
     private static let uiTests = URL(filePath: #filePath)
@@ -14,12 +14,16 @@ struct UITestLanguageGuardTests {
     static func bareLaunches(in source: String) -> [Int] {
         source.split(separator: "\n", omittingEmptySubsequences: false).enumerated().compactMap { index, line in
             let code = line.trimmingCharacters(in: .whitespaces)
-            return !code.hasPrefix("//") && code.contains("XCUIApplication()") ? index + 1 : nil
+            return !code.hasPrefix("//") && code.contains("XCUIApplication(") ? index + 1 : nil
         }
     }
 
     @Test func scannerFindsBareLaunches() {
         #expect(Self.bareLaunches(in: "let a = XCUIApplication()\n// XCUIApplication()\nlet b = 1") == [1])
+    }
+
+    @Test func scannerFindsLaunchesWithArguments() {
+        #expect(Self.bareLaunches(in: "let a = XCUIApplication(bundleIdentifier: id)\nlet b = 1") == [1])
     }
 
     @Test(.enabled(if: isInRepository))

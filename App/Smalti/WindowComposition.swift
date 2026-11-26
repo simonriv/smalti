@@ -144,6 +144,9 @@ final class WindowComposition {
             || welcome?.isOpen == true
     }
 
+    /// F7.7: one card for the whole app, so another window does not open a second one.
+    var hasWelcomeOpen: Bool { welcome?.isOpen == true }
+
     /// F7.7: the welcome card in this window.
     func showWelcome(actions: WelcomeActions) {
         closeOverlays(keeping: .welcome)
@@ -292,6 +295,7 @@ final class WindowComposition {
             window.strip.render(state)
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
+            welcome?.restyle(state.theme)
             // The Window menu's list of windows names each by its active workspace.
             window.title = state.set.active.name
             labelTerminals(state.set.active)

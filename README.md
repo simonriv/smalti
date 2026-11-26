@@ -65,7 +65,7 @@ Smalti checks for a new version once a day (and when you choose "Check for Updat
 
 ## Privacy
 
-That update check is **the only thing that leaves your Mac**: Smalti sends no usage or system data (`SUEnableSystemProfiling = NO`). Claude Code's telemetry is received on `127.0.0.1` and never leaves your Mac; Ollama is asked on `127.0.0.1`. Turn the update check off with ⌘K → "Turn Off Automatic Updates". Details: the "Privacy" section of the help (⌘?) and https://smalti.sh/privacy.
+That update check is **the only thing that leaves your Mac**: Smalti sends no usage or system data (`SUEnableSystemProfiling = NO`). Claude Code's telemetry is received on `127.0.0.1` and never leaves your Mac; Ollama is asked on `127.0.0.1`. If you install claudecode.nvim, lazy.nvim downloads it from GitHub the next time you open Neovim. Turn the update check off with ⌘K → "Turn Off Automatic Updates". Details: the "Privacy" section of the help (⌘?) and https://smalti.sh/privacy.
 
 Limitations of not being notarized:
 
