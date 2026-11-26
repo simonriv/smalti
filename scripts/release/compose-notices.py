@@ -3,7 +3,8 @@
 
 Run by hand when a dependency changes; `check-notices.sh` then proves every component found in the binary has its
 section. Sources: the Ghostty submodule, Zig's package cache (filled by `scripts/build-ghostty.sh`), SwiftPM
-checkouts and files in the repo; texts that no archive carries live in `scripts/release/notices-extra/`.
+checkouts and files in the repo (Zig 0.17 keeps packages extracted in `vendor/ghostty/zig-pkg/<hash>/`; older Zig
+keeps `~/.cache/zig/p/<hash>.tar.gz`, still read when the folder is missing); texts that no archive carries live in `scripts/release/notices-extra/`.
 """
 import argparse
 import pathlib
@@ -12,6 +13,7 @@ import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 ZIG = pathlib.Path.home() / ".cache/zig/p"
+ZIG_PKG = ROOT / "vendor/ghostty/zig-pkg"
 EXTRA = ROOT / "scripts/release/notices-extra"
 EXTRAS = {
     "simdutf": EXTRA / "simdutf-LICENSE-MIT.txt",
@@ -77,6 +79,9 @@ def text_of(source: str, extras: dict[str, pathlib.Path]) -> str:
         archive_source, _, names = rest.rpartition("+")
         return text_of(f"zig:{archive_source}", extras) + "\n\n" + text_of(f"extra:{names}", extras)
     archive, _, member = rest.partition(":")
+    extracted = ZIG_PKG / archive / member
+    if extracted.is_file():
+        return extracted.read_text(encoding="utf-8", errors="replace")
     with tarfile.open(ZIG / f"{archive}.tar.gz") as tar:
         handle = tar.extractfile(f"{archive}/{member}")
         if handle is None:
