@@ -66,7 +66,7 @@ public struct KeyChord: Hashable, Sendable {
 
     private static let namedKeySymbols = [
         "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "escape": "⎋", "tab": "⇥", "plus": "+",
-        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
+        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘", "backspace": "⌫",
     ]
     private static let namedKeys = Set(namedKeySymbols.keys)
     private static let modifierNames: [String: KeyModifier] = [

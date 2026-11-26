@@ -33,6 +33,7 @@ private struct Rows {
         case .search: search
         case .tiling: tiling
         case .agents: agents
+        case .processes: CommandID.processes.map(titled)
         case .prompt: prompt
         case .mouse: mouse
         case .configuration: configuration

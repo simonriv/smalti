@@ -22,7 +22,7 @@ struct HelpCatalogTests {
         #expect(
             sections.map(\.title) == [
                 "Ventanas y workspaces", "Paneles", "Terminal", "Buscar", "Tiling", "Agentes y observatorio",
-                "En el prompt", "Ratón", "Configuración y ayuda", "Privacidad",
+                "Procesos y puertos", "En el prompt", "Ratón", "Configuración y ayuda", "Privacidad",
             ])
     }
 

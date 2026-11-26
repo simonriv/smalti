@@ -57,6 +57,20 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     // F7.7: the welcome card and the privacy policy.
     public static let helpWelcome = CommandID(rawValue: "help.welcome")
     public static let helpPrivacy = CommandID(rawValue: "help.privacy")
+    // F8: the processes and ports views. The last four act on the open view and pass to the terminal otherwise.
+    public static let processesToggle = CommandID(rawValue: "processes.toggle")
+    public static let portsToggle = CommandID(rawValue: "ports.toggle")
+    public static let processesStop = CommandID(rawValue: "processes.stop")
+    public static let processesLowerPriority = CommandID(rawValue: "processes.lowerPriority")
+    public static let processesTree = CommandID(rawValue: "processes.tree")
+    public static let processesSort = CommandID(rawValue: "processes.sort")
+    /// F8: what acts only while the processes view is open.
+    public static let processesContextual: Set<CommandID> = [
+        processesStop, processesLowerPriority, processesTree, processesSort,
+    ]
+    public static let processes: [CommandID] = [
+        processesToggle, portsToggle, processesStop, processesLowerPriority, processesTree, processesSort,
+    ]
     public static let terminalCopy = CommandID(rawValue: "terminal.copy")
     public static let terminalPaste = CommandID(rawValue: "terminal.paste")
     public static let terminalSelectAll = CommandID(rawValue: "terminal.selectAll")
@@ -206,6 +220,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
         + basics
         + appearance
         + [previewQuickLook, updatesCheck, updatesAutomatic, helpDocs, appSupport, helpWelcome, helpPrivacy]
+        + processes
         + NumberedShortcuts.range.map { paneFocus($0) } + NumberedShortcuts.range.map { workspace($0) }
         + Direction.allCases.flatMap { [paneFocus($0), paneSwap($0), paneResize($0)] }
 }

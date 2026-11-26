@@ -86,6 +86,8 @@ public final class FakeTerminalEngine: TerminalEngine {
     public private(set) var endedSearches: [PaneID] = []
     public var visibleTexts: [PaneID: String] = [:]
     public var foregroundProcesses: [PaneID: ForegroundProcess] = [:]
+    /// F8: what `foregroundGroup(of:)` answers per pane.
+    public var foregroundGroups: [PaneID: Int32] = [:]
 
     private func isOpen(_ pane: PaneID) -> Bool { streams[pane] != nil }
 
@@ -116,5 +118,9 @@ public final class FakeTerminalEngine: TerminalEngine {
     /// Unopened panes have a process too in some tests (panes built without the engine): only a closed one has none.
     public func foregroundProcess(of pane: PaneID) -> ForegroundProcess? {
         closedPanes.contains(pane) ? nil : foregroundProcesses[pane]
+    }
+
+    public func foregroundGroup(of pane: PaneID) -> Int32? {
+        closedPanes.contains(pane) ? nil : foregroundGroups[pane]
     }
 }

@@ -188,6 +188,8 @@ private struct Builder {
             item(.paletteOpen), item(.observatoryToggle), item(.observatoryFilter), item(.harnessSearch),
             item(.layoutImport),
             .separator,
+        ] + CommandID.processes.map { item($0) } + [
+            .separator,
             .submenu(texts.layoutSubmenu, layouts), item(.panesEqualize),
             .separator, item(.fontIncrease), item(.fontDecrease), item(.fontReset), .separator,
             .submenu(texts.scrollingSubmenu, scrolling.map { item($0) }), item(.previewQuickLook),

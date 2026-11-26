@@ -202,6 +202,10 @@ public final class GhosttyTerminalEngine: TerminalEngine {
     public func foregroundProcess(of pane: PaneID) -> SmaltiCore.ForegroundProcess? {
         views[pane]?.currentForegroundProcess
     }
+
+    public func foregroundGroup(of pane: PaneID) -> Int32? {
+        views[pane]?.foregroundGroup
+    }
 }
 
 extension GhosttyTerminalEngine: ScrollbackSource {

@@ -27,6 +27,9 @@ public protocol TerminalEngine: AnyObject {
     /// What runs in the pane's foreground now, read on demand (hidden panes stop reporting it); nil for an unknown
     /// pane or when the engine cannot tell.
     func foregroundProcess(of pane: PaneID) -> ForegroundProcess?
+    /// F8: the PID leading the pane's foreground process group, even when it cannot be named (root's `login` heads
+    /// a pane opened with its own command); nil for an unknown pane or before its PTY exists.
+    func foregroundGroup(of pane: PaneID) -> Int32?
 }
 
 public enum TerminalEngineError: Error, Equatable, Sendable {

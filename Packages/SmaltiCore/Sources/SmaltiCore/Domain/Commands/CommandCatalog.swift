@@ -212,9 +212,10 @@ public enum CommandCatalog {
 
     private static func workspaceCommands(_ context: Context) -> [Command] {
         var commands = [
-            CommandID.agentJump, .observatoryToggle, .observatoryFilter, .harnessSearch, .workspaceNew,
-            .workspaceRename, .layoutImport,
+            CommandID.agentJump, .observatoryToggle, .observatoryFilter, .harnessSearch,
         ].map { context.titled($0, group: .workspaces) }
+        commands += CommandID.processes.map { context.titled($0, group: .workspaces) }
+        commands += [CommandID.workspaceNew, .workspaceRename, .layoutImport].map { context.titled($0, group: .workspaces) }
         let others = context.workspaces.workspaces.filter { $0.id != context.workspaces.activeID }
         commands += others.map {
             context.command(

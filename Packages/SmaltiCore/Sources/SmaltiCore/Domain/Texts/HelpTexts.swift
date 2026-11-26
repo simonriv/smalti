@@ -27,7 +27,7 @@ public struct HelpTexts: Sendable, Equatable {
         inPalette: "en {palette}",
         sections: [
             .windows: "Ventanas y workspaces", .panes: "Paneles", .terminal: "Terminal", .search: "Buscar",
-            .tiling: "Tiling", .agents: "Agentes y observatorio", .prompt: "En el prompt", .mouse: "Ratón",
+            .tiling: "Tiling", .agents: "Agentes y observatorio", .processes: "Procesos y puertos", .prompt: "En el prompt", .mouse: "Ratón",
             .configuration: "Configuración y ayuda", .privacy: "Privacidad",
         ],
         titles: [
@@ -63,7 +63,7 @@ public struct HelpTexts: Sendable, Equatable {
         inPalette: "in {palette}",
         sections: [
             .windows: "Windows and Workspaces", .panes: "Panes", .terminal: "Terminal", .search: "Find",
-            .tiling: "Tiling", .agents: "Agents and Observatory", .prompt: "At the Prompt", .mouse: "Mouse",
+            .tiling: "Tiling", .agents: "Agents and Observatory", .processes: "Processes and Ports", .prompt: "At the Prompt", .mouse: "Mouse",
             .configuration: "Configuration and Help", .privacy: "Privacy",
         ],
         titles: [
@@ -96,5 +96,5 @@ public struct HelpTexts: Sendable, Equatable {
 
 /// The help view's sections, in order.
 public enum HelpSectionID: CaseIterable, Hashable, Sendable {
-    case windows, panes, terminal, search, tiling, agents, prompt, mouse, configuration, privacy
+    case windows, panes, terminal, search, tiling, agents, processes, prompt, mouse, configuration, privacy
 }
