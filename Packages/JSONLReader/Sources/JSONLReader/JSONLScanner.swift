@@ -36,8 +36,9 @@ public enum JSONLScanner {
     /// The lines of `bytes` (ending in a newline) that contain `needle`; all of them when it is empty.
     private static func emit(_ bytes: Data, base: UInt64, needle: [UInt8], line: (Data, UInt64) -> Void) {
         guard !needle.isEmpty else { return JSONLLineReader.handOver(bytes, from: base, to: line) }
-        let lowered = bytes.map(lowercased)
-        lowered.withUnsafeBufferPointer { haystack in
+        let original = [UInt8](bytes)
+        let folded = FoldedBlock(original)
+        folded.bytes.withUnsafeBufferPointer { haystack in
             needle.withUnsafeBufferPointer { pattern in
                 guard let start = haystack.baseAddress, let target = pattern.baseAddress else { return }
                 var position = 0
@@ -45,17 +46,74 @@ public enum JSONLScanner {
                     let hit = memmem(start + position, haystack.count - position, target, pattern.count)
                 {
                     let at = UnsafePointer(hit.assumingMemoryBound(to: UInt8.self)) - start
-                    let lineStart = (lowered[..<at].lastIndex(of: JSONLLineReader.newline) ?? -1) + 1
-                    let lineEnd = lowered[at...].firstIndex(of: JSONLLineReader.newline) ?? lowered.count
-                    let first = bytes.startIndex + lineStart
-                    line(Data(bytes[first..<(bytes.startIndex + lineEnd)]), base + UInt64(lineStart))
-                    position = lineEnd + 1
+                    let (lineStart, lineEnd, nextFolded) = folded.line(containing: at, in: original)
+                    line(Data(original[lineStart..<lineEnd]), base + UInt64(lineStart))
+                    position = nextFolded
                 }
             }
         }
     }
 
-    private static func lowercased(_ byte: UInt8) -> UInt8 {
+    static func lowercased(_ byte: UInt8) -> UInt8 {
         byte >= 65 && byte <= 90 ? byte | 0x20 : byte
+    }
+}
+
+/// A block lowercased, with Latin accented letters (UTF-8 `0xC3 xx`) folded to their base letter, as the domain folds
+/// the query (`TextFolding`). Newlines stay, so a hit's line is found by counting them.
+struct FoldedBlock {
+    /// `À`…`ÿ` (`0xC3 0x80`…`0xC3 0xBF`) to their lowercase base letter; 0 keeps both bytes (`×`, `ß`, `ø`, `æ`…).
+    private static let latin: [UInt8] = Array(
+        "aaaaaa\0ceeeeiiii\0nooooo\0\0uuuuy\0\0aaaaaa\0ceeeeiiii\0nooooo\0\0uuuuy\0y".utf8)
+
+    let bytes: [UInt8]
+    /// Where each line starts in the folded bytes and in the original ones.
+    private let foldedStarts: [Int]
+    private let originalStarts: [Int]
+
+    init(_ original: [UInt8]) {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(original.count)
+        var foldedStarts = [0]
+        var originalStarts = [0]
+        var index = 0
+        while index < original.count {
+            let byte = original[index]
+            if byte == 0xC3, index + 1 < original.count, let base = Self.base(of: original[index + 1]) {
+                bytes.append(base)
+                index += 2
+                continue
+            }
+            bytes.append(JSONLScanner.lowercased(byte))
+            index += 1
+            if byte == JSONLLineReader.newline {
+                foldedStarts.append(bytes.count)
+                originalStarts.append(index)
+            }
+        }
+        self.bytes = bytes
+        self.foldedStarts = foldedStarts
+        self.originalStarts = originalStarts
+    }
+
+    private static func base(of second: UInt8) -> UInt8? {
+        guard second >= 0x80, second <= 0xBF else { return nil }
+        let letter = latin[Int(second - 0x80)]
+        return letter == 0 ? nil : letter
+    }
+
+    /// The original line holding folded position `at` (start, end without the newline) and where the next search
+    /// in the folded bytes begins (after that line).
+    func line(containing at: Int, in original: [UInt8]) -> (Int, Int, Int) {
+        var low = 0
+        var high = foldedStarts.count - 1
+        while low < high {
+            let middle = (low + high + 1) / 2
+            if foldedStarts[middle] <= at { low = middle } else { high = middle - 1 }
+        }
+        let start = originalStarts[low]
+        let end = low + 1 < originalStarts.count ? originalStarts[low + 1] - 1 : original.count
+        let next = low + 1 < foldedStarts.count ? foldedStarts[low + 1] : bytes.count
+        return (start, end, next)
     }
 }

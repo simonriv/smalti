@@ -57,10 +57,18 @@ import Testing
         #expect(try scan(file.url, "").map(\.0) == ["a", "b", "last"])
     }
 
-    @Test func keepsNonASCIIBytesAsTheyAre() throws {
-        let file = try TemporaryFile("canción\nCANCIÓN\n")
+    @Test func foldsLatinAccentsInTheFile() throws {
+        let file = try TemporaryFile("canción\nCANCIÓN\ncancion\nÑandú\n")
 
-        #expect(try scan(file.url, "canci").map(\.0) == ["canción", "CANCIÓN"])
+        #expect(try scan(file.url, "cancion").map(\.0) == ["canción", "CANCIÓN", "cancion"])
+        #expect(try scan(file.url, "nandu").map(\.0) == ["Ñandú"])
+        #expect(try scan(file.url, "nandu").map(\.1) == [26])
+    }
+
+    @Test func otherMultibyteCharactersStayAsTheyAre() throws {
+        let file = try TemporaryFile("precio 5 €\n€ 7\n")
+
+        #expect(try scan(file.url, "€ 7").map(\.0) == ["€ 7"])
     }
 
     @Test func stopsWhenCancelled() throws {
