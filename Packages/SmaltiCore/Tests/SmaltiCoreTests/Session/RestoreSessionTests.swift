@@ -184,6 +184,14 @@ struct RestoreSessionTests {
         #expect(result.set?.active.focusedPane == PaneID(rawValue: focused.id))
     }
 
+    @Test func failureNamesTheEnginesOwnReason() {
+        engine.failure = .surfaceCreationFailed(workingDirectory: "/x", reason: .engine("sin memoria"))
+
+        let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
+
+        #expect(result.failures.first == "/Users/s/dev/solen: no se pudo abrir el panel (sin memoria)")
+    }
+
     @Test func failureNamesTheEngineError() {
         engine.failingDirectories = ["/Users/s/dev/solen", "/Users/s"]
 
