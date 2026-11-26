@@ -46,11 +46,19 @@ public protocol GuardRequests: AnyObject {
 public enum ProjectPermissionsError: Error, Equatable, Sendable {
     case unreadable(path: String, reason: String)
     case unwritable(path: String, reason: String)
+    /// F7.5: the project is the user's home, whose settings are global.
+    case homeFolder(path: String)
+    /// The settings file is not a JSON object, or its `permissions.deny` is not a list of texts.
+    case notAnObject(path: String)
+    case denyNotAList(path: String)
 
     public func message(_ texts: GuardTexts) -> String {
         switch self {
         case .unreadable(let path, let reason): texts.unreadableFile(["path": path, "reason": reason])
         case .unwritable(let path, let reason): texts.unwritableFile(["path": path, "reason": reason])
+        case .homeFolder(let path): texts.unwritableFile(["path": path, "reason": texts.homeFolder])
+        case .notAnObject(let path): texts.unreadableFile(["path": path, "reason": texts.notAnObject])
+        case .denyNotAList(let path): texts.unreadableFile(["path": path, "reason": texts.denyNotAList])
         }
     }
 }

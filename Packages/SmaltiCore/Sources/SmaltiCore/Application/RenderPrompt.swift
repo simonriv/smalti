@@ -7,6 +7,8 @@ public struct PromptEnvironment: Sendable {
     public let agents: @MainActor (PaneID) -> WaitingAgents
     public let workspace: @MainActor (PaneID) -> WorkspaceID?
     public let home: String
+    /// F7.7: the words of the interface's language.
+    public let copy: PromptCopy
     public let now: @Sendable () -> Date
     /// The shell's zone for the clock module, so the full prompt agrees with the immediate `%D{%H:%M}`.
     public let timeZone: TimeZone
@@ -16,13 +18,15 @@ public struct PromptEnvironment: Sendable {
     public init(
         settings: @escaping @MainActor () -> (PromptConfig, AppliedTheme),
         agents: @escaping @MainActor (PaneID) -> WaitingAgents,
-        workspace: @escaping @MainActor (PaneID) -> WorkspaceID?, home: String, now: @escaping @Sendable () -> Date,
+        workspace: @escaping @MainActor (PaneID) -> WorkspaceID?, home: String, copy: PromptCopy,
+        now: @escaping @Sendable () -> Date,
         timeZone: TimeZone = .current, highlighting: @escaping @MainActor () -> Bool = { true }
     ) {
         self.settings = settings
         self.agents = agents
         self.workspace = workspace
         self.home = home
+        self.copy = copy
         self.now = now
         self.timeZone = timeZone
         self.highlighting = highlighting
@@ -138,7 +142,7 @@ public final class RenderPrompt {
         guard config.source == .smalti else {
             return .promptStyle(RenderedPrompt(immediate: "", full: "", values: [:], directoryLabel: ""), ghost: ghost)
         }
-        let base = PromptContext(directory: environment.home, home: environment.home)
+        let base = PromptContext(directory: environment.home, home: environment.home, copy: environment.copy)
         let rendered = ZshPromptRenderer.render(config, context: base, theme: theme)
         // Only what the immediate prompt references: a full prompt's values would repaint the one on screen with
         // another context's text (block 2 review, I1).
@@ -158,7 +162,7 @@ public final class RenderPrompt {
     }
 
     private func promptContext(_ shell: QuietShell, pane: PaneID) -> PromptContext {
-        var context = PromptContext(directory: shell.context.pwd, home: environment.home)
+        var context = PromptContext(directory: shell.context.pwd, home: environment.home, copy: environment.copy)
         context.repoRoot = shell.facts.repoRoot
         context.branch = shell.facts.branch
         context.changes = shell.facts.changes

@@ -10,7 +10,7 @@ struct ZshPromptRendererTests {
 
     /// "Proyecto Node con git" of the board.
     private func nodeProject(_ change: (inout PromptContext) -> Void = { _ in }) -> PromptContext {
-        var context = PromptContext(directory: "/Users/simon/dev/solen/apps/api", home: "/Users/simon")
+        var context = PromptContext(directory: "/Users/simon/dev/solen/apps/api", home: "/Users/simon", copy: .spanish)
         context.repoRoot = "/Users/simon/dev/solen"
         context.branch = "feat/reminders"
         context.changes = GitChanges(modified: 2, staged: 1)
@@ -185,7 +185,7 @@ struct ZshPromptSizeTests {
         var config = PromptConfig.standard.applying(.pills)
         config.modules = PromptModuleID.allCases
         let emoji = String(repeating: "🎉%", count: 200)
-        var context = PromptContext(directory: "/" + emoji + "/" + emoji, home: "/Users/simon")
+        var context = PromptContext(directory: "/" + emoji + "/" + emoji, home: "/Users/simon", copy: .spanish)
         context.branch = emoji
         context.changes = GitChanges(modified: 999_999, staged: 999_999)
         context.runtime = RuntimeVersion(kind: .node, version: emoji)
@@ -216,7 +216,7 @@ struct ZshPromptWhitespaceTests {
     @Test func whitespaceNamesGoThroughValues() {
         var config = PromptConfig.standard
         config.modules = [.gitBranch]
-        var context = PromptContext(directory: "/tmp", home: "/Users/simon")
+        var context = PromptContext(directory: "/tmp", home: "/Users/simon", copy: .spanish)
         context.branch = "\r"
 
         let rendered = ZshPromptRenderer.render(config, context: context, theme: ThemeCatalog.apply(.obsidian))

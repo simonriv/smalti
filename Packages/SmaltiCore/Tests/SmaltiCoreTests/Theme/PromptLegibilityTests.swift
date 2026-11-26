@@ -10,7 +10,7 @@ struct PromptLegibilityTests {
 
     /// Everything that paints text in a color of its own: an error, a waiting and a failed agent, git, a runtime.
     private var context: PromptContext {
-        var context = PromptContext(directory: "/Users/you/dev/solen/apps/api", home: "/Users/you")
+        var context = PromptContext(directory: "/Users/you/dev/solen/apps/api", home: "/Users/you", copy: .spanish)
         context.repoRoot = "/Users/you/dev/solen"
         context.branch = "main"
         context.changes = GitChanges(modified: 2, staged: 1)

@@ -14,10 +14,12 @@ public enum FeedbackReport {
     private static let unreserved = CharacterSet(
         charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
-    public static func issueURL(kind: FeedbackKind, build: BuildInfo) -> URL {
-        let query = [("template", template(kind)), ("title", title(kind)), (buildFieldID, build.summary)]
-            .map { name, value in name + "=" + encoded(value) }
-            .joined(separator: "&")
+    public static func issueURL(kind: FeedbackKind, build: BuildInfo, texts: CommandTexts) -> URL {
+        let query = [
+            ("template", template(kind)), ("title", texts.feedbackTitles[kind] ?? ""), (buildFieldID, build.summary),
+        ]
+        .map { name, value in name + "=" + encoded(value) }
+        .joined(separator: "&")
         guard let url = URL(string: SmaltiLinks.newIssue + "?" + query) else {
             // Unreachable: the base is a valid constant and every value is percent-encoded to unreserved characters.
             preconditionFailure("issue URL could not be built from \(SmaltiLinks.newIssue)")
@@ -27,14 +29,6 @@ public enum FeedbackReport {
 
     private static func encoded(_ value: String) -> String {
         value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
-    }
-
-    /// "Fallo: " / "Idea: ", for the user to finish.
-    private static func title(_ kind: FeedbackKind) -> String {
-        switch kind {
-        case .bug: "Fallo: "
-        case .idea: "Idea: "
-        }
     }
 
     private static func template(_ kind: FeedbackKind) -> String {

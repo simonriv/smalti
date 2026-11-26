@@ -37,7 +37,7 @@ public final class CollectTelemetry: TelemetryVariablesSource {
             let endpoint = try receiver.start { [weak self] events in self?.record(events) }
             change(to: .listening(endpoint))
         } catch {
-            change(to: .failed(error.message))
+            change(to: .failed(error))
         }
     }
 

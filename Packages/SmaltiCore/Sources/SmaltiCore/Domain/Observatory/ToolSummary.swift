@@ -27,6 +27,6 @@ public enum ToolSummary {
     private static func searchText(_ input: [String: String]) -> String {
         let pattern = "\"\(input["pattern"] ?? "")\""
         guard let path = input["path"] else { return pattern }
-        return "\(pattern) en \(path)"
+        return "\(pattern) · \(path)"
     }
 }

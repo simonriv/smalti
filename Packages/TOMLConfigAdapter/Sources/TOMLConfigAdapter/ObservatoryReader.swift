@@ -6,8 +6,6 @@ enum ObservatoryReader {
     private static let modelsKey = "models"
     private static let contextKey = "context"
     private static let rateKeys = ["input", "output", "cache_read", "cache_write_5m", "cache_write_1h"]
-    private static let negativeReason = "debe ser ≥ 0"
-    private static let contextReason = "se esperaba un número entero mayor que 0"
 
     static func read(_ section: TOMLSection) throws(ConfigError) -> ObservatorySettings {
         try section.rejectUnknownKeys(allowed: [modelsKey])
@@ -39,14 +37,14 @@ enum ObservatoryReader {
 
     private static func rate(_ key: String, in table: TOMLSection) throws(ConfigError) -> Double? {
         guard let value = try table.number(key) else { return nil }
-        guard value.isFinite, value >= 0 else { throw table.error(at: key, negativeReason) }
+        guard value.isFinite, value >= 0 else { throw table.error(at: key, .notNegative) }
         return value
     }
 
     private static func context(in table: TOMLSection) throws(ConfigError) -> Int? {
         guard let value = try table.number(contextKey) else { return nil }
         guard value.isFinite, value > 0, value.rounded() == value, value < Double(Int.max) else {
-            throw table.error(at: contextKey, contextReason)
+            throw table.error(at: contextKey, .expectedPositiveInteger)
         }
         return Int(value)
     }
@@ -57,6 +55,6 @@ enum ObservatoryReader {
         let written = Set(table.keysInFileOrder)
         let missing = ([contextKey] + rateKeys).filter { !written.contains($0) }
         guard !missing.isEmpty else { return }
-        throw models.error(at: id, "faltan claves: " + missing.joined(separator: ", "))
+        throw models.error(at: id, .missingKeys(missing))
     }
 }

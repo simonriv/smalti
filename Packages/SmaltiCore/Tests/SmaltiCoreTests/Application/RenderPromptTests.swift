@@ -30,7 +30,7 @@ struct RenderPromptTests {
             },
             agents: { world.agents[$0] ?? WaitingAgents() },
             workspace: { workspaces[$0] },
-            home: "/Users/simon",
+            home: "/Users/simon", copy: .spanish,
             now: { Date(timeIntervalSince1970: 0) })
         return (RenderPrompt(facts: facts, environment: environment), world)
     }
@@ -216,7 +216,8 @@ struct RenderPromptReviewTests {
             environment: PromptEnvironment(
                 settings: { (PromptConfig.standard, ThemeCatalog.apply(.obsidian)) },
                 agents: { _ in agents.waiting },
-                workspace: { _ in workspace }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) }))
+                workspace: { _ in workspace }, home: "/Users/simon", copy: .spanish,
+                now: { Date(timeIntervalSince1970: 0) }))
     }
 
     private func context(_ pwd: String) -> ShellContext {
@@ -293,7 +294,7 @@ struct RenderPromptTimeZoneTests {
             facts: FakePromptFacts(),
             environment: PromptEnvironment(
                 settings: { (config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
-                workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) },
+                workspace: { _ in nil }, home: "/Users/simon", copy: .spanish, now: { Date(timeIntervalSince1970: 0) },
                 timeZone: bogota))
         let context = ShellContext(
             pwd: "/tmp", exit: 0, durationMilliseconds: 0, awsProfile: nil, kubeconfig: nil, runtimePaths: [:])
@@ -322,7 +323,7 @@ struct RenderPromptHeaderTests {
             answers: ["/Users/simon/dev/solen": PromptFactsResult(repoRoot: "/Users/simon/dev/solen", branch: "main")])
         let environment = PromptEnvironment(
             settings: { (settings.config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
-            workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 0) })
+            workspace: { _ in nil }, home: "/Users/simon", copy: .spanish, now: { Date(timeIntervalSince1970: 0) })
         return RenderPrompt(facts: facts, environment: environment)
     }
 
@@ -387,7 +388,7 @@ struct RenderPromptStyleDeliveryTests {
             environment: PromptEnvironment(
                 settings: { (PromptConfig.standard, ThemeCatalog.apply(settings.appearance)) },
                 agents: { _ in WaitingAgents() }, workspace: { _ in nil }, home: "/Users/simon",
-                now: { Date(timeIntervalSince1970: 0) }, highlighting: { settings.highlighting }))
+                copy: .spanish, now: { Date(timeIntervalSince1970: 0) }, highlighting: { settings.highlighting }))
     }
 
     private let shell = ShellContext(

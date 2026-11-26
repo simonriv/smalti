@@ -150,8 +150,9 @@ final class ObservatoryRefresher {
             )
             lastHealth = health
         }
-        if let error = snapshot.lastError, error != lastError { onError(error) }
-        lastError = snapshot.lastError
+        let message = snapshot.lastError?.message(.spanish /* T9 */)
+        if let message, message != lastError { onError(message) }
+        lastError = message
         onSnapshot(frame)
     }
 }

@@ -16,7 +16,7 @@ struct FeedbackReportTests {
     }
 
     @Test func issueURLPointsAtTheRepository() {
-        let url = FeedbackReport.issueURL(kind: .bug, build: build)
+        let url = FeedbackReport.issueURL(kind: .bug, build: build, texts: .spanish)
 
         #expect(url.absoluteString.hasPrefix("https://github.com/simonriv/smalti/issues/new?"))
     }
@@ -24,16 +24,16 @@ struct FeedbackReportTests {
     /// F7.6: the public repo's issue forms; the form adds its own label.
     @Test(arguments: [(FeedbackKind.bug, "bug.yml"), (.idea, "idea.yml")])
     func issueURLOpensTheFormOfItsKind(_ kind: FeedbackKind, _ template: String) {
-        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["template"] == template)
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build, texts: .spanish))["template"] == template)
     }
 
     @Test(arguments: [FeedbackKind.bug, .idea])
     func issueURLFillsTheBuildField(_ kind: FeedbackKind) {
-        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["build"] == build.summary)
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build, texts: .spanish))["build"] == build.summary)
     }
 
     @Test func issueURLLeavesLabelsAndBodyToTheForm() {
-        let names = Set(query(FeedbackReport.issueURL(kind: .bug, build: build)).keys)
+        let names = Set(query(FeedbackReport.issueURL(kind: .bug, build: build, texts: .spanish)).keys)
 
         #expect(names == ["template", "title", "build"])
     }
@@ -45,7 +45,7 @@ struct FeedbackReportTests {
     @Test func versionWithAmpersandsAndHashesStaysEncoded() {
         let odd = BuildInfo(version: "0.4.5&x=1#y", commit: "abc", macOS: "27", chip: "M4")
 
-        let url = FeedbackReport.issueURL(kind: .bug, build: odd)
+        let url = FeedbackReport.issueURL(kind: .bug, build: odd, texts: .spanish)
 
         #expect(query(url)["build"]?.contains("0.4.5&x=1#y") == true)
         #expect(!url.absoluteString.contains(" "))
@@ -54,10 +54,10 @@ struct FeedbackReportTests {
 
     @Test(arguments: [(FeedbackKind.bug, "Fallo: "), (.idea, "Idea: ")])
     func issueTitleStartsWithItsKind(_ kind: FeedbackKind, _ prefix: String) {
-        #expect(query(FeedbackReport.issueURL(kind: kind, build: build))["title"] == prefix)
+        #expect(query(FeedbackReport.issueURL(kind: kind, build: build, texts: .spanish))["title"] == prefix)
     }
 
     @Test func issueURLUnder8000Bytes() {
-        #expect(FeedbackReport.issueURL(kind: .bug, build: build).absoluteString.utf8.count < 8_000)
+        #expect(FeedbackReport.issueURL(kind: .bug, build: build, texts: .spanish).absoluteString.utf8.count < 8_000)
     }
 }

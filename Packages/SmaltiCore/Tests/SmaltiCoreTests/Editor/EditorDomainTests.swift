@@ -128,7 +128,7 @@ struct EditedFilesTests {
     }
 
     @Test func noEditsText() {
-        #expect(EditedFiles.noneText == "Claude no ha editado archivos en este espacio")
+        #expect(TerminalTexts.spanish.editedNone == "Claude no ha editado archivos en este espacio")
     }
 
     @MainActor

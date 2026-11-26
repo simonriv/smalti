@@ -14,7 +14,7 @@ struct EditPromptTests {
         config.appearance.protectLegibility = false
         let appearance = ChangeAppearance(
             document: AppearanceDocument(config: config), store: store, debouncer: debouncer)
-        return (EditPrompt(appearance: appearance), appearance)
+        return (EditPrompt(appearance: appearance, copy: .spanish), appearance)
     }
 
     private func text(_ lines: [[PreviewRun]]) -> [String] {
@@ -27,11 +27,11 @@ struct EditPromptTests {
         #expect(text(edit.preview(.normalFolder)) == ["\u{E900} ~/Downloads", "› "])
         #expect(
             text(edit.preview(.nodeProject)) == [
-                "\u{E900} solen/apps/api   \u{E901} feat/reminders ●2 +1   \u{E902} 22.11", "› ",
+                "\u{E900} acme/apps/api   \u{E901} feat/reminders ●2 +1   \u{E902} 22.11", "› ",
             ])
         #expect(
             text(edit.preview(.afterErrorWithAgent)) == [
-                "\u{E900} rizaria/web   \u{E901} main   4.2s   ● claude te espera", "› exit 1 ",
+                "\u{E900} dev/website   \u{E901} main   4.2s   ● claude te espera", "› exit 1 ",
             ])
     }
 

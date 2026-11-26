@@ -16,7 +16,7 @@ final class AppearanceSession {
 
     init(config: SmaltiConfig, themeFile: URL, onSaveError: @escaping @MainActor (ConfigError) -> Void) {
         let document = AppearanceDocument(config: config)
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish /* T9 */)
         store.remember(document)
         self.store = store
         self.themeFile = themeFile
@@ -32,7 +32,8 @@ final class AppearanceSession {
     var state: AppearancePanelState {
         AppearancePanelState(
             document: change.document, applied: ThemeCatalog.apply(change.document.appearance),
-            savedIn: AppearanceTexts.savedIn(path: themeFile.path(percentEncoded: false), home: Self.home))
+            savedIn: AppearanceTexts.savedIn(
+                path: themeFile.path(percentEncoded: false), home: Self.home, copy: .spanish /* T9 */))
     }
 
     private static var home: String {
@@ -61,7 +62,7 @@ final class AppearanceSession {
     // MARK: - Prompt studio
 
     /// A draft of the prompt over this document (spec F5): nothing changes until it is applied.
-    func promptEditor() -> EditPrompt { EditPrompt(appearance: change) }
+    func promptEditor() -> EditPrompt { EditPrompt(appearance: change, copy: .spanish /* T9 */) }
 
     /// "Aplicar a todos los paneles": written now, painted in every window and sent to every shell.
     func applyPrompt(_ editor: EditPrompt) {
@@ -73,7 +74,10 @@ final class AppearanceSession {
 
     /// "Exportar como starship.toml": the draft with this document's colors.
     func starshipText(for draft: PromptConfig) -> String {
-        StarshipText.render(StarshipPreset.make(from: draft, theme: ThemeCatalog.apply(change.document.appearance)))
+        StarshipText.render(
+            StarshipPreset.make(
+                from: draft, theme: ThemeCatalog.apply(change.document.appearance), copy: .spanish /* T9 */),
+            texts: .spanish /* T9 */)
     }
 
     /// "Abrir theme.toml": written first if it does not exist yet, so there is something to open.

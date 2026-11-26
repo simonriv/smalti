@@ -25,6 +25,9 @@ public struct GuardTexts: Sendable, Equatable {
     public let tooManyPending: String
     public let unreadableFile: TextTemplate
     public let unwritableFile: TextTemplate
+    public let homeFolder: String
+    public let notAnObject: String
+    public let denyNotAList: String
 
     public static let spanish = GuardTexts(
         command: "comando", against: "{rule} contra {environment}",
@@ -50,7 +53,9 @@ public struct GuardTexts: Sendable, Equatable {
         unreadableInput: "Smalti no pudo leer la petición del hook: la herramienta queda bloqueada.",
         paneClosed: "El panel de Smalti se cerró antes de aprobar el comando.",
         tooManyPending: "Hay demasiados comandos esperando aprobación en Smalti.",
-        unreadableFile: "No se pudo leer {path}: {reason}", unwritableFile: "No se pudo escribir {path}: {reason}")
+        unreadableFile: "No se pudo leer {path}: {reason}", unwritableFile: "No se pudo escribir {path}: {reason}",
+        homeFolder: "es tu carpeta personal: Smalti no escribe tu configuración global",
+        notAnObject: "no es un objeto JSON", denyNotAList: "permissions.deny no es una lista de textos")
 
     public static let english = GuardTexts(
         command: "command", against: "{rule} against {environment}",
@@ -75,5 +80,7 @@ public struct GuardTexts: Sendable, Equatable {
         unreadableInput: "Smalti couldn’t read the hook’s request: the tool stays blocked.",
         paneClosed: "The Smalti pane closed before the command was approved.",
         tooManyPending: "Too many commands are waiting for approval in Smalti.",
-        unreadableFile: "Couldn’t read {path}: {reason}", unwritableFile: "Couldn’t write {path}: {reason}")
+        unreadableFile: "Couldn’t read {path}: {reason}", unwritableFile: "Couldn’t write {path}: {reason}",
+        homeFolder: "it’s your home folder: Smalti doesn’t write your global settings",
+        notAnObject: "it isn’t a JSON object", denyNotAList: "permissions.deny isn’t a list of texts")
 }

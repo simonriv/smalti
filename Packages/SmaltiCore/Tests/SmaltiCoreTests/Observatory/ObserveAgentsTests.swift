@@ -131,7 +131,7 @@ struct ObserveAgentsTests {
 
         #expect(snapshot.activity.sessions == [session])
         #expect(
-            snapshot.lastError
+            snapshot.lastError?.message(.spanish)
                 == "No se pudieron leer los transcripts de /Users/simon/.claude/projects: permiso denegado")
     }
 

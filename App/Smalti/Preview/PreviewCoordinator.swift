@@ -37,7 +37,7 @@ final class PreviewCoordinator {
         let wait = TimerDebouncer(delay: PreviewUnderPointer.delay)
         let debouncer: any Debouncer = timings.map { TimedDebouncer(wait, timings: $0) } ?? wait
         preview = PreviewUnderPointer(
-            ports: .init(files: dependencies.files, debouncer: debouncer),
+            ports: .init(files: dependencies.files, debouncer: debouncer, texts: .spanish /* T9 */),
             thumbnailSize: Size(width: box.width * scale, height: box.height * scale),
             show: { [weak self] card in self?.show(card) })
         watchForDismissal()

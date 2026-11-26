@@ -11,8 +11,8 @@ public struct StarshipPreset: Equatable, Sendable {
         tables.first { $0.name == name }
     }
 
-    public static func make(from config: PromptConfig, theme: AppliedTheme) -> StarshipPreset {
-        StarshipBuilder(config: config, theme: theme.theme).preset()
+    public static func make(from config: PromptConfig, theme: AppliedTheme, copy: PromptCopy) -> StarshipPreset {
+        StarshipBuilder(config: config, theme: theme.theme, copy: copy).preset()
     }
 }
 
@@ -40,11 +40,7 @@ public enum StarshipValue: Equatable, Sendable {
 public struct StarshipBuilder {
     let config: PromptConfig
     let theme: Theme
-
-    private static let directoryComment =
-        "Directorio: Starship muestra dos niveles también dentro de un repositorio; Smalti lo muestra desde la raíz."
-    private static let agentsComment =
-        "Agentes que esperan: solo existe dentro de Smalti; no tiene equivalente en Starship."
+    let copy: PromptCopy
 
     func preset() -> StarshipPreset {
         let character = table(
@@ -60,8 +56,8 @@ public struct StarshipBuilder {
         let lineBreak = config.layout == .twoLines ? "$line_break" : ""
         let format = modules.map { "$" + $0.name }.joined() + lineBreak + "$character"
         let comments =
-            (config.modules.contains(.directory) ? [Self.directoryComment] : [])
-            + (config.modules.contains(.agents) ? [Self.agentsComment] : [])
+            (config.modules.contains(.directory) ? [copy.starshipDirectoryComment] : [])
+            + (config.modules.contains(.agents) ? [copy.starshipAgentsComment] : [])
         return StarshipPreset(format: format, tables: modules + [character], comments: comments)
     }
 

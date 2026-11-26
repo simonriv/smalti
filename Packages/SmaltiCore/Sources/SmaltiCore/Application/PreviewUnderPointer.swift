@@ -9,10 +9,13 @@ public final class PreviewUnderPointer {
         let files: any ImageFiles
         /// Waits `delay` (the app's) or until fired by hand (tests).
         let debouncer: any Debouncer
+        /// F7.7: the card's words when an image cannot be shown.
+        let texts: TerminalTexts
 
-        public init(files: any ImageFiles, debouncer: any Debouncer) {
+        public init(files: any ImageFiles, debouncer: any Debouncer, texts: TerminalTexts) {
             self.files = files
             self.debouncer = debouncer
+            self.texts = texts
         }
     }
 
@@ -58,8 +61,9 @@ public final class PreviewUnderPointer {
         guard !paths.isEmpty else { return }
         let files = ports.files
         let size = thumbnailSize
+        let texts = ports.texts
         load = Task { [weak self] in
-            let card = await Self.card(for: paths, files: files, size: size, anchor: word.frame)
+            let card = await Self.card(for: paths, files: files, size: size, anchor: word.frame, texts: texts)
             guard !Task.isCancelled, let card, let self, self.word == word else { return }
             self.current = card
             self.show(card)
@@ -68,7 +72,7 @@ public final class PreviewUnderPointer {
 
     /// The card of the first path that describes as an image; nil when none does.
     private nonisolated static func card(
-        for paths: [String], files: any ImageFiles, size: Size, anchor: Rect
+        for paths: [String], files: any ImageFiles, size: Size, anchor: Rect, texts: TerminalTexts
     ) async -> PreviewCard? {
         for path in paths {
             guard !Task.isCancelled else { return nil }
@@ -76,7 +80,7 @@ public final class PreviewUnderPointer {
             do {
                 image = try await files.describe(path)
             } catch .tooLarge {
-                return .tooLarge(path: path, anchor: anchor)
+                return .tooLarge(path: path, anchor: anchor, texts: texts)
             } catch {
                 continue
             }
@@ -85,7 +89,7 @@ public final class PreviewUnderPointer {
             do {
                 return .image(image, thumbnail: try await files.thumbnail(of: path, fitting: size), anchor: anchor)
             } catch {
-                return .unreadable(image, anchor: anchor)
+                return .unreadable(image, anchor: anchor, texts: texts)
             }
         }
         return nil

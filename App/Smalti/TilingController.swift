@@ -633,7 +633,7 @@ final class TilingController {
             return false
         }
         do {
-            try deps.applyAppearance(theme.terminal)
+            try deps.applyAppearance(engineAppearance)
         } catch {
             show(.engineFailure(error))
         }
@@ -647,10 +647,17 @@ final class TilingController {
         publish()
     }
 
+    /// The theme's terminal with the config's `[keyboard] option_as_meta` (F7.7).
+    private var engineAppearance: TerminalAppearance {
+        var appearance = theme.terminal
+        appearance.optionAsMeta = config.optionAsMeta
+        return appearance
+    }
+
     /// The engine's appearance is the app's: one window gives it the theme's terminal colors and font.
     func applyEngineAppearance() {
         do {
-            try deps.applyAppearance(theme.terminal)
+            try deps.applyAppearance(engineAppearance)
         } catch {
             show(.engineFailure(error))
         }
@@ -676,7 +683,7 @@ final class TilingController {
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
         status = status.withPersistent(nil)
         // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
-        if let warning = reload.warnings.first { show(.configWarning(warning.message)) }
+        if let warning = reload.warnings.first { show(.configWarning(warning.message(.spanish /* T9 */))) }
         return true
     }
 

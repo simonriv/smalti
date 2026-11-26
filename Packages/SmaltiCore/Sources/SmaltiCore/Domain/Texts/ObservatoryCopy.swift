@@ -32,6 +32,8 @@ public struct ObservatoryCopy: Sendable, Equatable {
     public let noCompactions: String
     public let compaction: TextTemplate
     public let compactionFreed: TextTemplate
+    public let transcriptsUnreadable: TextTemplate
+    public let cannotListen: TextTemplate
     public let telemetry: TelemetryCopy
     public let time: TimeTexts
 
@@ -54,7 +56,9 @@ public struct ObservatoryCopy: Sendable, Equatable {
         ollamaNotRunning: "Ollama no está corriendo", noLocalModels: "Sin modelos locales", loaded: "cargado",
         onDisk: "en disco", downloaded: "descargado {ago}", todayTokens: "hoy {count} tokens", todayPending: "hoy …",
         activity: "Actividad · {label}", noCompactions: "Sin compactaciones", compaction: "Compactación {ago}",
-        compactionFreed: "Compactación {ago} · liberó {percent}% del contexto", telemetry: .spanish, time: .spanish)
+        compactionFreed: "Compactación {ago} · liberó {percent}% del contexto",
+        transcriptsUnreadable: "No se pudieron leer los transcripts de {path}: {reason}",
+        cannotListen: "{operation} falló (errno {errno})", telemetry: .spanish, time: .spanish)
 
     public static let english = ObservatoryCopy(
         footnote:
@@ -75,7 +79,9 @@ public struct ObservatoryCopy: Sendable, Equatable {
         ollamaNotRunning: "Ollama isn’t running", noLocalModels: "No local models", loaded: "loaded",
         onDisk: "on disk", downloaded: "downloaded {ago}", todayTokens: "today {count} tokens", todayPending: "today …",
         activity: "Activity · {label}", noCompactions: "No compactions", compaction: "Compacted {ago}",
-        compactionFreed: "Compacted {ago} · freed {percent}% of the context", telemetry: .english, time: .english)
+        compactionFreed: "Compacted {ago} · freed {percent}% of the context",
+        transcriptsUnreadable: "Couldn’t read the transcripts in {path}: {reason}",
+        cannotListen: "{operation} failed (errno {errno})", telemetry: .english, time: .english)
 }
 
 /// F7.7: the telemetry line of the session detail (spec F7).

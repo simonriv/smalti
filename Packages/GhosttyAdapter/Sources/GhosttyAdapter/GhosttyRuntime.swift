@@ -13,9 +13,13 @@ public final class GhosttyRuntime {
     /// Smalti's generated engine config file; `apply` rewrites it.
     private let configFile: URL
     private var observers: [NSObjectProtocol] = []
+    /// F7.7: the paste confirmation's words; libghostty's callbacks are static, as is the one app per process.
+    private(set) static var texts = TerminalTexts.english
 
-    /// `ghostty_app_new` clones `config`, so the caller may release it afterwards.
-    public init(config: GhosttyConfig) throws(TerminalEngineError) {
+    /// `ghostty_app_new` clones `config`, so the caller may release it afterwards. `texts` words the alerts the
+    /// engine shows (the multi-line paste confirmation).
+    public init(config: GhosttyConfig, texts: TerminalTexts) throws(TerminalEngineError) {
+        Self.texts = texts
         var runtime = Self.makeRuntimeConfig()
         guard let app = ghostty_app_new(&runtime, config.handle) else {
             throw .engineStartFailed(reason: "ghostty_app_new returned null")
@@ -194,7 +198,7 @@ public final class GhosttyRuntime {
             nonisolated(unsafe) let pendingState = state
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    let approved = ClipboardConfirmation.userApprovesPaste(of: text)
+                    let approved = ClipboardConfirmation.userApprovesPaste(of: text, texts: Self.texts)
                     // The pane may have closed while the alert was open.
                     guard let surface = liveView(at: viewAddress, surfaceAddress: surfaceAddress)?.surface else {
                         return

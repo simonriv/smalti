@@ -18,8 +18,6 @@ public struct EditedFile: Equatable, Sendable {
 /// "Editados por Claude": the last 20 files, newest first, each once (spec F6). Kept in memory only.
 public struct EditedFiles: Equatable, Sendable {
     public static let limit = 20
-    /// ⌘⇧L with nothing to open.
-    public static let noneText = "Claude no ha editado archivos en este espacio"
 
     public private(set) var recent: [EditedFile] = []
 

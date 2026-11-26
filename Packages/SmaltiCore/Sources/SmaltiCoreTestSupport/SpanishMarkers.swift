@@ -5,7 +5,7 @@ import Foundation
 public enum SpanishMarkers {
     private static let letters = Set("áéíóúñÁÉÍÓÚÑ¿¡")
     public static let words: Set<String> = [
-        "de", "del", "la", "las", "el", "los", "en", "con", "sin", "para", "por", "una", "un", "que", "se", "al", "y",
+        "de", "del", "la", "las", "el", "los", "en", "con", "sin", "para", "por", "una", "que",
         "hace", "ahora", "panel", "paneles", "sesión", "sesiones", "ventana", "ventanas", "abrir", "cerrar", "buscar",
         "guardar", "mostrar", "activar", "desactivar", "ayuda", "nada", "todos", "todas", "hoy", "días", "línea",
         "tema", "temas", "registros", "archivo", "fallo", "aprobar", "rechazar", "espera", "esperan", "esperando",

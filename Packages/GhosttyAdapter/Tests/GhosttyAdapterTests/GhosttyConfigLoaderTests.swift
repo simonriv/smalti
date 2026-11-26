@@ -19,7 +19,8 @@ struct GhosttyConfigLoaderTests {
 
     @Test func applyingAppearanceReloadsWithoutDiagnostics() throws {
         let runtime = try GhosttyRuntime(
-            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file))
+            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file),
+            texts: .spanish)
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let pane = try engine.open(
             TerminalSessionSpec(workingDirectory: try WorkingDirectory(path: "/tmp"), command: .custom("/bin/zsh -f")))
@@ -35,7 +36,8 @@ struct GhosttyConfigLoaderTests {
 
     @Test func failedApplyLeavesConfigFileUntouched() throws {
         let runtime = try GhosttyRuntime(
-            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file))
+            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file),
+            texts: .spanish)
         let before = try Data(contentsOf: file)
 
         #expect(throws: TerminalEngineError.self) { try runtime.reload(configText: "not-a-real-key = 1\n") }
@@ -45,7 +47,8 @@ struct GhosttyConfigLoaderTests {
 
     @Test func failedApplyLeavesNoTemporaryFile() throws {
         let runtime = try GhosttyRuntime(
-            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file))
+            config: try GhosttyConfig.load(text: GhosttyConfigText.render(Theme.obsidian.terminal), writingTo: file),
+            texts: .spanish)
         let directory = file.deletingLastPathComponent()
 
         _ = try? runtime.reload(configText: "not-a-real-key = 1\n")

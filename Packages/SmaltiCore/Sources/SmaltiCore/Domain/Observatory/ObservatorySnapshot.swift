@@ -152,7 +152,7 @@ public struct ObservatorySnapshot: Equatable, Sendable {
     /// The user's home, to label sessions outside Smalti (`~`, `termotty`, `solen/api`).
     public let home: String
     /// Why the transcripts could not be read this time; the previous sessions are kept.
-    public let lastError: String?
+    public let lastError: TranscriptError?
     /// F6: other harnesses' sessions (OpenCode), as their own stores count them.
     public private(set) var usage: [UsageRow] = []
     /// F7: what Smalti's panes' Claude Code sent to the local receiver, and where the receiver stands.
@@ -162,7 +162,7 @@ public struct ObservatorySnapshot: Equatable, Sendable {
     public init(
         activity: TranscriptActivity, running: [RunningAgent], panes: [PaneAgent], localModels: LocalModelsReport,
         system: SystemSample, cpuHistory: [Double], gpuHistory: [Double], catalog: ModelCatalog, now: Date,
-        home: String, lastError: String?
+        home: String, lastError: TranscriptError?
     ) {
         self.activity = activity
         self.running = running

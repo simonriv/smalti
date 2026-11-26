@@ -19,6 +19,14 @@ public struct TerminalTexts: Sendable, Equatable {
     public let skipped: PluralText
     public let hidden: TextTemplate
     public let noImages: TextTemplate
+    public let previewUnreadable: String
+    public let previewTooLarge: String
+    public let previewCaption: TextTemplate
+    public let editedNone: String
+    public let pasteTitle: String
+    public let pasteMessage: String
+    public let pasteButton: String
+    public let cancelButton: String
     public let automaticUpdatesOn: String
     public let automaticUpdatesOff: String
 
@@ -33,7 +41,11 @@ public struct TerminalTexts: Sendable, Equatable {
         selectedMatch: "{index} de {total}", images: PluralText(one: "{count} imagen", other: "{count} imágenes"),
         skipped: PluralText(one: "{count} omitida (no es imagen)", other: "{count} omitidas (no son imagen)"),
         hidden: "… y {count} más (máximo {limit})", noImages: "Sin imágenes en {source}",
-        automaticUpdatesOn: "Actualizaciones automáticas activadas",
+        previewUnreadable: "No se pudo leer la imagen", previewTooLarge: "Imagen demasiado grande",
+        previewCaption: "{name} · {detail} · {shortcut} para abrir",
+        editedNone: "Claude no ha editado archivos en este espacio", pasteTitle: "¿Pegar texto de varias líneas?",
+        pasteMessage: "El programa no usa pegado protegido, así que cada línea podría ejecutarse al pegarla.",
+        pasteButton: "Pegar", cancelButton: "Cancelar", automaticUpdatesOn: "Actualizaciones automáticas activadas",
         automaticUpdatesOff: "Actualizaciones automáticas desactivadas")
 
     public static let english = TerminalTexts(
@@ -47,6 +59,10 @@ public struct TerminalTexts: Sendable, Equatable {
         selectedMatch: "{index} of {total}", images: PluralText(one: "{count} image", other: "{count} images"),
         skipped: PluralText(one: "{count} skipped (not an image)", other: "{count} skipped (not images)"),
         hidden: "… and {count} more (maximum {limit})", noImages: "No images in {source}",
-        automaticUpdatesOn: "Automatic updates turned on",
+        previewUnreadable: "Couldn’t read the image", previewTooLarge: "Image too large",
+        previewCaption: "{name} · {detail} · {shortcut} to open",
+        editedNone: "Claude hasn’t edited any files in this space", pasteTitle: "Paste text with several lines?",
+        pasteMessage: "The program doesn’t use bracketed paste, so each line might run as it’s pasted.",
+        pasteButton: "Paste", cancelButton: "Cancel", automaticUpdatesOn: "Automatic updates turned on",
         automaticUpdatesOff: "Automatic updates turned off")
 }

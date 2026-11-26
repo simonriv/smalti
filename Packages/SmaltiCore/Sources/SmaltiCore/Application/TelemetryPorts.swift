@@ -2,9 +2,10 @@
 public enum TelemetryReceiverError: Error, Equatable, Sendable {
     case cannotListen(operation: String, errno: Int32)
 
-    public var message: String {
+    public func message(_ copy: ObservatoryCopy) -> String {
         switch self {
-        case .cannotListen(let operation, let errno): "\(operation) falló (errno \(errno))"
+        case .cannotListen(let operation, let errno):
+            copy.cannotListen(["operation": operation, "errno": String(errno)])
         }
     }
 }
@@ -28,7 +29,7 @@ public enum TelemetryStatus: Equatable, Sendable {
     case off
     case configuredByUser
     case listening(TelemetryEndpoint)
-    case failed(String)
+    case failed(TelemetryReceiverError)
 }
 
 /// What a pane's environment takes from the telemetry: its variables while the receiver listens, none otherwise.

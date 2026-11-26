@@ -49,11 +49,11 @@ public final class ObserveAgents {
     }
 
     public func snapshot(panes: [PaneAgent], now: Date) async -> ObservatorySnapshot {
-        var lastError: String?
+        var lastError: TranscriptError?
         do {
             lastActivity = try await sources.transcripts.activity(since: now.addingTimeInterval(-Self.history))
         } catch {
-            lastError = error.message
+            lastError = error
         }
         let running = await sources.live.running()
         lastRunning = running

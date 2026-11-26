@@ -171,8 +171,10 @@ final class AppComposition {
     }
 
     private func start(_ startup: Startup) throws(TerminalEngineError) {
+        var terminal = startup.theme.terminal
+        terminal.optionAsMeta = startup.initial.config.optionAsMeta
         let runtime = try makeRuntime(
-            startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
+            terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let state = startup.settings.stateDirectory
         let engine = GhosttyTerminalEngine(
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
@@ -658,7 +660,7 @@ final class AppComposition {
     private func report(_ kind: FeedbackKind, includingLogs: Bool) {
         Task {
             if includingLogs { await saveLogs() }
-            URLOpener.open(FeedbackReport.issueURL(kind: kind, build: Self.buildInfo))
+            URLOpener.open(FeedbackReport.issueURL(kind: kind, build: Self.buildInfo, texts: .spanish /* T9 */))
         }
     }
 
@@ -732,7 +734,8 @@ final class AppComposition {
             do {
                 try FileManager.default.createDirectory(
                     at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try ConfigTemplate.text(defaults: .defaults).write(to: file, atomically: true, encoding: .utf8)
+                try ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.spanish.template /* T9 */).write(
+                    to: file, atomically: true, encoding: .utf8)
             } catch {
                 logger.error("could not write the config template: \(String(describing: error), privacy: .public)")
                 controller?.report(.configTemplateFailed(path))
@@ -860,10 +863,11 @@ final class AppComposition {
     private func telemetryChanged(_ collector: CollectTelemetry) {
         observatory?.telemetryChanged()
         writeTelemetryProbe(collector.status)
-        guard case .failed(let reason) = collector.status else {
+        guard case .failed(let error) = collector.status else {
             reportedTelemetryFailure = nil
             return
         }
+        let reason = error.message(.spanish /* T9 */)
         // Once per failure: a later reload that fails the same way does not repeat it.
         guard reportedTelemetryFailure != reason, let controller else { return }
         reportedTelemetryFailure = reason
@@ -878,7 +882,7 @@ final class AppComposition {
             case .off: ["status": "off"]
             case .configuredByUser: ["status": "configuredByUser"]
             case .listening(let endpoint): ["status": "listening", "port": Int(endpoint.port)]
-            case .failed(let reason): ["status": "failed", "reason": reason]
+            case .failed(let error): ["status": "failed", "reason": error.message(.english)]
             }
         do {
             try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]).write(
@@ -981,7 +985,8 @@ final class AppComposition {
                 self?.workspace(containing: pane)?.waitingAgents(besides: pane) ?? WaitingAgents()
             },
             workspace: { [weak self] pane in self?.workspace(containing: pane)?.id },
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() },
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            copy: .spanish /* T9 */, now: { Date() },
             highlighting: { [weak self] in Self.isHighlighting(self?.controller?.config ?? startup.initial.config) })
         let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
         coordinator.renderPrompt = render
@@ -1191,7 +1196,7 @@ final class AppComposition {
         try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(appearance), writingTo: configFile)
-        return try GhosttyRuntime(config: config)
+        return try GhosttyRuntime(config: config, texts: .spanish /* T9 */)
     }
 
     private func homeDirectory() throws(TerminalEngineError) -> WorkingDirectory {

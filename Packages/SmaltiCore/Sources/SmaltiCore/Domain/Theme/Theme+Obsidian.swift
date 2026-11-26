@@ -5,7 +5,7 @@
 private let monospacedFontFamily = "JetBrains Mono"
 
 extension Theme {
-    public static let obsidian = Theme.make(name: "Obsidiana", colors: .obsidiana)
+    public static let obsidian = Theme.make(name: ThemeID.obsidiana.rawValue, colors: .obsidiana)
 
     /// Every theme shares these sizes; only `colors` change (spec F5, "Temas").
     static func make(name: String, colors c: ThemeColors) -> Theme {

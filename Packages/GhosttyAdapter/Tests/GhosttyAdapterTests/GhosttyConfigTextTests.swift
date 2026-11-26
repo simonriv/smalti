@@ -15,7 +15,6 @@ struct GhosttyConfigTextTests {
         "window-padding-x = 16",
         "window-padding-y = 12",
         "window-padding-balance = false",
-        "macos-option-as-alt = false",
         "shell-integration = zsh",
         "confirm-close-surface = true",
         "adjust-cell-height = 23%",
@@ -84,5 +83,34 @@ struct GhosttyConfigTextTests {
 
     @Test func naturalLineHeightNeedsNoAdjustment() {
         #expect(GhosttyConfigText.cellHeightAdjustment(lineHeight: GhosttyConfigText.naturalLineHeight) == "0%")
+    }
+}
+
+/// F7.7 `[keyboard] option_as_meta`: `auto` leaves the choice to libghostty's layout detection.
+@Suite("Ghostty option as meta")
+struct GhosttyOptionAsMetaTests {
+    private func optionLines(_ choice: OptionAsMeta) -> [String] {
+        var appearance = Theme.obsidian.terminal
+        appearance.optionAsMeta = choice
+        return GhosttyConfigText.render(appearance).split(separator: "\n").map(String.init)
+            .filter { $0.hasPrefix("macos-option-as-alt") }
+    }
+
+    @Test func autoWritesNoKey() {
+        #expect(optionLines(.auto).isEmpty)
+    }
+
+    @Test(arguments: [
+        (OptionAsMeta.never, "false"), (.always, "true"), (.left, "left"), (.right, "right"),
+    ])
+    func explicitChoicesAreWritten(choice: OptionAsMeta, value: String) {
+        #expect(optionLines(choice) == ["macos-option-as-alt = \(value)"])
+    }
+
+    @Test func resizingKeepsTheChoice() {
+        var appearance = Theme.obsidian.terminal
+        appearance.optionAsMeta = .left
+
+        #expect(appearance.withFontSize(20).optionAsMeta == .left)
     }
 }

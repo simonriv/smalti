@@ -276,7 +276,7 @@ struct SharedLayoutTests {
         let errors: [SharedLayoutError] = [
             .unsupportedFormat(0), .newerFormat(2), .invalidName("a/b", reason: "x"), .paneCount(12),
             .treeMismatch(leaves: 2, panes: 3), .untypeableCommand(pane: 1), .emptyCommand(pane: 1),
-            .escapingDirectory(pane: 1, path: "../x"), .tooLarge(bytes: 300_000), .notJSON(reason: "y"),
+            .escapingDirectory(pane: 1, path: "../x"), .tooLarge(bytes: 300_000), .notJSON(.other("y")),
         ]
 
         let messages = errors.map { $0.message(SessionTexts.spanish.layoutErrors) }

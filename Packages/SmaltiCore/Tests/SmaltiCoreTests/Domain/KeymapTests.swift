@@ -107,7 +107,7 @@ struct KeymapTests {
         let reserved = try chord("opt+c")
 
         #expect(
-            throws: ConfigError(file: "", line: nil, key: "⌥C", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+            throws: ConfigError(file: "", line: nil, key: "⌥C", problem: .reservedOption)
         ) {
             try Keymap.standard.overriding([reserved: .layoutColumns])
         }
@@ -117,7 +117,7 @@ struct KeymapTests {
         let reserved = KeyChord(key: "c", modifiers: [.option])
 
         #expect(
-            throws: ConfigError(file: "", line: nil, key: "⌥C", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+            throws: ConfigError(file: "", line: nil, key: "⌥C", problem: .reservedOption)
         ) {
             try Keymap.standard.overriding([reserved: .layoutColumns])
         }
@@ -144,7 +144,7 @@ struct KeymapTests {
         let optionAlone = try chord("opt+k")
 
         #expect(
-            throws: ConfigError(file: "", line: nil, key: "⌥K", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir")
+            throws: ConfigError(file: "", line: nil, key: "⌥K", problem: .reservedOption)
         ) {
             try Keymap.validate(optionAlone)
         }

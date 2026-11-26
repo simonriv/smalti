@@ -51,7 +51,7 @@ public final class InMemoryConfigStoreHarness: ConfigStoreHarness {
         case .missing: .success(.defaults)
         case .customShellAndColumns: .success(ConfigStoreContract.customConfig)
         case .invalid:
-            .failure(ConfigError(file: "config.toml", line: 3, key: "font_size", reason: "se esperaba un número"))
+            .failure(ConfigError(file: "config.toml", line: 3, key: "font_size", problem: .expectedNumber))
         }
     }
 }

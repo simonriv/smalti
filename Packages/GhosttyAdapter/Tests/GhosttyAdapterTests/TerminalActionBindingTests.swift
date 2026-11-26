@@ -36,7 +36,7 @@ struct GhosttyEngineActionsContractTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-contract-\(UUID()).conf"))
-        let runtime = try GhosttyRuntime(config: config)
+        let runtime = try GhosttyRuntime(config: config, texts: .spanish)
 
         try TerminalEngineActionsContract.verify { GhosttyTerminalEngine(runtime: runtime) }
     }

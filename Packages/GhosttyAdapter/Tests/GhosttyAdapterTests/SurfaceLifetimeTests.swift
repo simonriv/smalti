@@ -25,7 +25,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func viewReleasedWithoutShutDownLeavesNoLiveRegistration() throws {
-        let runtime = try GhosttyRuntime(config: config)
+        let runtime = try GhosttyRuntime(config: config, texts: .spanish)
         let before = GhosttyRuntime.liveViewCount
 
         try autoreleasepool {
@@ -37,7 +37,7 @@ struct SurfaceLifetimeTests {
 
     @Test func releasedRuntimeClearsTheAppSeenByWakeups() throws {
         do {
-            let runtime = try GhosttyRuntime(config: config)
+            let runtime = try GhosttyRuntime(config: config, texts: .spanish)
             #expect(GhosttyRuntime.currentApp == runtime.app)
         }
 
@@ -46,7 +46,7 @@ struct SurfaceLifetimeTests {
 
     /// A restored pane whose directory was deleted must fail to open, so the core falls back to the root or home.
     @Test func openingInAMissingDirectoryThrows() throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let missing = TerminalSessionSpec(
             workingDirectory: try WorkingDirectory(path: "/tmp/smalti-missing-\(UUID())"),
             command: .custom("/bin/zsh -f"))
@@ -55,7 +55,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func openingAFileInsteadOfADirectoryThrows() throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let file = FileManager.default.temporaryDirectory.appending(path: "smalti-file-\(UUID())")
         FileManager.default.createFile(atPath: file.path(percentEncoded: false), contents: Data())
         let spec = TerminalSessionSpec(
@@ -66,7 +66,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func closeSurfaceWithLiveProcessRequestsClose() async throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let pane = try engine.open(spec)
         defer { engine.close(pane) }
         let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
@@ -79,7 +79,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func closeRequestIsDeferredToTheNextMainLoopTurn() async throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let pane = try engine.open(spec)
         let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
         let events = engine.events(for: pane)
@@ -91,7 +91,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func closeEmitsNoExitedEvent() async throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let pane = try engine.open(spec)
         let events = engine.events(for: pane)
 
@@ -102,7 +102,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func childExitIsDeliveredOnceWithItsCode() async throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let pane = try engine.open(spec)
         defer { engine.close(pane) }
         let view = try #require(engine.view(for: pane) as? GhosttySurfaceView)
@@ -145,7 +145,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func visibleSurfaceReportsItsForegroundProcess() async throws {
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let pane = try engine.open(spec)
         defer { engine.close(pane) }
         let events = engine.events(for: pane)
@@ -163,7 +163,7 @@ struct SurfaceLifetimeTests {
     }
 
     @Test func eventForAReplacedSurfaceIsNotDelivered() throws {
-        let runtime = try GhosttyRuntime(config: config)
+        let runtime = try GhosttyRuntime(config: config, texts: .spanish)
         let view = try GhosttySurfaceView(app: runtime.app, spec: spec)
         defer { view.shutDown() }
         let viewAddress = Int(bitPattern: Unmanaged.passUnretained(view).toOpaque())
@@ -178,7 +178,7 @@ struct SurfaceLifetimeTests {
     private func exitsDelivered(
         running command: String, afterExit: @escaping @MainActor (GhosttySurfaceView) -> Void = { _ in }
     ) async throws -> ExitRun {
-        let runtime = try GhosttyRuntime(config: config)
+        let runtime = try GhosttyRuntime(config: config, texts: .spanish)
         let engine = GhosttyTerminalEngine(runtime: runtime)
         let pane = try engine.open(
             TerminalSessionSpec(workingDirectory: spec.workingDirectory, command: .custom(command)))

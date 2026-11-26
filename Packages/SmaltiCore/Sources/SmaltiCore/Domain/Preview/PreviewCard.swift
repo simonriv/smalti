@@ -19,23 +19,23 @@ public struct PreviewCard: Equatable, Sendable {
             name: shortName(image.name))
     }
 
-    public static func unreadable(_ image: ImageDescription, anchor: Rect) -> PreviewCard {
+    public static func unreadable(_ image: ImageDescription, anchor: Rect, texts: TerminalTexts) -> PreviewCard {
         PreviewCard(
-            path: image.path, detail: "No se pudo leer la imagen", thumbnail: nil, anchor: anchor,
+            path: image.path, detail: texts.previewUnreadable, thumbnail: nil, anchor: anchor,
             name: shortName(image.name))
     }
 
-    public static func tooLarge(path: String, anchor: Rect) -> PreviewCard {
+    public static func tooLarge(path: String, anchor: Rect, texts: TerminalTexts) -> PreviewCard {
         let name = String(path.split(separator: "/").last ?? "")
         return PreviewCard(
-            path: path, detail: "Imagen demasiado grande", thumbnail: nil, anchor: anchor, name: shortName(name))
+            path: path, detail: texts.previewTooLarge, thumbnail: nil, anchor: anchor, name: shortName(name))
     }
 
     /// "landing-v3.png · 1440×900 · ⌘Y para abrir", with the shortcut the keymap binds to Quick Look (final review
     /// m5); without one, or for a card with no image, no hint.
-    public func caption(shortcut: String?) -> String {
+    public func caption(shortcut: String?, texts: TerminalTexts) -> String {
         guard thumbnail != nil, let shortcut else { return "\(name) · \(detail)" }
-        return "\(name) · \(detail) · \(shortcut) para abrir"
+        return texts.previewCaption(["name": name, "detail": detail, "shortcut": shortcut])
     }
 
     /// The name without control characters, cut in the middle to `nameLimit` so its extension stays visible.

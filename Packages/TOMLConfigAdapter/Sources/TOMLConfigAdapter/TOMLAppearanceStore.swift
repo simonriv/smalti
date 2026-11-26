@@ -7,11 +7,14 @@ import SmaltiCore
 @MainActor
 public final class TOMLAppearanceStore: AppearanceStore {
     private let file: URL
+    /// F7.7: the comments' language.
+    private let texts: ConfigTexts
     /// The document the UI started from and the file's modification date then (load, reload or last write).
     private var baseline: (document: AppearanceDocument, date: Date?)?
 
-    public init(file: URL) {
+    public init(file: URL, texts: ConfigTexts) {
         self.file = file
+        self.texts = texts
     }
 
     /// Call with what was loaded from the files (startup, "Recargar configuración"), so the first save of a session
@@ -31,10 +34,10 @@ public final class TOMLAppearanceStore: AppearanceStore {
         do {
             try FileManager.default.createDirectory(
                 at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data(TOMLWriter.text(merged).utf8).write(to: target, options: .atomic)
+            try Data(TOMLWriter.text(merged, texts: texts).utf8).write(to: target, options: .atomic)
         } catch {
             throw ConfigError(
-                file: path, line: nil, key: nil, reason: "no se pudo escribir: \(error.localizedDescription)")
+                file: path, line: nil, key: nil, problem: .unwritable(detail: error.localizedDescription))
         }
         baseline = (merged, modificationDate())
         return merged
@@ -48,7 +51,7 @@ public final class TOMLAppearanceStore: AppearanceStore {
         else { return }
         throw ConfigError(
             file: path, line: nil, key: nil,
-            reason: "es de una versión más nueva de Smalti: no se sobrescribe")
+            problem: .newerNotOverwritten)
     }
 
     /// Keys missing from the edited file read as defaults, so deleting one by hand is respected (M8). A file that no

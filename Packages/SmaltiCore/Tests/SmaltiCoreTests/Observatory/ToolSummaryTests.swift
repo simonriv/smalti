@@ -23,7 +23,7 @@ struct ToolSummaryTests {
     @Test func grepShowsPatternAndPath() {
         #expect(
             ToolSummary.text(name: "Grep", input: ["pattern": "scheduleReminder", "path": "src/"], diff: nil)
-                == "\"scheduleReminder\" en src/")
+                == "\"scheduleReminder\" · src/")
     }
 
     @Test func grepWithoutPathShowsPattern() {

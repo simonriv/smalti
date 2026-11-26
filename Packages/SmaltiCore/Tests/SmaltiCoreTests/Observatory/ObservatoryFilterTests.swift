@@ -32,7 +32,7 @@ struct ObservatoryFilterTests {
     }
 
     @Test func filtersCycleInTheBoardsOrder() {
-        #expect(ObservatoryFilter.allCases.map(\.title) == ["Todas", "Claude Code", "OpenCode", "Locales"])
+        #expect(ObservatoryFilter.allCases.map { $0.title } == ["Todas", "Claude Code", "OpenCode", "Locales"])
         #expect(ObservatoryFilter.local.next == .all)
         #expect(ObservatoryFilter.all.next == .claude)
     }

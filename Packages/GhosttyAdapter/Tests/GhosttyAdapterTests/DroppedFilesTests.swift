@@ -44,7 +44,7 @@ struct DroppedFilesSurfaceTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-drop-\(UUID()).conf"))
-        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        let engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         let output = FileManager.default.temporaryDirectory.appending(path: "smalti-drop-\(UUID()).txt")
         let script = #"printf '\033[?2004h'; stty raw -echo; dd bs=1 count=40 2>/dev/null | od -c > "$OUT"; sleep 5"#
         let pane = PaneID()

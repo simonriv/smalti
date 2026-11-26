@@ -38,7 +38,7 @@ struct LibghosttyF5ApiTests {
             .filter { !$0.hasPrefix("font-codepoint-map") }.joined(separator: "\n")
         let text = base + "\n" + extraConfig
         let config = try GhosttyConfig.load(text: text, writingTo: work.appending(path: "\(name).conf"))
-        return try GhosttyRuntime(config: config)
+        return try GhosttyRuntime(config: config, texts: .spanish)
     }
 
     /// Counts bright pixels of the window after printing U+E900 in a fresh `zsh -f`.

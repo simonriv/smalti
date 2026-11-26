@@ -128,6 +128,9 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
     public let invalidEditor: TextTemplate
     public let invalidTree: String
     public let invalidRoot: TextTemplate
+    public let jsonMissingKey: TextTemplate
+    public let jsonInvalidValue: TextTemplate
+    public let jsonInvalid: String
 
     public static let spanish = SharedLayoutErrorTexts(
         unsupportedFormat: "formato {format} no compatible con esta versión de Smalti",
@@ -142,7 +145,8 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         ambiguousPane: "el panel {pane} indica más de un programa que abrir",
         invalidEditor: "el archivo o la línea del editor del panel {pane} no son válidos",
         invalidTree: "su árbol no coloca cada panel una sola vez",
-        invalidRoot: "la carpeta «{root}» no es una ruta absoluta ni empieza por ~")
+        invalidRoot: "la carpeta «{root}» no es una ruta absoluta ni empieza por ~",
+        jsonMissingKey: "falta «{key}»", jsonInvalidValue: "valor no válido en «{path}»", jsonInvalid: "JSON no válido")
 
     public static let english = SharedLayoutErrorTexts(
         unsupportedFormat: "format {format} isn’t supported by this version of Smalti",
@@ -157,5 +161,16 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         ambiguousPane: "pane {pane} names more than one program to open",
         invalidEditor: "pane {pane}’s editor file or line isn’t valid",
         invalidTree: "its tree doesn’t place each pane exactly once",
-        invalidRoot: "the folder “{root}” is neither an absolute path nor starts with ~")
+        invalidRoot: "the folder “{root}” is neither an absolute path nor starts with ~",
+        jsonMissingKey: "“{key}” is missing", jsonInvalidValue: "invalid value at “{path}”", jsonInvalid: "invalid JSON"
+    )
+
+    func describe(_ problem: LayoutJSONProblem) -> String {
+        switch problem {
+        case .missingKey(let key): jsonMissingKey(["key": key])
+        case .invalidValue(let path): jsonInvalidValue(["path": path])
+        case .invalid: jsonInvalid
+        case .other(let description): description
+        }
+    }
 }

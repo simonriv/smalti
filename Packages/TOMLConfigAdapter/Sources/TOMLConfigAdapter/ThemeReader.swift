@@ -2,8 +2,6 @@ import SmaltiCore
 
 /// `[appearance.ansi.<tema>]`: the user's ANSI edits per theme, index 0–15 to `#rrggbb` (spec F5).
 enum ANSIReader {
-    private static let indexReason = "se esperaba un índice ANSI de 0 a 15"
-    private static let colorReason = "se esperaba un color #rrggbb"
 
     static func read(_ section: TOMLSection) throws(ConfigError) -> [ThemeID: ANSIOverrides] {
         try section.rejectUnknownKeys(allowed: Set(ThemeID.allCases.map(\.rawValue)))
@@ -19,24 +17,24 @@ enum ANSIReader {
         var colors: [Int: RGBAColor] = [:]
         for key in table.keysInFileOrder {
             guard let index = Int(key), ANSIOverrides.range.contains(index) else {
-                throw table.error(at: key, indexReason)
+                throw table.error(at: key, .expectedANSIIndex)
             }
             colors[index] = try color(key, in: table)
         }
         do {
             return try ANSIOverrides(colors)
         } catch {
-            throw table.error(at: table.keysInFileOrder.first ?? "", indexReason)
+            throw table.error(at: table.keysInFileOrder.first ?? "", .expectedANSIIndex)
         }
     }
 
     private static func color(_ key: String, in table: TOMLSection) throws(ConfigError) -> RGBAColor {
-        guard let text = try table.text(key, reason: colorReason), text.wholeMatch(of: /#[0-9a-fA-F]{6}/) != nil
-        else { throw table.error(at: key, colorReason) }
+        guard let text = try table.text(key, reason: .expectedColor), text.wholeMatch(of: /#[0-9a-fA-F]{6}/) != nil
+        else { throw table.error(at: key, .expectedColor) }
         do {
             return try RGBAColor(hex: text)
         } catch {
-            throw table.error(at: key, colorReason)
+            throw table.error(at: key, .expectedColor)
         }
     }
 }
@@ -63,10 +61,10 @@ enum PromptReader {
         for word in words {
             guard let module = PromptModuleID(rawValue: word) else {
                 try section.skipUnknownValue(
-                    word, at: modulesKey, else: section.error(at: modulesKey, "módulo desconocido: \(word)"))
+                    word, at: modulesKey, else: section.error(at: modulesKey, .unknownModule(word)))
                 continue
             }
-            guard !modules.contains(module) else { throw section.error(at: modulesKey, "módulo repetido: \(word)") }
+            guard !modules.contains(module) else { throw section.error(at: modulesKey, .repeatedModule(word)) }
             modules.append(module)
         }
         return modules

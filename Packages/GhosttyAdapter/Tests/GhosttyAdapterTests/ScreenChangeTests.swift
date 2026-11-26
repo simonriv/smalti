@@ -18,7 +18,7 @@ struct ScreenChangeTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-screen-\(UUID()).conf"))
-        runtime = try GhosttyRuntime(config: config)
+        runtime = try GhosttyRuntime(config: config, texts: .spanish)
         spec = TerminalSessionSpec(
             workingDirectory: try WorkingDirectory(path: "/tmp"), command: .custom("/bin/sleep 30"))
     }

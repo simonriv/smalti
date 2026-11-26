@@ -33,7 +33,7 @@ struct ZshExpansionTests {
         var appearance = AppearanceSettings.obsidian
         appearance.protectLegibility = false
         return ZshPromptRenderer.render(
-            config, context: PromptContext(directory: "/tmp", home: "/Users/simon"),
+            config, context: PromptContext(directory: "/tmp", home: "/Users/simon", copy: .spanish),
             theme: ThemeCatalog.apply(appearance))
     }
 
@@ -70,7 +70,7 @@ struct ZshExpansionTests {
     }
 
     @Test func fullPromptValuesStayLiteral() throws {
-        var context = PromptContext(directory: "/tmp", home: "/Users/simon")
+        var context = PromptContext(directory: "/tmp", home: "/Users/simon", copy: .spanish)
         context.branch = "$(touch /tmp/smalti-pwned)`id`%F{red}"
         var config = PromptConfig.standard
         config.modules = [.gitBranch]

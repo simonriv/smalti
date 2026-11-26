@@ -75,16 +75,19 @@ struct SmaltiConfigTests {
     }
 
     @Test func configErrorSummaryNamesFileLineAndKey() {
-        let error = ConfigError(file: "config.toml", line: 12, key: "font_size", reason: "se esperaba un número")
+        let error = ConfigError(file: "config.toml", line: 12, key: "font_size", problem: .expectedNumber)
 
-        #expect(error.summary == "config.toml:12 · font_size: se esperaba un número")
+        #expect(error.summary(.spanish) == "config.toml:12 · font_size: se esperaba un número")
     }
 
     @Test func configErrorSummaryOmitsMissingParts() {
         #expect(
-            ConfigError(file: "config.toml", line: nil, key: nil, reason: "ilegible").summary
-                == "config.toml · ilegible")
-        #expect(ConfigError(file: "", line: nil, key: "⌥C", reason: "reservado").summary == "⌥C: reservado")
+            ConfigError(file: "config.toml", line: nil, key: nil, problem: .unreadableFile(detail: "ilegible")).summary(
+                .spanish)
+                == "config.toml · no se pudo leer el archivo: ilegible")
+        #expect(
+            ConfigError(file: "", line: nil, key: "⌥C", problem: .reservedOption).summary(.spanish)
+                == "⌥C: ⌥ sin ⌘ ni ⌃ queda reservado para escribir")
     }
 
     @Test(arguments: [

@@ -25,9 +25,8 @@ struct StatusMessage: Equatable {
 
     /// File name instead of the full path: the bar is one short line.
     static func invalidConfig(_ error: ConfigError) -> StatusMessage {
-        let short = ConfigError(
-            file: URL(filePath: error.file).lastPathComponent, line: error.line, key: error.key, reason: error.reason)
-        return StatusMessage(text: short.summary, isTransient: false)
+        let short = error.located(in: URL(filePath: error.file).lastPathComponent)
+        return StatusMessage(text: short.summary(.spanish /* T9 */), isTransient: false)
     }
 
     /// Shown once per distinct reason by `SessionKeeper`; the session keeps trying at the next change.

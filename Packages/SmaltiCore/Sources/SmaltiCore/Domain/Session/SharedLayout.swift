@@ -13,7 +13,7 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
     case emptyCommand(pane: Int)
     case escapingDirectory(pane: Int, path: String)
     case tooLarge(bytes: Int)
-    case notJSON(reason: String)
+    case notJSON(LayoutJSONProblem)
     /// A pane that names more than one of `command`, `harness` and `editor`: which one runs would be ambiguous.
     case ambiguousPane(pane: Int)
     case invalidEditor(pane: Int)
@@ -36,7 +36,7 @@ public enum SharedLayoutError: Error, Equatable, Sendable {
         case .escapingDirectory(let pane, let path): texts.escapingDirectory(["pane": String(pane), "path": path])
         case .tooLarge(let bytes):
             texts.tooLarge(["bytes": String(bytes), "maximum": String(SharedLayout.maximumBytes)])
-        case .notJSON(let reason): texts.notJSON(["reason": reason])
+        case .notJSON(let problem): texts.notJSON(["reason": texts.describe(problem)])
         case .ambiguousPane(let pane): texts.ambiguousPane(["pane": String(pane)])
         case .invalidEditor(let pane): texts.invalidEditor(["pane": String(pane)])
         case .invalidTree: texts.invalidTree
@@ -286,4 +286,13 @@ struct PortablePaths {
     private static func trimmed(_ path: String) -> String {
         path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
     }
+}
+
+/// F7.7: why a layout file is not JSON Smalti can read, without words.
+public enum LayoutJSONProblem: Equatable, Sendable {
+    case missingKey(String)
+    case invalidValue(path: String)
+    case invalid
+    /// The system's own (already localized) description.
+    case other(String)
 }
