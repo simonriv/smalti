@@ -37,6 +37,26 @@ struct TimelineCommandsTests {
         #expect(KeyRouting.decide(press, keymap: .standard, context: .overlay(allowing: [])) == .passThrough)
     }
 
+    /// Review 2 (C1): with nothing open, the contextual chords of the Observatory, processes and timeline reach the
+    /// terminal (⇧⌘C must not open the timeline).
+    @Test(arguments: [CommandID.timelineCopyCall, .processesStop, .observatoryPeriod, .observatoryFilter])
+    func contextualChordsReachTheTerminalWithNothingOpen(command: CommandID) throws {
+        let press = KeyPress(try #require(Keymap.standard.chord(for: command)))
+
+        #expect(KeyRouting.decide(press, keymap: .standard, context: .terminal) == .passThrough)
+    }
+
+    /// Beside the timeline every shortcut acts but the text keys (⌘C reaches the focused view) and the other views'.
+    @Test func besideTheTimelineTextKeysReachTheFocusedView() throws {
+        let copy = KeyPress(try #require(Keymap.standard.chord(for: .terminalCopy)))
+        let copyCall = KeyPress(try #require(Keymap.standard.chord(for: .timelineCopyCall)))
+        let focus = KeyPress(try #require(Keymap.standard.chord(for: .paneFocus(2))))
+
+        #expect(KeyRouting.decide(copy, keymap: .standard, context: .besideTimeline) == .passThrough)
+        #expect(KeyRouting.decide(copyCall, keymap: .standard, context: .besideTimeline) == .perform(.timelineCopyCall))
+        #expect(KeyRouting.decide(focus, keymap: .standard, context: .besideTimeline) == .perform(.paneFocus(2)))
+    }
+
     @Test func allAreStandard() {
         for command in CommandID.timeline { #expect(CommandID.allStandard.contains(command)) }
     }

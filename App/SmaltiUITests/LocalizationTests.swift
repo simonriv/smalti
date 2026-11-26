@@ -167,16 +167,19 @@ final class LocalizationTests: SmaltiUITestCase {
                     panes: [
                         .init(directory: root, process: "codex", harness: ("codex", TimelineFixture.codex)),
                         .init(directory: root),
+                        .init(directory: root, process: "agy", harness: ("antigravity", "g1")),
+                        .init(directory: root, process: "codex", harness: ("codex", nil)),
                     ])
             ], alwaysRestore: true, in: english)
-        launch(english, shells: 2)
+        launch(english, shells: 4)
 
         app.typeKey("1", modifierFlags: .command)
         app.typeKey("t", modifierFlags: [.command, .shift])
         XCTAssertTrue(app.element("smalti.timeline.session.title").waitForExistence(timeout: 10))
-        app.typeKey(.upArrow, modifierFlags: [])
+        // The last row is Codex's reply; one up is its failing `cat` call.
         app.typeKey(.upArrow, modifierFlags: [])
         app.typeKey(.rightArrow, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.timeline.output").waitForExistence(timeout: 5))
         collect("timeline session")
         app.typeKey("c", modifierFlags: .command)
         collect("timeline copied")
@@ -184,10 +187,23 @@ final class LocalizationTests: SmaltiUITestCase {
         app.typeText("missing")
         XCTAssertTrue(app.element("smalti.timeline.hit.1").waitForExistence(timeout: 10))
         collect("timeline search")
+        app.typeText("zzz")
+        let summary = app.element("smalti.timeline.search.summary")
+        let nothing = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (summary.value as? String ?? "").hasPrefix("Nothing matches") },
+            object: nil)
+        wait(for: [nothing], timeout: 10)
+        collect("timeline no match")
         app.typeKey(.escape, modifierFlags: [])
         app.typeKey("2", modifierFlags: .command)
         XCTAssertTrue(app.element("smalti.timeline.empty").waitForExistence(timeout: 10))
         collect("timeline empty")
+        app.typeKey("3", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.timeline.empty").waitForExistence(timeout: 10))
+        collect("timeline fallback")
+        app.typeKey("4", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.timeline.banner").waitForExistence(timeout: 10))
+        collect("timeline unidentified")
 
         XCTAssertTrue(offenders.isEmpty, "Spanish in the English timeline: " + offenders.joined(separator: " | "))
     }

@@ -60,6 +60,14 @@ public final class SearchTranscripts {
         onChange?()
     }
 
+    /// Closing the timeline or going back to its session: nothing of the search stays (review 2 of F9).
+    public func clear() {
+        cancel()
+        query = TimelineQuery("")
+        results = SearchResults()
+        onChange?()
+    }
+
     public func cancel() {
         task?.cancel()
         isSearching = false

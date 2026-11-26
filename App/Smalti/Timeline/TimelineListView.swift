@@ -45,7 +45,7 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
         scroll.translatesAutoresizingMaskIntoConstraints = false
         addSubview(scroll)
         NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: topAnchor, constant: 6),
+            scroll.topAnchor.constraint(equalTo: topAnchor, constant: theme.timeline.listTop),
             scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
             scroll.leadingAnchor.constraint(equalTo: leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -55,9 +55,20 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
     @available(*, unavailable, message: "Built in code only")
     required init?(coder: NSCoder) { nil }
 
+    private var shownBody: TimelineScreen.Body?
+
     func show(_ screen: TimelineScreen) {
-        entries = Self.entries(screen.body)
+        let previous = selected
         selected = screen.selected
+        // Only the choice moved: repaint those two rows, not the whole list (review 2, I5).
+        if screen.body == shownBody {
+            let rows = [previous, screen.selected].compactMap { tableRow(of: $0) }
+            table.reloadData(forRowIndexes: IndexSet(rows), columnIndexes: IndexSet(integer: 0))
+            if let row = tableRow(of: screen.selected) { table.scrollRowToVisible(row) }
+            return
+        }
+        shownBody = screen.body
+        entries = Self.entries(screen.body)
         table.reloadData()
         if let row = tableRow(of: screen.selected) { table.scrollRowToVisible(row) }
     }
@@ -96,6 +107,10 @@ final class TimelineListView: NSView, NSTableViewDataSource, NSTableViewDelegate
         guard entries.indices.contains(table.clickedRow) else { return }
         switch entries[table.clickedRow] {
         case .row(_, let index), .recent(_, let index): onChoose?(index)
+        case .hit(_, _, _, _, let item):
+            // Hits are chosen by their place among the hits, as ↑↓ count them.
+            let hits = entries.compactMap { if case .hit(_, _, _, _, let at) = $0 { at } else { nil } }
+            if let position = hits.firstIndex(of: item) { onChoose?(position) }
         default: break
         }
     }

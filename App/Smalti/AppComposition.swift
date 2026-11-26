@@ -898,6 +898,12 @@ final class AppComposition {
                         }
                     }, uniquingKeysWith: { first, _ in first })
             },
+            liveStates: { [weak self] in
+                guard let panes = self?.windowSet()?.allPanes else { return [:] }
+                return Dictionary(
+                    panes.compactMap { pane in pane.agent.map { ($0.sessionID, $0.state.kind) } },
+                    uniquingKeysWith: { first, _ in first })
+            },
             paneNames: { [weak self] in self?.windowSet().map { PaneNames.of($0, texts: .current) } ?? [:] })
     }
 

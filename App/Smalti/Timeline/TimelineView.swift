@@ -43,8 +43,8 @@ final class TimelineView: NSView, NSTextFieldDelegate {
         layer?.borderWidth = theme.chrome.hairlineWidth
         shadow = NSShadow()
         layer?.shadowOpacity = Float(tokens.shadowOpacity)
-        layer?.shadowRadius = 25
-        layer?.shadowOffset = CGSize(width: -18, height: 0)
+        layer?.shadowRadius = tokens.shadowRadius
+        layer?.shadowOffset = CGSize(width: tokens.shadowOffsetX, height: 0)
         configureField()
         layoutAll()
         setAccessibilityElement(true)
@@ -73,8 +73,10 @@ final class TimelineView: NSView, NSTextFieldDelegate {
         let tokens = theme.timeline
         top.orientation = .vertical
         top.alignment = .leading
-        top.spacing = 6
-        top.edgeInsets = NSEdgeInsets(top: 9, left: tokens.padding, bottom: 9, right: tokens.padding)
+        top.spacing = tokens.topSpacing
+        top.edgeInsets = NSEdgeInsets(
+            top: tokens.topPaddingVertical, left: tokens.padding, bottom: tokens.topPaddingVertical,
+            right: tokens.padding)
         let views: [NSView] = [
             header, ProcessesView.hairline(theme.strip.bottomBorder), top,
             ProcessesView.hairline(theme.strip.bottomBorder),
@@ -135,6 +137,12 @@ final class TimelineView: NSView, NSTextFieldDelegate {
         field.stringValue = text
         focusSearch()
         field.currentEditor()?.selectedRange = NSRange(location: (text as NSString).length, length: 0)
+    }
+
+    /// The search field is being edited (its field editor has the keyboard).
+    var isSearching: Bool {
+        guard let editor = window?.firstResponder as? NSText else { return false }
+        return editor.delegate === field
     }
 
     func focusSearch() {
@@ -215,13 +223,14 @@ private final class TimelineHeader: NSView {
         super.init(frame: .zero)
         let title = ObservatoryText.label(
             String(localized: "Timeline"),
-            .init(size: theme.observatory.stripTitleSize, color: theme.text.title, weight: 600),
+            .init(size: theme.observatory.stripTitleSize, color: theme.text.title, weight: theme.timeline.titleWeight),
             theme: theme)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let stack = NSStackView(views: [title, spacer, session, search, KbdView("esc", theme: theme)])
-        stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 0, left: theme.timeline.padding, bottom: 0, right: 12)
+        stack.spacing = theme.timeline.headerGap
+        stack.edgeInsets = NSEdgeInsets(
+            top: 0, left: theme.timeline.padding, bottom: 0, right: theme.timeline.headerTrailing)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -264,8 +273,8 @@ private final class TimelineChip: NSView {
         addSubview(stack)
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: theme.timeline.toolRowHeight),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: theme.timeline.chipPadding),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -theme.timeline.chipPadding),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
         setAccessibilityElement(true)
@@ -286,7 +295,7 @@ private final class TimelineChip: NSView {
             layer?.backgroundColor =
                 (isOn ? theme.focus.glow : RGBAColor(red: 0, green: 0, blue: 0, alpha: 0)).nsColor.cgColor
             title.textColor = (isOn ? chips.chosenText : chips.inactiveText).nsColor
-            setAccessibilityValue(isOn ? "selected" : "")
+            setAccessibilitySelected(isOn)
         }
     }
 }
@@ -300,12 +309,13 @@ private final class TimelineFooter: NSView {
 
     init(theme: Theme) {
         self.theme = theme
-        notice = ObservatoryText.label("", .init(size: 11, color: theme.text.primary), theme: theme)
+        notice = ObservatoryText.label(
+            "", .init(size: theme.timeline.smallFontSize, color: theme.text.primary), theme: theme)
         super.init(frame: .zero)
         notice.setAccessibilityIdentifier("smalti.timeline.notice")
         notice.lineBreakMode = .byTruncatingHead
         notice.setContentCompressionResistancePriority(.init(1), for: .horizontal)
-        keys.spacing = 10
+        keys.spacing = theme.timeline.footerGap
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let stack = NSStackView(views: [keys, spacer, notice])
@@ -325,9 +335,10 @@ private final class TimelineFooter: NSView {
     func show(keys hints: [(key: String, label: String)]) {
         keys.arrangedSubviews.forEach { $0.removeFromSuperview() }
         for hint in hints {
-            let label = ObservatoryText.label(hint.label, .init(size: 11, color: theme.text.secondary), theme: theme)
+            let label = ObservatoryText.label(
+                hint.label, .init(size: theme.timeline.smallFontSize, color: theme.text.secondary), theme: theme)
             let pair = NSStackView(views: [KbdView(hint.key, theme: theme), label])
-            pair.spacing = 5
+            pair.spacing = theme.timeline.footerKeyGap
             keys.addArrangedSubview(pair)
         }
     }

@@ -40,6 +40,24 @@ public struct KeyContext: Equatable, Sendable {
         KeyContext(allowing: allowing, passingThrough: Set(CommandID.allStandard).subtracting(allowing))
     }
 
+    /// Nothing open over the panes: the Observatory's, the processes view's and the timeline's own chords are the
+    /// terminal's (review 2 of F9: ⇧⌘C must not open the timeline).
+    public static let terminal = KeyContext(
+        passingThrough: Set([CommandID.observatoryPeriod, .observatoryFilter]).union(CommandID.processesContextual)
+    )
+    .addingPassThrough(CommandID.timelineContextual)
+
+    /// F9: the timeline beside the panes. Every shortcut acts (⌘1…⌘9 move the focus and the timeline follows) but
+    /// the text keys, which reach the focused view (⌘C copies the chosen item while the timeline has the keyboard),
+    /// and the other views' chords.
+    public static let besideTimeline = KeyContext(
+        passingThrough: textEditing.union([CommandID.observatoryPeriod, .observatoryFilter])
+            .union(CommandID.processesContextual))
+
+    private func addingPassThrough(_ commands: Set<CommandID>) -> KeyContext {
+        KeyContext(allowing: allowing, passingThrough: passingThrough.union(commands))
+    }
+
     /// An open overlay (⌘K, ⌃R, the help, feedback): only `allowing` runs, and its text field keeps the text keys,
     /// among them ⌘⌫ and ⌘⇧↓ (F8: the processes view's chords only act inside that view).
     public static func overlay(allowing: Set<CommandID>) -> KeyContext {

@@ -47,6 +47,20 @@ final class TimelineTests: SmaltiUITestCase {
         wait(for: [matched], timeout: timeout)
     }
 
+    private var chosenItem: XCUIElement {
+        app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'smalti.timeline.item.' AND selected == true")
+        ).firstMatch
+    }
+
+    private func terminal(_ index: Int) -> XCUIElement { app.elements("smalti.terminal").element(boundBy: index) }
+
+    private func expect(_ terminal: XCUIElement, toContain text: String) {
+        let shown = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in (terminal.value as? String)?.contains(text) == true }, object: nil)
+        wait(for: [shown], timeout: 10)
+    }
+
     private func press(_ key: XCUIKeyboardKey, times: Int = 1) {
         for _ in 0..<times { app.typeKey(key, modifierFlags: []) }
     }
@@ -86,7 +100,7 @@ final class TimelineTests: SmaltiUITestCase {
         expectTitle("fixture prompt B")
 
         press(.upArrow, times: 7)
-        XCTAssertEqual(app.element("smalti.timeline.item.1").value as? String, "selected")
+        XCTAssertTrue(app.element("smalti.timeline.item.1").isSelected)
         press(.rightArrow)
         XCTAssertTrue(app.element("smalti.timeline.output").waitForExistence(timeout: 5))
         app.typeKey("c", modifierFlags: .command)
@@ -130,11 +144,10 @@ final class TimelineTests: SmaltiUITestCase {
         press(.return)
 
         expectTitle("fixture prompt F")
-        let selected = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH 'smalti.timeline.item.' AND value == 'selected'")
-        ).firstMatch
+        let selected = chosenItem
         XCTAssertTrue(selected.waitForExistence(timeout: 5))
         XCTAssertTrue(selected.label.contains("adiós"), selected.label)
+        XCTAssertTrue(selected.isHittable, "the chosen turn is in view")
     }
 
     // MARK: - Fallbacks and closing
@@ -152,11 +165,87 @@ final class TimelineTests: SmaltiUITestCase {
 
     func testEscClosesAndGivesTheKeyboardBack() throws {
         try launchWithSessions()
+        app.typeKey("1", modifierFlags: .command)
         openTimeline()
 
         press(.escape)
-
         XCTAssertTrue(app.element("smalti.timeline").waitForNonExistence(timeout: 5))
+        app.run("echo vuelta-al-panel")
+
+        expect(terminal(0), toContain: "vuelta-al-panel\n")
+    }
+
+    // MARK: - Review 2
+
+    /// C1: with the timeline closed, ⇧⌘C and ⌘F are the terminal's.
+    func testItsChordsBelongToTheTerminalWhileClosed() throws {
+        try launchWithSessions()
+
+        app.typeKey("c", modifierFlags: [.command, .shift])
+        XCTAssertFalse(app.element("smalti.timeline").waitForExistence(timeout: 2))
+        app.typeKey("f", modifierFlags: .command)
+
+        XCTAssertTrue(app.element("smalti.search").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.element("smalti.timeline").exists)
+    }
+
+    /// C3: a click on a pane gives it the keyboard; ⌘2 then moves it to the other pane, as without the timeline.
+    func testAClickOnAPaneGivesItTheKeyboardAndTheFocusMovesIt() throws {
+        try launchWithSessions()
+        app.typeKey("1", modifierFlags: .command)
+        openTimeline()
+
+        terminal(0).click()
+        app.run("echo en-el-uno")
+        expect(terminal(0), toContain: "en-el-uno\n")
+        app.typeKey("2", modifierFlags: .command)
+        expectTitle("Run the shell command: ls")
+        app.run("echo en-el-dos")
+
+        expect(terminal(1), toContain: "en-el-dos\n")
+    }
+
+    /// I1: ⌘K over the timeline and esc: the timeline has the keyboard again.
+    func testThePaletteGivesTheKeyboardBackToTheTimeline() throws {
+        try launchWithSessions()
+        app.typeKey("1", modifierFlags: .command)
+        openTimeline()
+        expectTitle("fixture prompt B")
+        let last = chosenItem.identifier
+
+        openPalette()
+        press(.escape)
+        press(.upArrow)
+
+        XCTAssertNotEqual(chosenItem.identifier, last)
+    }
+
+    func testTheProcessesViewAndTheTimelineNeverStack() throws {
+        try launchWithSessions()
+        openTimeline()
+
+        app.typeKey("m", modifierFlags: [.command, .shift])
+
+        XCTAssertTrue(app.element("smalti.processes").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("smalti.timeline").waitForNonExistence(timeout: 5))
+    }
+
+    /// I4: a hit in the session already shown only moves the choice.
+    func testAHitInTheShownSessionOnlyMovesTheChoice() throws {
+        try launchWithSessions()
+        app.typeKey("1", modifierFlags: .command)
+        openTimeline()
+        expectTitle("fixture prompt B")
+
+        app.typeKey("f", modifierFlags: .command)
+        app.typeText("vacio")
+        XCTAssertTrue(app.element("smalti.timeline.hit.1").waitForExistence(timeout: 10))
+        press(.downArrow)
+        press(.return)
+
+        expectTitle("fixture prompt B")
+        XCTAssertTrue(chosenItem.waitForExistence(timeout: 5))
+        XCTAssertTrue(chosenItem.label.contains("vacío"), chosenItem.label)
     }
 
     func testTheObservatoryAndTheTimelineNeverStack() throws {

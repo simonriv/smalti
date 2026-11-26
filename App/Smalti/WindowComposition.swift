@@ -44,6 +44,8 @@ struct TimelineServices {
     let projectRoot: (Workspace, String) -> String
     /// Sessions open in some pane of any window: session id → "<workspace> · <n>".
     let livePanes: () -> [String: String]
+    /// Sessions open in some pane of any window: session id → the state of its agent.
+    let liveStates: () -> [String: AgentStateKind]
     let paneNames: () -> [PaneID: String]
 }
 
@@ -175,7 +177,7 @@ final class WindowComposition {
     /// A palette, the observatory or the ⌃R palette owns the keyboard.
     var hasOverlayOpen: Bool {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || processesScreen?.isOpen == true
-            || timelineScreen?.isOpen == true || hasHistoryPaletteOpen
+            || hasHistoryPaletteOpen
             || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
             || welcome?.isOpen == true || projects?.isOpen == true
     }
@@ -229,6 +231,7 @@ final class WindowComposition {
                 return panel
             }()
         closeOverlays()
+        timelineScreen?.dismiss()
         panel.toggle()
     }
 
@@ -249,6 +252,7 @@ final class WindowComposition {
             }()
         closeOverlays()
         appearancePanel?.close()
+        timelineScreen?.dismiss()
         studio.toggle()
     }
 
@@ -350,7 +354,10 @@ final class WindowComposition {
             window.paneGrid.render(state) { engine.view(for: $0) }
             window.statusBar.render(state)
         }
-        grid.onPaneClicked = { [weak controller] pane in controller?.focus(pane) }
+        grid.onPaneClicked = { [weak self, weak controller] pane in
+            self?.timelineScreen?.releaseKeyboard()
+            controller?.focus(pane)
+        }
         window.strip.onCommand = { [weak controller] command in controller?.perform(command) }
         window.strip.onCursor = { [weak window] isInside in window?.buttons?.cursorOnStrip(isInside) }
         window.buttons?.onShow = { [weak window] faded in
@@ -555,14 +562,15 @@ final class WindowComposition {
             actions: .init(
                 target: { [weak self] in self?.timelineTarget(services) },
                 livePanes: services.livePanes,
+                liveDot: { [weak self] session in
+                    guard let self, let kind = services.liveStates()[session] else { return nil }
+                    return controller.theme.statusDot(for: kind)
+                },
                 didClose: { [weak self] in
                     guard let self else { return }
                     focusKeyboard(on: controller.set.active.focusedPane)
                 },
-                area: { [weak self] in
-                    guard let self else { return .zero }
-                    return window.paneGrid.frame
-                }))
+                area: { [weak self] in self?.window.paneGrid }))
     }
 
     /// What the focused pane means for the timeline: its session, the project around it and how to name it.
@@ -576,10 +584,11 @@ final class WindowComposition {
         }
         let running = process.flatMap { self.services.harnesses.adapter(detecting: $0)?.harness }
         let directory = pane.workingDirectory.path
-        return TimelineController.Target(
+        let focus = TimelineFocus(
             resolution: TimelineTarget.resolve(pane: pane, running: running, readable: services.readable),
-            root: services.projectRoot(workspace, directory), directory: directory,
-            paneName: services.paneNames()[id] ?? "", agentDot: controller.theme.statusDot(for: pane.agent?.state.kind))
+            root: services.projectRoot(workspace, directory), pane: services.paneNames()[id] ?? "")
+        return TimelineController.Target(
+            focus: focus, directory: directory, agentDot: controller.theme.statusDot(for: pane.agent?.state.kind))
     }
 
     /// ⌘⇧A: the observatory over the window; the panes stay alive and get the focus back when it closes.
@@ -681,13 +690,9 @@ final class WindowComposition {
         if processesScreen?.isOpen == true { return KeyContext(allowing: Set(CommandID.processes)) }
         // F9: beside the panes, every shortcut still acts (⌘1…⌘9 move the focus and the timeline follows); the
         // text keys reach the focused view, so ⌘C copies the chosen item while the timeline has the keyboard.
-        if timelineScreen?.isOpen == true {
-            return KeyContext(
-                passingThrough: KeyContext.textEditing.union([CommandID.observatoryPeriod, .observatoryFilter])
-                    .union(CommandID.processesContextual))
-        }
-        return KeyContext(
-            passingThrough: Set([CommandID.observatoryPeriod, .observatoryFilter]).union(CommandID.processesContextual))
+        // The timeline's text keys only while it has the keyboard: a pane with the keyboard keeps ⌘C, ⌘V and ⌘A.
+        if timelineScreen?.ownsFirstResponder == true { return .besideTimeline }
+        return .terminal
     }
 
     /// VoiceOver names each terminal "Terminal, panel 2, zsh"; its value is the visible text (`GhosttySurfaceView`).
@@ -709,6 +714,18 @@ final class WindowComposition {
     /// Keystrokes go to the focused pane's terminal. The palette and the observatory own the keyboard while open: a
     /// publish (a hook, the minute tick) must not hand it back to a terminal they cover.
     func focusKeyboard(on pane: PaneID?) {
+        // F9 (review 2): beside the panes, the timeline keeps the keyboard while it is being used; a click on a pane
+        // gives it back to the panes, and then the focus moves the keyboard as usual.
+        // A click inside a terminal goes to its surface, not to the grid: a pane holding the keyboard means the
+        // panes have it (review 2, C3).
+        if let responder = window.firstResponder as? NSView, responder.isDescendant(of: window.paneGrid) {
+            timelineScreen?.releaseKeyboard()
+        }
+        if let timeline = timelineScreen, timeline.isOpen, timeline.hasKeyboard, !hasOverlayOpen,
+            appearancePanel?.ownsKeyboard != true, studio?.isOpen != true
+        {
+            return timeline.takeKeyboard()
+        }
         guard !hasOverlayOpen, appearancePanel?.ownsKeyboard != true, studio?.isOpen != true, let pane,
             let view = services.engine.view(for: pane), window.firstResponder !== view
         else { return }

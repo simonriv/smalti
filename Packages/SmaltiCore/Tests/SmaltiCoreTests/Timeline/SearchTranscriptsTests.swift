@@ -65,6 +65,20 @@ struct SearchTranscriptsTests {
         #expect(!search.isSearching)
     }
 
+    /// Review 2 (I2): closing the timeline or going back to the session leaves no query or results behind.
+    @Test func clearingForgetsTheQueryAndTheResults() async {
+        let claude = FakeProjectTranscripts(harness: .claude, hits: [hit("s1", "abc")])
+        let search = make([claude])
+        search.update(query: "abc", root: "/w")
+        await waitUntil { search.results.matchCount == 1 && !search.isSearching }
+
+        search.clear()
+
+        #expect(search.results.matchCount == 0)
+        #expect(search.query.isEmpty)
+        #expect(!search.isSearching)
+    }
+
     @Test func startsIdle() {
         #expect(!make([]).isSearching)
     }
