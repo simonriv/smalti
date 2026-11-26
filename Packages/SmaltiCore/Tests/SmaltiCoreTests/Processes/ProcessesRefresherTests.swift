@@ -71,4 +71,21 @@ struct ProcessesRefresherTests {
         #expect(await running.reads == before + 1)
         refresher.stop()
     }
+
+    /// Mutation 2: two refreshes asked at once read once; they never overlap.
+    @Test func overlappingRefreshesReadOnce() async throws {
+        let running = FakeRunningProcesses(samples: [F.sample([F.record(10)])])
+        let refresher = ProcessesRefresher(
+            observe: observe(running, FakeListeningPorts()), timing: .init(first: .seconds(60), every: .seconds(60)))
+        refresher.start(foregroundGroups: { [:] }) { _ in }
+        for _ in 0..<200 where await running.reads == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        let before = await running.reads
+
+        async let first: Void = refresher.refreshNow()
+        async let second: Void = refresher.refreshNow()
+        _ = await (first, second)
+
+        #expect(await running.reads == before + 1)
+        refresher.stop()
+    }
 }
