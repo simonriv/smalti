@@ -80,7 +80,6 @@ public final class ShowTimeline {
         watch?.cancel()
         watch = nil
         loading?.cancel()
-        loading = nil
         state = .loading
         return generation
     }

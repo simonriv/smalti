@@ -99,6 +99,8 @@ public actor FakeProjectTranscripts: ProjectTranscripts {
     public private(set) var lastRoot: String?
     public private(set) var lastQuery: TimelineQuery?
     public private(set) var searches = 0
+    /// Hits handed to the consumer so far.
+    public private(set) var delivered = 0
 
     public init(harness: HarnessID, sessions: [HarnessSession] = [], hits: [TranscriptHit] = []) {
         self.harness = harness
@@ -122,7 +124,9 @@ public actor FakeProjectTranscripts: ProjectTranscripts {
                 for hit in await self.started(query, root) {
                     if let delay = await self.delayed, delay > .zero { try? await Task.sleep(for: delay) }
                     guard !Task.isCancelled else { break }
-                    continuation.yield(hit)
+                    // Waits until the consumer asks for more, so `delivered` counts what was actually read.
+                    if case .terminated = continuation.yield(hit) { break }
+                    await self.count()
                 }
                 continuation.finish()
             }
@@ -131,6 +135,8 @@ public actor FakeProjectTranscripts: ProjectTranscripts {
     }
 
     private var delayed: Duration? { delay }
+
+    private func count() { delivered += 1 }
 
     private func started(_ query: TimelineQuery, _ root: String) -> [TranscriptHit] {
         searches += 1

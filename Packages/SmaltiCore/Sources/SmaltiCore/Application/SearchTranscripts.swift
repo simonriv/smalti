@@ -62,7 +62,6 @@ public final class SearchTranscripts {
 
     public func cancel() {
         task?.cancel()
-        task = nil
         isSearching = false
         onChange?()
     }

@@ -13,7 +13,8 @@ struct TimelineMatchTests {
 
     @Test(arguments: [
         ("reembolso parcial", "reembolso parcial"), ("Ñandú", "nandu"), ("ab", ""), ("say \"hola\"", "say "),
-        ("Canción", "cancion"), ("a\\b\\cdef", "cdef"), ("precio €", "precio €"),
+        ("Canción", "cancion"), ("a\\b\\cdef", "cdef"), ("precio €", "precio €"), ("abc\tdefgh", "defgh"),
+        ("abc\ndefgh", "defgh"),
     ])
     func theNeedleIsTheLongestPieceJSONKeepsAsItIs(query: String, needle: String) {
         #expect(String(decoding: TimelineQuery(query).needle, as: UTF8.self) == needle)

@@ -17,7 +17,7 @@ public struct TimelineQuery: Equatable, Sendable {
     /// UTF-8, for the adapters' byte prefilter (they fold the file the same way); empty (every line is decoded) when
     /// it is shorter than 3.
     public var needle: [UInt8] {
-        let pieces = folded.split(omittingEmptySubsequences: false) {
+        let pieces = folded.split {
             $0 == "\"" || $0 == "\\" || $0.isNewline || $0 == "\t"
         }
         let longest = pieces.max { $0.count < $1.count } ?? ""

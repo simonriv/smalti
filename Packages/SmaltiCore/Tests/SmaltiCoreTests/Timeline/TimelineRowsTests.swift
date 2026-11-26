@@ -38,6 +38,29 @@ struct TimelineRowsTests {
         #expect(all[0].time == "10:58")
     }
 
+    /// Mutation: only an expanded tool says it is expanded, and only a cut text says it is cut.
+    @Test func rowsSayWhatIsExpandedAndCut() {
+        let location = F.excerpt("", offset: 9).location
+        let timeline = Timeline().appending(
+            F.workB + [F.entry(.image(ImageNote(mediaType: "image/png", byteCount: 1, location: location)))])
+
+        let all = rows(timeline)
+
+        #expect(all.allSatisfy { !$0.isExpanded })
+        #expect(all.allSatisfy { !$0.isTruncated })
+    }
+
+    @Test func anExpandedOutputKeepsItsBlankLines() throws {
+        let timeline = Timeline().appending([
+            F.prompt("p", at: 1), F.call("t", "Bash", [:], at: 2), F.result("t", "uno\n\ndos", at: 3),
+        ])
+
+        let tool = try #require(rows(timeline, expanded: [TimelineItemID(rawValue: "tool:t")]).last)
+
+        #expect(tool.expandedText == "uno\n\ndos")
+        #expect(tool.moreLines == 0)
+    }
+
     @Test func toolsShowSummaryAndStatus() {
         let all = rows(Timeline().appending(F.workB))
 

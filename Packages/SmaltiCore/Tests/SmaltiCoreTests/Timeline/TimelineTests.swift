@@ -171,5 +171,6 @@ struct TimelineTests {
         #expect(excerpt.byteCount == long.utf8.count)
         #expect(excerpt.lineCount == 2)
         #expect(!F.excerpt("corto", offset: 0).isTruncated)
+        #expect(F.excerpt("a\n\nb", offset: 0).lineCount == 3)
     }
 }

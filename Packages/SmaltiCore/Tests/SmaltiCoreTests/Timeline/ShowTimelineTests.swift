@@ -51,6 +51,24 @@ struct ShowTimelineTests {
         #expect(shown(show)?.timeline == Timeline().appending(F.workB))
     }
 
+    /// Mutation (review 1): each change reads on from where the last one stopped.
+    @Test func eachChangeReadsOnFromTheLastCursor() async throws {
+        let transcripts = FakeSessionTranscripts(harness: .claude)
+        await transcripts.add(
+            ref, reads: [Array(F.workB.prefix(4)), Array(F.workB[4..<8]), Array(F.workB.dropFirst(8))])
+        let show = make(transcripts)
+        await show.show(.session(.claude, "c1"), root: "/w")
+        await waitUntil { await transcripts.watchers == 1 }
+
+        await transcripts.change(ref)
+        await waitUntil { await transcripts.cursorsRead(ref).count == 2 }
+        await transcripts.change(ref)
+        await waitUntil { shown(show)?.timeline.turnCount == 3 }
+
+        #expect(await transcripts.cursorsRead(ref) == [0, 1, 2])
+        #expect(shown(show)?.timeline == Timeline().appending(F.workB))
+    }
+
     @Test func aRestartedReadRebuildsTheTimeline() async throws {
         let transcripts = FakeSessionTranscripts(harness: .claude)
         await transcripts.add(ref, reads: [F.workB, [F.prompt("nuevo", at: 1)]], restartAt: 1)
@@ -129,6 +147,36 @@ struct ShowTimelineTests {
         #expect(await transcripts.cancelledReads == 1)
     }
 
+    /// Mutation: opening a chosen session also cancels its read when something else is shown.
+    @Test func showingSomethingElseCancelsAChosenSessionsRead() async throws {
+        let transcripts = FakeSessionTranscripts(harness: .claude)
+        await transcripts.add(ref, reads: [F.workB])
+        await transcripts.slowDown(ref, .seconds(1))
+        let show = make(transcripts)
+
+        async let first: Void = show.open(session("c1"))
+        try await Task.sleep(for: .milliseconds(30))
+        await show.show(.noAgent, root: "/w")
+        await first
+
+        #expect(await transcripts.cancelledReads == 1)
+    }
+
+    @Test func isLoadingWhileTheSessionIsRead() async throws {
+        let transcripts = FakeSessionTranscripts(harness: .claude)
+        await transcripts.add(ref, reads: [F.workB])
+        await transcripts.slowDown(ref, .milliseconds(300))
+        let show = make(transcripts)
+        await show.show(.noAgent, root: "/w")
+
+        async let opening: Void = show.show(.session(.claude, "c1"), root: "/w")
+        try await Task.sleep(for: .milliseconds(50))
+        let during = show.state
+        await opening
+
+        #expect(during == .loading)
+    }
+
     @Test func anUnidentifiedPaneShowsTheLatestSessionMarked() async throws {
         let codexRef = TranscriptSessionRef(harness: .codex, sessionID: "x2", file: "/fx/x2.jsonl", subagentFolder: nil)
         let transcripts = FakeSessionTranscripts(harness: .codex)
@@ -188,6 +236,7 @@ struct ShowTimelineTests {
         await show.open(session("c1"))
 
         #expect(shown(show)?.ref == ref)
+        #expect(shown(show)?.isUnidentified == false)
     }
 }
 
