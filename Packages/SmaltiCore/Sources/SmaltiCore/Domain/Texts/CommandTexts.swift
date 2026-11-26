@@ -29,6 +29,10 @@ public struct CommandTexts: Sendable, Equatable {
     public let unprotectSecrets: TextTemplate
     public let editedFileSubtitle: TextTemplate
     public let integrations: IntegrationTexts
+    /// F8.5: "Abrir proyecto “{name}”" and the save row's subtitle.
+    public let openProject: TextTemplate
+    public let saveProjectSubtitle: TextTemplate
+    public let projects: ProjectTexts
     public let time: TimeTexts
     public let guards: GuardTexts
     /// The started title of a GitHub issue: "Fallo: " / "Idea: ".
@@ -55,6 +59,7 @@ public struct CommandTexts: Sendable, Equatable {
             .updatesCheck: "Buscar actualizaciones…", .helpDocs: "Abrir la documentación",
             .appSupport: "Apoyar Smalti…",
             .helpWelcome: "Bienvenida a Smalti", .helpPrivacy: "Abrir la política de privacidad",
+            .projectRecent: "Proyectos recientes…", .projectSave: "Guardar layout del proyecto",
         ],
         paletteTitles: [
             .panesEqualize: "Igualar tamaños de paneles", .paneNew: "Nuevo panel", .paneClose: "Cerrar panel",
@@ -68,7 +73,7 @@ public struct CommandTexts: Sendable, Equatable {
             .configReload: "Recargar configuración",
         ],
         groups: [
-            .approvals: "Esperan tu aprobación", .tiling: "Tiling", .panes: "Paneles",
+            .approvals: "Esperan tu aprobación", .projects: "Proyectos", .tiling: "Tiling", .panes: "Paneles",
             .workspaces: "Workspaces y sesiones", .configuration: "Configuración", .windows: "Ventanas",
             .terminal: "Terminal", .help: "Ayuda", .editedFiles: "Editados por Claude",
         ],
@@ -89,7 +94,9 @@ public struct CommandTexts: Sendable, Equatable {
         exportLayout: "Exportar layout “{name}”…", approve: "Aprobar “{quote}” en {workspace}",
         reject: "Rechazar “{quote}” en {workspace}", protectSecrets: "Proteger secretos en “{name}”",
         unprotectSecrets: "Quitar protección de secretos en “{name}”", editedFileSubtitle: "línea {line} · {elapsed}",
-        integrations: .spanish, time: .spanish, guards: .spanish,
+        integrations: .spanish, openProject: "Abrir proyecto “{name}”",
+        saveProjectSubtitle: "escribe .smalti/layout.json en {root}", projects: .spanish, time: .spanish,
+        guards: .spanish,
         feedbackTitles: [.bug: "Fallo: ", .idea: "Idea: "])
 
     public static let english = CommandTexts(
@@ -111,6 +118,7 @@ public struct CommandTexts: Sendable, Equatable {
             .editorOpenLastEdited: "Open the Last Edited File in Neovim", .observatoryFilter: "Filter the Observatory",
             .layoutImport: "Import Layout…", .updatesCheck: "Check for Updates…", .helpDocs: "Open the Documentation",
             .appSupport: "Support Smalti…", .helpWelcome: "Welcome to Smalti", .helpPrivacy: "Open the Privacy Policy",
+            .projectRecent: "Recent Projects…", .projectSave: "Save Project Layout",
         ],
         paletteTitles: [
             .panesEqualize: "Equalize Pane Sizes", .paneNew: "New Pane", .paneClose: "Close Pane",
@@ -124,7 +132,7 @@ public struct CommandTexts: Sendable, Equatable {
             .configReload: "Reload Configuration",
         ],
         groups: [
-            .approvals: "Waiting for your approval", .tiling: "Tiling", .panes: "Panes",
+            .approvals: "Waiting for your approval", .projects: "Projects", .tiling: "Tiling", .panes: "Panes",
             .workspaces: "Workspaces and Sessions", .configuration: "Configuration", .windows: "Windows",
             .terminal: "Terminal", .help: "Help", .editedFiles: "Edited by Claude",
         ],
@@ -143,6 +151,8 @@ public struct CommandTexts: Sendable, Equatable {
         exportLayout: "Export Layout “{name}”…", approve: "Approve “{quote}” in {workspace}",
         reject: "Reject “{quote}” in {workspace}", protectSecrets: "Protect Secrets in “{name}”",
         unprotectSecrets: "Remove Secret Protection in “{name}”", editedFileSubtitle: "line {line} · {elapsed}",
-        integrations: .english, time: .english, guards: .english,
+        integrations: .english, openProject: "Open Project “{name}”",
+        saveProjectSubtitle: "writes .smalti/layout.json in {root}", projects: .english, time: .english,
+        guards: .english,
         feedbackTitles: [.bug: "Bug: ", .idea: "Idea: "])
 }

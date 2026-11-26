@@ -81,8 +81,8 @@ extension XCUIApplication {
 
     /// F5: the shell keeps the `.zshrc`'s `p% ` prompt (`[prompt] source = "shell"`) unless `smaltiPrompt` is true,
     /// so F4's tests read the prompt they were written for; PromptTests turn Smalti's on.
-    static func isolatedSmaltiWithIntegration(smaltiPrompt: Bool = false) -> XCUIApplication {
-        let app = isolatedSmalti(shell: integratedShell)
+    static func isolatedSmaltiWithIntegration(smaltiPrompt: Bool = false, language: String = "es") -> XCUIApplication {
+        let app = isolatedSmalti(shell: integratedShell, language: language)
         if !smaltiPrompt { app.writeTheme("[prompt]\nsource = \"shell\"\n") }
         let zdotdir = app.configFile.deletingLastPathComponent().appending(path: "zdotdir")
         try? FileManager.default.createDirectory(at: zdotdir, withIntermediateDirectories: true)

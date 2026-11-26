@@ -33,6 +33,8 @@ public struct SessionTexts: Sendable, Equatable {
     public let unavailable: TextTemplate
     public let cannotFork: TextTemplate
     public let paneFailed: TextTemplate
+    /// F8.5: a project's pane whose folder is gone opens a shell elsewhere and runs nothing.
+    public let notRunMissingFolder: TextTemplate
     public let noAdapter: TextTemplate
     public let allHarnesses: String
     public let noSessions: String
@@ -73,6 +75,7 @@ public struct SessionTexts: Sendable, Equatable {
         folderMissing: "La carpeta de la sesión ya no existe: {path}",
         unavailable: "{harness} no está disponible en este Mac", cannotFork: "{harness} no permite bifurcar sesiones",
         paneFailed: "{directory}: no se pudo abrir el panel ({error})",
+        notRunMissingFolder: "{command} no se ejecutó: falta la carpeta {directory}",
         noAdapter: "{harness}: harness sin adaptador, no se reanuda {session}", allHarnesses: "Todas",
         noSessions: "No hay sesiones de agentes en este Mac", noMatches: "Sin sesiones que coincidan",
         readFailed: "No se pudo leer {harness}: {reason}", storeMissing: "no existe {path}",
@@ -104,6 +107,7 @@ public struct SessionTexts: Sendable, Equatable {
         folderMissing: "The session’s folder no longer exists: {path}",
         unavailable: "{harness} isn’t available on this Mac",
         cannotFork: "{harness} can’t fork sessions", paneFailed: "{directory}: couldn’t open the pane ({error})",
+        notRunMissingFolder: "{command} didn’t run: the folder {directory} is missing",
         noAdapter: "{harness}: no adapter for this harness, {session} isn’t resumed", allHarnesses: "All",
         noSessions: "No agent sessions on this Mac", noMatches: "No matching sessions",
         readFailed: "Couldn’t read {harness}: {reason}", storeMissing: "{path} doesn’t exist",
@@ -131,6 +135,8 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
     public let invalidEditor: TextTemplate
     public let invalidTree: String
     public let invalidRoot: TextTemplate
+    public let outsideProject: TextTemplate
+    public let editorOutsidePane: TextTemplate
     public let jsonMissingKey: TextTemplate
     public let jsonInvalidValue: TextTemplate
     public let jsonInvalid: String
@@ -149,6 +155,8 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         invalidEditor: "el archivo o la línea del editor del panel {pane} no son válidos",
         invalidTree: "su árbol no coloca cada panel una sola vez",
         invalidRoot: "la carpeta «{root}» no es una ruta absoluta ni empieza por ~",
+        outsideProject: "el panel {pane} está fuera del proyecto: {path}",
+        editorOutsidePane: "el archivo del editor del panel {pane} no está en su carpeta: {path}",
         jsonMissingKey: "falta «{key}»", jsonInvalidValue: "valor no válido en «{path}»", jsonInvalid: "JSON no válido")
 
     public static let english = SharedLayoutErrorTexts(
@@ -165,6 +173,8 @@ public struct SharedLayoutErrorTexts: Sendable, Equatable {
         invalidEditor: "pane {pane}’s editor file or line isn’t valid",
         invalidTree: "its tree doesn’t place each pane exactly once",
         invalidRoot: "the folder “{root}” is neither an absolute path nor starts with ~",
+        outsideProject: "pane {pane} is outside the project: {path}",
+        editorOutsidePane: "pane {pane}’s editor file isn’t in its folder: {path}",
         jsonMissingKey: "“{key}” is missing", jsonInvalidValue: "invalid value at “{path}”", jsonInvalid: "invalid JSON"
     )
 

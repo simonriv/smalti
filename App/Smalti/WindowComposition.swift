@@ -65,6 +65,8 @@ final class WindowComposition {
     private var studio: PromptStudioController?
     private var search: SearchBarController?
     private var feedback: FeedbackController?
+    /// F8.5: the ⌘O selector and the project confirmations of this window.
+    private(set) var projects: ProjectsController?
     private var welcome: WelcomeController?
     /// F5.5: the image preview card over this window's panes.
     private(set) var preview: PreviewCoordinator?
@@ -158,7 +160,7 @@ final class WindowComposition {
         palette?.isOpen == true || observatoryScreen?.isOpen == true || processesScreen?.isOpen == true
             || hasHistoryPaletteOpen
             || help?.isOpen == true || search?.isOpen == true || feedback?.isOpen == true
-            || welcome?.isOpen == true
+            || welcome?.isOpen == true || projects?.isOpen == true
     }
 
     /// F7.7: one card for the whole app, so another window does not open a second one.
@@ -181,7 +183,7 @@ final class WindowComposition {
     /// The window's own overlays. One at a time: opening one closes the others, so the keyboard always has a
     /// single place to go when the top one closes (block 4 review).
     enum Overlay {
-        case palette, help, search, feedback, sessions, welcome, processes
+        case palette, help, search, feedback, sessions, welcome, processes, projects
     }
 
     func closeOverlays(keeping kept: Overlay? = nil) {
@@ -191,6 +193,7 @@ final class WindowComposition {
         if kept != .feedback { feedback?.close() }
         if kept != .sessions { sessions?.close() }
         if kept != .welcome { welcome?.close() }
+        if kept != .projects { projects?.close() }
         // F8 review 2: closing the window (or opening another overlay) stops its sampling too.
         if kept != .processes { processesScreen?.dismiss() }
     }
@@ -372,6 +375,8 @@ final class WindowComposition {
             if isOpen { services.completionMenu()?.close() }
             // F5.6: the integration may have changed outside Smalti; a new state rebuilds the open list.
             if isOpen { controller.refreshIntegrationState() }
+            // F8.5 review 2: the projects are read once per opening, never per keystroke.
+            controller.refreshProjectCatalog(isOpen: isOpen)
         }
         // F5.6: a new Claude integration state rebuilds the open palette's list.
         observers.append(
@@ -409,6 +414,13 @@ final class WindowComposition {
             if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
         }
         self.feedback = feedback
+        let projects = ProjectsController(window: window)
+        projects.onOpenChange = { [weak self] isOpen in
+            guard let self else { return }
+            window.paneGrid.alphaValue = isOpen ? controller.theme.palette.panelsBackdropOpacity : 1
+            if !isOpen { focusKeyboard(on: controller.set.active.focusedPane) }
+        }
+        self.projects = projects
         let welcome = WelcomeController(window: window)
         welcome.onOpenChange = { [weak self] isOpen in
             guard let self else { return }
@@ -566,6 +578,9 @@ final class WindowComposition {
         }
         // The feedback box has no text field: ⌘C, ⌘V and ⌘A must not reach the terminal behind it either.
         if feedback?.isOpen == true || welcome?.isOpen == true { return KeyContext(allowing: []) }
+        // F8.5: the selector and the cards own the keyboard (⌘O is the selector's own "next"); the approval keys
+        // still decide, as over the help or the search (review 2).
+        if projects?.isOpen == true { return .overlay(allowing: [.guardApprove, .guardReject]) }
         if search?.isOpen == true {
             return .overlay(allowing: [
                 .searchOpen, .searchNext, .searchPrevious, .paletteOpen, .helpShow, .guardApprove, .guardReject,

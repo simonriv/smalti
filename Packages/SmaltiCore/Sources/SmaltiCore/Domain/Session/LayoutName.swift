@@ -17,6 +17,14 @@ public struct LayoutName: Hashable, Sendable {
         rawValue = name
     }
 
+    /// F8.5: the name of a project whose folder is not a valid name.
+    public static let project = LayoutName(known: "project")
+
+    /// A literal written in this file that `problem(with:)` accepts.
+    private init(known rawValue: String) {
+        self.rawValue = rawValue
+    }
+
     private static func problem(with name: String) -> String? {
         if name.isEmpty { return "empty" }
         if name.count > maximumLength { return "longer than \(maximumLength) characters" }

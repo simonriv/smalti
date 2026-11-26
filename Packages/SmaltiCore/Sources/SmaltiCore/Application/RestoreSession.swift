@@ -84,7 +84,8 @@ public struct RestoreSession {
         var failures: [String] = []
         var unreachable: Set<WorkingDirectory> = []
         for (index, pane) in planned.panes.enumerated() {
-            let result = open(pane, savedAt: savedAt, fallbacks: [root, home])
+            let result = open(
+                pane, savedAt: savedAt, fallbacks: [root, home], runsOnlyInItsFolder: planned.project != nil)
             failures += result.failures
             unreachable.formUnion(result.unreachable)
             if let restored = result.pane { opened.append((index, restored)) }
@@ -92,7 +93,8 @@ public struct RestoreSession {
         guard !opened.isEmpty else { return (nil, failures) }
         let workspaceRoot = unreachable.contains(root) ? home : root
         let layout = LayoutCatalog.standard.strategyOrDefault(for: planned.layout)
-        let empty = Workspace.empty(name: planned.name, rootDirectory: workspaceRoot, layout: layout)
+        let blank = Workspace.empty(name: planned.name, rootDirectory: workspaceRoot, layout: layout)
+        let empty = planned.project.map { blank.markingProject($0) } ?? blank
         let workspace = opened.reduce(empty) { $0.adding($1.pane) }
         return (arrange(workspace, as: planned, opened: opened), failures)
     }
@@ -111,9 +113,11 @@ public struct RestoreSession {
         return arranged
     }
 
-    private func open(_ planned: PlannedPane, savedAt: Date, fallbacks: [WorkingDirectory])
-        -> (pane: Pane?, failures: [String], unreachable: Set<WorkingDirectory>)
-    {
+    /// F8.5: in a project's workspace (`runsOnlyInItsFolder`) a pane whose folder is gone opens a shell in a fallback
+    /// folder and runs nothing: the user approved the command in its folder, not in the repo's root or the home.
+    private func open(
+        _ planned: PlannedPane, savedAt: Date, fallbacks: [WorkingDirectory], runsOnlyInItsFolder: Bool
+    ) -> (pane: Pane?, failures: [String], unreachable: Set<WorkingDirectory>) {
         let id = PaneID(rawValue: planned.id)
         let start = startup(for: planned)
         let scrollback = planned.restoresScrollback ? deps.transcripts.scrollback(of: id) : nil
@@ -125,11 +129,19 @@ public struct RestoreSession {
         var lastError = deps.texts.terminal.reason(
             .surfaceCreationFailed(workingDirectory: planned.workingDirectory, reason: .directoryMissing))
         for directory in ([saved].compactMap { $0 } + fallbacks) where !unreachable.contains(directory) {
+            let isElsewhere = runsOnlyInItsFolder && directory != saved
             let spec = TerminalSessionSpec(
                 workingDirectory: directory, command: deps.shell, environment: deps.environment.variables(for: id),
-                restoration: restoration, initialInput: start.input)
+                restoration: restoration, initialInput: isElsewhere ? nil : start.input)
             do {
                 try deps.engine.open(spec, as: id)
+                if isElsewhere, let input = start.input {
+                    let command = input.trimmingCharacters(in: .newlines)
+                    let note = deps.texts.notRunMissingFolder([
+                        "command": command, "directory": planned.workingDirectory,
+                    ])
+                    return (Pane(id: id, workingDirectory: directory), start.failures + [note], unreachable)
+                }
                 let pane = Pane(id: id, workingDirectory: directory).attaching(start.agent)
                 return (start.binding.map(pane.binding) ?? pane, start.failures, unreachable)
             } catch {

@@ -165,8 +165,8 @@ private struct Builder {
 
     var file: [MenuItem] {
         [
-            item(.windowNew), item(.paneNew), item(.workspaceNew), .separator, item(.paneClose), item(.workspaceClose),
-            item(.windowClose),
+            item(.windowNew), item(.paneNew), item(.workspaceNew), .separator, item(.projectRecent),
+            item(.projectSave), .separator, item(.paneClose), item(.workspaceClose), item(.windowClose),
         ]
     }
 
