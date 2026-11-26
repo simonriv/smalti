@@ -21,7 +21,7 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 ## Convenciones del roadmap
 
 - **Criterio de cierre**: se verifica con una prueba o con una medición concreta, no con una impresión. Sin pruebas físicas ni de uso real hasta que la app esté terminada (decidido por Simón, 2026-11-22): todo criterio de fase se comprueba con pruebas automáticas, mediciones o capturas.
-- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7, F7.5, F7.6, F7.7 y F8.
+- **Spec**: cada fase tiene `docs/specs/F<n>-<slug>.md` antes de escribir código. Hoy existen F0, F1, F2, F3, F4, F4.5, F5, F5.5, F5.6, F6, F7, F7.5, F7.6, F7.7, F8 y F8.5.
 - Las Decisiones de `PROJECT.md` están cerradas. Una fase no las reabre sin pasar antes por ese documento.
 
 ---
@@ -208,7 +208,8 @@ El orden es el del documento. Las dependencias técnicas reales son menos estric
 
 - **Objetivo:** abrir un proyecto tal como se trabaja en él con un atajo, sin buscar el layout guardado.
 - **Entregables:** un layout compartible de F7 dentro del repo (`.smalti/layout.json`) se descubre al abrir un panel o workspace en esa carpeta y se ofrece en ⌘K como «Abrir proyecto “rizaria”»; con la misma confirmación de comandos de F7 la primera vez que cambia el archivo. Atajo para saltar entre proyectos recientes.
-- **Criterio de cierre:** por definir en su spec; como mínimo, un repo con `.smalti/layout.json` se abre con su layout y sus comandos tras confirmar, y un archivo modificado vuelve a pedir confirmación.
+- **Spec:** `docs/specs/F8.5-proyectos.md` (maqueta en `docs/specs/F8.5-assets/`).
+- **Criterio de cierre:** un repo con `.smalti/layout.json` se abre con su layout y sus comandos tras confirmar; un archivo modificado vuelve a pedir confirmación mostrando el cambio y uno sin cambios no la pide; sin confirmar no se lanza ningún proceso (dominio y XCUITest con un archivo testigo); ⌘O salta entre proyectos recientes, que sobreviven a reiniciar y descartan los que ya no existen; sin coste en reposo (GPU y CPU sin empeorar respecto de F8); inglés y español completos.
 - **Dependencias:** F7 (formato y validación del layout compartible).
 
 ## F9 · Timeline de la sesión

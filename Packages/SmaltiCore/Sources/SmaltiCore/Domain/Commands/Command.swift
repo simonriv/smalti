@@ -3,6 +3,8 @@
 public enum CommandGroup: String, Sendable {
     /// F7.5: commands Smalti holds until the user decides.
     case approvals
+    /// F8.5: the repos with `.smalti/layout.json`.
+    case projects
     case tiling
     case panes
     case workspaces

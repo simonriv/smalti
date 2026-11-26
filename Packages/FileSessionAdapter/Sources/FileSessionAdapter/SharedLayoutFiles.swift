@@ -7,10 +7,8 @@ public final class SharedLayoutFiles: LayoutFiles {
     public init() {}
 
     public func write(_ layout: SharedLayout, to file: URL) throws(LayoutFileError) {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         do {
-            try encoder.encode(layout).write(to: file, options: .atomic)
+            try SharedLayoutJSON.encoded(layout).write(to: file, options: .atomic)
         } catch {
             throw .unwritable(path: file.path(percentEncoded: false), reason: error.localizedDescription)
         }
@@ -29,10 +27,23 @@ public final class SharedLayoutFiles: LayoutFiles {
         } catch {
             throw .unreadable(path: path, reason: error.localizedDescription)
         }
+        return try SharedLayoutJSON.decoded(data)
+    }
+}
+
+/// The JSON of a shared layout: how F7's files and F8.5's `.smalti/layout.json` are written and read.
+enum SharedLayoutJSON {
+    static func encoded(_ layout: SharedLayout) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(layout)
+    }
+
+    static func decoded(_ data: Data) throws(LayoutFileError) -> SharedLayout {
         do {
             return try JSONDecoder().decode(SharedLayout.self, from: data)
         } catch {
-            throw .invalid(.notJSON(Self.describe(error)))
+            throw .invalid(.notJSON(describe(error)))
         }
     }
 

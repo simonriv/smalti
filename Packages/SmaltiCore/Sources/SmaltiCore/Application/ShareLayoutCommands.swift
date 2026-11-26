@@ -41,9 +41,14 @@ public struct ExportLayout {
 
 /// What importing a file would do, shown before anything is saved.
 /// One command a shared layout runs, and where when it is not the layout's root ("make en api").
-public struct PlannedCommand: Equatable, Sendable {
+public struct PlannedCommand: Codable, Equatable, Sendable {
     public let command: String
     public let place: String?
+
+    public init(command: String, place: String?) {
+        self.command = command
+        self.place = place
+    }
 
     public func text(_ texts: SessionTexts) -> String {
         place.map { texts.located(["command": command, "place": $0]) } ?? command
@@ -102,26 +107,8 @@ public struct ImportLayout {
         return name
     }
 
-    /// What each pane will run, read through `PaneLaunch.saved`: the same choice restoring makes.
     private func commands(of layout: SharedLayout, root: String) -> [PlannedCommand] {
-        layout.workspaceSnapshot(root: root, home: home).panes.compactMap { pane in
-            let command: String? =
-                switch PaneLaunch.saved(pane) {
-                case .shell: nil
-                case .relaunch(let command): command.displayText
-                case .editor(let position): position.plainCommand
-                case .resume(let agent): harnesses.adapter(for: agent.harness)?.continueCommand()
-                }
-            return command.map { located($0, in: pane.workingDirectory, root: root) }
-        }
-    }
-
-    /// "make en api", "claude --continue en ~/.ssh": a command that does not run in the layout's root says where.
-    private func located(_ command: String, in directory: String, root: String) -> PlannedCommand {
-        guard let place = PortablePaths.relative(directory, to: root) else {
-            return PlannedCommand(command: command, place: PortablePaths(home: home).portable(directory))
-        }
-        return PlannedCommand(command: command, place: place == "." ? nil : place)
+        PlannedCommands.of(layout, root: root, home: home, harnesses: harnesses)
     }
 
     private func freeName(for name: LayoutName) -> LayoutName {
@@ -163,5 +150,35 @@ public enum ImportTexts {
         case .unknownHarness(let pane, let name): texts.unknownHarness(["pane": String(pane), "name": name])
         case .unknownLayout(let layout): texts.unknownLayout(["layout": layout])
         }
+    }
+}
+
+/// What a shared layout runs when opened, one per pane that runs something, as typed in the shell and with where
+/// when it is not the root: what the import (F7) and a project's confirmation (F8.5) show.
+public enum PlannedCommands {
+    /// Read through `PaneLaunch.saved`: the same choice restoring makes.
+    public static func of(_ layout: SharedLayout, root: String, home: String, harnesses: HarnessRegistry)
+        -> [PlannedCommand]
+    {
+        layout.workspaceSnapshot(root: root, home: home).panes.compactMap { pane in
+            let command: String? =
+                switch PaneLaunch.saved(pane) {
+                case .shell: nil
+                case .relaunch(let command): command.displayText
+                case .editor(let position): position.plainCommand
+                case .resume(let agent): harnesses.adapter(for: agent.harness)?.continueCommand()
+                }
+            return command.map { located($0, in: pane.workingDirectory, root: root, home: home) }
+        }
+    }
+
+    /// "make en api", "claude --continue en ~/.ssh": a command that does not run in the layout's root says where.
+    private static func located(_ command: String, in directory: String, root: String, home: String)
+        -> PlannedCommand
+    {
+        guard let place = PortablePaths.relative(directory, to: root) else {
+            return PlannedCommand(command: command, place: PortablePaths(home: home).portable(directory))
+        }
+        return PlannedCommand(command: command, place: place == "." ? nil : place)
     }
 }

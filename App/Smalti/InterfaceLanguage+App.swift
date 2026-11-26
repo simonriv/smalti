@@ -36,3 +36,4 @@ extension PromptCopy: Bilingual {}
 extension AppearanceCopy: Bilingual {}
 extension WelcomeTexts: Bilingual {}
 extension ProcessTexts: Bilingual {}
+extension ProjectTexts: Bilingual {}

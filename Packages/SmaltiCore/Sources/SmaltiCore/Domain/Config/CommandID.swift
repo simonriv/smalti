@@ -71,6 +71,9 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     public static let processes: [CommandID] = [
         processesToggle, portsToggle, processesStop, processesLowerPriority, processesTree, processesSort,
     ]
+    /// F8.5: ⌘O, the recent projects; and writing the repo's `.smalti/layout.json`.
+    public static let projectRecent = CommandID(rawValue: "project.recent")
+    public static let projectSave = CommandID(rawValue: "project.save")
     public static let terminalCopy = CommandID(rawValue: "terminal.copy")
     public static let terminalPaste = CommandID(rawValue: "terminal.paste")
     public static let terminalSelectAll = CommandID(rawValue: "terminal.selectAll")
@@ -169,6 +172,15 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
     private static let layoutRestorePrefix = "layout.restore:"
     private static let layoutExportPrefix = "layout.export:"
     private static let editorOpenPrefix = "editor.open:"
+    private static let projectOpenPrefix = "project.open:"
+
+    /// F8.5: opens (or jumps to) the project at `root`. Not bindable: ⌘K and ⌘O offer it.
+    public static func projectOpen(root: String) -> CommandID { CommandID(rawValue: projectOpenPrefix + root) }
+
+    /// The project root of a `projectOpen` command.
+    public var projectRoot: String? {
+        rawValue.hasPrefix(Self.projectOpenPrefix) ? String(rawValue.dropFirst(Self.projectOpenPrefix.count)) : nil
+    }
 
     /// F6: opens a file the pane's Claude edited, at its line (`editor.open:<line>:<path>`).
     public static func editorOpen(path: String, line: Int) -> CommandID {
@@ -215,7 +227,7 @@ public struct CommandID: Hashable, Sendable, RawRepresentable {
             paletteOpen, layoutDwindle, layoutColumns, layoutMaster, panesEqualize, paneNew, paneClose,
             workspaceNew, workspaceRename, workspaceClose, configReload, agentJump, observatoryToggle,
             observatoryPeriod, historySearch, harnessSearch, editorOpenBeside, editorOpenLastEdited, observatoryFilter,
-            layoutImport, guardApprove, guardReject, secretsProtect, secretsUnprotect,
+            layoutImport, guardApprove, guardReject, secretsProtect, secretsUnprotect, projectRecent, projectSave,
         ]
         + basics
         + appearance

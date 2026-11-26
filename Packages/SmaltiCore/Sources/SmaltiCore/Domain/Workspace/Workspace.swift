@@ -14,6 +14,8 @@ public struct Workspace: Sendable, Equatable {
     public private(set) var layout: any LayoutStrategy
     public private(set) var tree: LayoutTree?
     public private(set) var focusedPane: PaneID?
+    /// F8.5: the repo (real path) this workspace was opened from as a project; `nil` for any other workspace.
+    public private(set) var project: String?
 
     public static func empty(
         name: String, rootDirectory: WorkingDirectory, layout: any LayoutStrategy
@@ -26,7 +28,7 @@ public struct Workspace: Sendable, Equatable {
     public static func == (lhs: Workspace, rhs: Workspace) -> Bool {
         lhs.id == rhs.id && lhs.name == rhs.name && lhs.rootDirectory == rhs.rootDirectory
             && lhs.panes == rhs.panes && lhs.layout.id == rhs.layout.id && lhs.tree == rhs.tree
-            && lhs.focusedPane == rhs.focusedPane
+            && lhs.focusedPane == rhs.focusedPane && lhs.project == rhs.project
     }
 
     public func contains(_ pane: PaneID) -> Bool {
@@ -155,6 +157,13 @@ public struct Workspace: Sendable, Equatable {
         guard let position = panes.firstIndex(where: { $0.id == pane }) else { return self }
         var updated = self
         updated.panes[position] = transform(panes[position])
+        return updated
+    }
+
+    /// F8.5: the workspace of the project at `root`.
+    public func markingProject(_ root: String) -> Workspace {
+        var updated = self
+        updated.project = root
         return updated
     }
 

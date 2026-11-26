@@ -35,9 +35,23 @@ public struct RestoreNamedLayout {
     public func execute(_ name: LayoutName, into set: inout WorkspaceSet, home: WorkingDirectory)
         throws(SessionArchiveError) -> NamedLayoutOutcome
     {
-        let saved = try layouts.layout(named: name)
+        // A saved layout is a template, never a project's workspace (F8.5).
+        open(try layouts.layout(named: name), named: name.rawValue, project: nil, into: &set, home: home)
+    }
+
+    /// F8.5: opens a project's layout the same way, as the workspace of the project at `snapshot.project`.
+    public func open(project snapshot: WorkspaceSnapshot, into set: inout WorkspaceSet, home: WorkingDirectory)
+        -> NamedLayoutOutcome
+    {
+        open(snapshot, named: snapshot.name, project: snapshot.project, into: &set, home: home)
+    }
+
+    private func open(
+        _ saved: WorkspaceSnapshot, named name: String, project: String?, into set: inout WorkspaceSet,
+        home: WorkingDirectory
+    ) -> NamedLayoutOutcome {
         let live = Set(set.workspaces.flatMap(\.panes).compactMap(\.agent?.sessionID))
-        let planned = plan(saved, named: name, skipping: live)
+        let planned = plan(saved, named: name, project: project, skipping: live)
         let built = restore.restore(planned.workspace, savedAt: Date.distantPast, home: home)
         guard let workspace = built.workspace else {
             return NamedLayoutOutcome(skippedLiveSessions: planned.skipped, failures: built.failures)
@@ -47,7 +61,7 @@ public struct RestoreNamedLayout {
         return NamedLayoutOutcome(skippedLiveSessions: planned.skipped, failures: built.failures)
     }
 
-    private func plan(_ saved: WorkspaceSnapshot, named name: LayoutName, skipping live: Set<String>)
+    private func plan(_ saved: WorkspaceSnapshot, named name: String, project: String?, skipping live: Set<String>)
         -> (workspace: PlannedWorkspace, skipped: [String])
     {
         var skipped: [String] = []
@@ -63,8 +77,8 @@ public struct RestoreNamedLayout {
                 restoresHistory: false, launch: launch)
         }
         let workspace = PlannedWorkspace(
-            name: name.rawValue, rootDirectory: saved.rootDirectory, layout: LayoutID(rawValue: saved.layout),
-            tree: saved.tree, focusedIndex: saved.focusedIndex, panes: panes)
+            name: name, rootDirectory: saved.rootDirectory, layout: LayoutID(rawValue: saved.layout),
+            tree: saved.tree, focusedIndex: saved.focusedIndex, panes: panes, project: project)
         return (workspace, skipped)
     }
 }

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Proyectos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<!--
+  Maqueta de F8.5 (Proyectos), en la línea de Paleta.dc.html y Reanudar.dc.html, con los tokens de docs/design/README.md.
+  Tableros: ?view=palette|recent|confirm|changed|replace&lang=es|en. Capturas con Chrome sin interfaz (ver la spec F8.5).
+  Datos de ejemplo neutrales: ~/dev/rizaria, ~/dev/acme, ~/dev/notes.
+-->
+<style>
+  :root{--accent:#7aa2f7;--ring:#7aa2f780;--glow:#7aa2f726;--text:#d7dae0;--title:#e6e9ef;--muted:#8b919c;--soft:#aeb3bd;
+        --green:#9ece6a;--amber:#e0af68;--red:#f7768e;--stopped:#6b717c}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text)}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);color:var(--soft);background:rgba(255,255,255,0.04);white-space:nowrap}
+  .grp{margin:0;padding:10px 12px 4px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .desk{width:1440px;height:900px;position:relative;overflow:hidden;background-color:#0b0d12;
+    background-image:radial-gradient(circle at 16% 20%,#284766 0,rgba(40,71,102,0) 38%),radial-gradient(circle at 84% 80%,#563663 0,rgba(86,54,99,0) 42%),radial-gradient(circle at 72% 12%,#1d5a55 0,rgba(29,90,85,0) 34%),radial-gradient(circle at 30% 92%,#5a4a2a 0,rgba(90,74,42,0) 30%)}
+  .win{position:absolute;left:56px;top:40px;width:1328px;height:820px;border-radius:16px;border:1px solid rgba(255,255,255,0.09);box-shadow:0 30px 90px rgba(0,0,0,0.5);
+    background:rgba(13,15,21,0.62);backdrop-filter:blur(28px) saturate(150%);display:flex;flex-direction:column;overflow:hidden}
+  .strip{height:40px;flex:none;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;padding:0 14px 0 18px}
+  .ws{height:26px;padding:0 10px;border-radius:7px;border:1px solid transparent;color:#9aa0ab;font:500 12px Inter,sans-serif;display:flex;align-items:center;gap:7px}
+  .ws.on{border-color:var(--ring);background:#7aa2f722;color:var(--title)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+  .ghosts{flex:1;display:grid;grid-template-columns:1.35fr 1fr;grid-template-rows:1fr 1fr;gap:8px;padding:10px;opacity:.45}
+  .ghost{border-radius:11px;background:rgba(6,7,10,0.30);border:1px solid rgba(255,255,255,0.05);padding:18px;display:flex;flex-direction:column;gap:10px}
+  .bar{height:7px;border-radius:4px;background:rgba(255,255,255,0.06)}
+  .box{position:absolute;left:400px;top:150px;width:640px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(20,22,30,0.82);
+    backdrop-filter:blur(36px) saturate(160%);box-shadow:0 40px 100px rgba(0,0,0,0.55);overflow:hidden;display:flex;flex-direction:column}
+  .box.amber{border-color:rgba(224,175,104,0.55)}
+  .search{display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;border-bottom:1px solid rgba(255,255,255,0.07);font:400 16px Inter,sans-serif;color:var(--title)}
+  .caret{width:1px;height:18px;background:var(--accent);display:inline-block;vertical-align:middle;margin-left:1px}
+  .rows{padding:4px 6px 8px;display:flex;flex-direction:column}
+  .row{display:flex;align-items:center;gap:12px;height:38px;padding:0 12px;border-radius:8px;font:400 13.5px Inter,sans-serif;color:var(--text);min-width:0}
+  .row.sel{background:var(--glow);color:var(--title)}
+  .row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .sub{color:var(--muted)}
+  .row.tall{height:48px}
+  .two{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+  .two .p{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tag{font-size:11.5px;white-space:nowrap}
+  .foot{height:36px;display:flex;align-items:center;gap:16px;padding:0 16px;border-top:1px solid rgba(255,255,255,0.07);font-size:11.5px;color:var(--muted)}
+  .head{padding:16px 18px 6px;display:flex;flex-direction:column;gap:6px}
+  .head h2{margin:0;font:600 15px Inter,sans-serif;color:var(--title);display:flex;align-items:center;gap:9px}
+  .head p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .cmds{margin:8px 18px 4px;border-radius:9px;background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.06);padding:8px 0;display:flex;flex-direction:column}
+  .cmd{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;height:28px;padding:0 12px;font-size:12.5px}
+  .cmd .mono{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cmd .where{font-size:11.5px;color:var(--muted);padding-left:12px;font-family:'JetBrains Mono',monospace}
+  .cmd.add .sign,.cmd.add .mono{color:var(--green)}
+  .cmd.del .sign{color:var(--red)}
+  .cmd.del .mono{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(247,118,142,0.6)}
+  .cmd .sign{font-family:'JetBrains Mono',monospace;color:var(--muted)}
+  .note{margin:6px 18px 12px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .shade{position:absolute;inset:0;background:rgba(4,5,8,0.28)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const params = new URLSearchParams(location.search);
+const view = params.get('view') || 'palette';
+const lang = params.get('lang') || 'es';
+document.documentElement.lang = lang;
+
+const T = {
+  es: {
+    query: 'proy', groupProjects: 'Proyectos', groupWorkspaces: 'Workspaces y sesiones',
+    open: n => `Abrir proyecto “${n}”`, recentTitle: 'Proyectos recientes…', saveProject: 'Guardar layout del proyecto',
+    saveSub: '— escribe .smalti/layout.json en ~/dev/rizaria',
+    openSub: (p, extra) => `— ${p}${extra ? ' · ' + extra : ''}`,
+    isOpen: n => `abierto en el workspace ${n}`, panes: n => `${n} paneles`,
+    keysPalette: [['↑↓', 'navegar'], ['↵', 'ejecutar'], ['⌘↵', 'en panel nuevo']], palettePitch: 'Todo lo que hacen los botones vive aquí',
+    recentSearch: 'Buscar proyecto', open1: 'abierto · workspace 1', lastAgo: a => a,
+    ago: ['ahora', 'hace 2 h', 'ayer', 'hace 4 días'], here: 'en este panel',
+    keysRecent: [['↑↓', 'elegir'], ['↵', 'abrir o ir'], ['⌘O', 'siguiente'], ['esc', 'cerrar']],
+    recentPitch: 'Los que ya no existen se quitan solos',
+    confirmTitle: n => `¿Abrir el proyecto “${n}”?`,
+    confirmBody: 'Es la primera vez que abres este layout. Al abrirlo ejecutará:',
+    changedBody: 'El layout cambió desde que lo aprobaste el 24 nov. Al abrirlo ejecutará:',
+    changedLayout: 'También cambió la disposición: 4 paneles en Columnas (antes 3 en Dwindle).',
+    confirmNote: 'Viene de ~/dev/rizaria/.smalti/layout.json. Sin aprobar no se ejecuta nada; Smalti recuerda lo que apruebes, nunca en el repo.',
+    keysConfirm: [['↵', 'abrir y ejecutar'], ['esc', 'cancelar']],
+    replaceTitle: 'Guardar layout del proyecto',
+    replaceBody: '~/dev/rizaria ya tiene .smalti/layout.json. Reemplazarlo con este workspace:',
+    replaceNote: 'Se escribe en el repo para compartirlo con quien lo clone; no lleva sesiones, salida ni la ruta de tu home.',
+    keysReplace: [['↵', 'reemplazar'], ['esc', 'cancelar']],
+    shellOnly: 'shell', layoutCols: 'Columnas',
+  },
+  en: {
+    query: 'proj', groupProjects: 'Projects', groupWorkspaces: 'Workspaces & Sessions',
+    open: n => `Open Project “${n}”`, recentTitle: 'Recent Projects…', saveProject: 'Save Project Layout',
+    saveSub: '— writes .smalti/layout.json in ~/dev/rizaria',
+    openSub: (p, extra) => `— ${p}${extra ? ' · ' + extra : ''}`,
+    isOpen: n => `open in workspace ${n}`, panes: n => `${n} panes`,
+    keysPalette: [['↑↓', 'navigate'], ['↵', 'run'], ['⌘↵', 'in new pane']], palettePitch: 'Everything buttons would do lives here',
+    recentSearch: 'Search projects', open1: 'open · workspace 1', lastAgo: a => a,
+    ago: ['now', '2h ago', 'yesterday', '4 days ago'], here: 'in this pane',
+    keysRecent: [['↑↓', 'choose'], ['↵', 'open or go'], ['⌘O', 'next'], ['esc', 'close']],
+    recentPitch: 'Projects that no longer exist drop off',
+    confirmTitle: n => `Open the project “${n}”?`,
+    confirmBody: 'This is the first time you open this layout. Opening it will run:',
+    changedBody: 'The layout changed since you approved it on Nov 24. Opening it will run:',
+    changedLayout: 'The arrangement changed too: 4 panes in Columns (was 3 in Dwindle).',
+    confirmNote: 'From ~/dev/rizaria/.smalti/layout.json. Nothing runs unless you approve; Smalti remembers what you approve, never in the repo.',
+    keysConfirm: [['↵', 'open and run'], ['esc', 'cancel']],
+    replaceTitle: 'Save Project Layout',
+    replaceBody: '~/dev/rizaria already has .smalti/layout.json. Replace it with this workspace:',
+    replaceNote: 'It is written into the repo to share with whoever clones it; it carries no sessions, output or your home path.',
+    keysReplace: [['↵', 'replace'], ['esc', 'cancel']],
+    shellOnly: 'shell', layoutCols: 'Columns',
+  },
+}[lang];
+
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const kbd = k => `<span class="kbd">${esc(k)}</span>`;
+const foot = (keys, pitch) => `<div class="foot">${keys.map(([k, v]) => `<span>${kbd(k)} ${esc(v)}</span>`).join('')}<span style="flex:1"></span>${pitch ? `<span>${esc(pitch)}</span>` : ''}</div>`;
+
+// Folder with a dot: the project icon (one stroke, like the palette's).
+const icon = (on) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="${on ? 'var(--accent)' : '#8b919c'}" stroke-width="1.4" aria-hidden="true"><path d="M1.8 4.2a1.2 1.2 0 0 1 1.2-1.2h3l1.5 1.6h5.5a1.2 1.2 0 0 1 1.2 1.2v6.2a1.2 1.2 0 0 1-1.2 1.2H3a1.2 1.2 0 0 1-1.2-1.2z"/><circle cx="8" cy="9" r="1.3"/></svg>`;
+const saveIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.4" aria-hidden="true"><path d="M3 2.5h8l2.5 2.5v8.5H3z"/><path d="M5.5 2.5v3.5h5V2.5M5.5 13.5V9.5h5v4"/></svg>`;
+const clockIcon = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.6"/><path d="M8 5v3.2l2.2 1.4"/></svg>`;
+
+function desk(inner) {
+  return `<div class="desk"><div class="win">
+    <div class="strip">
+      <span class="ws"><span class="dot" style="background:var(--green)"></span>acme</span>
+      <span class="ws on"><span class="dot" style="background:var(--amber)"></span>scratch</span>
+    </div>
+    <div class="ghosts">
+      <div class="ghost" style="grid-row:span 2"><div class="bar" style="width:60%"></div><div class="bar" style="width:40%"></div><div class="bar" style="width:72%"></div><div class="bar" style="width:50%"></div></div>
+      <div class="ghost"><div class="bar" style="width:55%"></div><div class="bar" style="width:35%"></div></div>
+      <div class="ghost"><div class="bar" style="width:45%"></div><div class="bar" style="width:62%"></div></div>
+    </div>
+  </div>${inner}</div>`;
+}
+
+function palette() {
+  return desk(`<div class="box">
+    <div class="search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8b919c" stroke-width="1.5" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <span style="flex:1">${T.query}<span class="caret"></span></span>${kbd('esc')}</div>
+    <div class="rows">
+      <p class="grp">${T.groupProjects}</p>
+      <div class="row sel">${icon(true)}<span class="t">${T.open('rizaria')} <span class="sub">${T.openSub('~/dev/rizaria', T.here)}</span></span></div>
+      <div class="row">${icon(false)}<span class="t">${T.open('acme')} <span class="sub">${T.openSub('~/dev/acme', T.isOpen(1))}</span></span></div>
+      <div class="row">${icon(false)}<span class="t">${T.open('notes')} <span class="sub">${T.openSub('~/dev/notes')}</span></span></div>
+      <div class="row">${clockIcon}<span class="t">${T.recentTitle}</span>${kbd('⌘O')}</div>
+      <p class="grp">${T.groupWorkspaces}</p>
+      <div class="row">${saveIcon}<span class="t">${T.saveProject} <span class="sub">${T.saveSub}</span></span></div>
+    </div>
+    ${foot(T.keysPalette, T.palettePitch)}
+  </div>`);
+}
+
+function recent() {
+  const rows = [
+    {n: 'acme', p: '~/dev/acme', tag: T.open1, tagColor: 'var(--accent)', sel: true, ago: T.ago[0]},
+    {n: 'rizaria', p: '~/dev/rizaria', tag: T.ago[1], ago: T.ago[1]},
+    {n: 'notes', p: '~/dev/notes', tag: T.ago[2]},
+    {n: 'site', p: '~/dev/acme/site', tag: T.ago[3]},
+  ];
+  return desk(`<div class="box" style="width:600px;left:420px">
+    <div class="search">${clockIcon}<span style="flex:1;color:#5f6672">${T.recentSearch}</span>${kbd('esc')}</div>
+    <div class="rows">
+      <p class="grp">${T.groupProjects}</p>
+      ${rows.map(r => `<div class="row tall ${r.sel ? 'sel' : ''}">${icon(r.sel)}
+        <span class="two"><span style="color:var(--title)">${r.n}</span><span class="p">${r.p}</span></span>
+        <span class="tag" style="color:${r.tagColor || 'var(--muted)'}">${r.tag}</span></div>`).join('')}
+    </div>
+    ${foot(T.keysRecent, T.recentPitch)}
+  </div>`);
+}
+
+function confirmCard({title, body, cmds, extra, note, keys}) {
+  return desk(`<div class="shade"></div><div class="box amber" style="width:600px;left:420px;top:200px">
+    <div class="head"><h2><span class="dot" style="background:var(--amber)"></span>${esc(title)}</h2><p>${esc(body)}</p></div>
+    <div class="cmds">${cmds.map(c => `<div class="cmd ${c.k || ''}"><span class="sign">${c.k === 'add' ? '+' : c.k === 'del' ? '−' : '›'}</span>
+      <span class="mono">${esc(c.c)}</span><span class="where">${esc(c.w || '')}</span></div>`).join('')}</div>
+    ${extra ? `<p class="note" style="color:var(--text);margin-bottom:0">${esc(extra)}</p>` : ''}
+    <p class="note">${esc(note)}</p>
+    ${foot(keys)}
+  </div>`);
+}
+
+const views = {
+  palette,
+  recent,
+  confirm: () => confirmCard({
+    title: T.confirmTitle('rizaria'), body: T.confirmBody,
+    cmds: [{c: 'npm run dev', w: 'web'}, {c: 'claude --continue'}, {c: 'nvim +42 src/reminder.ts'}],
+    note: T.confirmNote, keys: T.keysConfirm,
+  }),
+  changed: () => confirmCard({
+    title: T.confirmTitle('rizaria'), body: T.changedBody,
+    cmds: [{c: 'npm run dev', w: 'web'}, {c: 'claude --continue'}, {c: 'nvim +42 src/reminder.ts', k: 'del'},
+           {c: 'docker compose up db', k: 'add'}, {c: 'npm test -- --watch', w: 'api', k: 'add'}],
+    extra: T.changedLayout, note: T.confirmNote, keys: T.keysConfirm,
+  }),
+  replace: () => confirmCard({
+    title: T.replaceTitle, body: T.replaceBody,
+    cmds: [{c: 'npm run dev', w: 'web'}, {c: 'claude --continue'}, {c: T.shellOnly}],
+    note: T.replaceNote, keys: T.keysReplace,
+  }),
+};
+document.getElementById('root').innerHTML = (views[view] || palette)();
+</script>
+</body>
+</html>
