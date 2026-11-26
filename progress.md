@@ -447,4 +447,4 @@
 - [x] Revisión intermedia 2 (0 críticos, 3 importantes, 10 menores; corregidos) + regresión de UI de las clases afectadas (33/33) + mutación 2 (solo líneas cambiadas: 3 mutantes, 1 sobreviviente muerto). Revisión final y mutación de cierre omitidas por decisión de Simón
 #### Bloque 4 · Cierre
 - [x] T13 · Verificación, capturas y checklist
-- [ ] T14 · 0.7.7, release, web y actualización real
+- [x] T14 · 0.7.7, release, web y actualización real (PRs #51–#52; release `v0.7.7` por el pipeline, appcast smalti-web #12 y cask homebrew-tap #4; web smalti-web #11; el diario 0.7.6 → 0.7.7 por Sparkle, sin Gatekeeper y con la sesión intacta)
