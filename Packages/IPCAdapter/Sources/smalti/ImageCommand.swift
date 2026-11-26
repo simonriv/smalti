@@ -6,6 +6,8 @@ import SmaltiCore
 /// the size of a cell.
 protocol CommandTerminal {
     var metrics: CellMetrics? { get }
+    /// F7.7: the language of what the command writes.
+    var texts: TerminalTexts { get }
     func write(_ text: String)
     func writeError(_ text: String)
 }
@@ -13,6 +15,7 @@ protocol CommandTerminal {
 /// The process's own standard output and error.
 struct StandardTerminal: CommandTerminal {
     let metrics = TerminalSize.metrics(of: STDOUT_FILENO, environment: ProcessInfo.processInfo.environment)
+    let texts = CLILanguage.resolve(environment: ProcessInfo.processInfo.environment).terminalTexts
 
     func write(_ text: String) { FileHandle.standardOutput.write(Data(text.utf8)) }
     func writeError(_ text: String) { FileHandle.standardError.write(Data(text.utf8)) }
@@ -20,31 +23,24 @@ struct StandardTerminal: CommandTerminal {
 
 /// `smalti img [carpeta | archivos…]` (spec F5.5): the images of a folder (or the files named) as a thumbnail grid.
 enum ImageCommand {
-    static let usage = """
-        uso: smalti img [carpeta | archivos…]
-        Muestra las imágenes en una cuadrícula de miniaturas (sin argumentos, las de la carpeta actual).
-        Fuera de una terminal escribe solo los nombres y los tamaños.
-
-        """
-
     /// Describing reads every file's header: past this many, a terminal is told why it waits.
     static let announcedFileCount = 500
 
     static func run(_ arguments: [String], in directory: String, terminal: any CommandTerminal) async -> Int32 {
         let options = arguments.prefix { $0 != "--" }
         if options.contains("--help") || options.contains("-h") {
-            terminal.write(usage)
+            terminal.write(terminal.texts.imageUsage.joined(separator: "\n") + "\n\n")
             return 0
         }
         let listing: ImageListing
         do {
-            listing = try ImageArguments.listing(arguments, currentDirectory: directory)
+            listing = try ImageArguments.listing(arguments, currentDirectory: directory, texts: terminal.texts)
         } catch {
-            terminal.writeError(error.message)
+            terminal.writeError(error.message(terminal.texts))
             return 1
         }
         if terminal.metrics != nil, listing.images.count > announcedFileCount {
-            terminal.writeError("Leyendo \(listing.images.count) archivos…\n")
+            terminal.writeError(terminal.texts.readingFiles(["count": String(listing.images.count)]) + "\n")
         }
         await ShowImageGrid.render(listing, to: TerminalSink(terminal), files: ImageIOImageFiles())
         return 0
@@ -70,10 +66,10 @@ enum ImageArgumentError: Error, Equatable {
     case unreadable(String, reason: String)
 
     /// What the user reads on stderr, with the argument as written.
-    var message: String {
+    func message(_ texts: TerminalTexts) -> String {
         switch self {
-        case .missing(let path): "No existe: \(TerminalText.sanitized(path))\n"
-        case .unreadable(let path, _): "No se pudo leer: \(TerminalText.sanitized(path))\n"
+        case .missing(let path): texts.pathMissing(["path": TerminalText.sanitized(path)]) + "\n"
+        case .unreadable(let path, _): texts.pathUnreadable(["path": TerminalText.sanitized(path)]) + "\n"
         }
     }
 }
@@ -81,7 +77,9 @@ enum ImageArgumentError: Error, Equatable {
 /// From the arguments to the image paths: a folder gives its visible files (no recursion, subfolders left out), a file
 /// gives itself, hidden or not. Files without an image extension count as skipped.
 enum ImageArguments {
-    static func listing(_ arguments: [String], currentDirectory: String) throws(ImageArgumentError) -> ImageListing {
+    static func listing(_ arguments: [String], currentDirectory: String, texts: TerminalTexts)
+        throws(ImageArgumentError) -> ImageListing
+    {
         let paths = arguments.filter { $0 != "--" }
         let given = paths.isEmpty ? ["."] : paths
         var images: [String] = []
@@ -94,7 +92,7 @@ enum ImageArguments {
         var seen = Set<String>()
         let unique = images.filter { seen.insert($0).inserted }
         return ImageListing(
-            source: given.joined(separator: " "), images: unique, skipped: skipped, texts: .spanish /* T8 */)
+            source: given.joined(separator: " "), images: unique, skipped: skipped, texts: texts)
     }
 
     /// The argument's files: a folder's visible entries that are not folders (a broken link included, so it counts

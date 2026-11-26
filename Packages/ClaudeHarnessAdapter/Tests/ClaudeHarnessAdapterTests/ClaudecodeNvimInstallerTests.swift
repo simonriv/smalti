@@ -125,3 +125,61 @@ struct ClaudecodeNvimInstallerTests {
         #expect(text.contains("LOADED"), "\(text)")
     }
 }
+
+/// F7.7: any lazy.nvim config that imports `plugins` (NvChad, the LazyVim starter, your own), not just NvChad.
+@MainActor
+@Suite("claudecode.nvim with lazy.nvim configs")
+struct LazyNvimDetectionTests {
+    private let nvim = FileManager.default.temporaryDirectory.appending(path: "nvim-lazy-\(UUID())/nvim")
+
+    private func write(_ text: String, to relative: String) throws {
+        let file = nvim.appending(path: relative)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try text.write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    @Test func lazyVimStarterLayoutIsDetected() async throws {
+        defer { try? FileManager.default.removeItem(at: nvim.deletingLastPathComponent()) }
+        try write(#"require("config.lazy")"#, to: "init.lua")
+        try write(
+            #"require("lazy").setup({ spec = { { "LazyVim/LazyVim", import = "lazyvim.plugins" }, { import = "plugins" } } })"#,
+            to: "lua/config/lazy.lua")
+        try write("return {}\n", to: "lua/plugins/example.lua")
+
+        let installer = ClaudecodeNvimInstaller(configHome: nvim)
+
+        #expect(await installer.installState == .notInstalled)
+        try await installer.install()
+        #expect(FileManager.default.fileExists(atPath: nvim.appending(path: "lua/plugins/smalti-claudecode.lua").path))
+    }
+
+    @Test func singleQuotesCount() async throws {
+        defer { try? FileManager.default.removeItem(at: nvim.deletingLastPathComponent()) }
+        try write("require('lazy').setup({ { import = 'plugins' } })", to: "init.lua")
+        try write("return {}\n", to: "lua/plugins/init.lua")
+
+        #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .notInstalled)
+    }
+
+    @Test func kickstartWithoutPluginsFolderIsUnknown() async throws {
+        defer { try? FileManager.default.removeItem(at: nvim.deletingLastPathComponent()) }
+        try write("require('lazy').setup({ 'tpope/vim-sleuth' })", to: "init.lua")
+
+        #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .unknown)
+    }
+
+    /// The real LazyVim starter, cloned into a temporary folder; skipped without network or git.
+    @Test func realLazyVimStarterIsDetected() async throws {
+        let base = nvim.deletingLastPathComponent()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let git = Process()
+        git.executableURL = URL(filePath: "/usr/bin/git")
+        git.arguments = ["clone", "--depth", "1", "--quiet", "https://github.com/LazyVim/starter", nvim.path]
+        git.environment = ["GIT_TERMINAL_PROMPT": "0", "PATH": "/usr/bin:/bin"]
+        try git.run()
+        git.waitUntilExit()
+        try #require(git.terminationStatus == 0, "git clone of LazyVim/starter failed (no network?)")
+
+        #expect(await ClaudecodeNvimInstaller(configHome: nvim).installState == .notInstalled)
+    }
+}

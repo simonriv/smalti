@@ -21,6 +21,9 @@ struct ScreenedToolUse {
         "SUPABASE_DB_URL",
     ]
 
+    /// F7.7: the language of the reasons this hook writes.
+    let texts: GuardTexts
+
     /// nil when the input is not a tool call (nothing to guard).
     init?(input: Data, environment: [String: String]) {
         guard let fields = (try? JSONSerialization.jsonObject(with: input)) as? [String: Any],
@@ -34,9 +37,9 @@ struct ScreenedToolUse {
             searchPath: toolInput["path"] as? String, glob: toolInput["glob"] as? String, cwd: fields["cwd"] as? String)
         environmentHosts = Self.databaseVariables.compactMap { environment[$0].flatMap(DatabaseURL.host(of:)) }
         let home = environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        texts = CLILanguage.resolve(environment: environment).guardTexts
         verdict = ScreenToolUse.verdict(
-            for: use,
-            context: GuardContext(settings: .standard, environmentHosts: environmentHosts, texts: .spanish /* T8 */),
+            for: use, context: GuardContext(settings: .standard, environmentHosts: environmentHosts, texts: texts),
             home: home)
     }
 
@@ -82,10 +85,11 @@ enum GuardCommand {
     static func run(_ invocation: Invocation, transport: any GuardTransport, deadline: Duration) -> String {
         // Review 1: a PreToolUse input Smalti cannot read is refused, not let through.
         guard let screened = ScreenedToolUse(input: invocation.input(), environment: invocation.environment) else {
-            return HookOutput.denial(GuardTexts.spanish.unreadableInput /* T8 */)
+            return HookOutput.denial(
+                CLILanguage.resolve(environment: invocation.environment).guardTexts.unreadableInput)
         }
         let answer = ask(screened, invocation.environment, transport: transport, deadline: deadline)
-        return output(local: screened.verdict, app: answer)
+        return output(local: screened.verdict, app: answer, texts: screened.texts)
     }
 
     /// The app's decision, or nil when it could not be had (no socket, no answer, an answer without a decision).
@@ -108,13 +112,13 @@ enum GuardCommand {
     }
 
     /// The stricter of both: a local denial always stands; an approval needs the app's `allow`.
-    private static func output(local: GuardVerdict, app: IPCDecisionAnswer?) -> String {
+    private static func output(local: GuardVerdict, app: IPCDecisionAnswer?, texts: GuardTexts) -> String {
         switch (local, app?.decision) {
         case (.deny(let denial), _): HookOutput.denial(denial.reason)
-        case (_, .deny?): HookOutput.denial(app?.reason ?? GuardTexts.spanish.unreachable /* T8 */)
+        case (_, .deny?): HookOutput.denial(app?.reason ?? texts.unreachable)
         case (_, .allow?): ""
         case (.allow, nil): ""
-        case (.ask, nil): HookOutput.denial(GuardTexts.spanish.unreachable /* T8 */)
+        case (.ask, nil): HookOutput.denial(texts.unreachable)
         }
     }
 

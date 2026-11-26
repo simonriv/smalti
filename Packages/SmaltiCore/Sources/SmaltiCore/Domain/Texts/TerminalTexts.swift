@@ -27,6 +27,12 @@ public struct TerminalTexts: Sendable, Equatable {
     public let pasteMessage: String
     public let pasteButton: String
     public let cancelButton: String
+    /// The `smalti` CLI's own lines.
+    public let cliUsage: String
+    public let readingFiles: TextTemplate
+    public let pathMissing: TextTemplate
+    public let pathUnreadable: TextTemplate
+    public let imageUsage: [String]
     public let automaticUpdatesOn: String
     public let automaticUpdatesOff: String
 
@@ -45,7 +51,16 @@ public struct TerminalTexts: Sendable, Equatable {
         previewCaption: "{name} · {detail} · {shortcut} para abrir",
         editedNone: "Claude no ha editado archivos en este espacio", pasteTitle: "¿Pegar texto de varias líneas?",
         pasteMessage: "El programa no usa pegado protegido, así que cada línea podría ejecutarse al pegarla.",
-        pasteButton: "Pegar", cancelButton: "Cancelar", automaticUpdatesOn: "Actualizaciones automáticas activadas",
+        pasteButton: "Pegar", cancelButton: "Cancelar",
+        cliUsage:
+            "uso: smalti event <Hook> | smalti guard PreToolUse | smalti img [carpeta | archivos…] | smalti --version",
+        readingFiles: "Leyendo {count} archivos…", pathMissing: "No existe: {path}",
+        pathUnreadable: "No se pudo leer: {path}",
+        imageUsage: [
+            "uso: smalti img [carpeta | archivos…]",
+            "Muestra las imágenes en una cuadrícula de miniaturas (sin argumentos, las de la carpeta actual).",
+            "Fuera de una terminal escribe solo los nombres y los tamaños.",
+        ], automaticUpdatesOn: "Actualizaciones automáticas activadas",
         automaticUpdatesOff: "Actualizaciones automáticas desactivadas")
 
     public static let english = TerminalTexts(
@@ -63,6 +78,15 @@ public struct TerminalTexts: Sendable, Equatable {
         previewCaption: "{name} · {detail} · {shortcut} to open",
         editedNone: "Claude hasn’t edited any files in this space", pasteTitle: "Paste text with several lines?",
         pasteMessage: "The program doesn’t use bracketed paste, so each line might run as it’s pasted.",
-        pasteButton: "Paste", cancelButton: "Cancel", automaticUpdatesOn: "Automatic updates turned on",
+        pasteButton: "Paste", cancelButton: "Cancel",
+        cliUsage:
+            "usage: smalti event <Hook> | smalti guard PreToolUse | smalti img [folder | files…] | smalti --version",
+        readingFiles: "Reading {count} files…", pathMissing: "Doesn’t exist: {path}",
+        pathUnreadable: "Couldn’t read: {path}",
+        imageUsage: [
+            "usage: smalti img [folder | files…]",
+            "Shows the images in a grid of thumbnails (with no arguments, those of the current folder).",
+            "Outside a terminal it writes only the names and sizes.",
+        ], automaticUpdatesOn: "Automatic updates turned on",
         automaticUpdatesOff: "Automatic updates turned off")
 }

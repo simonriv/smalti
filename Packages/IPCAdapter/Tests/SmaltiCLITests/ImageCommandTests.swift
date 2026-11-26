@@ -11,6 +11,7 @@ import Testing
 struct ImageCommandTests {
     final class RecordingTerminal: CommandTerminal, @unchecked Sendable {
         let metrics: CellMetrics?
+        let texts = TerminalTexts.spanish
         var written = ""
         var errors = ""
 
@@ -34,7 +35,7 @@ struct ImageCommandTests {
     }
 
     private func listing(_ arguments: [String]) throws(ImageArgumentError) -> ImageListing {
-        try ImageArguments.listing(arguments, currentDirectory: folder.path)
+        try ImageArguments.listing(arguments, currentDirectory: folder.path, texts: .spanish)
     }
 
     @Test func noArgumentsUsesCurrentDirectory() throws {

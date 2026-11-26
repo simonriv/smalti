@@ -1,7 +1,7 @@
 import Foundation
 import SmaltiCore
 
-/// Installs claudecode.nvim in the user's NvChad config as one file of its own, `lua/plugins/smalti-claudecode.lua`,
+/// Installs claudecode.nvim in the user's lazy.nvim config (NvChad, the LazyVim starter or their own) as one file of its own, `lua/plugins/smalti-claudecode.lua`,
 /// marked as Smalti's: lazy.nvim installs the plugin on Neovim's next start, and uninstalling removes only that file
 /// (spec F6). Claude runs in its Smalti pane, so the plugin opens no terminal of its own.
 @MainActor
@@ -38,7 +38,7 @@ public final class ClaudecodeNvimInstaller: HarnessIntegration {
     public var isInstalled: Bool { currentState == .installed }
 
     private var currentState: IntegrationState {
-        guard isNvChad else { return .unknown }
+        guard importsPluginsFolder else { return .unknown }
         guard let text = try? String(contentsOf: file, encoding: .utf8) else {
             return FileManager.default.fileExists(atPath: file.path) ? .unknown : .notInstalled
         }
@@ -63,19 +63,27 @@ public final class ClaudecodeNvimInstaller: HarnessIntegration {
         }
     }
 
-    /// NvChad's starter keeps plugins in `lua/plugins/` and imports them from `init.lua`.
-    private var isNvChad: Bool {
+    /// F7.7: lazy.nvim configs that keep plugins in `lua/plugins/` and import them, from `init.lua` (NvChad) or
+    /// `lua/config/lazy.lua` (the LazyVim starter), with either quote. Others are left alone and documented.
+    private var importsPluginsFolder: Bool {
         let plugins = configHome.appending(path: "lua/plugins")
         var isDirectory: ObjCBool = false
         let hasPlugins =
             FileManager.default.fileExists(atPath: plugins.path, isDirectory: &isDirectory)
             && isDirectory.boolValue
-        let initText = (try? String(contentsOf: configHome.appending(path: "init.lua"), encoding: .utf8)) ?? ""
-        return hasPlugins && initText.contains(#"import = "plugins""#)
+        return hasPlugins
+            && Self.setupFiles.contains { relative in
+                let text = (try? String(contentsOf: configHome.appending(path: relative), encoding: .utf8)) ?? ""
+                return Self.importLines.contains { text.contains($0) }
+            }
     }
+
+    private static let setupFiles = ["init.lua", "lua/config/lazy.lua"]
+    private static let importLines = [#"import = "plugins""#, "import = 'plugins'"]
 
     private func refusal(_ action: String) -> IntegrationError {
         .commandFailed(
-            command: "\(action) claudecode.nvim", output: "\(file.path) is not Smalti's, or the config is not NvChad's")
+            command: "\(action) claudecode.nvim",
+            output: "\(file.path) is not Smalti's, or the config does not import lua/plugins with lazy.nvim")
     }
 }
