@@ -74,7 +74,7 @@ public struct ObservatoryReport: Equatable, Sendable {
     public let rows: [Row]
     public private(set) var detail: Detail?
     /// F7: the board's footnote, naming the telemetry when some arrived.
-    public private(set) var footnote = ObservatoryTexts.footnote
+    public private(set) var footnote = ""
 
     /// From 5 % of failed tools the rate turns red (the board shows 2 % plain and 9 % red).
     public static let highErrorRate = 5
@@ -86,14 +86,18 @@ public struct ObservatoryReport: Equatable, Sendable {
         public let calendar: Calendar
         /// F6: which harnesses the table and the summary count.
         public let filter: ObservatoryFilter
+        /// F7.7: the words of the interface's language.
+        public let copy: ObservatoryCopy
 
         public init(
-            period: ObservatoryPeriod, selection: String?, calendar: Calendar, filter: ObservatoryFilter = .all
+            period: ObservatoryPeriod, selection: String?, calendar: Calendar, filter: ObservatoryFilter = .all,
+            copy: ObservatoryCopy
         ) {
             self.period = period
             self.selection = selection
             self.calendar = calendar
             self.filter = filter
+            self.copy = copy
         }
     }
 
@@ -103,30 +107,38 @@ public struct ObservatoryReport: Equatable, Sendable {
         let sessions = request.filter.includesClaude ? ordered(ObservedSession.merge(snapshot), in: window) : []
         let others = snapshot.usage.filter { $0.updatedAt >= start && request.filter.includes($0) }
             .sorted { newerFirst($0.updatedAt, $1.updatedAt, $0.sessionID, $1.sessionID) }
+        let copy = request.copy
         let rows =
-            sessions.map { row(for: $0, in: window, snapshot: snapshot) } + others.map { row(for: $0, snapshot) }
+            sessions.map { row(for: $0, in: window, snapshot: snapshot, copy: copy) }
+            + others.map { row(for: $0, snapshot) }
         var report = ObservatoryReport(
             summary: summary(sessions, others: others, in: window, snapshot: snapshot),
             rows: rows,
-            detail: detail(selecting: request.selection, sessions: sessions, others: others, snapshot: snapshot))
+            detail: detail(
+                selecting: request.selection, among: (sessions, others), snapshot: snapshot, copy: copy))
         report.footnote = ObservatoryTexts.footnote(
-            status: snapshot.telemetryStatus, hasTelemetry: !snapshot.telemetry.isEmpty)
+            status: snapshot.telemetryStatus, hasTelemetry: !snapshot.telemetry.isEmpty, copy: copy)
         if let id = report.detail?.sessionID, let telemetry = snapshot.telemetry.telemetry(of: id) {
-            report.detail?.telemetry = TelemetryTexts.line(telemetry, timeZone: request.calendar.timeZone)
+            report.detail?.telemetry = TelemetryTexts.line(
+                telemetry, timeZone: request.calendar.timeZone, copy: copy.telemetry)
         }
         return report
     }
 
     /// The selected row's detail; a selection no longer listed falls back to the first row.
     private static func detail(
-        selecting selection: String?, sessions: [ObservedSession], others: [UsageRow], snapshot: ObservatorySnapshot
+        selecting selection: String?, among listed: (sessions: [ObservedSession], others: [UsageRow]),
+        snapshot: ObservatorySnapshot, copy: ObservatoryCopy
     ) -> Detail? {
+        let (sessions, others) = listed
         if let session = sessions.first(where: { $0.id == selection }) {
-            return detail(for: session, snapshot: snapshot)
+            return detail(for: session, snapshot: snapshot, copy: copy)
         }
-        if let usage = others.first(where: { $0.sessionID == selection }) { return detail(for: usage, snapshot) }
-        return sessions.first.map { detail(for: $0, snapshot: snapshot) }
-            ?? others.first.map { detail(for: $0, snapshot) }
+        if let usage = others.first(where: { $0.sessionID == selection }) {
+            return detail(for: usage, snapshot, copy: copy)
+        }
+        return sessions.first.map { detail(for: $0, snapshot: snapshot, copy: copy) }
+            ?? others.first.map { detail(for: $0, snapshot, copy: copy) }
     }
 
     private static let noFigure = "—"
@@ -150,11 +162,12 @@ public struct ObservatoryReport: Equatable, Sendable {
             context: .unavailable, errorRate: 0, isErrorRateHigh: false, pid: "—", pane: nil)
     }
 
-    private static func detail(for usage: UsageRow, _ snapshot: ObservatorySnapshot) -> Detail {
+    private static func detail(for usage: UsageRow, _ snapshot: ObservatorySnapshot, copy: ObservatoryCopy) -> Detail {
         Detail(
             sessionID: usage.sessionID,
-            title: "Actividad · \(ObservedSession.label(cwd: usage.directory, home: snapshot.home))", tools: [],
-            outputPerMinute: Array(repeating: 0, count: chartMinutes), peak: nil, compaction: "Sin compactaciones")
+            title: copy.activity(["label": ObservedSession.label(cwd: usage.directory, home: snapshot.home)]),
+            tools: [], outputPerMinute: Array(repeating: 0, count: chartMinutes), peak: nil,
+            compaction: copy.noCompactions)
     }
 
     private static func ordered(_ sessions: [ObservedSession], in window: PeriodWindow) -> [ObservedSession] {
@@ -190,15 +203,16 @@ public struct ObservatoryReport: Equatable, Sendable {
             isComplete: snapshot.activity.indexedSince <= window.start)
     }
 
-    private static func row(for session: ObservedSession, in window: PeriodWindow, snapshot: ObservatorySnapshot) -> Row
-    {
+    private static func row(
+        for session: ObservedSession, in window: PeriodWindow, snapshot: ObservatorySnapshot, copy: ObservatoryCopy
+    ) -> Row {
         let tokens = window.usage(of: session.activity).values.reduce(.zero, +)
         let tools = window.tools(of: session.activity)
         let errorRate = tools.calls == 0 ? 0 : Int((Double(tools.errors) * 100 / Double(tools.calls)).rounded())
         let model = session.activity.model.map { "Claude Code · \($0.family)" } ?? "Claude Code"
         return Row(
             id: session.id, state: session.state, label: session.label, agentModel: model,
-            lifetime: lifetime(of: session, now: snapshot.now),
+            lifetime: lifetime(of: session, now: snapshot.now, time: copy.time),
             input: ObservatoryFormat.count(tokens.inputTotal), output: ObservatoryFormat.count(tokens.output),
             context: session.isLive
                 ? ContextLoad.of(
@@ -208,15 +222,17 @@ public struct ObservatoryReport: Equatable, Sendable {
             pid: session.pid.map(String.init) ?? "—", pane: session.pane)
     }
 
-    private static func lifetime(of session: ObservedSession, now: Date) -> String {
+    private static func lifetime(of session: ObservedSession, now: Date, time: TimeTexts) -> String {
         if session.isLive { return ObservatoryFormat.lifetime(now.timeIntervalSince(session.startedAt ?? now)) }
-        return ObservatoryFormat.agoCompact(now.timeIntervalSince(session.activity.lastActivity ?? now))
+        return ObservatoryFormat.agoCompact(now.timeIntervalSince(session.activity.lastActivity ?? now), texts: time)
     }
 
     private static let minute: TimeInterval = 60
     private static let chartMinutes = 60
 
-    private static func detail(for session: ObservedSession, snapshot: ObservatorySnapshot) -> Detail {
+    private static func detail(
+        for session: ObservedSession, snapshot: ObservatorySnapshot, copy: ObservatoryCopy
+    ) -> Detail {
         let nowMinute = (snapshot.now.timeIntervalSince1970 / minute).rounded(.down) * minute
         let minutes = (0..<chartMinutes).map {
             Date(timeIntervalSince1970: nowMinute - Double(chartMinutes - 1 - $0) * minute)
@@ -226,17 +242,20 @@ public struct ObservatoryReport: Equatable, Sendable {
             $0.0 > 0 ? OutputPeak(output: $0.0, at: $0.1) : nil
         }
         return Detail(
-            sessionID: session.id, title: "Actividad · \(session.label)", tools: session.activity.recentTools,
-            outputPerMinute: series, peak: peak, compaction: compactionText(session.activity, snapshot: snapshot))
+            sessionID: session.id, title: copy.activity(["label": session.label]), tools: session.activity.recentTools,
+            outputPerMinute: series, peak: peak,
+            compaction: compactionText(session.activity, snapshot: snapshot, copy: copy))
     }
 
-    private static func compactionText(_ activity: SessionActivity, snapshot: ObservatorySnapshot) -> String {
-        guard let compaction = activity.lastCompaction else { return "Sin compactaciones" }
-        let ago = ObservatoryFormat.ago(snapshot.now.timeIntervalSince(compaction.at))
+    private static func compactionText(
+        _ activity: SessionActivity, snapshot: ObservatorySnapshot, copy: ObservatoryCopy
+    ) -> String {
+        guard let compaction = activity.lastCompaction else { return copy.noCompactions }
+        let ago = ObservatoryFormat.ago(snapshot.now.timeIntervalSince(compaction.at), texts: copy.time)
         guard let model = activity.model, let window = snapshot.catalog.pricing(for: model)?.contextWindow, window > 0
-        else { return "Compactación \(ago)" }
+        else { return copy.compaction(["ago": ago]) }
         let freed = Int((Double(compaction.preTokens - compaction.postTokens) * 100 / Double(window)).rounded())
-        return "Compactación \(ago) · liberó \(freed)% del contexto"
+        return copy.compactionFreed(["ago": ago, "percent": String(freed)])
     }
 }
 

@@ -29,14 +29,15 @@ struct AgentApprovalsTests {
         let verdict =
             local
             ?? ScreenToolUse.verdict(
-                for: use, context: GuardContext(settings: .standard, environmentHosts: hosts), home: "/Users/u")
+                for: use, context: GuardContext(settings: .standard, environmentHosts: hosts, texts: .spanish),
+                home: "/Users/u")
         return GuardRequest(
             id: UUID(), pane: pane ?? self.pane, use: use, environmentHosts: hosts, localVerdict: verdict,
             receivedAt: t0.addingTimeInterval(seconds), reply: { log.record($0) })
     }
 
     private func approvals(_ changes: ChangeLog = ChangeLog()) -> AgentApprovals {
-        let approvals = AgentApprovals(home: "/Users/u")
+        let approvals = AgentApprovals(home: "/Users/u", texts: .spanish)
         approvals.onChange = { changes.items.append($0) }
         return approvals
     }
@@ -95,7 +96,7 @@ struct AgentApprovalsTests {
 
         #expect(log.all.isEmpty)
         let pending = approvals.pending(in: pane)
-        #expect(pending.map(\.subject.summary) == ["terraform destroy contra PROD"])
+        #expect(pending.map { $0.subject.summary(.spanish) } == ["terraform destroy contra PROD"])
         #expect(pending.first?.deadline == t0.addingTimeInterval(AgentApprovals.standardTimeout))
         #expect(changes.items == [.waiting(pending[0])])
     }
@@ -113,7 +114,7 @@ struct AgentApprovalsTests {
         #expect(didApprove)
         #expect(first.all == [.allow])
         #expect(second.all.isEmpty)
-        #expect(approvals.pending(in: pane).map(\.subject.summary) == ["supabase db push contra PROD"])
+        #expect(approvals.pending(in: pane).map { $0.subject.summary(.spanish) } == ["supabase db push contra PROD"])
         #expect(changes.items.last?.isSettled(approved: true, remaining: 1) == true)
     }
 
@@ -125,7 +126,7 @@ struct AgentApprovalsTests {
 
         _ = approvals.rejectOldest(in: pane)
 
-        #expect(log.all == [.deny(GuardReasons.rejected(subject))])
+        #expect(log.all == [.deny(GuardReasons.rejected(subject, texts: .spanish))])
     }
 
     @Test func approveAndRejectByID() {
@@ -154,18 +155,18 @@ struct AgentApprovalsTests {
         #expect(approvals.nextDeadline == t0.addingTimeInterval(AgentApprovals.standardTimeout))
 
         approvals.expire(now: t0.addingTimeInterval(AgentApprovals.standardTimeout))
-        #expect(log.all == [.deny(GuardReasons.expired(minutes: 10))])
+        #expect(log.all == [.deny(GuardReasons.expired(minutes: 10, texts: .spanish))])
         #expect(approvals.nextDeadline == nil)
     }
 
     @Test func shortTimeoutSaysOneMinute() {
         let log = ReplyLog()
-        let approvals = AgentApprovals(home: "/Users/u", timeout: 3)
+        let approvals = AgentApprovals(home: "/Users/u", timeout: 3, texts: .spanish)
         approvals.receive(request("terraform destroy", log: log))
 
         approvals.expire(now: t0.addingTimeInterval(3))
 
-        #expect(log.all == [.deny(GuardReasons.expired(minutes: 1))])
+        #expect(log.all == [.deny(GuardReasons.expired(minutes: 1, texts: .spanish))])
     }
 
     @Test func closingPaneDeniesItsRequests() {
@@ -177,7 +178,7 @@ struct AgentApprovalsTests {
 
         approvals.paneClosed(pane)
 
-        #expect(mine.all == [.deny(GuardReasons.paneClosed)])
+        #expect(mine.all == [.deny(GuardTexts.spanish.paneClosed)])
         #expect(other.all.isEmpty)
     }
 
@@ -189,7 +190,7 @@ struct AgentApprovalsTests {
 
         approvals.stop()
 
-        #expect(log.all == [.deny(GuardReasons.unreachable), .deny(GuardReasons.unreachable)])
+        #expect(log.all == [.deny(GuardTexts.spanish.unreachable), .deny(GuardTexts.spanish.unreachable)])
     }
 
     @Test func tooManyPendingDeniesThe33rd() {
@@ -199,7 +200,7 @@ struct AgentApprovalsTests {
 
         approvals.receive(request("terraform destroy", log: log))
 
-        #expect(log.all == [.deny(GuardReasons.tooManyPending)])
+        #expect(log.all == [.deny(GuardTexts.spanish.tooManyPending)])
         #expect(approvals.allPending.count == AgentApprovals.maximumPending)
     }
 
@@ -215,7 +216,7 @@ struct AgentApprovalsTests {
         approvals.receive(request)
 
         #expect(log.all.isEmpty)
-        #expect(approvals.pending(in: pane).first?.subject.findings.map(\.rule) == [ScreenToolUse.oversizedRule])
+        #expect(approvals.pending(in: pane).first?.subject.findings.map(\.rule) == [GuardTexts.spanish.oversized])
     }
 
     /// T9: panes that no window has any more (closed pane, closed window) lose their requests.
@@ -230,7 +231,7 @@ struct AgentApprovalsTests {
         approvals.retain([pane])
 
         #expect(mine.all.isEmpty)
-        #expect(gone.all == [.deny(GuardReasons.paneClosed)])
+        #expect(gone.all == [.deny(GuardTexts.spanish.paneClosed)])
     }
 
     /// T9: a secret read the CLI denied is reported, so the pane's window can say so.

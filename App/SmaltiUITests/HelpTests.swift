@@ -44,6 +44,17 @@ final class HelpTests: SmaltiUITestCase {
         wait(for: [filtered], timeout: 5)
     }
 
+    func testRowsWithoutKeysHaveNoDanglingComma() {
+        openWithCommandQuestionMark()
+        app.typeText("127.0.0.1")
+
+        let rows = app.elements("smalti.helpRow")
+        let privacy = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in rows.count > 0 }, object: nil)
+        wait(for: [privacy], timeout: 5)
+        let labels = rows.allElementsBoundByIndex.map(\.label)
+        XCTAssertTrue(labels.allSatisfy { !$0.hasSuffix(", ") }, "\(labels)")
+    }
+
     func testReturnRunsTheSelectedCommand() {
         openWithCommandQuestionMark()
         app.typeText("nuevo panel")

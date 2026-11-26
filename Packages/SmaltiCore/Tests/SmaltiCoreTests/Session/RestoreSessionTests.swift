@@ -16,7 +16,7 @@ struct RestoreSessionTests {
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([FakeHarnessAdapter()]),
                 environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
-                clock: { SessionFixtures.now }))
+                clock: { SessionFixtures.now }, texts: .spanish))
     }
 
     private func run(_ workspaces: [PlannedWorkspace], activeIndex: Int = 0) -> RestoreResult {
@@ -184,12 +184,21 @@ struct RestoreSessionTests {
         #expect(result.set?.active.focusedPane == PaneID(rawValue: focused.id))
     }
 
+    @Test func failureNamesTheEnginesOwnReason() {
+        engine.failure = .surfaceCreationFailed(workingDirectory: "/x", reason: .engine("sin memoria"))
+
+        let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
+
+        #expect(result.failures.first == "/Users/s/dev/solen: no se pudo abrir el panel (sin memoria)")
+    }
+
     @Test func failureNamesTheEngineError() {
         engine.failingDirectories = ["/Users/s/dev/solen", "/Users/s"]
 
         let result = run([SessionFixtures.workspace("solen", [SessionFixtures.pane()])])
 
-        #expect(result.failures.first?.contains("no such directory") == true)
+        #expect(
+            result.failures.first == "/Users/s/dev/solen: no se pudo abrir el panel (la carpeta no existe)")
     }
 
     @Test func restoreUsesTheConfiguredShell() {

@@ -102,7 +102,7 @@ struct ResumeListingTests {
 
     @Test(arguments: [(0, "0"), (999, "999"), (1240, "1.240"), (1_234_567, "1.234.567")])
     func thousandsUseADot(value: Int, expected: String) {
-        #expect(ResumeListing.grouped(value) == expected)
+        #expect(ResumeListing.grouped(value, separator: ".") == expected)
     }
 }
 
@@ -123,8 +123,8 @@ struct ResumeListingWindowsTests {
 
     private func listing(_ windows: [WindowSnapshot]) -> [ResumeWindow] {
         ResumeListing.windows(
-            in: SessionSnapshot(version: 2, savedAt: .now, windows: windows, frontIndex: 0), home: home,
-            harnesses: harnesses)
+            in: SessionSnapshot(version: 2, savedAt: .now, windows: windows, frontIndex: 0),
+            context: ResumeListing.Context(home: home, harnesses: harnesses, texts: .spanish))
     }
 
     @Test func listingGroupsByWindowWhenTwoOrMore() {

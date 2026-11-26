@@ -15,7 +15,9 @@ struct ProviderAPIRule: DestructiveCommandRule {
             !["GET", "HEAD"].contains(request.method),
             let provider = Self.provider(of: request.host, extra: context.settings.providerAPIHosts)
         else { return nil }
-        return GuardFinding(rule: "API de \(provider) (\(request.method))", environment: .undetermined)
+        return GuardFinding(
+            rule: context.texts.providerAPI(["provider": provider, "method": request.method]),
+            environment: .undetermined)
     }
 
     private static func provider(of host: String, extra: [String]) -> String? {

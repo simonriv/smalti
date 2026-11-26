@@ -53,7 +53,7 @@ final class ThemeCardView: PanelButtonView {
     private let name = NSTextField(labelWithString: "")
 
     init(id: ThemeID) {
-        super.init(identifier: "smalti.appearance.theme.\(id.rawValue)", label: id.displayName)
+        super.init(identifier: "smalti.appearance.theme.\(id.rawValue)", label: id.displayName(.current))
         preview.wantsLayer = true
         preview.translatesAutoresizingMaskIntoConstraints = false
         addSubview(preview)
@@ -87,7 +87,7 @@ final class ThemeCardView: PanelButtonView {
     private func title(_ id: ThemeID, isSelected: Bool, theme: Theme) -> NSAttributedString {
         let tokens = theme.appearancePanel
         let text = NSMutableAttributedString(
-            string: id.displayName,
+            string: id.displayName(.current),
             attributes: [
                 .font: theme.interfaceFont(size: tokens.rowFontSize, weight: 500),
                 .foregroundColor: (isSelected ? tokens.title : tokens.text).nsColor,

@@ -184,7 +184,7 @@ struct AgentTransitionTests {
         let ended = running.applying(
             .commandFinished(exitCode: 1, duration: .seconds(3)), at: t0.addingTimeInterval(60))
 
-        #expect(ended.agent?.state == .failed(since: t0.addingTimeInterval(60), message: "salió con código 1"))
+        #expect(ended.agent?.state == .failed(since: t0.addingTimeInterval(60), message: "exit 1"))
     }
 
     @Test func claudeCleanExitStopsAgent() {

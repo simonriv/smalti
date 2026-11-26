@@ -23,7 +23,7 @@ struct ReloadConfigTests {
     @Test func failedReloadKeepsPreviousAndReportsError() {
         let store = InMemoryConfigStore(source: .success(customConfig))
         _ = ReloadConfig(store: store).execute()
-        let failure = ConfigError(file: "config.toml", line: 3, key: "font_size", reason: "x")
+        let failure = ConfigError(file: "config.toml", line: 3, key: "font_size", problem: .expectedNumber)
         store.replaceSource(with: .failure(failure))
 
         let reload = ReloadConfig(store: store).execute()

@@ -29,15 +29,15 @@ struct PromptConfigTests {
 
     @Test func moduleTitlesMatchBoard() {
         #expect(
-            PromptModuleID.allCases.map(\.title) == [
+            PromptModuleID.allCases.map { $0.title(.spanish) } == [
                 "Directorio", "Rama git", "Cambios git", "Runtime", "Duración", "Agentes que esperan", "Hora",
                 "Contexto de Kubernetes / AWS",
             ])
-        #expect(PromptModuleID.directory.detail == "últimos 2 niveles")
-        #expect(PromptModuleID.gitStatus.detail == "●2 +1")
-        #expect(PromptModuleID.runtime.detail == "Node, Bun, Python, Go")
-        #expect(PromptModuleID.duration.detail == "si pasa de 2 s")
-        #expect(PromptModuleID.time.detail == nil)
+        #expect(PromptModuleID.directory.detail(.spanish) == "últimos 2 niveles")
+        #expect(PromptModuleID.gitStatus.detail(.spanish) == "●2 +1")
+        #expect(PromptModuleID.runtime.detail(.spanish) == "Node, Bun, Python, Go")
+        #expect(PromptModuleID.duration.detail(.spanish) == "si pasa de 2 s")
+        #expect(PromptModuleID.time.detail(.spanish) == nil)
     }
 
     @Test(arguments: [
@@ -53,7 +53,10 @@ struct PromptConfigTests {
     }
 
     @Test func templateNamesMatchBoard() {
-        #expect(PromptTemplate.allCases.map(\.title) == ["Línea limpia", "Una sola línea", "Píldoras", "Solo símbolo"])
+        #expect(
+            PromptTemplate.allCases.map { $0.title(.spanish) } == [
+                "Línea limpia", "Una sola línea", "Píldoras", "Solo símbolo",
+            ])
     }
 
     @Test func applyingTemplateKeepsModulesIconsAndSymbol() {

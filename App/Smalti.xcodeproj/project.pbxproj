@@ -195,9 +195,10 @@
 				};
 			};
 			buildConfigurationList = 71371EFA15DA3BB408E93DEB /* Build configuration list for PBXProject "Smalti" */;
-			developmentRegion = es;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				en,
 				es,
 				Base,
 			);
@@ -353,7 +354,9 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -375,7 +378,9 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -388,7 +393,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 706;
+				CURRENT_PROJECT_VERSION = 707;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -400,7 +405,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.7.6;
+				MARKETING_VERSION = 0.7.7;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.dev;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "Smalti Dev";
@@ -412,7 +417,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 706;
+				CURRENT_PROJECT_VERSION = 707;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -424,7 +429,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 0.7.6;
+				MARKETING_VERSION = 0.7.7;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti;
 				PRODUCT_MODULE_NAME = Smalti;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -434,9 +439,9 @@
 		5AB3A6BF84C2901E813939E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 706;
+				CURRENT_PROJECT_VERSION = 707;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.7.6;
+				MARKETING_VERSION = 0.7.7;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;
@@ -446,9 +451,9 @@
 		54ECD3B736C66C8688F6C25B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CURRENT_PROJECT_VERSION = 706;
+				CURRENT_PROJECT_VERSION = 707;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.7.6;
+				MARKETING_VERSION = 0.7.7;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.simonriv.smalti.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_TARGET_NAME = Smalti;

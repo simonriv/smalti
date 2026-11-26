@@ -51,7 +51,7 @@ struct TelemetryTextsTests {
         let value = telemetry(requests: 42, errors: 2, durations: [1400], cost: 3_120_000)
 
         #expect(
-            TelemetryTexts.line(value, timeZone: utc)
+            TelemetryTexts.line(value, timeZone: utc, copy: .spanish)
                 == "Telemetría · desde 10:42 · 42 peticiones · mediana 1,4 s · 2 errores de API · $3.12 según Claude Code"
         )
     }
@@ -60,26 +60,26 @@ struct TelemetryTextsTests {
         let value = telemetry(requests: 1, errors: 1, durations: [820], cost: 4_000)
 
         #expect(
-            TelemetryTexts.line(value, timeZone: utc)
+            TelemetryTexts.line(value, timeZone: utc, copy: .spanish)
                 == "Telemetría · desde 10:42 · 1 petición · mediana 820 ms · 1 error de API · $0.00 según Claude Code")
     }
 
     @Test func lineWithoutErrors() {
         let value = telemetry(requests: 3, errors: 0, durations: [2000], cost: 10_000)
 
-        #expect(TelemetryTexts.line(value, timeZone: utc).contains("· sin errores de API ·"))
+        #expect(TelemetryTexts.line(value, timeZone: utc, copy: .spanish).contains("· sin errores de API ·"))
     }
 
     @Test func lineWithoutDurationsOmitsTheMedian() {
         let value = telemetry(requests: 0, errors: 1, durations: [], cost: 0)
 
         #expect(
-            TelemetryTexts.line(value, timeZone: utc)
+            TelemetryTexts.line(value, timeZone: utc, copy: .spanish)
                 == "Telemetría · desde 10:42 · 0 peticiones · 1 error de API · $0.00 según Claude Code")
     }
 
     @Test(arguments: [(999, "999 ms"), (1000, "1,0 s"), (1049, "1,0 s"), (1050, "1,1 s"), (65_400, "65,4 s")])
     func medianFormatting(milliseconds: Int, text: String) {
-        #expect(TelemetryTexts.duration(milliseconds: milliseconds) == text)
+        #expect(TelemetryTexts.duration(milliseconds: milliseconds, copy: .spanish) == text)
     }
 }

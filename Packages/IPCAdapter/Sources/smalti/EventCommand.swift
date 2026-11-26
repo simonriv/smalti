@@ -75,10 +75,8 @@ enum EventCommand {
             forward(hook: invocation.arguments[1], invocation, transport: transport)
             return 0
         default:
-            FileHandle.standardError.write(
-                Data(
-                    "uso: smalti event <Hook> | smalti guard PreToolUse | smalti img [carpeta | archivos…] | smalti --version\n"
-                        .utf8))
+            let usage = CLILanguage.resolve(environment: invocation.environment).terminalTexts.cliUsage
+            FileHandle.standardError.write(Data((usage + "\n").utf8))
             return usageError
         }
     }
@@ -87,12 +85,12 @@ enum EventCommand {
     /// approval: secrets are denied, and what would need approval is denied asking to update the integration.
     static func preToolUseOutput(_ input: Data, environment: [String: String]) -> String {
         guard let screened = ScreenedToolUse(input: input, environment: environment) else {
-            return HookOutput.denial(GuardReasons.unreadableInput)
+            return HookOutput.denial(CLILanguage.resolve(environment: environment).guardTexts.unreadableInput)
         }
         switch screened.verdict {
         case .allow: return ""
         case .deny(let denial): return HookOutput.denial(denial.reason)
-        case .ask: return HookOutput.denial(GuardReasons.outdatedIntegration)
+        case .ask: return HookOutput.denial(screened.texts.outdatedIntegration)
         }
     }
 

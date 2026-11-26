@@ -22,7 +22,7 @@ struct FuzzyMatchTests {
                     first: Workspace.empty(
                         name: "w", rootDirectory: root,
                         layout: DwindleLayout()))),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     @Test func layQueryRanksThreeLayoutsFirst() {
@@ -109,7 +109,7 @@ struct FuzzyMatchTests {
                         w, _ in
                         w.adding(Pane(id: PaneID(), workingDirectory: root))
                     })),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         let ranked = fuzzyMatch("izq", in: commands)
 

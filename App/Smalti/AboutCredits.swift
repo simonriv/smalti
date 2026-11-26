@@ -9,11 +9,12 @@ enum AboutCredits {
         let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         let credits = NSMutableAttributedString(
             string: "libghostty \(ghosttyVersion) (MIT) · Sparkle (MIT) · TOMLDecoder (MIT) · Inter (OFL) · "
-                + "JetBrains Mono (OFL) · specs de Fig (MIT)\n",
+                + "JetBrains Mono (OFL) · " + String(localized: "Fig specs (MIT)") + "\n",
             attributes: [.font: font])
         let links: [(String, URL?)] = [
-            ("Documentación", SmaltiLinks.documentation), ("Apoyar Smalti", SmaltiLinks.support),
-            ("Avisos de terceros", notices),
+            (String(localized: "Documentation"), SmaltiLinks.documentation(for: .current)),
+            (String(localized: "Support Smalti"), SmaltiLinks.support(for: .current)),
+            (String(localized: "Third-Party Notices"), notices),
         ]
         for (index, (title, url)) in links.enumerated() {
             if index > 0 { credits.append(NSAttributedString(string: " · ", attributes: [.font: font])) }

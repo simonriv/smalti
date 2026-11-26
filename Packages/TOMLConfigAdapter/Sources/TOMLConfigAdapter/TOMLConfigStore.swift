@@ -4,9 +4,6 @@ import SmaltiCore
 /// `ConfigStore` backed by a TOML file, normally `~/.config/smalti/config.toml`. A missing file means defaults.
 @MainActor
 public final class TOMLConfigStore: ConfigStore {
-    private static let unreadableReason = "no se pudo leer el archivo"
-    private static let noPermissionCause = "sin permiso de lectura"
-    private static let notUTF8Reason = "el archivo no está en UTF-8"
 
     private let file: URL
     /// F5: written by the UI and read over `file` key by key; `nil` reads `file` alone.
@@ -70,7 +67,7 @@ public final class TOMLConfigStore: ConfigStore {
         let path = url.path(percentEncoded: false)
         guard FileManager.default.fileExists(atPath: path) else { return nil }
         guard let text = String(validating: try contents(of: url), as: UTF8.self) else {
-            throw failure(Self.notUTF8Reason, file: path)
+            throw failure(.notUTF8, file: path)
         }
         return text
     }
@@ -79,16 +76,16 @@ public final class TOMLConfigStore: ConfigStore {
         do {
             return try Data(contentsOf: url)
         } catch {
-            throw failure("\(Self.unreadableReason): \(Self.cause(of: error))", file: url.path(percentEncoded: false))
+            throw failure(Self.problem(reading: error), file: url.path(percentEncoded: false))
         }
     }
 
-    private func failure(_ reason: String, file: String) -> ConfigError {
-        ConfigError(file: file, line: nil, key: nil, reason: reason)
+    private func failure(_ problem: ConfigProblem, file: String) -> ConfigError {
+        ConfigError(file: file, line: nil, key: nil, problem: problem)
     }
 
-    private static func cause(of error: any Error) -> String {
-        if let cocoa = error as? CocoaError, cocoa.code == .fileReadNoPermission { return noPermissionCause }
-        return error.localizedDescription
+    private static func problem(reading error: any Error) -> ConfigProblem {
+        if let cocoa = error as? CocoaError, cocoa.code == .fileReadNoPermission { return .noReadPermission }
+        return .unreadableFile(detail: error.localizedDescription)
     }
 }

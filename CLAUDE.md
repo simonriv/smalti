@@ -12,7 +12,8 @@ Terminal nativa para macOS, en Swift + AppKit sobre libghostty. Herramienta pers
 
 ## Diseño visual
 
-- Reproduce los tableros de `docs/design/*.dc.html` en AppKit/SwiftUI: colores, medidas, radios, tipografías, jerarquía y textos de interfaz (en español, tal cual).
+- Reproduce los tableros de `docs/design/*.dc.html` en AppKit/SwiftUI: colores, medidas, radios, tipografías, jerarquía y textos de interfaz (en español, tal cual; el inglés sale del glosario de `docs/specs/F7.7-primer-uso.md`).
+- **Textos de interfaz (F7.7):** ninguno suelto. Los del dominio viven en `SmaltiCore/Domain/Texts/` (un `struct` por área con `.spanish` y `.english`; plantillas `{nombre}`; el idioma llega como parámetro); los de las vistas, en `App/Smalti/Localizable.xcstrings` (`String(localized:)`, claves en inglés). La app resuelve el idioma una vez (`InterfaceLanguage.current`, desde `Bundle.main.preferredLocalizations`) y exporta `SMALTI_LANGUAGE` a los paneles para el CLI.
 - Los tokens viven en un único sitio del código (tema Obsidiana por defecto) y salen de `docs/design/README.md`. No hay valores mágicos sueltos en las vistas.
 - Toda diferencia visual con un tablero se justifica en el PR. Si el tablero no cubre un caso, pregunta antes de inventarlo.
 - Principios no negociables: sin botones fijos (toda acción tiene atajo y está en ⌘K); estado codificado siempre igual (verde trabajando, ámbar te espera, rojo error, círculo hueco detenido); un solo acento; contraste ≥ 4.5:1 sobre el vidrio; animaciones de 150 ms como máximo, que respetan "Reducir movimiento".
@@ -27,7 +28,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 ```
 
 - **Dominio en Swift puro.** `SmaltiCore` no importa AppKit, SwiftUI, Combine, GhosttyKit, librerías de C ni SDKs. Foundation solo para tipos de valor (`URL`, `Date`, `UUID`). Usa geometría propia (`Rect`, `Size`), nunca `CGRect`.
-- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`, `LayoutFiles`, `TelemetryReceiver`, `ClaudeTelemetrySettings`, `GuardRequests`, `ProjectPermissions`, `AppUpdates`):
+- **Puertos** (`TerminalEngine`, `HarnessAdapter`, `TelemetrySource`, `AgentTranscripts`, `LiveAgents`, `LocalModels`, `CompletionProvider`, `PredictionProvider`, `CommandHistory`, `ProjectContext`, `EditorBridge`, `SystemMetrics`, `ConfigStore`, `AppearanceStore`, `PromptFacts`, `Notifier`, `ImageFiles`, `PathFacts`, `LayoutFiles`, `TelemetryReceiver`, `ClaudeTelemetrySettings`, `GuardRequests`, `ProjectPermissions`, `AppUpdates`, `WelcomeRecord`):
   - Los define `SmaltiCore`, desde el caso de uso que los usa.
   - Usan vocabulario de dominio (`open`, `close`, `current`), no técnico.
   - Son pocos y pequeños (ISP).
@@ -51,7 +52,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - Solo macOS 27 o posterior, en Apple Silicon. Bundle ID `dev.simonriv.smalti`.
 - Firma ad hoc local, sin Developer ID ni notarización.
 - Se permiten APIs privadas de AppKit/CoreGraphics solo en adaptadores y con respaldo público. Ejemplo: el desenfoque de ventana con radio exacto.
-- ⌥ queda reservado para escribir caracteres (layout Latin American): ningún atajo usa ⌥ sin ⌘ o ⌃, y ⌥ no actúa como Meta.
+- Ningún atajo usa ⌥ sin ⌘ o ⌃ (⌥ escribe caracteres en layouts como el Latin American). ⌥ como Meta lo decide `[keyboard] option_as_meta` (F7.7): `auto` por defecto deja que libghostty decida por la distribución (Meta solo en U.S. y U.S. International).
 
 ## Swift
 
@@ -66,7 +67,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
   - Predicados con `is/has/can`.
 - **Funciones:** pequeñas, de una sola cosa y con 3 parámetros como máximo. `struct` y `enum` por defecto; `final class` solo con identidad o estado compartido; nada de herencia salvo la que exige AppKit.
 - **Formato:** `swift format` (incluido en la toolchain) con la configuración del repo. No se discute a mano.
-- **Idiomas:** código, identificadores, archivos y commits en inglés. Textos de interfaz en español, tal cual los tableros. Docs en español.
+- **Idiomas:** código, identificadores, archivos y commits en inglés. Interfaz en inglés y español según el sistema (F7.7), siempre desde el catálogo. Docs en español; `README.md` y `CONTRIBUTING.md` en inglés.
 
 ## Pruebas
 
@@ -78,6 +79,7 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - **Verificación manual:** las listas de render y las mediciones de cada spec se registran en el PR o en el informe de la fase.
 - **Suites largas:** toda suite de más de ~30 s se lanza con `"$KB_ROOT/_system/bin/kb-progress" run <etiqueta> -- <comando>` y muestra `[n/total] ok|FAIL <unidad>`.
 - No des una suite por buena mirando una salida que pasó por un pipe: comprueba el código de salida.
+- **Idioma en pruebas (F7.7):** ninguna depende del idioma del Mac. `isolatedSmalti(language:)` fuerza `-AppleLanguages` (español por defecto, `"en"` para las inglesas) y escribe la marca de bienvenida salvo `welcome: true`; nunca `XCUIApplication()` fuera de `IsolatedApp.swift` (lo vigila `UITestLanguageGuardTests`). Las pruebas de dominio pasan `.spanish`/`.english` explícito.
 
 ## Comandos
 
@@ -111,12 +113,14 @@ SmaltiCore (SPM)   → Domain/ + Application/ (casos de uso + puertos). Swift pu
 - `xcodebuild -project App/Smalti.xcodeproj -scheme Smalti -derivedDataPath build build`: app de desarrollo `build/Build/Products/Debug/Smalti Dev.app` (`dev.simonriv.smalti.dev`, estado propio); el Release (`Smalti.app`, `dev.simonriv.smalti`) es el diario.
 - `scripts/check-daily-untouched.sh <comando…>`: falla si el comando cerró el Smalti diario o tocó su estado (C1 de F2).
 - `scripts/tests/build-identity.test.sh`: bundle ID y nombre de Debug y Release.
-- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh [Clase | Clase/prueba …]`: XCUITest, una sola compilación para todo lo pedido y una línea `[n/total] ok|FAIL` por prueba.
+- `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh Clase | Clase/prueba …`: XCUITest, una sola compilación para todo lo pedido y una línea `[n/total] ok|FAIL` por prueba. Sin clases se niega (sale con 2): la suite e2e completa nunca corre (`scripts/tests/test-ui-args.test.sh`).
 - `swift test --disable-keychain --package-path Packages/SparkleUpdatesAdapter`: actualizaciones con Sparkle 2.10.1 (F7.6). En esta máquina SwiftPM se cuelga descargando el binario de Sparkle si consulta el llavero: `--disable-keychain` siempre (también en `swift package resolve`).
+- Textos (F7.7): `scripts/tests/strings-catalog.test.sh` (cada clave del catálogo con `en` y `es`, ninguna clave de la app fuera de él y ningún literal español fuera de los catálogos; `// strings-catalog: keep` marca un literal que no es interfaz). Tras compilar la app, `python3 scripts/l10n/catalog.py sync` añade al catálogo las claves nuevas del compilador y `catalog.py translate <mapa.json>` fija su español; `catalog.py missing` lista las que faltan. `"$KB_ROOT/_system/bin/kb-progress" run e2e -- scripts/test-ui.sh LocalizationTests` recorre la interfaz en inglés buscando español.
+- Privacidad (F7.7): `scripts/tests/network-surface.test.sh` falla si aparece una API de red o una URL literal fuera de los archivos permitidos (Sparkle, Ollama y OTLP en `127.0.0.1`, sockets Unix, enlaces de la web).
 - `scripts/tests/notices.test.sh` y `scripts/tests/issue-forms.test.sh`: avisos de terceros (`THIRD_PARTY_NOTICES.md`, regenerado con `python3 scripts/release/compose-notices.py` tras construir GhosttyKit; `scripts/release/check-notices.sh` comprueba el binario) y formularios de issue (F7.6).
 - Release (F7.6): `scripts/tests/release.test.sh` (scripts de `scripts/release/` sobre repos y claves de usar y tirar, `brew style` y `actionlint`). De punta a punta, al cerrar la fase y bajo `scripts/check-daily-untouched.sh` con `SMALTI_DAILY_PID`: `scripts/release/test-install.sh dmg|brew` y `scripts/release/test-update.sh valid|invalid` (builds Release con bundle ID `dev.simonriv.smalti.updatetest`, estado y defaults de prueba, cuarentena puesta a propósito, appcast en 127.0.0.1; nunca tocan `/Applications/Smalti.app`). **Nunca `brew uninstall --zap` con el cask real** en esta máquina: borraría `~/.config/smalti`. En UI tests, `-SmaltiUpdateFeedURL` (solo Debug) apunta Smalti Dev a un feed local servido desde un panel.
 - `swift format lint --strict -r App Packages/SmaltiCore Packages/GhosttyAdapter/Sources Packages/GhosttyAdapter/Tests Packages/TOMLConfigAdapter Packages/ClaudeTelemetryAdapter Packages/OllamaAdapter Packages/DarwinMetricsAdapter Packages/FigCompletionAdapter/Sources Packages/FigCompletionAdapter/Tests Packages/ProjectContextAdapter Packages/IPCAdapter Packages/FileSessionAdapter Packages/DiagnosticsAdapter Packages/ImageIOAdapter Packages/SQLiteReader Packages/NeovimAdapter Packages/ClaudeHarnessAdapter Packages/CodexHarnessAdapter Packages/AntigravityHarnessAdapter Packages/OpenCodeHarnessAdapter Packages/OTLPReceiverAdapter Packages/SparkleUpdatesAdapter/Sources Packages/SparkleUpdatesAdapter/Tests scripts/input-bench/Sources`: formato.
-- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore [--changed-since <base>]`: mutation testing (con `--changed-since`, solo los archivos que cambió la rama); pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
+- `"$KB_ROOT/_system/bin/kb-progress" run mutation -- python3 scripts/mutation/mutate.py --package Packages/SmaltiCore [--changed-since <base>]`: mutation testing (con `--changed-since`, solo las líneas que cambió la rama; un archivo nuevo, entero); pruebas del mutador con `cd scripts/mutation && python3 -m unittest test_mutate`.
 - Pruebas automáticas que abran un shell: siempre `-SmaltiShellCommand "/bin/zsh -f"` (el login shell de Simón se engancha a su tmux). Las que necesitan la integración de shell (F4: OSC 133 y widgets) usan `"/bin/zsh -d"` con un ZDOTDIR temporal vacío vía `-SmaltiUserZdotdir`.
 
 ## Git

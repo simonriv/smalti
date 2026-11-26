@@ -6,12 +6,12 @@ public enum SessionArchiveError: Error, Equatable, Sendable {
     /// F7.6: the file was written by a newer Smalti; it is left as it is.
     case newerFormat(file: String, version: Int)
 
-    public var summary: String {
+    public func summary(_ texts: SessionTexts) -> String {
         switch self {
         case .writeFailed(let file, let reason): "\(file): \(reason)"
-        case .notFound(let name): "\(name): not found"
+        case .notFound(let name): texts.archiveNotFound(["name": name])
         case .newerFormat(let file, let version):
-            "\(file): guardado por una versión más nueva de Smalti (formato \(version))"
+            texts.archiveNewer(["file": file, "version": String(version)])
         }
     }
 }
@@ -56,11 +56,11 @@ public enum LayoutFileError: Error, Equatable, Sendable {
     case unwritable(path: String, reason: String)
     case invalid(SharedLayoutError)
 
-    public var message: String {
+    public func message(_ texts: SessionTexts) -> String {
         switch self {
-        case .unreadable(let path, let reason): "no se pudo leer \(path) (\(reason))"
-        case .unwritable(let path, let reason): "no se pudo escribir \(path) (\(reason))"
-        case .invalid(let error): error.message
+        case .unreadable(let path, let reason): texts.unreadable(["path": path, "reason": reason])
+        case .unwritable(let path, let reason): texts.unwritable(["path": path, "reason": reason])
+        case .invalid(let error): error.message(texts.layoutErrors)
         }
     }
 }

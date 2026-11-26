@@ -24,6 +24,13 @@ final class ChildEnvironmentTests: SmaltiUITestCase {
         waitForOutput("guarded\n")
     }
 
+    /// F7.7: the CLI an agent runs in a pane answers in the app's language (forced to Spanish by the helper).
+    func testPaneSeesTheInterfaceLanguage() {
+        app.typeText("<<<${SMALTI_LANGUAGE:-none}>>\"$SMALTI_UITEST_OUT\"\n")
+
+        waitForOutput("es\n")
+    }
+
     /// F2: a pane knows its identity and this Smalti's socket, and `smalti` resolves to the CLI in the bundle.
     func testPaneSeesSmaltiVariables() throws {
         app.run(

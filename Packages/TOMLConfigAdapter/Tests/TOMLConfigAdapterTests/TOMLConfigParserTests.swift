@@ -111,37 +111,37 @@ struct TOMLConfigParserTests {
     @Test func unknownKeyIsReportedWithLine() throws {
         let error = try error(parsingFixture: "unknown-key")
 
-        #expect(error == ConfigError(file: Self.file, line: 4, key: "font_wieght", reason: "clave desconocida"))
+        #expect(error == ConfigError(file: Self.file, line: 4, key: "font_wieght", problem: .unknownKey))
     }
 
     @Test func unknownTableIsReportedWithLine() {
         let error = error(parsing: "[tiling]\n\n[colors]\nbackground = \"#000000\"")
 
-        #expect(error == ConfigError(file: Self.file, line: 3, key: "colors", reason: "tabla desconocida"))
+        #expect(error == ConfigError(file: Self.file, line: 3, key: "colors", problem: .unknownTable))
     }
 
     @Test func unknownTopLevelKeyIsReportedWithLine() {
         let error = error(parsing: "theme = \"obsidiana\"")
 
-        #expect(error == ConfigError(file: Self.file, line: 1, key: "theme", reason: "clave desconocida"))
+        #expect(error == ConfigError(file: Self.file, line: 1, key: "theme", problem: .unknownKey))
     }
 
     @Test func knownTableWithAValueIsReportedWithLine() {
         let error = error(parsing: "\nappearance = 3")
 
-        #expect(error == ConfigError(file: Self.file, line: 2, key: "appearance", reason: "se esperaba una tabla"))
+        #expect(error == ConfigError(file: Self.file, line: 2, key: "appearance", problem: .expectedTable))
     }
 
     @Test func wrongTypeIsReportedWithLine() throws {
         let error = try error(parsingFixture: "wrong-type")
 
-        #expect(error == ConfigError(file: Self.file, line: 3, key: "font_size", reason: "se esperaba un número"))
+        #expect(error == ConfigError(file: Self.file, line: 3, key: "font_size", problem: .expectedNumber))
     }
 
     @Test func textValueWithWrongTypeIsReportedWithLine() {
         let error = error(parsing: "[appearance]\nfont_family = 13")
 
-        #expect(error == ConfigError(file: Self.file, line: 2, key: "font_family", reason: "se esperaba un texto"))
+        #expect(error == ConfigError(file: Self.file, line: 2, key: "font_family", problem: .expectedText))
     }
 
     /// Values that could break or inject lines into the generated engine config, as TOML source.
@@ -162,7 +162,7 @@ struct TOMLConfigParserTests {
             error
                 == ConfigError(
                     file: Self.file, line: 2, key: "font_family",
-                    reason: "se esperaba un nombre de 1 a 100 caracteres sin comillas, \\ ni caracteres de control"))
+                    problem: .expectedFontName(maximumLength: 100)))
     }
 
     @Test func fontFamilyOfOneHundredCharactersIsAccepted() throws {
@@ -180,7 +180,7 @@ struct TOMLConfigParserTests {
             error
                 == ConfigError(
                     file: Self.file, line: 3, key: "default_layout",
-                    reason: "layout desconocido; se esperaba dwindle, columns o master"))
+                    problem: .unknownLayout(["dwindle", "columns", "master"])))
     }
 
     @Test(arguments: ["7aa2f7", "#7aa2f", "#7aa2f7ff", "#+7aa2f", "#7aa2fg"])
@@ -188,7 +188,7 @@ struct TOMLConfigParserTests {
         let error = error(parsing: "[appearance]\n\naccent = \"\(value)\"")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 3, key: "accent", reason: "se esperaba un color #rrggbb"))
+            error == ConfigError(file: Self.file, line: 3, key: "accent", problem: .expectedColor))
     }
 
     @Test(arguments: [0.29, 0.96])
@@ -198,7 +198,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 2, key: "glass_opacity", reason: "se esperaba un número entre 0,3 y 0,95"))
+                    file: Self.file, line: 2, key: "glass_opacity", problem: .expectedNumberBetween(0.3, 0.95)))
     }
 
     @Test(arguments: [-1, 49])
@@ -206,7 +206,7 @@ struct TOMLConfigParserTests {
         let error = error(parsing: "[appearance]\nblur = \(value)")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 2, key: "blur", reason: "se esperaba un número entre 0 y 48"))
+            error == ConfigError(file: Self.file, line: 2, key: "blur", problem: .expectedNumberBetween(0, 48)))
     }
 
     @Test(arguments: ["font_size", "gap", "radius", "glass_opacity", "blur"], ["nan", "inf", "-inf"])
@@ -229,14 +229,14 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 2, key: "glass_opacity", reason: "se esperaba un número entre 0,3 y 0,95"))
+                    file: Self.file, line: 2, key: "glass_opacity", problem: .expectedNumberBetween(0.3, 0.95)))
     }
 
     @Test func blurInfinityIsRejected() {
         let error = error(parsing: "[appearance]\nblur = inf")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 2, key: "blur", reason: "se esperaba un número entre 0 y 48"))
+            error == ConfigError(file: Self.file, line: 2, key: "blur", problem: .expectedNumberBetween(0, 48)))
     }
 
     @Test(arguments: [5, 73])
@@ -245,7 +245,7 @@ struct TOMLConfigParserTests {
 
         #expect(
             error
-                == ConfigError(file: Self.file, line: 2, key: "font_size", reason: "se esperaba un número entre 6 y 72")
+                == ConfigError(file: Self.file, line: 2, key: "font_size", problem: .expectedNumberBetween(6, 72))
         )
     }
 
@@ -254,7 +254,7 @@ struct TOMLConfigParserTests {
         let error = error(parsing: "[appearance]\ngap = \(value)")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 2, key: "gap", reason: "se esperaba un número entre 0 y 32"))
+            error == ConfigError(file: Self.file, line: 2, key: "gap", problem: .expectedNumberBetween(0, 32)))
     }
 
     @Test(arguments: [-1, 33])
@@ -262,7 +262,7 @@ struct TOMLConfigParserTests {
         let error = error(parsing: "[appearance]\nradius = \(value)")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 2, key: "radius", reason: "se esperaba un número entre 0 y 32"))
+            error == ConfigError(file: Self.file, line: 2, key: "radius", problem: .expectedNumberBetween(0, 32)))
     }
 
     @Test(arguments: [6, 72])
@@ -284,7 +284,7 @@ struct TOMLConfigParserTests {
         let error = error(parsing: "[appearance]\n\nfont_family = \"Jet\\qBrains\"")
 
         #expect(
-            error == ConfigError(file: Self.file, line: 3, key: "font_family", reason: "sintaxis TOML no válida"))
+            error == ConfigError(file: Self.file, line: 3, key: "font_family", problem: .syntax))
     }
 
     @Test func emptyShellCommandIsRejected() {
@@ -293,7 +293,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 2, key: "command", reason: "se esperaba un comando o \"login\""))
+                    file: Self.file, line: 2, key: "command", problem: .expectedShellCommand))
     }
 
     // MARK: Keys
@@ -336,7 +336,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 3, key: "opt+k", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir"))
+                    file: Self.file, line: 3, key: "opt+k", problem: .reservedOption))
     }
 
     @Test func firstOptionOnlyChordInFileOrderIsReported() {
@@ -345,7 +345,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 2, key: "opt+z", reason: "⌥ sin ⌘ ni ⌃ queda reservado para escribir"))
+                    file: Self.file, line: 2, key: "opt+z", problem: .reservedOption))
     }
 
     @Test func unknownCommandIsReportedWithLine() {
@@ -355,7 +355,7 @@ struct TOMLConfigParserTests {
             error
                 == ConfigError(
                     file: Self.file, line: 3, key: "cmd+j",
-                    reason: "comando desconocido; se esperaba un id de comando o \"none\""))
+                    problem: .unknownCommand))
     }
 
     @Test func commandWithWrongTypeIsReportedWithLine() {
@@ -364,7 +364,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 2, key: "cmd+j", reason: "se esperaba un id de comando o \"none\""))
+                    file: Self.file, line: 2, key: "cmd+j", problem: .expectedCommandID))
     }
 
     @Test func duplicateChordIsReportedOnTheSecondOccurrence() {
@@ -373,7 +373,7 @@ struct TOMLConfigParserTests {
         #expect(
             error
                 == ConfigError(
-                    file: Self.file, line: 3, key: "command+j", reason: "atajo repetido; ya aparece como cmd+j"))
+                    file: Self.file, line: 3, key: "command+j", problem: .repeatedShortcut(first: "cmd+j")))
     }
 
     @Test(arguments: [
@@ -387,7 +387,10 @@ struct TOMLConfigParserTests {
     func chordErrorIsTranslatedWithLine(chord: String, reason: String) {
         let error = error(parsing: "[keys]\n\n\"\(chord)\" = \"palette.open\"")
 
-        #expect(error == ConfigError(file: Self.file, line: 3, key: chord, reason: reason))
+        #expect(error?.file == Self.file)
+        #expect(error?.line == 3)
+        #expect(error?.key == chord)
+        #expect(error?.reason == reason)
     }
 }
 
@@ -399,13 +402,14 @@ struct TOMLF45Tests {
 
     /// C12: the template ⌘, writes, with every value uncommented, reads as the defaults.
     @Test func templateUncommentedEqualsDefaults() throws {
-        let text = ConfigTemplate.uncommented(ConfigTemplate.text(defaults: .defaults))
+        let text = ConfigTemplate.uncommented(
+            ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.spanish.template))
 
         #expect(try parse(text) == .defaultsWithExplicitAccent)
     }
 
     @Test func templateAsWrittenReadsAsDefaults() throws {
-        #expect(try parse(ConfigTemplate.text(defaults: .defaults)) == .defaults)
+        #expect(try parse(ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.spanish.template)) == .defaults)
     }
 
     @Test func windowConfirmCloseParses() throws {
@@ -425,7 +429,7 @@ struct TOMLF45Tests {
 struct TOMLTemplateExampleTests {
     /// The commented observatory example, uncommented by hand, is a valid table.
     @Test func observatoryExampleParses() throws {
-        let lines = ConfigTemplate.text(defaults: .defaults).split(separator: "\n")
+        let lines = ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.spanish.template).split(separator: "\n")
         let example = lines.drop { !$0.hasPrefix("# [observatory.models.") }.prefix { $0.hasPrefix("# ") }
             .map { String($0.dropFirst(2)) }.joined(separator: "\n")
 
@@ -440,5 +444,35 @@ extension SmaltiConfig {
         var config = SmaltiConfig.defaults
         config.appearance.accent = Theme.obsidian.accent
         return config
+    }
+}
+
+/// F7.7 `[keyboard] option_as_meta`.
+@Suite("Keyboard section")
+struct KeyboardSectionTests {
+    @Test func optionAsMetaIsRead() throws {
+        let config = try TOMLConfigParser.parse("[keyboard]\noption_as_meta = \"left\"\n", file: "config.toml")
+
+        #expect(config.optionAsMeta == .left)
+    }
+
+    @Test func missingSectionKeepsAuto() throws {
+        #expect(try TOMLConfigParser.parse("", file: "config.toml").optionAsMeta == .auto)
+    }
+
+    @Test func invalidValueNamesTheChoices() {
+        #expect(
+            throws: ConfigError(
+                file: "config.toml", line: 2, key: "option_as_meta",
+                problem: .expectedOneOf(["auto", "never", "left", "right", "always"]))
+        ) {
+            try TOMLConfigParser.parse("[keyboard]\noption_as_meta = \"yes\"\n", file: "config.toml")
+        }
+    }
+
+    @Test func unknownKeyIsRejected() {
+        #expect(throws: ConfigError(file: "config.toml", line: 2, key: "meta", problem: .unknownKey)) {
+            try TOMLConfigParser.parse("[keyboard]\nmeta = true\n", file: "config.toml")
+        }
     }
 }

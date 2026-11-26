@@ -18,6 +18,7 @@ enum TOMLConfigParser {
         static let preview = "preview"
         static let extras = "extras"
         static let guards = "guards"
+        static let keyboard = "keyboard"
     }
 
     static let prompt = "prompt"
@@ -25,7 +26,6 @@ enum TOMLConfigParser {
     /// F7.6: the file format this build writes and understands; a file without `version` is format 1.
     static let supportedVersion = 1
     static let versionKey = "version"
-    private static let versionReason = "se esperaba un entero mayor o igual que 1"
 
     /// A configuration and what reading it noticed but still applied.
     struct Parsed {
@@ -41,7 +41,7 @@ enum TOMLConfigParser {
         let (root, ignored) = try versionedRoot(text, file: file)
         try root.rejectUnknownKeys(allowed: [
             versionKey, Table.appearance, Table.tiling, Table.shell, Table.keys, Table.observatory, Table.input,
-            Table.window, prompt, Table.preview, Table.extras, Table.guards,
+            Table.window, prompt, Table.preview, Table.extras, Table.guards, Table.keyboard,
         ])
         var config = SmaltiConfig.defaults
         try readLook(root, into: &config, scope: .config)
@@ -68,6 +68,11 @@ enum TOMLConfigParser {
         }
         if let section = try root.section(Table.guards) {
             config.guards = try GuardsReader.read(section)
+        }
+        if let section = try root.section(Table.keyboard) {
+            try section.rejectUnknownKeys(allowed: ["option_as_meta"])
+            config.optionAsMeta =
+                try Choice.read("option_as_meta", in: section, as: OptionAsMeta.self) ?? config.optionAsMeta
         }
         return Parsed(config: config, warning: ignored.warning)
     }
@@ -113,7 +118,7 @@ enum TOMLConfigParser {
     private static func version(of root: TOMLSection) throws(ConfigError) -> Int? {
         guard let number = try root.number(versionKey) else { return nil }
         guard number >= 1, number == number.rounded(), let version = Int(exactly: number) else {
-            throw root.error(at: versionKey, versionReason)
+            throw root.error(at: versionKey, .expectedVersion)
         }
         return version
     }
@@ -166,48 +171,28 @@ enum LookScope {
 /// Reads a word of `T`'s raw values, with the choices in the error ("se esperaba hidden, hover o visible").
 enum Choice {
     static func read<T: RawRepresentable & CaseIterable>(
-        _ key: String, in section: TOMLSection, as type: T.Type, prefix: String = ""
+        _ key: String, in section: TOMLSection, as type: T.Type,
+        problem: ([String]) -> ConfigProblem = ConfigProblem.expectedOneOf
     ) throws(ConfigError) -> T? where T.RawValue == String {
-        guard let text = try section.text(key, reason: reason(T.self, prefix: prefix)) else { return nil }
+        let problem = problem(T.allCases.map(\.rawValue))
+        guard let text = try section.text(key, reason: problem) else { return nil }
         guard let value = T(rawValue: text) else {
-            try section.skipUnknownValue(text, at: key, else: section.error(at: key, reason(T.self, prefix: prefix)))
+            try section.skipUnknownValue(text, at: key, else: section.error(at: key, problem))
             return nil
         }
         return value
-    }
-
-    static func reason<T: RawRepresentable & CaseIterable>(_ type: T.Type, prefix: String = "") -> String
-    where T.RawValue == String {
-        let words = T.allCases.map(\.rawValue)
-        let list =
-            words.count > 1 ? words.dropLast().joined(separator: ", ") + " o " + (words.last ?? "") : words.joined()
-        return prefix + "se esperaba " + list
     }
 }
 
 /// `[appearance]`. Glass and blur ranges come from the sliders in `docs/design/Apariencia.dc.html`; font size, gap
 /// and radius have no board range, so theirs are sanity bounds that can be widened. Non-finite values never pass.
 private enum AppearanceReader {
-    private struct Bounds {
-        let range: ClosedRange<Double>
-        let reason: String
-
-        init(_ range: ClosedRange<Double>, _ text: String) {
-            self.range = range
-            self.reason = "se esperaba un número entre \(text)"
-        }
-    }
-
-    private static let glassOpacity = Bounds(AppearanceSettings.glassOpacityRange, "0,3 y 0,95")
-    private static let blur = Bounds(AppearanceSettings.blurRange, "0 y 48")
-    private static let fontSize = Bounds(AppearanceSettings.fontSizeRange, "6 y 72")
-    private static let gap = Bounds(AppearanceSettings.gapRange, "0 y 32")
-    private static let radius = Bounds(AppearanceSettings.radiusRange, "0 y 32")
-    private static let accentReason = "se esperaba un color #rrggbb"
+    private static let glassOpacity = AppearanceSettings.glassOpacityRange
+    private static let blur = AppearanceSettings.blurRange
+    private static let fontSize = AppearanceSettings.fontSizeRange
+    private static let gap = AppearanceSettings.gapRange
+    private static let radius = AppearanceSettings.radiusRange
     private static let fontFamilyKey = "font_family"
-    private static let fontFamilyReason =
-        "se esperaba un nombre de 1 a \(AppearanceSettings.maximumFontFamilyLength) caracteres sin comillas, "
-        + "\\ ni caracteres de control"
 
     static func read(_ section: TOMLSection, over defaults: AppearanceSettings) throws(ConfigError)
         -> AppearanceSettings
@@ -218,7 +203,8 @@ private enum AppearanceReader {
         ])
         var appearance = defaults
         appearance.theme =
-            try Choice.read("theme", in: section, as: ThemeID.self, prefix: "tema desconocido; ") ?? appearance.theme
+            try Choice.read("theme", in: section, as: ThemeID.self, problem: ConfigProblem.unknownTheme)
+            ?? appearance.theme
         appearance.protectLegibility = try section.flag("protect_legibility") ?? appearance.protectLegibility
         if let ansi = try section.section("ansi") {
             // Per index across files (block 3 review, M7): theme.toml's colors over config.toml's, one by one.
@@ -235,12 +221,12 @@ private enum AppearanceReader {
     }
 
     private static func accent(in section: TOMLSection) throws(ConfigError) -> RGBAColor? {
-        guard let text = try section.text("accent", reason: accentReason) else { return nil }
-        guard text.wholeMatch(of: /#[0-9a-fA-F]{6}/) != nil else { throw section.error(at: "accent", accentReason) }
+        guard let text = try section.text("accent", reason: .expectedColor) else { return nil }
+        guard text.wholeMatch(of: /#[0-9a-fA-F]{6}/) != nil else { throw section.error(at: "accent", .expectedColor) }
         do {
             return try RGBAColor(hex: text)
         } catch {
-            throw section.error(at: "accent", accentReason)
+            throw section.error(at: "accent", .expectedColor)
         }
     }
 
@@ -249,16 +235,20 @@ private enum AppearanceReader {
     private static func fontFamily(in section: TOMLSection) throws(ConfigError) -> String? {
         guard let text = try section.text(fontFamilyKey) else { return nil }
         guard AppearanceSettings.isValidFontFamily(text) else {
-            throw section.error(at: fontFamilyKey, fontFamilyReason)
+            throw section.error(
+                at: fontFamilyKey, .expectedFontName(maximumLength: AppearanceSettings.maximumFontFamilyLength))
         }
         return text
     }
 
-    private static func number(_ key: String, in section: TOMLSection, _ bounds: Bounds) throws(ConfigError)
+    private static func number(_ key: String, in section: TOMLSection, _ bounds: ClosedRange<Double>)
+        throws(ConfigError)
         -> Double?
     {
         guard let value = try section.number(key) else { return nil }
-        guard value.isFinite, bounds.range.contains(value) else { throw section.error(at: key, bounds.reason) }
+        guard value.isFinite, bounds.contains(value) else {
+            throw section.error(at: key, .expectedNumberBetween(bounds.lowerBound, bounds.upperBound))
+        }
         return value
     }
 }
@@ -273,31 +263,25 @@ private enum TilingReader {
         let id = LayoutID(rawValue: text)
         guard LayoutCatalog.standard.strategy(for: id) != nil else {
             try section.skipUnknownValue(
-                text, at: key, else: section.error(at: key, "layout desconocido; se esperaba \(knownLayouts)"))
+                text, at: key,
+                else: section.error(at: key, .unknownLayout(LayoutCatalog.standard.all.map(\.id.rawValue))))
             return nil
         }
         return id
     }
 
-    /// `dwindle, columns o master`.
-    private static var knownLayouts: String {
-        let ids = LayoutCatalog.standard.all.map(\.id.rawValue)
-        guard let last = ids.last, ids.count > 1 else { return ids.joined() }
-        return ids.dropLast().joined(separator: ", ") + " o " + last
-    }
 }
 
 /// `[shell]`: `command = "login"` is the user's login shell; any other non-blank text is run as is.
 private enum ShellReader {
     private static let key = "command"
     private static let loginKeyword = "login"
-    private static let reason = "se esperaba un comando o \"login\""
 
     static func read(_ section: TOMLSection) throws(ConfigError) -> TerminalCommand? {
         try section.rejectUnknownKeys(allowed: [key])
-        guard let text = try section.text(key, reason: reason) else { return nil }
+        guard let text = try section.text(key, reason: .expectedShellCommand) else { return nil }
         if text == loginKeyword { return .loginShell }
-        guard text.contains(where: { !$0.isWhitespace }) else { throw section.error(at: key, reason) }
+        guard text.contains(where: { !$0.isWhitespace }) else { throw section.error(at: key, .expectedShellCommand) }
         return .custom(text)
     }
 }

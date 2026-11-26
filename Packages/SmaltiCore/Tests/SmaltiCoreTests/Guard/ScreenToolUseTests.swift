@@ -7,7 +7,8 @@ struct ScreenToolUseTests {
         _ use: ToolUse, settings: GuardSettings = .standard, hosts: [String] = []
     ) -> GuardVerdict {
         ScreenToolUse.verdict(
-            for: use, context: GuardContext(settings: settings, environmentHosts: hosts), home: "/Users/u")
+            for: use, context: GuardContext(settings: settings, environmentHosts: hosts, texts: .spanish),
+            home: "/Users/u")
     }
 
     private func bash(_ command: String) -> ToolUse {
@@ -20,7 +21,7 @@ struct ScreenToolUseTests {
             return
         }
         #expect(denial.kind == .secret(path: ".env"))
-        #expect(denial.reason == GuardReasons.secret(path: ".env"))
+        #expect(denial.reason == GuardTexts.spanish.secretReason(["path": ".env"]))
     }
 
     @Test(arguments: ["Read", "Edit", "MultiEdit", "Write", "NotebookEdit"])
@@ -47,9 +48,10 @@ struct ScreenToolUseTests {
     @Test func incidentsAsk() {
         let replit = verdict(bash(IncidentCommands.replit), hosts: [IncidentCommands.replitEnvironmentHost])
 
-        #expect(replit.subject?.summary == "npm run db:push contra PROD")
-        #expect(verdict(bash(IncidentCommands.dataTalks)).subject?.summary == "terraform destroy contra PROD")
-        #expect(verdict(bash(IncidentCommands.pocketOS)).subject?.summary == "API de Railway (POST) contra PROD")
+        #expect(replit.subject?.summary(.spanish) == "npm run db:push contra PROD")
+        #expect(verdict(bash(IncidentCommands.dataTalks)).subject?.summary(.spanish) == "terraform destroy contra PROD")
+        #expect(
+            verdict(bash(IncidentCommands.pocketOS)).subject?.summary(.spanish) == "API de Railway (POST) contra PROD")
     }
 
     @Test func oversizedCommandAsks() {
@@ -83,7 +85,7 @@ struct ScreenToolUseTests {
         let subject = verdict(bash("supabase db reset --local && terraform destroy")).subject
 
         #expect(subject?.environment.kind == .production)
-        #expect(subject?.summary == "terraform destroy contra PROD")
+        #expect(subject?.summary(.spanish) == "terraform destroy contra PROD")
         #expect(subject?.findings.count == 2)
     }
 
@@ -93,10 +95,12 @@ struct ScreenToolUseTests {
 
     @Test func reasonsAreTheSpecTexts() {
         #expect(
-            GuardReasons.unreachable == "Smalti no respondió (app cerrada o socket caído): el comando queda bloqueado.")
-        #expect(GuardReasons.expired(minutes: 10) == "Nadie aprobó el comando en Smalti en 10 minutos.")
+            GuardTexts.spanish.unreachable
+                == "Smalti no respondió (app cerrada o socket caído): el comando queda bloqueado.")
         #expect(
-            GuardReasons.outdatedIntegration
+            GuardReasons.expired(minutes: 10, texts: .spanish) == "Nadie aprobó el comando en Smalti en 10 minutos.")
+        #expect(
+            GuardTexts.spanish.outdatedIntegration
                 == "Este comando necesita la aprobación de Smalti y la integración instalada es antigua: actualízala desde ⌘K."
         )
     }
@@ -106,7 +110,7 @@ struct ScreenToolUseTests {
         let subject = ApprovalSubject(command: "terraform destroy", findings: [finding])
 
         #expect(
-            GuardReasons.rejected(subject)
+            GuardReasons.rejected(subject, texts: .spanish)
                 == "El usuario rechazó en Smalti este comando (terraform destroy, contra PROD). No lo reintentes ni busques otra vía; pregunta qué hacer."
         )
     }

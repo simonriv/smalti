@@ -20,7 +20,7 @@ struct GuardSocketTests {
 
     private func server() throws -> UnixSocketTelemetry {
         let now = self.now
-        return try UnixSocketTelemetry(socketFile: socketFile, clock: { now })
+        return try UnixSocketTelemetry(socketFile: socketFile, clock: { now }, texts: .spanish)
     }
 
     private func guardLine(_ command: String, local: String = "ask") -> Data {
@@ -116,7 +116,7 @@ struct GuardSocketTests {
 
         #expect(
             await answer.value
-                == IPCResponse(ok: true, error: nil, decision: .deny, reason: GuardReasons.unreachable))
+                == IPCResponse(ok: true, error: nil, decision: .deny, reason: GuardTexts.spanish.unreachable))
     }
 
     @Test func truncatedFlagReachesTheRequest() async throws {

@@ -45,21 +45,13 @@ public struct DetectedEnvironment: Equatable, Sendable {
 
     public static let undetermined = DetectedEnvironment(kind: .production, host: nil, cause: .undetermined)
 
-    public var label: String {
-        switch kind {
-        case .production: "PROD"
-        case .nonProduction: "QA/desarrollo"
-        case .local: "local"
-        }
+    public func label(_ texts: GuardTexts) -> String {
+        texts.environments[kind] ?? ""
     }
 
-    public var detail: String? {
-        switch cause {
-        case .unrecognizedHost: "host no reconocido"
-        case .undetermined: "no determinado"
-        case .linkedProject: "proyecto enlazado"
-        case .listed, .localHost, .localFlag: nil
-        }
+    /// Why Smalti assumed it; nil when the host or a flag said so plainly.
+    public func detail(_ texts: GuardTexts) -> String? {
+        texts.causes[cause]
     }
 
     /// The production one first; nil when there is none.

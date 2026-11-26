@@ -178,9 +178,7 @@ final class SessionRestoreTests: SmaltiUITestCase {
     private func quitAndRelaunch(_ app: XCUIApplication) -> XCUIApplication {
         app.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
-        let again = XCUIApplication()
-        again.launchArguments = app.launchArguments
-        again.launchEnvironment = app.launchEnvironment
+        let again = XCUIApplication.relaunched(from: app)
         self.app = again
         again.launch()
         return again

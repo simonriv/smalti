@@ -108,7 +108,8 @@ final class TilingController {
         .windowNew, .windowClose, .windowFullscreen, .windowMinimize, .agentJump, .configReload, .appAbout,
         .configOpen, .secureInputToggle, .feedbackReport, .logsShow, .fontIncrease, .fontDecrease, .fontReset,
         .appearanceOpen, .themeOpen, .themeNext, .ansiReset, .legibilityToggle, .promptStudio, .promptApply,
-        .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport,
+        .promptExport, .layoutImport, .updatesCheck, .updatesAutomatic, .helpDocs, .appSupport, .helpWelcome,
+        .helpPrivacy,
     ]
 
     private let deps: Dependencies
@@ -172,7 +173,7 @@ final class TilingController {
             let edited = deps.editor.editedFiles
             Task { await edited.record(event) }
         }
-        _ = HandleAgentEvent(notifier: deps.agents.notifier).execute(
+        _ = HandleAgentEvent(notifier: deps.agents.notifier, texts: .current).execute(
             event, in: &set, isAppActive: deps.agents.isAppActive())
         publish()
     }
@@ -234,7 +235,7 @@ final class TilingController {
             if protect { try guards.secrets.protect(project) } else { try guards.secrets.unprotect(project) }
             show(protect ? .secretsProtected(name) : .secretsUnprotected(name))
         } catch {
-            show(.secretsFailed(error.message))
+            show(.secretsFailed(error.message(.current)))
         }
     }
 
@@ -244,7 +245,7 @@ final class TilingController {
             guard set.workspace(containing: pane) != nil else { return }
             show(.secretBlocked(path))
         } else {
-            HandleApprovalChange(notifier: deps.agents.notifier).execute(change, in: &set)
+            HandleApprovalChange(notifier: deps.agents.notifier, texts: .current).execute(change, in: &set)
         }
         publish()
     }
@@ -254,13 +255,26 @@ final class TilingController {
     }
 
     private func runIntegration(_ id: IntegrationID, _ command: IntegrationCommand.Type) {
+        runIntegration(id, command) { _ in }
+    }
+
+    /// F7.7: the welcome card's install, which also wants to know whether it worked.
+    func installIntegration(_ id: IntegrationID, then done: @escaping @MainActor (IntegrationOutcome) -> Void) {
+        runIntegration(id, InstallClaudeIntegration.self, then: done)
+    }
+
+    private func runIntegration(
+        _ id: IntegrationID, _ command: IntegrationCommand.Type,
+        then done: @escaping @MainActor (IntegrationOutcome) -> Void
+    ) {
         guard let status = deps.agents.integrations[id] else { return }
         let integration = status.integration
         status.changeStarted()
         Task { [weak self] in
-            let line = await command.init(integration: integration, id: id).execute()
-            self?.report(.integration(line))
+            let outcome = await command.init(integration: integration, id: id, texts: .current).run()
+            self?.report(.integration(outcome.text))
             status.refresh(forced: true)
+            done(outcome)
         }
     }
 
@@ -295,7 +309,7 @@ final class TilingController {
                 try SaveNamedLayout(layouts: deps.namedLayouts).execute(set.active, as: name)
                 show(.layoutSaved(name.rawValue))
             } catch {
-                show(.layoutSaveFailed(name.rawValue, reason: error.summary))
+                show(.layoutSaveFailed(name.rawValue, reason: error.summary(.current)))
             }
         case .restore(let name): restoreLayout(name)
         // F7: the save panel belongs to the window, so the app runs it.
@@ -311,7 +325,7 @@ final class TilingController {
             if let skipped = outcome.skippedLiveSessions.first { show(.sessionAlreadyOpen(skipped)) }
             reportRestoreFailures(outcome.failures)
         } catch {
-            show(.layoutRestoreFailed(name.rawValue, reason: error.summary))
+            show(.layoutRestoreFailed(name.rawValue, reason: error.summary(.current)))
         }
     }
 
@@ -321,7 +335,7 @@ final class TilingController {
         return RestoreSession(
             .init(
                 engine: deps.engine, transcripts: deps.transcripts, harnesses: deps.harnesses,
-                environment: deps.paneEnvironment, shell: config.shell, clock: { .now },
+                environment: deps.paneEnvironment, shell: config.shell, clock: { .now }, texts: .current,
                 // F6: Claude reopens with `--ide` while claudecode.nvim is installed.
                 connectsEditor: deps.editor.connectsEditor(),
                 editorCommand: { position, pane in
@@ -530,15 +544,19 @@ final class TilingController {
                 let pane = try OpenPane(engine: deps.engine, environment: deps.paneEnvironment).execute(
                     request, in: &set)
                 observe(pane)
-                if folderMissing { show(.harnessSession(OpenHarnessSession.folderMissingMessage(directory ?? ""))) }
+                if folderMissing {
+                    show(
+                        .harnessSession(
+                            OpenHarnessSession.folderMissingMessage(directory ?? "", texts: .current)))
+                }
             } catch {
                 show(Self.message(for: error))
             }
             publish()
         case .cannotFork(let harness):
-            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness)))
+            show(.harnessSession(OpenHarnessSession.cannotForkMessage(harness, texts: .current)))
         case .unavailable(let harness):
-            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness)))
+            show(.harnessSession(OpenHarnessSession.unavailableMessage(harness, texts: .current)))
         }
     }
 
@@ -563,8 +581,10 @@ final class TilingController {
     /// Closes at once when nothing runs (or `confirm_close` is off); otherwise only after the user confirms, and
     /// then publishes itself, since the question returns after `perform` did.
     private func confirmClosing(_ scope: CloseScope, _ panes: [Pane], close: @escaping () -> Void) {
-        let busy = RunningPrograms(engine: deps.engine).busy(in: panes)
-        guard let question = CloseGuard.question(for: scope, busy: busy, settings: config.window),
+        let busy = RunningPrograms(engine: deps.engine, texts: .current).busy(in: panes)
+        guard
+            let question = CloseGuard.question(
+                for: scope, busy: busy, settings: config.window, texts: .current),
             let onConfirmClose
         else {
             close()
@@ -627,7 +647,7 @@ final class TilingController {
             return false
         }
         do {
-            try deps.applyAppearance(theme.terminal)
+            try deps.applyAppearance(engineAppearance)
         } catch {
             show(.engineFailure(error))
         }
@@ -641,10 +661,17 @@ final class TilingController {
         publish()
     }
 
+    /// The theme's terminal with the config's `[keyboard] option_as_meta` (F7.7).
+    private var engineAppearance: TerminalAppearance {
+        var appearance = theme.terminal
+        appearance.optionAsMeta = config.optionAsMeta
+        return appearance
+    }
+
     /// The engine's appearance is the app's: one window gives it the theme's terminal colors and font.
     func applyEngineAppearance() {
         do {
-            try deps.applyAppearance(theme.terminal)
+            try deps.applyAppearance(engineAppearance)
         } catch {
             show(.engineFailure(error))
         }
@@ -670,7 +697,7 @@ final class TilingController {
         config = reload.config.withShell(overriddenBy: deps.shellOverride)
         status = status.withPersistent(nil)
         // F5: keys repeated in config.toml and theme.toml ("theme.toml manda sobre config.toml en: …").
-        if let warning = reload.warnings.first { show(.configWarning(warning.message)) }
+        if let warning = reload.warnings.first { show(.configWarning(warning.message(.current))) }
         return true
     }
 
@@ -854,8 +881,8 @@ final class TilingController {
 /// Install and uninstall share one shape, so the palette runs either the same way.
 @MainActor
 protocol IntegrationCommand {
-    init(integration: any HarnessIntegration, id: IntegrationID)
-    func execute() async -> String
+    init(integration: any HarnessIntegration, id: IntegrationID, texts: IntegrationTexts)
+    func run() async -> IntegrationOutcome
 }
 
 extension InstallClaudeIntegration: IntegrationCommand {}

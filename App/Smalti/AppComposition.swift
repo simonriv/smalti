@@ -28,6 +28,8 @@ final class AppComposition {
     private var runtime: GhosttyRuntime?
     /// F5: the one Appearance document every window's panel edits.
     private var appearance: AppearanceSession?
+    /// F7.7: whether the welcome card was seen, next to the session in this build's state directory.
+    private var welcomeRecord: FileWelcomeRecord?
     /// F5 "Solo símbolo": a pane's prompt context for its header (from `RenderPrompt`).
     private var promptHeader: ((PaneID) -> String?)?
     private var engine: GhosttyTerminalEngine?
@@ -171,9 +173,12 @@ final class AppComposition {
     }
 
     private func start(_ startup: Startup) throws(TerminalEngineError) {
+        var terminal = startup.theme.terminal
+        terminal.optionAsMeta = startup.initial.config.optionAsMeta
         let runtime = try makeRuntime(
-            startup.theme.terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
+            terminal, configFile: startup.settings.stateDirectory.appending(path: "ghostty.conf"))
         let state = startup.settings.stateDirectory
+        welcomeRecord = FileWelcomeRecord(directory: state)
         let engine = GhosttyTerminalEngine(
             runtime: runtime, zshDirectory: state.appending(path: "zsh"),
             userZdotdir: startup.settings.userZdotdir ?? ProcessInfo.processInfo.environment["ZDOTDIR"])
@@ -187,7 +192,12 @@ final class AppComposition {
                 named: "input", stateDirectory: state, temporaryDirectory: FileManager.default.temporaryDirectory)
             : nil
         let environment = PaneEnvironment(
-            version: Self.version, extra: ["SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString],
+            version: Self.version,
+            extra: [
+                "SMALTI_GHOST_COLOR": startup.theme.text.ghostText.hexString,
+                // F7.7: the CLI a pane's agent runs (hooks, guards) answers in the app's language.
+                "SMALTI_LANGUAGE": InterfaceLanguage.current.rawValue,
+            ],
             files: PaneFileLocator(stateDirectory: state),
             ipc: Self.ipcEndpoints(socket: socket, inputSocket: inputSocket), telemetry: startTelemetry(startup))
         harnesses = Self.harnessRegistry(startup.settings)
@@ -241,7 +251,8 @@ final class AppComposition {
         installMenus(engine)
         // The receiver started before any window existed: its first status reaches the bar now.
         if let claudeTelemetry { telemetryChanged(claudeTelemetry) }
-        switch LoadLastSession(archive: archive, preferences: archive).execute() {
+        let choice = LoadLastSession(archive: archive, preferences: archive).execute()
+        switch choice {
         case .startFresh:
             controller.start()
         case .startFreshAfterUnreadable(let reason):
@@ -260,6 +271,53 @@ final class AppComposition {
         }
         // While the resume screen asks, nothing is saved: quitting there keeps the last session.
         if !composition.isAskingToRestore { beginSaving(keepingPreviousSession: false) }
+        let isFresh = if case .startFresh = choice { true } else { false }
+        offerWelcome(in: composition, hasSavedSession: !isFresh)
+    }
+
+    // MARK: - Welcome (F7.7)
+
+    /// The card opens only on a fresh install; someone who already used Smalti (a saved session) is marked as done.
+    private func offerWelcome(in composition: WindowComposition, hasSavedSession: Bool) {
+        guard let welcomeRecord else { return }
+        let show = ShowWelcome(record: welcomeRecord)
+        Task { [weak self, weak composition] in
+            guard await show.shouldShowAtLaunch(hasSavedSession: hasSavedSession), let self, let composition else {
+                return
+            }
+            composition.showWelcome(actions: welcomeActions(for: composition, marking: welcomeRecord))
+        }
+    }
+
+    /// Opened from ⌘K or the help: one card for the app (the window that has it comes forward), and closing it
+    /// marks nothing (spec F7.7).
+    private func showWelcomeByHand(in composition: WindowComposition) {
+        if let open = compositions.first(where: \.hasWelcomeOpen) {
+            open.window.makeKeyAndOrderFront(nil)
+            return
+        }
+        composition.showWelcome(actions: welcomeActions(for: composition, marking: nil))
+    }
+
+    /// `record` is where finishing or skipping marks the card seen; nil when it was opened by hand.
+    private func welcomeActions(for composition: WindowComposition, marking record: FileWelcomeRecord?)
+        -> WelcomeActions
+    {
+        WelcomeActions(
+            states: { [weak composition] in composition?.controller.catalogState().integrations ?? [:] },
+            install: { [weak composition] id, done in composition?.controller.installIntegration(id, then: done) },
+            selectTheme: { [weak self] theme in self?.appearance?.selectTheme(theme) },
+            markDone: {
+                guard let record else { return }
+                Task {
+                    do {
+                        try await record.markDone()
+                    } catch {
+                        Logger(subsystem: AppIdentity.current.bundleIdentifier, category: "state")
+                            .error("could not mark the welcome card as seen: \(String(describing: error))")
+                    }
+                }
+            })
     }
 
     // MARK: - Appearance (F5)
@@ -380,10 +438,13 @@ final class AppComposition {
         case .updatesAutomatic:
             guard let updates else { return }
             composition.controller.report(
-                StatusMessage(text: SetAutomaticUpdates(updates: updates).toggle(), isTransient: true))
+                StatusMessage(
+                    text: SetAutomaticUpdates(updates: updates, texts: .current).toggle(), isTransient: true))
             mainMenu?.refresh()
-        case .helpDocs: URLOpener.open(SmaltiLinks.documentation)
-        case .appSupport: URLOpener.open(SmaltiLinks.support)
+        case .helpDocs: URLOpener.open(SmaltiLinks.documentation(for: .current))
+        case .appSupport: URLOpener.open(SmaltiLinks.support(for: .current))
+        case .helpPrivacy: URLOpener.open(SmaltiLinks.privacy(for: .current))
+        case .helpWelcome: showWelcomeByHand(in: composition)
         case .feedbackReport:
             composition.showFeedback(summary: Self.buildInfo.summary) { [weak self] kind, includesLogs in
                 self?.report(kind, includingLogs: includesLogs)
@@ -434,9 +495,11 @@ final class AppComposition {
             return
         }
         guard let engine else { return }
-        let busy = RunningPrograms(engine: engine).busy(in: composition.controller.set.workspaces.flatMap(\.panes))
+        let busy = RunningPrograms(engine: engine, texts: .current).busy(
+            in: composition.controller.set.workspaces.flatMap(\.panes))
         guard
-            let question = CloseGuard.question(for: .window, busy: busy, settings: composition.controller.config.window)
+            let question = CloseGuard.question(
+                for: .window, busy: busy, settings: composition.controller.config.window, texts: .current)
         else {
             close(composition)
             return
@@ -555,13 +618,15 @@ final class AppComposition {
         guard let controller else { return .empty }
         var state = CatalogState(workspaces: controller.set, savedLayouts: controller.savedLayouts())
         state.updates = UpdatesAvailability(updates)
-        let commands = CommandCatalog.commands(for: state, keymap: controller.config.keys, layouts: .standard)
+        let commands = CommandCatalog.commands(
+            for: state, keymap: controller.config.keys, layouts: .standard, texts: .current)
         // The item shows the user's own choice; a password prompt turning it on is shown by the status bar.
         let checked: Set<CommandID> = secureInput.entry.isOnByUser ? [.secureInputToggle] : []
         return MenuModel.bar(
             keymap: controller.config.keys, commands: commands,
             state: MenuState(
-                workspaces: controller.set, checked: checked, context: front?.menuContext ?? .unrestricted))
+                workspaces: controller.set, checked: checked, context: front?.menuContext ?? .unrestricted),
+            texts: .current)
     }
 
     /// A menu item acts on the window in front; with none (all closed while quitting), only ⌘N makes sense.
@@ -589,7 +654,7 @@ final class AppComposition {
         guard let owner = composition(containing: pane) else { return nil }
         let menu = NSMenu()
         let keymap = owner.controller.config.keys
-        for item in MenuModel.contextMenu(keymap: keymap) {
+        for item in MenuModel.contextMenu(keymap: keymap, texts: .current) {
             guard !item.isSeparator, let command = item.command else {
                 menu.addItem(.separator())
                 continue
@@ -653,7 +718,7 @@ final class AppComposition {
     private func report(_ kind: FeedbackKind, includingLogs: Bool) {
         Task {
             if includingLogs { await saveLogs() }
-            URLOpener.open(FeedbackReport.issueURL(kind: kind, build: Self.buildInfo))
+            URLOpener.open(FeedbackReport.issueURL(kind: kind, build: Self.buildInfo, texts: .current))
         }
     }
 
@@ -727,7 +792,8 @@ final class AppComposition {
             do {
                 try FileManager.default.createDirectory(
                     at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try ConfigTemplate.text(defaults: .defaults).write(to: file, atomically: true, encoding: .utf8)
+                try ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.current.template).write(
+                    to: file, atomically: true, encoding: .utf8)
             } catch {
                 logger.error("could not write the config template: \(String(describing: error), privacy: .public)")
                 controller?.report(.configTemplateFailed(path))
@@ -740,7 +806,7 @@ final class AppComposition {
     /// The Dock's menu: "Nueva ventana".
     func dockMenu() -> NSMenu {
         let menu = NSMenu()
-        for item in MenuModel.dockMenu() {
+        for item in MenuModel.dockMenu(texts: .current) {
             menu.addItem(
                 ClosureMenuItem(title: item.title) { [weak self] in self?.openWindow(from: self?.front) })
         }
@@ -855,10 +921,11 @@ final class AppComposition {
     private func telemetryChanged(_ collector: CollectTelemetry) {
         observatory?.telemetryChanged()
         writeTelemetryProbe(collector.status)
-        guard case .failed(let reason) = collector.status else {
+        guard case .failed(let error) = collector.status else {
             reportedTelemetryFailure = nil
             return
         }
+        let reason = error.message(.current)
         // Once per failure: a later reload that fails the same way does not repeat it.
         guard reportedTelemetryFailure != reason, let controller else { return }
         reportedTelemetryFailure = reason
@@ -873,7 +940,7 @@ final class AppComposition {
             case .off: ["status": "off"]
             case .configuredByUser: ["status": "configuredByUser"]
             case .listening(let endpoint): ["status": "listening", "port": Int(endpoint.port)]
-            case .failed(let reason): ["status": "failed", "reason": reason]
+            case .failed(let error): ["status": "failed", "reason": error.message(.english)]
             }
         do {
             try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]).write(
@@ -892,7 +959,7 @@ final class AppComposition {
     /// without agent states and says so.
     private func listenForAgents(on socket: URL, controller: TilingController) {
         do {
-            let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now })
+            let telemetry = try UnixSocketTelemetry(socketFile: socket, clock: { .now }, texts: .current)
             self.telemetry = telemetry
             let events = telemetry.events()
             let requests = telemetry.requests()
@@ -976,7 +1043,8 @@ final class AppComposition {
                 self?.workspace(containing: pane)?.waitingAgents(besides: pane) ?? WaitingAgents()
             },
             workspace: { [weak self] pane in self?.workspace(containing: pane)?.id },
-            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false), now: { Date() },
+            home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
+            copy: .current, now: { Date() },
             highlighting: { [weak self] in Self.isHighlighting(self?.controller?.config ?? startup.initial.config) })
         let render = RenderPrompt(facts: FilePromptFacts(), environment: environment)
         coordinator.renderPrompt = render
@@ -1016,7 +1084,7 @@ final class AppComposition {
     {
         let approvals = AgentApprovals(
             home: FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false),
-            timeout: startup.settings.approvalTimeout)
+            timeout: startup.settings.approvalTimeout, texts: .current)
         approvals.settings = startup.initial.config.guards
         approvals.onChange = { [weak self] change in self?.approvalChanged(change) }
         self.approvals = approvals
@@ -1123,9 +1191,14 @@ final class AppComposition {
             answer(false)
             return
         }
-        let busy = engine.map { RunningPrograms(engine: $0).busy(in: windows) } ?? CloseGuard.busyPanes(in: windows)
+        let busy =
+            engine.map { RunningPrograms(engine: $0, texts: .current).busy(in: windows) }
+            ?? CloseGuard.busyPanes(in: windows, texts: .current)
         let count = CloseGuard.windowsWithBusyPanes(busy, in: windows)
-        guard let question = CloseGuard.question(for: .quit(windowCount: count), busy: busy, settings: settings) else {
+        guard
+            let question = CloseGuard.question(
+                for: .quit(windowCount: count), busy: busy, settings: settings, texts: .current)
+        else {
             answer(true)
             return
         }
@@ -1153,6 +1226,8 @@ final class AppComposition {
     func saveForQuit() async {
         // F7.5: every waiting command is denied before the socket closes; nobody would approve it.
         approvals?.stop()
+        // F7.7 review 2: an open welcome card puts its previewed theme back (quitting skips `close`'s overlays).
+        compositions.forEach { $0.closeOverlays() }
         // Block 4 review (I1): an Appearance change of the last 300 ms is written before quitting.
         appearance?.saveIfPending()
         secureInput.releaseAll()
@@ -1181,7 +1256,7 @@ final class AppComposition {
         try GhosttyProcess.ensureInitialized(resourcesDirectory: Bundle.main.resourceURL?.appending(path: "ghostty"))
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(appearance), writingTo: configFile)
-        return try GhosttyRuntime(config: config)
+        return try GhosttyRuntime(config: config, texts: .current)
     }
 
     private func homeDirectory() throws(TerminalEngineError) -> WorkingDirectory {
@@ -1189,14 +1264,14 @@ final class AppComposition {
         do {
             return try WorkingDirectory(path: path)
         } catch {
-            throw .surfaceCreationFailed(workingDirectory: path, reason: "home directory is not absolute")
+            throw .surfaceCreationFailed(workingDirectory: path, reason: .homeNotAbsolute)
         }
     }
 
     private func fail(_ error: TerminalEngineError) {
         logger.error("terminal engine failed: \(String(describing: error), privacy: .public)")
         let alert = NSAlert()
-        alert.messageText = "Smalti no pudo iniciar la terminal"
+        alert.messageText = String(localized: "Smalti couldn’t start the terminal")
         alert.informativeText = EngineErrorText.describe(error)
         alert.runModal()
         NSApp.terminate(nil)

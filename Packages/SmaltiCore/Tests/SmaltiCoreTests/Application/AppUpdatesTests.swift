@@ -15,7 +15,7 @@ struct AppUpdatesTests {
     }
 
     @Test func toggleTurnsAutomaticOff() {
-        let message = SetAutomaticUpdates(updates: updates).toggle()
+        let message = SetAutomaticUpdates(updates: updates, texts: .spanish).toggle()
 
         #expect(!updates.isAutomatic)
         #expect(message == "Actualizaciones automáticas desactivadas")
@@ -24,7 +24,7 @@ struct AppUpdatesTests {
     @Test func toggleTurnsAutomaticOn() {
         let updates = FakeAppUpdates(isAutomatic: false)
 
-        let message = SetAutomaticUpdates(updates: updates).toggle()
+        let message = SetAutomaticUpdates(updates: updates, texts: .spanish).toggle()
 
         #expect(updates.isAutomatic)
         #expect(message == "Actualizaciones automáticas activadas")

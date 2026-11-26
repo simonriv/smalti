@@ -11,7 +11,7 @@ public struct ClaudeProjectPermissions: ProjectPermissions {
         let permissions = settings["permissions"] as? [String: Any] ?? [:]
         guard let deny = permissions["deny"] else { return [] }
         guard let rules = deny as? [String] else {
-            throw .unreadable(path: Self.path(in: project), reason: "permissions.deny no es una lista de textos")
+            throw .denyNotAList(path: Self.path(in: project))
         }
         return rules
     }
@@ -73,13 +73,13 @@ public struct ClaudeProjectPermissions: ProjectPermissions {
         do {
             let data = try Data(contentsOf: file)
             guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                throw ProjectPermissionsError.unreadable(path: path, reason: "no es un objeto JSON")
+                throw ProjectPermissionsError.notAnObject(path: path)
             }
             return object
         } catch let error as ProjectPermissionsError {
             throw error
         } catch {
-            throw .unreadable(path: path, reason: "JSON inválido")
+            throw .invalidJSON(path: path)
         }
     }
 }

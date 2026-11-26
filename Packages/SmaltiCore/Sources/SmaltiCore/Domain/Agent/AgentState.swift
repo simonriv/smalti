@@ -32,8 +32,8 @@ public enum WaitReason: Equatable, Sendable {
     case permission(String)
     /// It raised a notification with this message.
     case attention(String)
-    /// F7.5: Smalti holds a guarded command until the user approves it («supabase db push contra PROD»).
-    case approval(String)
+    /// F7.5: Smalti holds a guarded command until the user approves it.
+    case approval(ApprovalSubject)
 }
 
 /// The state shown for an agent, always with the same colour: working green, waiting amber, failed red,

@@ -13,7 +13,9 @@ final class SessionTableView: NSView, NSTableViewDataSource, NSTableViewDelegate
     var onSelect: ((String) -> Void)?
 
     private static let headers = [
-        "Estado", "Sesión", "Agente · modelo", "Vida", "Entrada", "Salida", "Contexto", "Err", "PID",
+        String(localized: "State"), String(localized: "Session"), String(localized: "Agent · model"),
+        String(localized: "Age"), String(localized: "Input"), String(localized: "Output"), String(localized: "Context"),
+        "Err", "PID",
     ]
     private static let rowIdentifier = NSUserInterfaceItemIdentifier("observatory.row")
 
@@ -142,7 +144,7 @@ private final class TableRowView: NSView {
         setAccessibilityRole(.row)
         setAccessibilityIdentifier("smalti.observatory.row.\(row.id)")
         setAccessibilityLabel(row.label)
-        setAccessibilityValue(isSelected ? "selected" : ObservatoryTexts.state(row.state))
+        setAccessibilityValue(isSelected ? "selected" : ObservatoryTexts.state(row.state, copy: .current))
         needsDisplay = true
     }
 
@@ -150,7 +152,8 @@ private final class TableRowView: NSView {
         let color = state == .stopped ? theme.text.secondary : theme.color(for: state)
         let dot = StatusDot(diameter: theme.observatory.tableDot, style: theme.statusDot(for: state))
         let text = ObservatoryText.label(
-            ObservatoryTexts.state(state), .init(size: theme.observatory.rowFontSize, color: color), theme: theme)
+            ObservatoryTexts.state(state, copy: .current),
+            .init(size: theme.observatory.rowFontSize, color: color), theme: theme)
         let stack = NSStackView(views: [dot, text])
         stack.spacing = theme.observatory.spacing.stateDot
         return stack

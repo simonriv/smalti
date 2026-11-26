@@ -85,29 +85,10 @@ public enum PromptModuleID: String, CaseIterable, Sendable {
     case time
     case cloud
 
-    public var title: String {
-        switch self {
-        case .directory: "Directorio"
-        case .gitBranch: "Rama git"
-        case .gitStatus: "Cambios git"
-        case .runtime: "Runtime"
-        case .duration: "Duración"
-        case .agents: "Agentes que esperan"
-        case .time: "Hora"
-        case .cloud: "Contexto de Kubernetes / AWS"
-        }
-    }
+    public func title(_ copy: PromptCopy) -> String { copy.modules[self] ?? rawValue }
 
     /// The grey note after the title on the board ("· últimos 2 niveles").
-    public var detail: String? {
-        switch self {
-        case .directory: "últimos 2 niveles"
-        case .gitStatus: "●2 +1"
-        case .runtime: "Node, Bun, Python, Go"
-        case .duration: "si pasa de 2 s"
-        case .gitBranch, .agents, .time, .cloud: nil
-        }
-    }
+    public func detail(_ copy: PromptCopy) -> String? { copy.moduleDetails[self] }
 }
 
 /// The four template cards: a style and a layout each (spec F5).
@@ -117,14 +98,7 @@ public enum PromptTemplate: CaseIterable, Sendable {
     case pills
     case symbolOnly
 
-    public var title: String {
-        switch self {
-        case .cleanLine: "Línea limpia"
-        case .singleLine: "Una sola línea"
-        case .pills: "Píldoras"
-        case .symbolOnly: "Solo símbolo"
-        }
-    }
+    public func title(_ copy: PromptCopy) -> String { copy.templates[self] ?? "" }
 
     var style: PromptStyleID {
         switch self {
@@ -149,32 +123,20 @@ public enum PromptTemplate: CaseIterable, Sendable {
 
 extension PromptIcons {
     /// The studio's "Iconos" choices (`Prompt.dc.html`).
-    public var title: String {
-        switch self {
-        case .thin: "Trazo fino"
-        case .nerd: "Nerd Font"
-        case .none: "Sin iconos"
-        }
-    }
+    public func title(_ copy: PromptCopy) -> String { copy.icons[self] ?? rawValue }
 }
 
 extension PromptLayout {
     /// "Disposición": the board's text for two lines; one line takes its template's name (Claude).
-    public var title: String {
+    public func title(_ copy: PromptCopy) -> String {
         switch self {
-        case .twoLines: "Contexto arriba, input abajo"
-        case .oneLine: PromptTemplate.singleLine.title
+        case .twoLines: copy.twoLines
+        case .oneLine: PromptTemplate.singleLine.title(copy)
         }
     }
 }
 
 extension PromptTemplate {
     /// The grey note after a card's title on the board.
-    public var note: String? { self == .symbolOnly ? "· contexto en la cabecera" : nil }
-}
-
-/// The studio's texts that are not on the board (spec F5, "Textos nuevos").
-public enum PromptStudioTexts {
-    public static let shellPrompt = "Prompt del shell"
-    public static let noNerdFont = "No hay una Nerd Font instalada"
+    public func note(_ copy: PromptCopy) -> String? { self == .symbolOnly ? copy.symbolOnlyNote : nil }
 }

@@ -6,8 +6,8 @@ import SmaltiCore
 /// dot, how long ago and how many times, and the footer "↩ insertar · ⌘↩ ejecutar · ⇥ cambiar ámbito · esc cerrar".
 @MainActor
 final class HistoryPaletteView: NSView {
-    static let emptyHistory = "Historial vacío: se llena con lo que ejecutes en Smalti"
-    static let noMatches = "Sin coincidencias"
+    static let emptyHistory = String(localized: "Empty history: it fills with what you run in Smalti")
+    static let noMatches = String(localized: "No matches")
 
     let field = PaletteField()
     /// ⌘↩: reaches the view as a key equivalent, not as the field's newline.
@@ -20,8 +20,8 @@ final class HistoryPaletteView: NSView {
 
     init(theme: Theme) {
         self.theme = theme
-        directoryChip = Chip("Este directorio", identifier: "smalti.historyScopeDirectory", theme: theme)
-        everywhereChip = Chip("Todos", identifier: "smalti.historyScopeAll", theme: theme)
+        directoryChip = Chip(String(localized: "This folder"), identifier: "smalti.historyScopeDirectory", theme: theme)
+        everywhereChip = Chip(String(localized: "All"), identifier: "smalti.historyScopeAll", theme: theme)
         super.init(frame: .zero)
         layoutBox(content: makeContent())
         setAccessibilityElement(true)
@@ -111,7 +111,7 @@ final class HistoryPaletteView: NSView {
         field.focusRingType = .none
         field.font = theme.interfaceFont(size: palette.fieldFontSize)
         field.textColor = theme.text.title.nsColor
-        field.setAccessibilityLabel("Buscar en el historial")
+        field.setAccessibilityLabel(String(localized: "Search history"))
         field.setAccessibilityIdentifier("smalti.historyField")
         showScope(everywhere: false)
         let row = NSStackView(views: [prefix, field, directoryChip, everywhereChip])
@@ -139,7 +139,10 @@ final class HistoryPaletteView: NSView {
 
     private func footer() -> NSView {
         let palette = theme.palette
-        let hints: [NSView] = [("↩", "insertar"), ("⌘↩", "ejecutar"), ("⇥", "cambiar ámbito"), ("esc", "cerrar")].map {
+        let hints: [NSView] = [
+            ("↩", String(localized: "insert")), ("⌘↩", String(localized: "run")),
+            ("⇥", String(localized: "switch scope")), ("esc", String(localized: "close")),
+        ].map {
             key, action in
             let label = NSTextField(labelWithString: " \(action)")
             label.font = theme.interfaceFont(size: palette.footerFontSize)
@@ -233,7 +236,7 @@ final class HistoryRowView: NSView {
         let dot = NSTextField(labelWithString: "●")
         dot.font = theme.interfaceFont(size: tokens.dotSize)
         dot.textColor = Self.color(for: hit.stats.lastExit, theme: theme).nsColor
-        let ago = HistorySearch.ago(hit.stats.lastUsed, now: now, calendar: .current)
+        let ago = HistorySearch.ago(hit.stats.lastUsed, now: now, calendar: .current, texts: .current)
         let meta = NSTextField(labelWithString: "\(ago)   ×\(hit.stats.uses)")
         meta.font = theme.interfaceFont(size: palette.footerFontSize)
         meta.textColor = theme.text.secondary.nsColor

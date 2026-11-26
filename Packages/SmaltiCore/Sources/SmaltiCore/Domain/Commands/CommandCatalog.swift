@@ -4,85 +4,66 @@ import Foundation
 public enum CommandCatalog {
     private static let configPathSubtitle = "~/.config/smalti/config.toml"
 
-    public static func commands(for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog) -> [Command] {
+    public static func commands(
+        for state: CatalogState, keymap: Keymap, layouts: LayoutCatalog, texts: CommandTexts
+    ) -> [Command] {
         let context = Context(
-            workspaces: state.workspaces, keymap: keymap, integrations: state.integrations, updates: state.updates)
-        return state.pendingApprovals.flatMap(approvalCommands)
+            workspaces: state.workspaces, keymap: keymap, integrations: state.integrations, updates: state.updates,
+            texts: texts)
+        return state.pendingApprovals.flatMap { approvalCommands($0, texts) }
             + tilingCommands(context, layouts)
             + paneCommands(context)
             + terminalCommands(context)
             + workspaceCommands(context)
-            + state.savedLayouts.flatMap { [restoreCommand($0), exportCommand($0)] }
+            + state.savedLayouts.flatMap { [restoreCommand($0, texts), exportCommand($0, texts)] }
             + windowCommands(context)
             + configurationCommands(context)
-            + (state.secretsProject.map { [secretsCommand($0)] } ?? [])
+            + (state.secretsProject.map { [secretsCommand($0, texts)] } ?? [])
             + helpCommands(context)
-            + state.editedFiles.map { editedFileCommand($0, now: state.now) }
+            + state.editedFiles.map { editedFileCommand($0, now: state.now, texts: texts) }
     }
 
     /// F7.5: the longest part of a command an approval entry quotes.
     static let approvalQuoteLength = 40
 
     /// «Aprobar “terraform destroy” en rizaria» and its «Rechazar…», with the rule and the environment below.
-    private static func approvalCommands(_ entry: ApprovalEntry) -> [Command] {
+    private static func approvalCommands(_ entry: ApprovalEntry, _ texts: CommandTexts) -> [Command] {
         let subject = entry.approval.subject
         let command = subject.command
         let quote =
             command.count > approvalQuoteLength ? String(command.prefix(approvalQuoteLength)) + "…" : command
         // Final review: a quoted command is cut, so the subtitle carries it whole (redacted).
         let whole = command.count > approvalQuoteLength ? command : nil
-        let subtitle = [subject.summary, subject.environment.detail, whole].compactMap { $0 }.joined(separator: " · ")
+        let subtitle = [subject.summary(texts.guards), subject.environment.detail(texts.guards), whole].compactMap {
+            $0
+        }.joined(separator: " · ")
         return [
-            (CommandID.guardApprove(id: entry.approval.id), "Aprobar"),
-            (CommandID.guardReject(id: entry.approval.id), "Rechazar"),
-        ].map { id, verb in
+            (CommandID.guardApprove(id: entry.approval.id), texts.approve),
+            (CommandID.guardReject(id: entry.approval.id), texts.reject),
+        ].map { id, template in
             Command(
-                id: id, title: "\(verb) “\(quote)” en \(entry.workspace)", subtitle: subtitle, group: .approvals,
-                shortcut: nil, isCurrent: false)
+                id: id, title: template(["quote": quote, "workspace": entry.workspace]), subtitle: subtitle,
+                group: .approvals, shortcut: nil, isCurrent: false)
         }
     }
 
     /// F7.5: «Proteger secretos en “rizaria”» or its undo, whichever applies.
-    private static func secretsCommand(_ project: SecretsProjectState) -> Command {
-        let (id, title) =
+    private static func secretsCommand(_ project: SecretsProjectState, _ texts: CommandTexts) -> Command {
+        let (id, template) =
             project.isProtected
-            ? (CommandID.secretsUnprotect, "Quitar protección de secretos en “\(project.name)”")
-            : (CommandID.secretsProtect, "Proteger secretos en “\(project.name)”")
-        return Command(id: id, title: title, subtitle: nil, group: .configuration, shortcut: nil, isCurrent: false)
+            ? (CommandID.secretsUnprotect, texts.unprotectSecrets) : (CommandID.secretsProtect, texts.protectSecrets)
+        return Command(
+            id: id, title: template(["name": project.name]), subtitle: nil, group: .configuration, shortcut: nil,
+            isCurrent: false)
     }
 
     /// "reminder.service.ts", "línea 42 · hace 2 min".
-    private static func editedFileCommand(_ file: EditedFile, now: Date) -> Command {
-        Command(
+    private static func editedFileCommand(_ file: EditedFile, now: Date, texts: CommandTexts) -> Command {
+        let elapsed = ElapsedPhrase.text(since: file.at, now: now, texts: texts.time)
+        return Command(
             id: .editorOpen(path: file.path, line: file.line), title: file.fileName,
-            subtitle: "línea \(file.line) · \(ElapsedPhrase.text(since: file.at, now: now))", group: .editedFiles,
+            subtitle: texts.editedFileSubtitle(["line": String(file.line), "elapsed": elapsed]), group: .editedFiles,
             shortcut: nil, isCurrent: false)
-    }
-
-    /// F4.5: titles as in the spec's menu table; the menu and the help reuse them.
-    static let titles: [CommandID: String] = [
-        .windowNew: "Nueva ventana", .windowClose: "Cerrar ventana", .windowFullscreen: "Pantalla completa",
-        .windowMinimize: "Minimizar", .terminalCopy: "Copiar", .terminalPaste: "Pegar",
-        .terminalSelectAll: "Seleccionar todo", .terminalClear: "Limpiar pantalla", .searchOpen: "Buscar…",
-        .searchNext: "Buscar siguiente", .searchPrevious: "Buscar anterior", .fontIncrease: "Aumentar letra",
-        .fontDecrease: "Reducir letra", .fontReset: "Tamaño real", .scrollPageUp: "Página arriba",
-        .scrollPageDown: "Página abajo", .scrollTop: "Al principio", .scrollBottom: "Al final",
-        .promptPrevious: "Prompt anterior", .promptNext: "Prompt siguiente", .configOpen: "Abrir config.toml",
-        .secureInputToggle: "Entrada de teclado segura", .helpShow: "Ayuda de Smalti",
-        .feedbackReport: "Reportar un problema o una idea…", .logsShow: "Mostrar registros…",
-        .appAbout: "Acerca de Smalti", .appearanceOpen: "Apariencia…", .promptStudio: "Estudio de prompt…",
-        .themeOpen: "Abrir theme.toml", .themeNext: "Siguiente tema", .ansiReset: "Restablecer paleta ANSI",
-        .promptApply: "Aplicar prompt a todos los paneles", .promptExport: "Exportar como starship.toml",
-        .legibilityToggle: "Proteger legibilidad", .previewQuickLook: "Abrir en Quick Look",
-        .harnessSearch: "Buscar sesiones de agentes", .editorOpenBeside: "Abrir Neovim junto al agente",
-        .editorOpenLastEdited: "Abrir en Neovim el último archivo editado",
-        .observatoryFilter: "Filtrar el Observatorio", .layoutImport: "Importar layout…",
-        .updatesCheck: "Buscar actualizaciones…", .helpDocs: "Abrir la documentación", .appSupport: "Apoyar Smalti…",
-    ]
-
-    /// F7.6: the toggle says what choosing it does.
-    static func automaticUpdatesTitle(isAutomatic: Bool) -> String {
-        isAutomatic ? "Desactivar actualizaciones automáticas" : "Activar actualizaciones automáticas"
     }
 
     static let terminalIDs: [CommandID] = [
@@ -103,7 +84,9 @@ public enum CommandCatalog {
     }
 
     private static func helpCommands(_ context: Context) -> [Command] {
-        [CommandID.helpShow, .helpDocs, .feedbackReport, .logsShow].map { context.titled($0, group: .help) }
+        [CommandID.helpShow, .helpWelcome, .helpDocs, .helpPrivacy, .feedbackReport, .logsShow].map {
+            context.titled($0, group: .help)
+        }
             + updateCommands(context)
             + [CommandID.appSupport, .appAbout].map { context.titled($0, group: .help) }
     }
@@ -111,41 +94,37 @@ public enum CommandCatalog {
     /// F7.6: only in a build that can update itself.
     private static func updateCommands(_ context: Context) -> [Command] {
         guard case .available(let isAutomatic) = context.updates else { return [] }
-        return [
-            context.titled(.updatesCheck, group: .help),
-            context.command(
-                .updatesAutomatic, automaticUpdatesTitle(isAutomatic: isAutomatic), group: .help),
-        ]
+        let toggle = isAutomatic ? context.texts.turnOffAutomaticUpdates : context.texts.turnOnAutomaticUpdates
+        return [context.titled(.updatesCheck, group: .help), context.command(.updatesAutomatic, toggle, group: .help)]
     }
 
     /// "Guardar layout actual como “solen-dev”", offered for whatever the user typed when it is a valid name.
-    public static func saveCommand(named query: String) -> Command? {
+    public static func saveCommand(named query: String, texts: CommandTexts) -> Command? {
         guard let name = try? LayoutName(query) else { return nil }
         return Command(
-            id: .layoutSave(name), title: "Guardar layout actual como “\(name.rawValue)”", subtitle: nil,
+            id: .layoutSave(name), title: texts.saveLayout(["name": name.rawValue]), subtitle: nil,
             group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
     /// "Restaurar layout “rizaria-full” — 4 paneles, retoma 2 sesiones de Claude" (Paleta.dc.html).
-    private static func restoreCommand(_ layout: NamedLayoutSummary) -> Command {
+    private static func restoreCommand(_ layout: NamedLayoutSummary, _ texts: CommandTexts) -> Command {
+        let title = texts.restoreLayout(["name": layout.name.rawValue])
         if let format = layout.newerFormat {
             return Command(
-                id: .layoutRestore(layout.name), title: "Restaurar layout “\(layout.name.rawValue)”",
-                subtitle: "— guardado por una versión más nueva de Smalti (formato \(format))", group: .workspaces,
-                shortcut: nil, isCurrent: false)
+                id: .layoutRestore(layout.name), title: title,
+                subtitle: texts.restoreNewerFormat(["format": String(format)]), group: .workspaces, shortcut: nil,
+                isCurrent: false)
         }
-        let panes = "\(layout.paneCount) \(layout.paneCount == 1 ? "panel" : "paneles")"
-        let sessions = layout.agentCount == 1 ? "sesión" : "sesiones"
-        let agents = layout.agentCount > 0 ? ", retoma \(layout.agentCount) \(sessions) de Claude" : ""
+        let agents = layout.agentCount > 0 ? texts.restoreSessions(layout.agentCount) : ""
         return Command(
-            id: .layoutRestore(layout.name), title: "Restaurar layout “\(layout.name.rawValue)”",
-            subtitle: "— \(panes)\(agents)", group: .workspaces, shortcut: nil, isCurrent: false)
+            id: .layoutRestore(layout.name), title: title, subtitle: texts.restorePanes(layout.paneCount) + agents,
+            group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
     /// F7: "Exportar layout “solen-dev”…", right after its restore.
-    private static func exportCommand(_ layout: NamedLayoutSummary) -> Command {
+    private static func exportCommand(_ layout: NamedLayoutSummary, _ texts: CommandTexts) -> Command {
         Command(
-            id: .layoutExport(layout.name), title: "Exportar layout “\(layout.name.rawValue)”…", subtitle: nil,
+            id: .layoutExport(layout.name), title: texts.exportLayout(["name": layout.name.rawValue]), subtitle: nil,
             group: .workspaces, shortcut: nil, isCurrent: false)
     }
 
@@ -154,6 +133,7 @@ public enum CommandCatalog {
         let keymap: Keymap
         let integrations: [IntegrationID: IntegrationState]
         let updates: UpdatesAvailability
+        let texts: CommandTexts
 
         var paneCount: Int { workspaces.active.panes.count }
 
@@ -164,7 +144,7 @@ public enum CommandCatalog {
         }
 
         func titled(_ id: CommandID, group: CommandGroup) -> Command {
-            command(id, CommandCatalog.titles[id] ?? id.rawValue, group: group)
+            command(id, texts.titles[id] ?? texts.paletteTitles[id] ?? id.rawValue, group: group)
         }
     }
 
@@ -173,7 +153,8 @@ public enum CommandCatalog {
         if context.paneCount >= 2 {
             commands.append(
                 Command(
-                    id: .panesEqualize, title: "Igualar tamaños de paneles", subtitle: nil, group: .tiling,
+                    id: .panesEqualize, title: context.texts.paletteTitles[.panesEqualize] ?? "", subtitle: nil,
+                    group: .tiling,
                     shortcut: context.keymap.chord(for: .panesEqualize), isCurrent: false, icon: .equalize))
         }
         return commands
@@ -182,19 +163,19 @@ public enum CommandCatalog {
     private static func layoutCommand(_ layout: any LayoutStrategy, _ context: Context) -> Command {
         let id = CommandID.layout(layout.id)
         return Command(
-            id: id, title: "Layout: \(layout.displayName)", subtitle: layout.subtitle, group: .tiling,
+            id: id,
+            title: context.texts.layoutTitle(["name": context.texts.layoutNames[layout.id] ?? layout.id.rawValue]),
+            subtitle: context.texts.layoutSubtitles[layout.id], group: .tiling,
             shortcut: context.keymap.chord(for: id), isCurrent: layout.id == context.workspaces.active.layout.id,
             icon: layout.icon)
     }
 
     private static func paneCommands(_ context: Context) -> [Command] {
-        var commands = [context.command(.paneNew, "Nuevo panel", group: .panes)]
+        var commands = [context.titled(.paneNew, group: .panes)]
         if context.paneCount >= 1 {
-            commands.append(context.command(.paneClose, "Cerrar panel", group: .panes))
-            commands.append(context.command(.historySearch, "Buscar en el historial", group: .panes))
-            commands.append(context.command(.editorOpenBeside, "Abrir Neovim junto al agente", group: .panes))
-            commands.append(
-                context.command(.editorOpenLastEdited, "Abrir en Neovim el último archivo editado", group: .panes))
+            commands += [CommandID.paneClose, .historySearch, .editorOpenBeside, .editorOpenLastEdited].map {
+                context.titled($0, group: .panes)
+            }
         }
         commands += goToPaneCommands(context)
         if context.paneCount >= 2 {
@@ -209,39 +190,38 @@ public enum CommandCatalog {
             let number = index + 1
             let process = pane.headerName
             return context.command(
-                .paneFocus(number), "Ir al panel \(number)", subtitle: process.isEmpty ? nil : process,
+                .paneFocus(number), context.texts.goToPane(["number": String(number)]),
+                subtitle: process.isEmpty ? nil : process,
                 group: .panes)
         }
     }
 
     private static func directionalCommands(_ context: Context) -> [Command] {
-        let actions: [(verb: String, id: (Direction) -> CommandID)] = [
-            ("Enfocar", CommandID.paneFocus), ("Intercambiar", CommandID.paneSwap), ("Agrandar", CommandID.paneResize),
+        let texts = context.texts
+        let actions: [(template: TextTemplate, id: (Direction) -> CommandID)] = [
+            (texts.focusPane, CommandID.paneFocus), (texts.swapPane, CommandID.paneSwap),
+            (texts.resizePane, CommandID.paneResize),
         ]
         return actions.flatMap { action in
             Direction.allCases.map { direction in
-                context.command(
-                    action.id(direction), "\(action.verb) panel hacia \(direction.spanishPhrase)", group: .panes)
+                let phrase = texts.directions[direction] ?? ""
+                return context.command(action.id(direction), action.template(["direction": phrase]), group: .panes)
             }
         }
     }
 
     private static func workspaceCommands(_ context: Context) -> [Command] {
         var commands = [
-            context.command(.agentJump, "Saltar al agente que espera", group: .workspaces),
-            context.command(.observatoryToggle, "Abrir observatorio", group: .workspaces),
-            context.command(.observatoryFilter, "Filtrar el Observatorio", group: .workspaces),
-            context.command(.harnessSearch, "Buscar sesiones de agentes", group: .workspaces),
-            context.command(.workspaceNew, "Nuevo workspace", group: .workspaces),
-            context.command(.workspaceRename, "Renombrar workspace…", group: .workspaces),
-            context.titled(.layoutImport, group: .workspaces),
-        ]
+            CommandID.agentJump, .observatoryToggle, .observatoryFilter, .harnessSearch, .workspaceNew,
+            .workspaceRename, .layoutImport,
+        ].map { context.titled($0, group: .workspaces) }
         let others = context.workspaces.workspaces.filter { $0.id != context.workspaces.activeID }
         commands += others.map {
-            context.command(.workspaceGo($0.id), "Ir a workspace \($0.name)", group: .workspaces)
+            context.command(
+                .workspaceGo($0.id), context.texts.goToWorkspace(["name": $0.name]), group: .workspaces)
         }
         if context.workspaces.workspaces.count >= 2 {
-            commands.append(context.command(.workspaceClose, "Cerrar workspace", group: .workspaces))
+            commands.append(context.titled(.workspaceClose, group: .workspaces))
         }
         return commands
     }
@@ -249,7 +229,8 @@ public enum CommandCatalog {
     private static func configurationCommands(_ context: Context) -> [Command] {
         [
             context.command(
-                .configReload, "Recargar configuración", subtitle: configPathSubtitle, group: .configuration)
+                .configReload, context.texts.paletteTitles[.configReload] ?? "", subtitle: configPathSubtitle,
+                group: .configuration)
         ] + integrationCommands(context) + [
             context.titled(.configOpen, group: .configuration),
             context.titled(.secureInputToggle, group: .configuration),
@@ -260,9 +241,10 @@ public enum CommandCatalog {
 /// One action per integration, the one its state allows (spec F5.6, F6).
 private func integrationCommands(_ context: CommandCatalog.Context) -> [Command] {
     IntegrationID.allCases.compactMap { integration in
-        integration.commandID(for: context.integrations[integration, default: .unknown]).map {
-            context.command($0.id, $0.title, group: .configuration)
-        }
+        integration.command(
+            for: context.integrations[integration, default: .unknown], texts: context.texts.integrations
+        )
+        .map { context.command($0.id, $0.title, group: .configuration) }
     }
 }
 
@@ -323,18 +305,6 @@ public struct SecretsProjectState: Equatable, Sendable {
     public init(name: String, isProtected: Bool) {
         self.name = name
         self.isProtected = isProtected
-    }
-}
-
-extension Direction {
-    /// The direction as it ends the sentence "… panel hacia …".
-    fileprivate var spanishPhrase: String {
-        switch self {
-        case .left: "la izquierda"
-        case .right: "la derecha"
-        case .up: "arriba"
-        case .down: "abajo"
-        }
     }
 }
 

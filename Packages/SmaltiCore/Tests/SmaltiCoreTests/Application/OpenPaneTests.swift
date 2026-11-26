@@ -93,7 +93,7 @@ struct OpenPaneTests {
     }
 
     @Test mutating func openPropagatesEngineFailure() {
-        let failure = TerminalEngineError.surfaceCreationFailed(workingDirectory: "/tmp", reason: "x")
+        let failure = TerminalEngineError.surfaceCreationFailed(workingDirectory: "/tmp", reason: .engine("x"))
         engine.failure = failure
         let before = set
 

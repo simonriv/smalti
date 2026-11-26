@@ -83,7 +83,8 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["pnpm dev", "fake --continue", "nvim +42 \(root)/src/a.ts"])
+        #expect(
+            preview.commands.map { $0.text(.spanish) } == ["pnpm dev", "fake --continue", "nvim +42 \(root)/src/a.ts"])
     }
 
     @Test func previewOfShellsOnlyHasNoCommands() throws {
@@ -184,13 +185,15 @@ struct ShareLayoutTests {
     // MARK: Texts
 
     @Test func confirmationTitle() throws {
-        #expect(ImportTexts.confirmationTitle(try LayoutName("solen-dev")) == "¿Importar el layout “solen-dev”?")
+        #expect(
+            ImportTexts.confirmationTitle(try LayoutName("solen-dev"), texts: .spanish)
+                == "¿Importar el layout “solen-dev”?")
     }
 
     @Test func confirmationBodyListsCommands() throws {
         files.files[file] = try shared([pane(relaunch: ["pnpm", "dev"]), pane(relaunch: ["make"])])
 
-        let body = ImportTexts.confirmationBody(try importer().preview(file))
+        let body = ImportTexts.confirmationBody(try importer().preview(file), texts: .spanish)
 
         #expect(body == "Al abrirlo ejecutará: pnpm dev · make")
     }
@@ -198,7 +201,9 @@ struct ShareLayoutTests {
     @Test func confirmationBodyForShellsOnly() throws {
         files.files[file] = try shared([pane()])
 
-        #expect(ImportTexts.confirmationBody(try importer().preview(file)) == "Al abrirlo solo abrirá shells.")
+        #expect(
+            ImportTexts.confirmationBody(try importer().preview(file), texts: .spanish)
+                == "Al abrirlo solo abrirá shells.")
     }
 
     @Test func confirmationBodyAddsWarnings() throws {
@@ -207,7 +212,7 @@ struct ShareLayoutTests {
         odd.panes[1] = SharedPane(directory: ".", harness: HarnessID(rawValue: "gemini"))
         files.files[file] = odd
 
-        let body = ImportTexts.confirmationBody(try importer().preview(file))
+        let body = ImportTexts.confirmationBody(try importer().preview(file), texts: .spanish)
 
         #expect(
             body == """
@@ -218,21 +223,23 @@ struct ShareLayoutTests {
     }
 
     @Test func folderPrompt() throws {
-        #expect(ImportTexts.folderPrompt(try LayoutName("solen-dev")) == "Elige la carpeta de “solen-dev” en este Mac")
+        #expect(
+            ImportTexts.folderPrompt(try LayoutName("solen-dev"), texts: .spanish)
+                == "Elige la carpeta de “solen-dev” en este Mac")
     }
 
     @Test func errorMessagesReachTheStatusBar() {
-        #expect(LayoutShareError.file(.invalid(.paneCount(10))).message == "tiene 10 paneles; el máximo es 9")
-        #expect(LayoutShareError.archive(.notFound(name: "x")).message.contains("x"))
+        #expect(LayoutShareError.file(.invalid(.paneCount(10))).message(.spanish) == "tiene 10 paneles; el máximo es 9")
+        #expect(LayoutShareError.archive(.notFound(name: "x")).message(.spanish).contains("x"))
     }
 
     /// F7.6: a layout saved by a newer Smalti says so instead of "not found".
     @Test func newerLayoutMessageNamesFileAndVersion() {
         #expect(
-            LayoutShareError.archive(.newerFormat(file: "solen.json", version: 2)).message
+            LayoutShareError.archive(.newerFormat(file: "solen.json", version: 2)).message(.spanish)
                 == "solen.json lo guardó una versión más nueva de Smalti (formato 2)")
         #expect(
-            SessionArchiveError.newerFormat(file: "session.json", version: 3).summary
+            SessionArchiveError.newerFormat(file: "session.json", version: 3).summary(.spanish)
                 == "session.json: guardado por una versión más nueva de Smalti (formato 3)")
     }
 
@@ -245,7 +252,7 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["fake --continue", "nvim +42 \(root)/src/a.ts"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["fake --continue", "nvim +42 \(root)/src/a.ts"])
     }
 
     @Test func freeNameIgnoresCase() throws {
@@ -265,7 +272,7 @@ struct ShareLayoutTests {
         let preview = try importer().preview(file, root: "/Volumes/work/solen")
 
         #expect(preview.root == "/Volumes/work/solen")
-        #expect(preview.commands == ["nvim +42 /Volumes/work/solen/src/a.ts"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["nvim +42 /Volumes/work/solen/src/a.ts"])
         #expect(!preview.isRootPresent)
     }
 
@@ -287,6 +294,7 @@ struct ShareLayoutTests {
 
         let preview = try importer(existing: [root]).preview(file)
 
-        #expect(preview.commands == ["pnpm dev", "make en api", "fake --continue en ~/.ssh"])
+        #expect(preview.commands.map { $0.text(.spanish) } == ["pnpm dev", "make en api", "fake --continue en ~/.ssh"])
+        #expect(preview.commands.map { $0.text(.english) } == ["pnpm dev", "make in api", "fake --continue in ~/.ssh"])
     }
 }

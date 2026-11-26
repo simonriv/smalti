@@ -3,13 +3,15 @@
 @MainActor
 public struct RunningPrograms {
     private let engine: any TerminalEngine
+    private let texts: TerminalTexts
 
-    public init(engine: any TerminalEngine) {
+    public init(engine: any TerminalEngine, texts: TerminalTexts) {
         self.engine = engine
+        self.texts = texts
     }
 
     public func busy(in panes: [Pane]) -> [BusyPane] {
-        CloseGuard.busyPanes(panes.map(current))
+        CloseGuard.busyPanes(panes.map(current), texts: texts)
     }
 
     public func busy(in windows: WindowSet) -> [BusyPane] {

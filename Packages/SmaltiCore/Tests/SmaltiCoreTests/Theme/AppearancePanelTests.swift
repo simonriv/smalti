@@ -12,11 +12,11 @@ struct AppearancePanelTests {
     private var document: AppearanceDocument { AppearanceDocument(config: .defaults) }
 
     @Test func opacityShowsTheChosenValue() {
-        #expect(AppearanceTexts.opacity(chosen: 0.62, underText: 0.62) == "62%")
+        #expect(AppearanceTexts.opacity(chosen: 0.62, underText: 0.62, copy: .spanish) == "62%")
     }
 
     @Test func opacitySaysWhenProtectionRaisesItUnderText() {
-        #expect(AppearanceTexts.opacity(chosen: 0.62, underText: 0.66) == "62% · 66% bajo el texto")
+        #expect(AppearanceTexts.opacity(chosen: 0.62, underText: 0.66, copy: .spanish) == "62% · 66% bajo el texto")
     }
 
     @Test func blurIsInPixels() {
@@ -24,30 +24,33 @@ struct AppearancePanelTests {
     }
 
     @Test func noAdjustedColorsSaysNothing() {
-        #expect(AppearanceTexts.adjusted(0) == nil)
+        #expect(AppearanceTexts.adjusted(0, copy: .spanish) == nil)
     }
 
     @Test func oneAdjustedColorIsSingular() {
-        #expect(AppearanceTexts.adjusted(1) == "Ajustados por legibilidad: 1 color")
+        #expect(AppearanceTexts.adjusted(1, copy: .spanish) == "Ajustados por legibilidad: 1 color")
     }
 
     @Test func severalAdjustedColors() {
-        #expect(AppearanceTexts.adjusted(3) == "Ajustados por legibilidad: 3 colores")
+        #expect(AppearanceTexts.adjusted(3, copy: .spanish) == "Ajustados por legibilidad: 3 colores")
     }
 
     @Test func homeFileIsShortenedLikeTheBoard() {
-        let text = AppearanceTexts.savedIn(path: "/Users/simon/.config/smalti/theme.toml", home: "/Users/simon")
+        let text = AppearanceTexts.savedIn(
+            path: "/Users/simon/.config/smalti/theme.toml", home: "/Users/simon", copy: .spanish)
 
         #expect(text == "se guarda en ~/.config/…/theme.toml")
     }
 
     @Test func shortPathIsShownWhole() {
         #expect(
-            AppearanceTexts.savedIn(path: "/tmp/theme.toml", home: "/Users/simon") == "se guarda en /tmp/theme.toml")
+            AppearanceTexts.savedIn(path: "/tmp/theme.toml", home: "/Users/simon", copy: .spanish)
+                == "se guarda en /tmp/theme.toml")
     }
 
     @Test func pathOutsideTheHomeKeepsItsFirstFolder() {
-        let text = AppearanceTexts.savedIn(path: "/var/folders/x1/T/run/theme.toml", home: "/Users/simon")
+        let text = AppearanceTexts.savedIn(
+            path: "/var/folders/x1/T/run/theme.toml", home: "/Users/simon", copy: .spanish)
 
         #expect(text == "se guarda en /var/…/theme.toml")
     }

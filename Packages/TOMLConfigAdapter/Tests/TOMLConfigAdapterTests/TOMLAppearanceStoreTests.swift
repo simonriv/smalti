@@ -22,7 +22,7 @@ struct TOMLAppearanceStoreTests {
     }
 
     @Test func roundTripEveryEnum() throws {
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         var round = 0
         for theme in ThemeID.allCases {
             for buttons in WindowButtons.allCases {
@@ -53,7 +53,7 @@ struct TOMLAppearanceStoreTests {
         document.appearance.glassOpacity = glass
         document.appearance.blur = blur
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack() == document)
     }
@@ -63,7 +63,7 @@ struct TOMLAppearanceStoreTests {
         var document = AppearanceDocument(config: .defaults)
         document.prompt.icons = icons
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack() == document)
     }
@@ -73,7 +73,7 @@ struct TOMLAppearanceStoreTests {
         var document = AppearanceDocument(config: .defaults)
         document.prompt.symbol = symbol
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack() == document)
     }
@@ -88,7 +88,7 @@ struct TOMLAppearanceStoreTests {
         document.appearance.fontFamily = "Berkeley Mono"
         document.appearance.protectLegibility = false
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack() == document)
     }
@@ -97,7 +97,7 @@ struct TOMLAppearanceStoreTests {
         var document = AppearanceDocument(config: .defaults)
         document.prompt.modules = []
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack() == document)
     }
@@ -106,13 +106,13 @@ struct TOMLAppearanceStoreTests {
         var document = AppearanceDocument(config: .defaults)
         document.appearance.accent = try RGBAColor(hex: "#ff8000")
 
-        try TOMLAppearanceStore(file: themeFile).save(document)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(document)
 
         #expect(try readBack().appearance.accent == (try RGBAColor(hex: "#ff8000")))
     }
 
     @Test func fileStartsWithTheExplainingComment() throws {
-        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
 
         let text = try String(contentsOf: themeFile, encoding: .utf8)
 
@@ -124,7 +124,7 @@ struct TOMLAppearanceStoreTests {
     }
 
     @Test func saveMergesExternalEditFirst() throws {
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         let base = AppearanceDocument(config: .defaults)
         try store.save(base)
         // Someone edits the file by hand while the UI is open.
@@ -145,7 +145,7 @@ struct TOMLAppearanceStoreTests {
 
     /// Final review (I1): the saved document carries the hand edit, so saving it again keeps the edit.
     @Test func secondSaveKeepsTheHandEdit() throws {
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         let base = AppearanceDocument(config: .defaults)
         try store.save(base)
         let edited = try String(contentsOf: themeFile, encoding: .utf8).replacingOccurrences(
@@ -164,7 +164,7 @@ struct TOMLAppearanceStoreTests {
     }
 
     @Test func writeLeavesNoTemporaryFiles() throws {
-        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
 
         let names = try FileManager.default.contentsOfDirectory(atPath: directory.path(percentEncoded: false))
 
@@ -174,7 +174,7 @@ struct TOMLAppearanceStoreTests {
     @Test func missingDirectoryIsCreated() throws {
         let nested = directory.appending(path: "a/b/theme.toml")
 
-        try TOMLAppearanceStore(file: nested).save(AppearanceDocument(config: .defaults))
+        try TOMLAppearanceStore(file: nested, texts: .spanish).save(AppearanceDocument(config: .defaults))
 
         #expect(FileManager.default.fileExists(atPath: nested.path(percentEncoded: false)))
     }
@@ -184,7 +184,7 @@ struct TOMLAppearanceStoreTests {
         let config = configFile
         AppearanceStoreContract.verify {
             (
-                TOMLAppearanceStore(file: file),
+                TOMLAppearanceStore(file: file, texts: .spanish),
                 { (try? TOMLConfigStore(config: config, theme: file).reload()).map(AppearanceDocument.init(config:)) }
             )
         }
@@ -214,8 +214,8 @@ struct TOMLAppearanceStoreReviewTests {
     }
 
     @Test func firstSaveOfTheSessionKeepsAHandEdit() throws {
-        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
-        let store = TOMLAppearanceStore(file: themeFile)
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         store.remember(try readBack())
         let edited = try String(contentsOf: themeFile, encoding: .utf8).replacingOccurrences(
             of: "gap = 8", with: "gap = 3")
@@ -231,7 +231,7 @@ struct TOMLAppearanceStoreReviewTests {
     }
 
     @Test func keyDeletedByHandIsRespected() throws {
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         var base = AppearanceDocument(config: .defaults)
         base.appearance.accent = try RGBAColor(hex: "#ff0000")
         try store.save(base)
@@ -248,7 +248,7 @@ struct TOMLAppearanceStoreReviewTests {
     }
 
     @Test func brokenFileIsBackedUpBeforeOverwriting() throws {
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         try store.save(AppearanceDocument(config: .defaults))
         try "[appearance\nroto = ".write(to: themeFile, atomically: true, encoding: .utf8)
         try bumpDate()
@@ -265,7 +265,7 @@ struct TOMLAppearanceStoreReviewTests {
         try "".write(to: real, atomically: true, encoding: .utf8)
         try FileManager.default.createSymbolicLink(at: themeFile, withDestinationURL: real)
 
-        try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+        try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
 
         let kind = try FileManager.default.attributesOfItem(atPath: themeFile.path(percentEncoded: false))[.type]
         #expect(kind as? FileAttributeType == .typeSymbolicLink)

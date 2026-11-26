@@ -66,7 +66,8 @@ struct MutantKillerF5Tests {
             facts: facts,
             environment: PromptEnvironment(
                 settings: { (config, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
-                workspace: { _ in nil }, home: "/Users/simon", now: { Date(timeIntervalSince1970: 49_500) },
+                workspace: { _ in nil }, home: "/Users/simon", copy: .spanish,
+                now: { Date(timeIntervalSince1970: 49_500) },
                 timeZone: utc))
         let context = ShellContext(
             pwd: "/repo/web", exit: 0, durationMilliseconds: 4200, awsProfile: "prod", kubeconfig: nil,
@@ -81,7 +82,7 @@ struct MutantKillerF5Tests {
     }
 
     @Test func timeFollowsTheContextZoneNotTheMachine() throws {
-        var context = PromptContext(directory: "/tmp", home: "/Users/simon")
+        var context = PromptContext(directory: "/tmp", home: "/Users/simon", copy: .spanish)
         context.now = Date(timeIntervalSince1970: 0)
         context.timeZone = try #require(TimeZone(identifier: "Asia/Tokyo"))
 
@@ -94,7 +95,7 @@ struct MutantKillerF5Tests {
         var config = PromptConfig.standard
         config.icons = .none
         config.modules = [.gitBranch, .gitStatus]
-        var context = PromptContext(directory: "/tmp", home: "/Users/simon")
+        var context = PromptContext(directory: "/tmp", home: "/Users/simon", copy: .spanish)
         context.branch = "main"
         context.changes = GitChanges(modified: 2, staged: 0)
 
@@ -105,9 +106,9 @@ struct MutantKillerF5Tests {
     }
 
     @Test func starshipFormatsWrapOnlyGitStatusAsOptional() {
-        let clean = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian))
+        let clean = StarshipPreset.make(from: .standard, theme: ThemeCatalog.apply(.obsidian), copy: .spanish)
         let pills = StarshipPreset.make(
-            from: PromptConfig.standard.applying(.pills), theme: ThemeCatalog.apply(.obsidian))
+            from: PromptConfig.standard.applying(.pills), theme: ThemeCatalog.apply(.obsidian), copy: .spanish)
 
         #expect(clean.table("directory")?.value("format") == .string("[$path]($style) "))
         #expect(pills.table("directory")?.value("format") == .string("[ $path ]($style) "))

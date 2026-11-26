@@ -17,7 +17,8 @@ struct CommandCatalogF5Tests {
     }
 
     private var commands: [Command] {
-        CommandCatalog.commands(for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard)
+        CommandCatalog.commands(
+            for: CatalogState(workspaces: set), keymap: .standard, layouts: .standard, texts: .spanish)
     }
 
     @Test(arguments: [
@@ -46,13 +47,13 @@ struct CommandCatalogF5Tests {
         .promptExport, .legibilityToggle,
     ])
     func everyNewCommandIsInHelp(_ id: CommandID) {
-        let covered = HelpCatalog.sections(keymap: .standard).flatMap(\.entries).flatMap(\.covers)
+        let covered = HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries).flatMap(\.covers)
 
         #expect(covered.contains(id))
     }
 
     @Test func helpListsAppearanceWithItsShortcut() throws {
-        let entries = HelpCatalog.sections(keymap: .standard).flatMap(\.entries)
+        let entries = HelpCatalog.sections(keymap: .standard, texts: .spanish).flatMap(\.entries)
         let appearance = try #require(entries.first { $0.command == .appearanceOpen })
 
         #expect(appearance.title == "Apariencia…")
@@ -62,7 +63,7 @@ struct CommandCatalogF5Tests {
     @Test func menuSmaltiListsAppearanceAndStudio() {
         let bar = MenuModel.bar(
             keymap: .standard, commands: commands,
-            state: MenuState(workspaces: set, checked: [], context: .unrestricted))
+            state: MenuState(workspaces: set, checked: [], context: .unrestricted), texts: .spanish)
         let titles = bar.menus[0].items.map(\.title)
 
         let appearance = titles.firstIndex(of: "Apariencia…")

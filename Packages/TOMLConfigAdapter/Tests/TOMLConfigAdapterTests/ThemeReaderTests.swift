@@ -99,7 +99,7 @@ struct ThemeReaderTests {
         let store = try store(theme: "[appearance.ansi.bosque]\n16 = \"#ffffff\"\n")
 
         #expect(
-            throws: ConfigError(file: themePath, line: 2, key: "16", reason: "se esperaba un índice ANSI de 0 a 15")
+            throws: ConfigError(file: themePath, line: 2, key: "16", problem: .expectedANSIIndex)
         ) {
             try store.reload()
         }
@@ -108,7 +108,7 @@ struct ThemeReaderTests {
     @Test func invalidAnsiColorNamesKey() throws {
         let store = try store(theme: "[appearance.ansi.bosque]\n3 = \"rojo\"\n")
 
-        #expect(throws: ConfigError(file: themePath, line: 2, key: "3", reason: "se esperaba un color #rrggbb")) {
+        #expect(throws: ConfigError(file: themePath, line: 2, key: "3", problem: .expectedColor)) {
             try store.reload()
         }
     }
@@ -119,7 +119,7 @@ struct ThemeReaderTests {
         #expect(
             throws: ConfigError(
                 file: themePath, line: 2, key: "theme",
-                reason: "tema desconocido; se esperaba obsidiana, niebla, ambar-nocturno o bosque")
+                problem: .unknownTheme(["obsidiana", "niebla", "ambar-nocturno", "bosque"]))
         ) {
             try store.reload()
         }
@@ -134,7 +134,7 @@ struct ThemeReaderTests {
     @Test func unknownModuleIsRejected() throws {
         let store = try store(theme: "[prompt]\nmodules = [\"directory\", \"weather\"]\n")
 
-        #expect(throws: ConfigError(file: themePath, line: 2, key: "modules", reason: "módulo desconocido: weather")) {
+        #expect(throws: ConfigError(file: themePath, line: 2, key: "modules", problem: .unknownModule("weather"))) {
             try store.reload()
         }
     }
@@ -142,7 +142,7 @@ struct ThemeReaderTests {
     @Test func repeatedModuleIsRejected() throws {
         let store = try store(theme: "[prompt]\nmodules = [\"time\", \"time\"]\n")
 
-        #expect(throws: ConfigError(file: themePath, line: 2, key: "modules", reason: "módulo repetido: time")) {
+        #expect(throws: ConfigError(file: themePath, line: 2, key: "modules", problem: .repeatedModule("time"))) {
             try store.reload()
         }
     }
@@ -150,7 +150,7 @@ struct ThemeReaderTests {
     @Test func confirmCloseStaysInConfig() throws {
         let themeStore = try store(theme: "[window]\nconfirm_close = false\n")
 
-        #expect(throws: ConfigError(file: themePath, line: 2, key: "confirm_close", reason: "clave desconocida")) {
+        #expect(throws: ConfigError(file: themePath, line: 2, key: "confirm_close", problem: .unknownKey)) {
             try themeStore.reload()
         }
     }
@@ -158,7 +158,7 @@ struct ThemeReaderTests {
     @Test func otherTablesAreNotAllowedInTheme() throws {
         let store = try store(theme: "[shell]\ncommand = \"/bin/zsh\"\n")
 
-        #expect(throws: ConfigError(file: themePath, line: 1, key: "shell", reason: "tabla desconocida")) {
+        #expect(throws: ConfigError(file: themePath, line: 1, key: "shell", problem: .unknownTable)) {
             try store.reload()
         }
     }
@@ -176,7 +176,7 @@ struct ThemeReaderTests {
 
         #expect(
             throws: ConfigError(
-                file: themePath, line: 2, key: "buttons", reason: "se esperaba hidden, hover o visible")
+                file: themePath, line: 2, key: "buttons", problem: .expectedOneOf(["hidden", "hover", "visible"]))
         ) {
             try store.reload()
         }

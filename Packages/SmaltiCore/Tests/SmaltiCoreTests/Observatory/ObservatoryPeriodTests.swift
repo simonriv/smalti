@@ -51,6 +51,6 @@ struct ObservatoryPeriodTests {
     }
 
     @Test func titlesComeFromTheBoard() {
-        #expect(ObservatoryPeriod.allCases.map(\.title) == ["Hoy", "7 días", "30 días"])
+        #expect(ObservatoryPeriod.allCases.map { $0.title(copy: .spanish) } == ["Hoy", "7 días", "30 días"])
     }
 }

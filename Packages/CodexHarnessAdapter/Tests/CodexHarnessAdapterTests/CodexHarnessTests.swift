@@ -42,8 +42,8 @@ struct CodexHarnessTests {
 
         let sessions = try await CodexFixture.harness(home: home).listSessions(SessionQuery())
 
-        #expect(sessions.allSatisfy { $0.detail?.hasPrefix("ollama · ") == true })
-        #expect(sessions.allSatisfy { $0.detail?.hasSuffix(" tokens") == true })
+        #expect(sessions.allSatisfy { $0.detail == "ollama" })
+        #expect(sessions.allSatisfy { ($0.tokens ?? 0) > 0 })
     }
 
     @Test func archivedThreadsAreNotListed() async throws {

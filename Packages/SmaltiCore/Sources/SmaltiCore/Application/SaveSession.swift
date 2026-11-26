@@ -2,16 +2,15 @@ import Foundation
 
 public enum SaveOutcome: Equatable, Sendable {
     case saved
-    case failed(String)
+    case failed(SessionArchiveError)
     /// F7.6: the stored session is from a newer Smalti, so nothing was written.
     case keptNewer(version: Int)
 
-    public var message: String? {
+    public func message(_ texts: SessionTexts) -> String? {
         switch self {
         case .saved: nil
-        case .failed(let reason): reason
-        case .keptNewer(let version):
-            "La sesión la guardó una versión más nueva de Smalti (formato \(version)): esta no la abre ni la sobrescribe"
+        case .failed(let error): error.summary(texts)
+        case .keptNewer(let version): texts.keptNewer(["version": String(version)])
         }
     }
 }
@@ -85,7 +84,7 @@ public struct SaveSession {
             try archive.save(snapshot)
             return .saved
         } catch {
-            return .failed(error.summary)
+            return .failed(error)
         }
     }
 }

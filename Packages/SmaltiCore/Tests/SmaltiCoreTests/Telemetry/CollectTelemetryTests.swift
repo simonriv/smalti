@@ -83,7 +83,7 @@ struct CollectTelemetryTests {
 
         collector.apply(on)
 
-        #expect(collector.status == .failed(TelemetryReceiverError.cannotListen(operation: "bind", errno: 48).message))
+        #expect(collector.status == .failed(TelemetryReceiverError.cannotListen(operation: "bind", errno: 48)))
         #expect(collector.currentVariables().isEmpty)
     }
 

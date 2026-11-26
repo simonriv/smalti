@@ -14,27 +14,21 @@ public enum PreviewSituation: CaseIterable, Sendable {
     private static let home = "/Users/you"
 
     /// The section's label on the board.
-    public var title: String {
-        switch self {
-        case .normalFolder: "Carpeta normal"
-        case .nodeProject: "Proyecto Node con git"
-        case .afterErrorWithAgent: "Después de un error, con agente activo"
-        }
-    }
+    public func title(_ copy: PromptCopy) -> String { copy.previews[self] ?? "" }
 
-    var context: PromptContext {
+    func context(_ copy: PromptCopy) -> PromptContext {
         switch self {
         case .normalFolder:
-            return PromptContext(directory: Self.home + "/Downloads", home: Self.home)
+            return PromptContext(directory: Self.home + "/Downloads", home: Self.home, copy: copy)
         case .nodeProject:
-            var context = PromptContext(directory: Self.home + "/dev/solen/apps/api", home: Self.home)
-            context.repoRoot = Self.home + "/dev/solen"
+            var context = PromptContext(directory: Self.home + "/dev/acme/apps/api", home: Self.home, copy: copy)
+            context.repoRoot = Self.home + "/dev/acme"
             context.branch = "feat/reminders"
             context.changes = GitChanges(modified: 2, staged: 1)
             context.runtime = RuntimeVersion(kind: .node, version: "22.11")
             return context
         case .afterErrorWithAgent:
-            var context = PromptContext(directory: Self.home + "/dev/rizaria/web", home: Self.home)
+            var context = PromptContext(directory: Self.home + "/dev/website", home: Self.home, copy: copy)
             context.branch = "main"
             context.duration = .milliseconds(4200)
             context.agents = WaitingAgents(waiting: ["claude"])

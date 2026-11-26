@@ -25,15 +25,17 @@ public struct CheckForUpdates {
 @MainActor
 public struct SetAutomaticUpdates {
     private let updates: any AppUpdates
+    private let texts: TerminalTexts
 
-    public init(updates: any AppUpdates) {
+    public init(updates: any AppUpdates, texts: TerminalTexts) {
         self.updates = updates
+        self.texts = texts
     }
 
     public func toggle() -> String {
         let isOn = !updates.isAutomatic
         updates.setAutomatic(isOn)
-        return isOn ? "Actualizaciones automáticas activadas" : "Actualizaciones automáticas desactivadas"
+        return isOn ? texts.automaticUpdatesOn : texts.automaticUpdatesOff
     }
 }
 

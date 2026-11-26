@@ -76,32 +76,20 @@ public struct ApprovalSubject: Equatable, Sendable {
     public static let shortCommandLength = 80
 
     /// «terraform destroy contra PROD».
-    public var summary: String {
-        "\(headline?.rule ?? "comando") contra \(environment.label)"
+    public func summary(_ texts: GuardTexts) -> String {
+        texts.against(["rule": headline?.rule ?? texts.command, "environment": environment.label(texts)])
     }
 }
 
 /// The texts the agent reads when Smalti refuses (spec F7.5, «Motivos para el agente»).
 public enum GuardReasons {
-    public static func secret(path: String) -> String {
-        "Smalti bloquea la lectura de archivos de secretos (\(path)). No intentes leerlo por otra vía: pide al usuario "
-            + "el dato que necesites."
+    public static func rejected(_ subject: ApprovalSubject, texts: GuardTexts) -> String {
+        texts.rejectedReason([
+            "rule": subject.headline?.rule ?? texts.command, "environment": subject.environment.label(texts),
+        ])
     }
 
-    public static func rejected(_ subject: ApprovalSubject) -> String {
-        "El usuario rechazó en Smalti este comando (\(subject.headline?.rule ?? "comando"), contra "
-            + "\(subject.environment.label)). No lo reintentes ni busques otra vía; pregunta qué hacer."
+    public static func expired(minutes: Int, texts: GuardTexts) -> String {
+        texts.expiredReason(["minutes": String(minutes)])
     }
-
-    public static func expired(minutes: Int) -> String {
-        "Nadie aprobó el comando en Smalti en \(minutes) minutos."
-    }
-
-    public static let unreachable = "Smalti no respondió (app cerrada o socket caído): el comando queda bloqueado."
-    public static let outdatedIntegration =
-        "Este comando necesita la aprobación de Smalti y la integración instalada es antigua: actualízala desde ⌘K."
-    public static let cancelled = "Claude canceló la herramienta antes de que el usuario decidiera."
-    public static let unreadableInput = "Smalti no pudo leer la petición del hook: la herramienta queda bloqueada."
-    public static let paneClosed = "El panel de Smalti se cerró antes de aprobar el comando."
-    public static let tooManyPending = "Hay demasiados comandos esperando aprobación en Smalti."
 }

@@ -4,9 +4,9 @@ public enum TranscriptError: Error, Equatable, Sendable {
     case unreadableRoot(path: String, reason: String)
 
     /// The status-bar text when a refresh could not read the transcripts.
-    public var message: String {
+    public func message(_ copy: ObservatoryCopy) -> String {
         switch self {
-        case .unreadableRoot(let path, let reason): "No se pudieron leer los transcripts de \(path): \(reason)"
+        case .unreadableRoot(let path, let reason): copy.transcriptsUnreadable(["path": path, "reason": reason])
         }
     }
 }

@@ -14,7 +14,7 @@ final class SearchBarView: NSView {
         OverlayBox.decorate(self, around: content(), theme: theme)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Buscar en el panel")
+        setAccessibilityLabel(String(localized: "Find in the pane"))
         setAccessibilityIdentifier("smalti.search")
     }
 
@@ -41,8 +41,8 @@ final class SearchBarView: NSView {
         field.focusRingType = .none
         field.font = theme.interfaceFont(size: palette.rowFontSize)
         field.textColor = theme.text.title.nsColor
-        field.placeholderString = "Buscar en el panel"
-        field.setAccessibilityLabel("Buscar en el panel")
+        field.placeholderString = String(localized: "Find in the pane")
+        field.setAccessibilityLabel(String(localized: "Find in the pane"))
         field.setAccessibilityIdentifier("smalti.searchField")
         counter.font = theme.interfaceFont(size: palette.footerFontSize)
         counter.textColor = theme.text.secondary.nsColor

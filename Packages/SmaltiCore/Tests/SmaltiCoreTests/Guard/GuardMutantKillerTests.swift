@@ -19,7 +19,7 @@ struct GuardMutantKillerTests {
     private func verdict(_ command: String) -> GuardVerdict {
         ScreenToolUse.verdict(
             for: ToolUse(tool: "Bash", command: command, cwd: "/p"),
-            context: GuardContext(settings: .standard, environmentHosts: []), home: home)
+            context: GuardContext(settings: .standard, environmentHosts: [], texts: .spanish), home: home)
     }
 
     // MARK: - AgentApprovals: a denial is never reported as approved
@@ -35,7 +35,7 @@ struct GuardMutantKillerTests {
     }
 
     private func queue(_ changes: Changes, panes: [PaneID]) -> AgentApprovals {
-        let approvals = AgentApprovals(home: home)
+        let approvals = AgentApprovals(home: home, texts: .spanish)
         approvals.onChange = { changes.items.append($0) }
         for pane in panes {
             let use = ToolUse(tool: "Bash", command: "terraform destroy", cwd: "/p")
@@ -143,7 +143,8 @@ struct GuardMutantKillerTests {
             workspaces: set, pendingApprovals: [ApprovalEntry(approval: approval, workspace: "w")],
             secretsProject: SecretsProjectState(name: "p", isProtected: false))
 
-        let entries = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard).filter {
+        let entries = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard, texts: .spanish).filter
+        {
             $0.group == .approvals || $0.id == .secretsProtect
         }
 

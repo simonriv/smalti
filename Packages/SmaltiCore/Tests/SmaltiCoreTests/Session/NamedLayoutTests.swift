@@ -16,7 +16,8 @@ struct NamedLayoutTests {
         RestoreSession(
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([FakeHarnessAdapter()]),
-                environment: PaneEnvironment(version: "2"), shell: .loginShell, clock: { SessionFixtures.now }))
+                environment: PaneEnvironment(version: "2"), shell: .loginShell, clock: { SessionFixtures.now },
+                texts: .spanish))
     }
 
     private func agentPane(_ sessionID: String) -> Pane {

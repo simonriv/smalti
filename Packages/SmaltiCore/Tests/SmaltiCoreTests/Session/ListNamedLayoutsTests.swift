@@ -35,7 +35,7 @@ struct ListNamedLayoutsTests {
                     first: Workspace.empty(
                         name: "p", rootDirectory: try WorkingDirectory(path: "/tmp/p"), layout: DwindleLayout())),
                 savedLayouts: [summary]),
-            keymap: .standard, layouts: .standard)
+            keymap: .standard, layouts: .standard, texts: .spanish)
 
         let restore = commands.first { $0.id == .layoutRestore(summary.name) }
 

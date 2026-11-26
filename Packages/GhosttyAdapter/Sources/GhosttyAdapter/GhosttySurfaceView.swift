@@ -57,7 +57,7 @@ final class GhosttySurfaceView: NSView {
         surface = Self.makeSurface(app: app, view: self, spec: spec)
         guard surface != nil else {
             throw .surfaceCreationFailed(
-                workingDirectory: spec.workingDirectory.path, reason: "ghostty_surface_new returned null")
+                workingDirectory: spec.workingDirectory.path, reason: .engine("ghostty_surface_new returned null"))
         }
         GhosttyRuntime.register(self)
         updateTrackingAreas()

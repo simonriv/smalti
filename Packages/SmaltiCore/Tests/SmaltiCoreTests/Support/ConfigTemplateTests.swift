@@ -3,7 +3,7 @@ import Testing
 
 @Suite("ConfigTemplate")
 struct ConfigTemplateTests {
-    private let text = ConfigTemplate.text(defaults: .defaults)
+    private let text = ConfigTemplate.text(defaults: .defaults, texts: ConfigTexts.spanish.template)
 
     @Test func everyValueLineIsCommented() {
         let values = text.split(separator: "\n").filter { $0.contains(" = ") }
@@ -33,7 +33,9 @@ struct ConfigTemplateTests {
         var config = SmaltiConfig.defaults
         config.input.generatorTimeout = .milliseconds(2_500)
 
-        #expect(ConfigTemplate.text(defaults: config).contains("# generator_timeout_ms = 2500\n"))
+        #expect(
+            ConfigTemplate.text(defaults: config, texts: ConfigTexts.spanish.template).contains(
+                "# generator_timeout_ms = 2500\n"))
     }
 
     /// Mutation (F4.5): prose that happens to hold " = " stays a comment.
@@ -55,7 +57,9 @@ struct ConfigTemplateTests {
         var config = SmaltiConfig.defaults
         config.shell = .custom(#"/bin/zsh -c "echo \ hi""#)
 
-        #expect(ConfigTemplate.text(defaults: config).contains(#"# command = "/bin/zsh -c \"echo \\ hi\"""#))
+        #expect(
+            ConfigTemplate.text(defaults: config, texts: ConfigTexts.spanish.template).contains(
+                #"# command = "/bin/zsh -c \"echo \\ hi\"""#))
     }
 
     @Test func uncommentingTurnsValuesIntoTOML() {

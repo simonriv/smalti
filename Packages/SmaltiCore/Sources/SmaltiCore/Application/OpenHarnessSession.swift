@@ -55,15 +55,15 @@ public struct OpenHarnessSession {
         connectsEditor() ? adapter as? any EditorConnectable : nil
     }
 
-    public static func folderMissingMessage(_ path: String) -> String {
-        "La carpeta de la sesión ya no existe: \(path)"
+    public static func folderMissingMessage(_ path: String, texts: SessionTexts) -> String {
+        texts.folderMissing(["path": path])
     }
 
-    public static func unavailableMessage(_ harness: HarnessID) -> String {
-        "\(harness.displayName) no está disponible en este Mac"
+    public static func unavailableMessage(_ harness: HarnessID, texts: SessionTexts) -> String {
+        texts.unavailable(["harness": harness.displayName])
     }
 
-    public static func cannotForkMessage(_ harness: HarnessID) -> String {
-        "\(harness.displayName) no permite bifurcar sesiones"
+    public static func cannotForkMessage(_ harness: HarnessID, texts: SessionTexts) -> String {
+        texts.cannotFork(["harness": harness.displayName])
     }
 }

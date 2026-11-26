@@ -18,7 +18,7 @@ struct ScrollbackExportTests {
         let config = try GhosttyConfig.load(
             text: GhosttyConfigText.render(Theme.obsidian.terminal),
             writingTo: FileManager.default.temporaryDirectory.appending(path: "smalti-scrollback-\(UUID()).conf"))
-        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config))
+        engine = GhosttyTerminalEngine(runtime: try GhosttyRuntime(config: config, texts: .spanish))
         spec = TerminalSessionSpec(
             workingDirectory: try WorkingDirectory(path: "/tmp"),
             command: .custom(#"/bin/zsh -f -c 'printf "\033[31mrojo-smalti\033[0m\n"; sleep 30'"#))

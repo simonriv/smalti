@@ -76,10 +76,11 @@ final class SessionKeeper {
     }
 
     private func report(_ outcome: SaveOutcome) {
-        guard case .failed(let reason) = outcome else {
+        guard case .failed(let error) = outcome else {
             lastFailure = nil
             return
         }
+        let reason = error.summary(.current)
         logger.error("could not save the session: \(reason, privacy: .public)")
         guard reason != lastFailure else { return }
         lastFailure = reason

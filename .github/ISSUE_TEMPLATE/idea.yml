@@ -1,25 +1,25 @@
 name: Idea
-description: Algo que te gustaría que Smalti hiciera.
+description: Something you'd like Smalti to do.
 title: "Idea: "
 labels: ["idea"]
 body:
   - type: textarea
     id: idea
     attributes:
-      label: La idea
+      label: The idea
     validations:
       required: true
   - type: textarea
     id: use
     attributes:
-      label: Para qué la usarías
+      label: What you'd use it for
     validations:
       required: false
   - type: input
     id: build
     attributes:
-      label: Versión
-      description: La rellena «Reportar un problema o una idea…» (⌘K).
-      placeholder: Smalti 0.7.6 (abc1234) · macOS 27.2 · Apple M4
+      label: Version
+      description: '"Report a Problem or Idea…" (⌘K) fills it in.'
+      placeholder: Smalti 0.7.7 (abc1234) · macOS 27.2 · Apple M4
     validations:
       required: false

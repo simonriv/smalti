@@ -82,12 +82,13 @@ struct FormatVersionTests {
 
     @Test func newerWarningMessage() {
         #expect(
-            ConfigWarning.newerFormat(file: "config.toml", version: 2, ignored: ["nueva", "appearance.futuro"]).message
+            ConfigWarning.newerFormat(file: "config.toml", version: 2, ignored: ["nueva", "appearance.futuro"]).message(
+                .spanish)
                 == "config.toml es de una versión más nueva de Smalti (2): se ignoran nueva, appearance.futuro")
     }
 
     @Test func themeWriterStartsWithItsVersion() {
-        let lines = TOMLWriter.text(AppearanceDocument(config: .defaults)).split(
+        let lines = TOMLWriter.text(AppearanceDocument(config: .defaults), texts: .spanish).split(
             separator: "\n", omittingEmptySubsequences: false)
 
         #expect(lines.prefix(4).contains("version = 1"))
@@ -96,7 +97,7 @@ struct FormatVersionTests {
     @Test func appearanceStoreNeverOverwritesANewerTheme() throws {
         let newer = "version = 2\n[appearance]\nblur = 20\nbrillo = 3\n"
         try write(newer, to: themeFile)
-        let appearance = TOMLAppearanceStore(file: themeFile)
+        let appearance = TOMLAppearanceStore(file: themeFile, texts: .spanish)
 
         #expect(throws: ConfigError.self) { try appearance.save(AppearanceDocument(config: .defaults)) }
         #expect(try String(contentsOf: themeFile, encoding: .utf8) == newer)
@@ -106,10 +107,12 @@ struct FormatVersionTests {
         try write("version = 2\n", to: themeFile)
 
         do {
-            try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+            try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
             Issue.record("the newer theme was overwritten")
         } catch {
-            #expect(error.summary.hasSuffix("theme.toml · es de una versión más nueva de Smalti: no se sobrescribe"))
+            #expect(
+                error.summary(.spanish).hasSuffix(
+                    "theme.toml · es de una versión más nueva de Smalti: no se sobrescribe"))
         }
     }
 
@@ -176,7 +179,7 @@ struct FormatVersionTests {
         try write("version = 2\n", to: themeFile)
 
         do {
-            try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+            try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
         } catch {
             #expect(error.key == nil)
         }
@@ -189,14 +192,14 @@ struct FormatVersionTests {
         try write(newer, to: themeFile)
 
         #expect(throws: ConfigError.self) {
-            try TOMLAppearanceStore(file: themeFile).save(AppearanceDocument(config: .defaults))
+            try TOMLAppearanceStore(file: themeFile, texts: .spanish).save(AppearanceDocument(config: .defaults))
         }
         #expect(try String(contentsOf: themeFile, encoding: .utf8) == newer)
     }
 
     @Test func unparseableThemeWithoutVersionIsStillBackedUpAndRewritten() throws {
         try write("[[x\n", to: themeFile)
-        let store = TOMLAppearanceStore(file: themeFile)
+        let store = TOMLAppearanceStore(file: themeFile, texts: .spanish)
         store.remember(AppearanceDocument(config: .defaults))
         try write("[[x\n", to: themeFile)
 

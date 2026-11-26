@@ -32,7 +32,7 @@ struct TOMLConfigStoreContractTests {
 
         #expect(
             throws: ConfigError(
-                file: file.path(percentEncoded: false), line: 3, key: nil, reason: "sintaxis TOML no válida")
+                file: file.path(percentEncoded: false), line: 3, key: nil, problem: .syntax)
         ) {
             try store.reload()
         }
@@ -46,7 +46,7 @@ struct TOMLConfigStoreContractTests {
 
         #expect(
             throws: ConfigError(
-                file: file.path(percentEncoded: false), line: nil, key: nil, reason: "el archivo no está en UTF-8")
+                file: file.path(percentEncoded: false), line: nil, key: nil, problem: .notUTF8)
         ) {
             try store.reload()
         }
@@ -63,7 +63,7 @@ struct TOMLConfigStoreContractTests {
         #expect(
             throws: ConfigError(
                 file: file.path(percentEncoded: false), line: nil, key: nil,
-                reason: "no se pudo leer el archivo: sin permiso de lectura")
+                problem: .noReadPermission)
         ) {
             try store.reload()
         }

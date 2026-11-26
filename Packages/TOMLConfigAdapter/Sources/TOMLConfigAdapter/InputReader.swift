@@ -28,7 +28,7 @@ enum InputReader {
     {
         guard let value = try section.number(key) else { return nil }
         guard value.rounded() == value, value >= Double(range.lowerBound), value <= Double(range.upperBound) else {
-            throw section.error(at: key, "se esperaba un número entero entre \(range.lowerBound) y \(range.upperBound)")
+            throw section.error(at: key, .expectedIntegerBetween(range.lowerBound, range.upperBound))
         }
         return Int(value)
     }

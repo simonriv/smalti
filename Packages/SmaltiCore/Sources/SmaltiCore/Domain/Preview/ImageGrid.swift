@@ -11,7 +11,17 @@ public struct ImageGrid: Equatable, Sendable {
 
     public let rows: [GridRow]
     public let columnsPerRow: Int
-    public let summary: String
+    /// The images shown, the files skipped and the images past the limit, for `summary(_:)`.
+    public let counts: (shown: Int, skipped: Int, hidden: Int)
+
+    public static func == (lhs: ImageGrid, rhs: ImageGrid) -> Bool {
+        lhs.rows == rhs.rows && lhs.columnsPerRow == rhs.columnsPerRow && lhs.counts == rhs.counts
+    }
+
+    /// "12 imágenes · 3 omitidas (no son imagen) · … y 23 más (máximo 100)".
+    public func summary(_ texts: TerminalTexts) -> String {
+        Summary.text(shown: counts.shown, skipped: counts.skipped, hidden: counts.hidden, texts: texts)
+    }
 
     public static func layout(_ images: [ImageDescription], skipped: Int, in metrics: CellMetrics) -> ImageGrid {
         let sorted = images.sorted { NaturalOrder.precedes($0.name, $1.name) }
@@ -22,8 +32,8 @@ public struct ImageGrid: Equatable, Sendable {
         let rows = stride(from: 0, to: cells.count, by: perRow).map {
             GridRow(cells: Array(cells[$0..<min($0 + perRow, cells.count)]))
         }
-        let summary = Summary.text(shown: shown.count, skipped: skipped, hidden: sorted.count - shown.count)
-        return ImageGrid(rows: rows, columnsPerRow: perRow, summary: summary)
+        return ImageGrid(
+            rows: rows, columnsPerRow: perRow, counts: (shown.count, skipped, sorted.count - shown.count))
     }
 
     /// A wide image fills the cell's width and reserves its height rounded up; one taller than the cap fills the cap
@@ -83,12 +93,10 @@ public struct GridCell: Equatable, Sendable {
 
 /// "12 imágenes · 3 omitidas (no son imagen) · … y 23 más (máximo 100)".
 enum Summary {
-    static func text(shown: Int, skipped: Int, hidden: Int) -> String {
-        var parts = [shown == 1 ? "1 imagen" : "\(shown) imágenes"]
-        if skipped > 0 {
-            parts.append(skipped == 1 ? "1 omitida (no es imagen)" : "\(skipped) omitidas (no son imagen)")
-        }
-        if hidden > 0 { parts.append("… y \(hidden) más (máximo \(ImageGrid.limit))") }
+    static func text(shown: Int, skipped: Int, hidden: Int, texts: TerminalTexts) -> String {
+        var parts = [texts.images(shown)]
+        if skipped > 0 { parts.append(texts.skipped(skipped)) }
+        if hidden > 0 { parts.append(texts.hidden(["count": String(hidden), "limit": String(ImageGrid.limit)])) }
         return parts.joined(separator: " · ")
     }
 }

@@ -179,7 +179,7 @@ struct HighlightMutantTests {
             facts: FakePromptFacts(),
             environment: PromptEnvironment(
                 settings: { (PromptConfig.standard, ThemeCatalog.apply(.obsidian)) }, agents: { _ in WaitingAgents() },
-                workspace: { _ in nil }, home: "/h", now: { Date(timeIntervalSince1970: 0) }))
+                workspace: { _ in nil }, home: "/h", copy: .spanish, now: { Date(timeIntervalSince1970: 0) }))
 
         #expect(render.styleMessages().last != .highlightStyle(nil))
     }

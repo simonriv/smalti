@@ -6,7 +6,7 @@ import Testing
 @Suite("Prompt modules")
 struct PromptModulesTests {
     private func context(_ change: (inout PromptContext) -> Void = { _ in }) -> PromptContext {
-        var context = PromptContext(directory: "/Users/simon/dev/solen/apps/api", home: "/Users/simon")
+        var context = PromptContext(directory: "/Users/simon/dev/solen/apps/api", home: "/Users/simon", copy: .spanish)
         change(&context)
         return context
     }

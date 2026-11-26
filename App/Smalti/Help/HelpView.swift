@@ -22,7 +22,7 @@ final class HelpView: NSView {
         OverlayBox.decorate(self, around: stack, theme: theme)
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Ayuda de Smalti")
+        setAccessibilityLabel(String(localized: "Smalti Help"))
         setAccessibilityIdentifier("smalti.help")
     }
 
@@ -97,8 +97,8 @@ final class HelpView: NSView {
         field.focusRingType = .none
         field.font = theme.interfaceFont(size: palette.fieldFontSize)
         field.textColor = theme.text.title.nsColor
-        field.placeholderString = "Buscar atajos y acciones"
-        field.setAccessibilityLabel("Buscar atajos y acciones")
+        field.placeholderString = String(localized: "Search shortcuts and actions")
+        field.setAccessibilityLabel(String(localized: "Search shortcuts and actions"))
         field.setAccessibilityIdentifier("smalti.helpField")
         let row = NSStackView(views: [icon, field, KbdView("esc", theme: theme)])
         row.spacing = palette.fieldGap
@@ -137,10 +137,11 @@ final class HelpView: NSView {
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .horizontal)
         let row = NSStackView(views: [
-            OverlayBox.footerLabel("Ayuda de Smalti", theme: theme), spacer,
-            OverlayBox.hint("↩", "ejecutar", theme: theme), OverlayBox.hint("esc", "cerrar", theme: theme),
-            OverlayBox.hint("⌘,", "configuración", theme: theme),
-            OverlayBox.footerLabel("Reportar un problema", theme: theme),
+            OverlayBox.footerLabel(String(localized: "Smalti Help"), theme: theme), spacer,
+            OverlayBox.hint("↩", String(localized: "run"), theme: theme),
+            OverlayBox.hint("esc", String(localized: "close"), theme: theme),
+            OverlayBox.hint("⌘,", String(localized: "settings"), theme: theme),
+            OverlayBox.footerLabel(String(localized: "Report a Problem"), theme: theme),
         ])
         row.spacing = palette.footerGap
         row.edgeInsets = NSEdgeInsets(top: 0, left: palette.fieldPadding, bottom: 0, right: palette.fieldPadding)
@@ -158,7 +159,13 @@ final class HelpRowView: NSView {
     var onClick: (() -> Void)?
     private let theme: Theme
 
-    private static let wordKeys: Set<String> = ["arrastrar", "clic derecho"]
+    /// Keys written as words, in the interface's language ("arrastrar" / "drag").
+    private static var wordKeys: Set<String> { [HelpTexts.current.pastePathKeys, HelpTexts.current.terminalMenuKeys] }
+
+    /// "en ⌘K" / "in ⌘K" starts with this.
+    private static var inPalettePrefix: String {
+        String(HelpTexts.current.inPalette.raw.prefix { $0 != "{" })
+    }
 
     init(_ entry: HelpEntry, theme: Theme, showsCommandName: Bool) {
         self.theme = theme
@@ -182,7 +189,7 @@ final class HelpRowView: NSView {
         heightAnchor.constraint(equalToConstant: theme.help.rowHeight).isActive = true
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityLabel("\(entry.title), \(entry.keys)")
+        setAccessibilityLabel(entry.keys.isEmpty ? entry.title : "\(entry.title), \(entry.keys)")
         setAccessibilityIdentifier("smalti.helpRow")
     }
 
@@ -206,7 +213,10 @@ final class HelpRowView: NSView {
     }
 
     private func keys(_ text: String) -> NSView {
-        guard text.hasPrefix("en ") || Self.wordKeys.contains(text) else { return KbdView(text, theme: theme) }
+        guard !text.isEmpty else { return NSView() }
+        guard text.hasPrefix(Self.inPalettePrefix) || Self.wordKeys.contains(text) else {
+            return KbdView(text, theme: theme)
+        }
         let label = NSTextField(labelWithString: text)
         label.font = theme.interfaceFont(size: theme.palette.footerFontSize)
         label.textColor = theme.text.secondary.nsColor

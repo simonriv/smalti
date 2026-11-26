@@ -15,7 +15,7 @@ struct ReviewFinalFindingsTests {
     private func verdict(_ command: String) -> GuardVerdict {
         ScreenToolUse.verdict(
             for: ToolUse(tool: "Bash", command: command, cwd: "/p"),
-            context: GuardContext(settings: .standard, environmentHosts: []), home: home)
+            context: GuardContext(settings: .standard, environmentHosts: [], texts: .spanish), home: home)
     }
 
     private func subject(_ command: String, rule: String = "URL de base de datos") -> ApprovalSubject {
@@ -56,7 +56,7 @@ struct ReviewFinalFindingsTests {
     // MARK: - I2: a cancelled hook takes its request away
 
     @Test func cancelledRequestLeavesTheQueue() {
-        let approvals = AgentApprovals(home: home)
+        let approvals = AgentApprovals(home: home, texts: .spanish)
         var changes: [AgentApprovalChange] = []
         approvals.onChange = { changes.append($0) }
         let id = UUID()
@@ -69,7 +69,7 @@ struct ReviewFinalFindingsTests {
     }
 
     @Test func cancellingTwiceOrUnknownDoesNothing() {
-        let approvals = AgentApprovals(home: home)
+        let approvals = AgentApprovals(home: home, texts: .spanish)
         approvals.receive(request())
 
         approvals.cancel(UUID())
@@ -117,7 +117,7 @@ struct ReviewFinalFindingsTests {
     // MARK: - M2: a second key press right after the card changed does nothing
 
     @Test func approvingRightAfterTheCardChangedIsTooSoon() {
-        let approvals = AgentApprovals(home: home)
+        let approvals = AgentApprovals(home: home, texts: .spanish)
         approvals.receive(request(command: "terraform destroy"))
         approvals.receive(request(command: "supabase db push", at: 1))
 
@@ -131,7 +131,7 @@ struct ReviewFinalFindingsTests {
     }
 
     @Test func emptyPaneHasNothingWaiting() {
-        #expect(AgentApprovals(home: home).rejectOldest(in: pane, now: t0) == .nothingWaiting)
+        #expect(AgentApprovals(home: home, texts: .spanish).rejectOldest(in: pane, now: t0) == .nothingWaiting)
     }
 
     // MARK: - M3: the notification and ⌘K show the command
@@ -141,7 +141,7 @@ struct ReviewFinalFindingsTests {
 
         let attention = session.awaitingApproval(subject("node seed.js postgres://u@db.x.com/a"), at: t0).attention
 
-        #expect(attention == .approval(command: "node seed.js postgres://u@db.x.com/a", environment: "PROD"))
+        #expect(attention == .approval(command: "node seed.js postgres://u@db.x.com/a", environment: .production))
     }
 
     @Test func longCommandsAreFullInThePaletteSubtitle() throws {
@@ -154,7 +154,7 @@ struct ReviewFinalFindingsTests {
             id: UUID(), pane: pane, subject: subject(command, rule: "terraform destroy"), since: t0, deadline: t0)
         let state = CatalogState(workspaces: set, pendingApprovals: [ApprovalEntry(approval: approval, workspace: "w")])
 
-        let entry = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard).first
+        let entry = CommandCatalog.commands(for: state, keymap: .standard, layouts: .standard, texts: .spanish).first
 
         #expect(entry?.subtitle?.contains("&& terraform destroy") == true)
     }

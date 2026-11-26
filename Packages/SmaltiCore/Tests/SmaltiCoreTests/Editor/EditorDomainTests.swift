@@ -128,7 +128,7 @@ struct EditedFilesTests {
     }
 
     @Test func noEditsText() {
-        #expect(EditedFiles.noneText == "Claude no ha editado archivos en este espacio")
+        #expect(TerminalTexts.spanish.editedNone == "Claude no ha editado archivos en este espacio")
     }
 
     @MainActor
@@ -224,7 +224,7 @@ struct EditedFilesPaletteTests {
 
         let commands = CommandCatalog.commands(
             for: CatalogState(workspaces: WorkspaceSet(first: workspace), editedFiles: edited, now: now),
-            keymap: .standard, layouts: .standard
+            keymap: .standard, layouts: .standard, texts: .spanish
         ).filter { $0.group == .editedFiles }
 
         #expect(commands.map(\.title) == ["reminder.service.ts", "a b.ts"])
@@ -232,7 +232,7 @@ struct EditedFilesPaletteTests {
         #expect(commands.allSatisfy { !$0.isCurrent }, "an edited file is never the current item")
         #expect(
             commands.first?.id.editorTarget == EditorTarget(path: "/w/src/reminder.service.ts", line: 42, column: nil))
-        #expect(CommandGroup.editedFiles.rawValue == "Editados por Claude")
+        #expect(CommandTexts.spanish.groups[.editedFiles] == "Editados por Claude")
     }
 
     @Test func editorOpenRoundTripsHostilePaths() {
@@ -243,11 +243,11 @@ struct EditedFilesPaletteTests {
     }
 
     @Test func elapsedPhrases() {
-        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-30), now: now) == "ahora")
-        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-60), now: now) == "hace 1 min")
-        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3599), now: now) == "hace 59 min")
-        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-7200), now: now) == "hace 2 h")
-        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3 * 86_400), now: now) == "hace 3 d")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-30), now: now, texts: .spanish) == "ahora")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-60), now: now, texts: .spanish) == "hace 1 min")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3599), now: now, texts: .spanish) == "hace 59 min")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-7200), now: now, texts: .spanish) == "hace 2 h")
+        #expect(ElapsedPhrase.text(since: now.addingTimeInterval(-3 * 86_400), now: now, texts: .spanish) == "hace 3 d")
     }
 }
 

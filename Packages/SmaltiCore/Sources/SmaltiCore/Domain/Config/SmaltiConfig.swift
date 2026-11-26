@@ -71,6 +71,8 @@ public struct SmaltiConfig: Equatable, Sendable {
     public var extras = ExtrasSettings.standard
     /// `[guards]` (F7.5); like `observatory`, outside the initializer.
     public var guards = GuardSettings.standard
+    /// F7.7 `[keyboard] option_as_meta`.
+    public var optionAsMeta = OptionAsMeta.auto
 
     public init(appearance: AppearanceSettings, defaultLayout: LayoutID, shell: TerminalCommand, keys: Keymap) {
         self.appearance = appearance

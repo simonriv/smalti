@@ -13,9 +13,12 @@ final class SummaryCardsView: NSStackView {
     private let theme: Theme
     private var cards: [Card] = []
 
-    private static let titles = ["Sesiones activas", "Tokens entrada", "Tokens salida", "Equivalente API"]
+    private static let titles = [
+        String(localized: "Active sessions"), String(localized: "Input tokens"), String(localized: "Output tokens"),
+        String(localized: "API equivalent"),
+    ]
     private static let identifiers = ["sessions", "input", "output", "cost"]
-    static let reading = "leyendo transcripts…"
+    static let reading = String(localized: "reading transcripts…")
 
     init(theme: Theme) {
         self.theme = theme
@@ -51,11 +54,15 @@ final class SummaryCardsView: NSStackView {
             cards.dropFirst().forEach { set($0, value: "—", note: plain(Self.reading)) }
             return
         }
-        set(cards[1], value: ObservatoryFormat.count(summary.input), note: plain(ObservatoryTexts.cache(summary)))
+        set(
+            cards[1], value: ObservatoryFormat.count(summary.input),
+            note: plain(ObservatoryTexts.cache(summary, copy: .current)))
         set(
             cards[2], value: ObservatoryFormat.count(summary.output),
-            note: plain(ObservatoryTexts.peak(summary, timeZone: timeZone)))
-        set(cards[3], value: ObservatoryFormat.usd(summary.cost.usd), note: plain(ObservatoryTexts.cost(summary)))
+            note: plain(ObservatoryTexts.peak(summary, timeZone: timeZone, copy: .current)))
+        set(
+            cards[3], value: ObservatoryFormat.usd(summary.cost.usd),
+            note: plain(ObservatoryTexts.cost(summary, copy: .current)))
     }
 
     func showReading() {
@@ -80,12 +87,12 @@ final class SummaryCardsView: NSStackView {
 
     /// "2 trabajando" in green and "1 esperando" in amber, as the board colours them.
     private func sessionsNote(_ summary: ObservatoryReport.Summary) -> NSAttributedString {
-        let text = ObservatoryTexts.sessions(summary)
+        let text = ObservatoryTexts.sessions(summary, copy: .current)
         let note = NSMutableAttributedString(attributedString: plain(text))
         let tones: [(String, RGBAColor)] = [
-            ("\(summary.working) trabajando", theme.agent.working),
-            ("\(summary.waiting) esperando", theme.agent.waiting),
-            ("\(summary.failed) error", theme.agent.failed),
+            (String(localized: "\(summary.working) working"), theme.agent.working),
+            (String(localized: "\(summary.waiting) waiting"), theme.agent.waiting),
+            (String(localized: "\(summary.failed) error"), theme.agent.failed),
         ]
         for (part, color) in tones {
             let range = (text as NSString).range(of: part)

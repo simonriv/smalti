@@ -9,9 +9,9 @@ public enum ThemeCatalog {
         }
     }
 
-    private static let niebla = Theme.make(name: ThemeID.niebla.displayName, colors: .niebla)
-    private static let ambarNocturno = Theme.make(name: ThemeID.ambarNocturno.displayName, colors: .ambarNocturno)
-    private static let bosque = Theme.make(name: ThemeID.bosque.displayName, colors: .bosque)
+    private static let niebla = Theme.make(name: ThemeID.niebla.rawValue, colors: .niebla)
+    private static let ambarNocturno = Theme.make(name: ThemeID.ambarNocturno.rawValue, colors: .ambarNocturno)
+    private static let bosque = Theme.make(name: ThemeID.bosque.rawValue, colors: .bosque)
 
     /// The colors the 4.5:1 rule covers on a panel: text, secondary and the ANSI colors but the background pair.
     public static func protectedColors(of theme: Theme, id: ThemeID) -> [RGBAColor] {

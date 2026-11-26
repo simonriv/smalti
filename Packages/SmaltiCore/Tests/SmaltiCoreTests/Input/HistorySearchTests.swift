@@ -68,29 +68,34 @@ struct HistorySearchTests {
 
     @Test func agoMinutes() {
         #expect(
-            HistorySearch.ago(date("2026-11-23T15:00:00Z"), now: date("2026-11-23T15:04:30Z"), calendar: bogota)
+            HistorySearch.ago(
+                date("2026-11-23T15:00:00Z"), now: date("2026-11-23T15:04:30Z"), calendar: bogota, texts: .spanish)
                 == "hace 4 min")
         #expect(
-            HistorySearch.ago(date("2026-11-23T15:00:00Z"), now: date("2026-11-23T15:00:10Z"), calendar: bogota)
+            HistorySearch.ago(
+                date("2026-11-23T15:00:00Z"), now: date("2026-11-23T15:00:10Z"), calendar: bogota, texts: .spanish)
                 == "hace 1 min")
     }
 
     @Test func agoHoursAcrossMidnight() {
         // 23:30 → 00:30 in Bogotá (UTC−5): one hour, not "ayer".
         #expect(
-            HistorySearch.ago(date("2026-11-24T04:30:00Z"), now: date("2026-11-24T05:30:00Z"), calendar: bogota)
+            HistorySearch.ago(
+                date("2026-11-24T04:30:00Z"), now: date("2026-11-24T05:30:00Z"), calendar: bogota, texts: .spanish)
                 == "hace 1 h")
     }
 
     @Test func agoYesterdayAfterADay() {
         #expect(
-            HistorySearch.ago(date("2026-11-22T13:00:00Z"), now: date("2026-11-23T15:00:00Z"), calendar: bogota)
+            HistorySearch.ago(
+                date("2026-11-22T13:00:00Z"), now: date("2026-11-23T15:00:00Z"), calendar: bogota, texts: .spanish)
                 == "ayer")
     }
 
     @Test func agoDaysAcrossMonthEnd() {
         #expect(
-            HistorySearch.ago(date("2026-10-30T15:00:00Z"), now: date("2026-11-02T15:00:00Z"), calendar: bogota)
+            HistorySearch.ago(
+                date("2026-10-30T15:00:00Z"), now: date("2026-11-02T15:00:00Z"), calendar: bogota, texts: .spanish)
                 == "hace 3 días")
     }
 

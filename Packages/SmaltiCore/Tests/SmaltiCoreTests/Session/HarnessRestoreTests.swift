@@ -46,7 +46,7 @@ struct HarnessRestoreTests {
                 engine: engine, transcripts: archive,
                 harnesses: HarnessRegistry([CodexLikeHarness(), EditorAwareHarness()]),
                 environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
-                clock: { SessionFixtures.now }, connectsEditor: connectsEditor))
+                clock: { SessionFixtures.now }, texts: .spanish, connectsEditor: connectsEditor))
     }
 
     private func run(_ launch: PaneLaunch, connectsEditor: Bool = false) -> RestoreResult {
@@ -97,7 +97,7 @@ struct HarnessRestoreTests {
             .init(
                 engine: engine, transcripts: archive, harnesses: HarnessRegistry([EditorAwareHarness()]),
                 environment: PaneEnvironment(version: "2", files: files), shell: .custom("/bin/zsh -f"),
-                clock: { SessionFixtures.now }))
+                clock: { SessionFixtures.now }, texts: .spanish))
         let agent = AgentSnapshot(harness: .claude, sessionID: "7f3a", title: nil, lastState: .waiting)
 
         _ = restore.execute(
