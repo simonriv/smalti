@@ -155,6 +155,37 @@ final class LocalizationTests: SmaltiUITestCase {
             offenders.isEmpty, "Spanish in the English processes views: " + offenders.joined(separator: " | "))
     }
 
+    /// F8.5: the ⌘O selector and the confirmation of a repo's layout, with a repo made for the test.
+    func testEnglishProjectsHaveNoSpanish() throws {
+        let repo = FileManager.default.temporaryDirectory.appending(path: "smalti-l10n-\(UUID().uuidString)/demo")
+            .resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: repo.deletingLastPathComponent()) }
+        try FileManager.default.createDirectory(at: repo.appending(path: ".smalti"), withIntermediateDirectories: true)
+        let json =
+            #"{"smaltiLayout":1,"name":"demo","root":".","layout":"dwindle","panes":[{"directory":".","command":["true"]}]}"#
+        try Data(json.utf8).write(to: repo.appending(path: ".smalti/layout.json"))
+        let english = XCUIApplication.isolatedSmalti(language: "en")
+        let root = repo.path(percentEncoded: false)
+        let record: [String: Any] = [
+            "root": root.hasSuffix("/") ? String(root.dropLast()) : root, "name": "demo",
+            "lastOpened": "2026-11-25T10:00:00Z",
+        ]
+        try FileManager.default.createDirectory(at: english.stateDirectory, withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: ["version": 1, "projects": [record]])
+            .write(to: english.stateDirectory.appending(path: "projects.json"))
+        launch(english)
+
+        app.typeKey("o", modifierFlags: .command)
+        XCTAssertTrue(app.element("smalti.projects").waitForExistence(timeout: 5))
+        collect("recent projects")
+        app.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(app.element("smalti.projects.confirm").waitForExistence(timeout: 5))
+        collect("project confirmation")
+        close()
+
+        XCTAssertEqual(offenders, [])
+    }
+
     func testEnglishResumeScreenHasNoSpanish() {
         let english = XCUIApplication.isolatedSmalti(language: "en")
         SessionState.seed(
